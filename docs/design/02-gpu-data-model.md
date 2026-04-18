@@ -1,4 +1,4 @@
-# BioSim4 — GPU/OpenCL Data Model Design (Refactoring Proposal)
+# GPU/OpenCL Data Model Design
 
 **Status:** Step 1 of 2 — High-level architectural proposal. **Companion
 document:** `biosim4-data-model-design.md` (current AoS model, used as the
