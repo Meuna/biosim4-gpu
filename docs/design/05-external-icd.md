@@ -40,7 +40,7 @@ format parsed by hand.
 
 The GPU port needs to replace it with something that is:
 
-- Multi-source with precedence: CLI flags first, configuration file second, environment variable last.
+- Multi-source with precedence: CLI flags first, configuration file second
 - Human-readable and human-editable.
 - Supported by a small, portable, C-compatible library available via vcpkg.
 - Expressive enough to support nested or grouped parameters if needed.
@@ -58,11 +58,7 @@ The GPU port needs to replace it with something that is:
 | INI | hand-rolled or `inih` | Trivial parser, no dependency | No types, flat structure |
 | JSON | `cJSON` | Universal | Noisy syntax, no comments |
 
-### 2.4 Environment variable options
-
-**Status: open trade-off.** An ENV parsing library must be identified.
-
-### 2.5 Recommendation
+### 2.4 Recommendation
 
 **TOML via `tomlc99`.** TOML is more expressive than INI (typed values,
 arrays, grouped tables), still human-readable and diff-friendly, and
@@ -74,7 +70,7 @@ standard INI and required custom parsing anyway.
 pick an alternative, pick an ENV option. Once decided, add the chosen
 library to `vcpkg.json` and record the choice here.
 
-### 2.6 File configuration versioning
+### 2.5 File configuration versioning
 
 The parameter file must carry a `format_version` key at the top level. The
 `core` loader rejects files whose version it does not recognise rather than
