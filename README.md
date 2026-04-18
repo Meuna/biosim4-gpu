@@ -11,8 +11,8 @@ and cross-validation.
 
 ## Motivation
 
-The port is 100% vibe-coded which is the main educational objective: for better
-or for worst, I think IA is here to stay and  I wanted a hands-on (or hands-off)
+The port is 100% AI-assisted which is the main educational objective: for better
+or for worst, I think IA is here to stay and  I want a hands-on (or hands-off)
 experience building a complex software using IA. The approach I used is documented
 in the [design section](/docs/design/README.md).
 

@@ -17,6 +17,7 @@ read before filling in any actual source or build files.
 9. [Documentation Organization](#9-documentation-organization)
 10. [Tooling — `tools/` and `benchmarks/`](#10-tooling--tools-and-benchmarks)
 11. [Data — Configurations and Snapshots](#11-data--configurations-and-snapshots)
+
 ## 1. Goals and Non-Goals
 
 ### Goals
