@@ -1,4 +1,4 @@
-# BioSim4 — Repository Structure Design Document
+# Repository Structure Design Document
 
 **Status:** Initial proposal for the new GPU port project.
 **Companion documents:**
@@ -16,8 +16,6 @@ build-system scaffolding, tooling.
 **Out of scope:** Concrete `CMakeLists.txt` content, source code, test code,
 kernel source. These are produced in follow-up steps once this structure is
 agreed upon.
-
----
 
 ## Table of Contents
 
@@ -37,9 +35,6 @@ agreed upon.
 14. [Open Design Decisions](#14-open-design-decisions)
 15. [Portability](#15-portability)
 16. [Implementation Conventions](#16-implementation-conventions)
-17. [What Is Intentionally Omitted](#17-what-is-intentionally-omitted)
-
----
 
 ## 1. Goals and Non-Goals
 
@@ -66,8 +61,6 @@ agreed upon.
 - Support for a package manager other than what CMake's `FetchContent` /
   `find_package` mechanism provides.
 
----
-
 ## 2. Guiding Principles
 
 Three principles drove every choice below. They are restated here because each
@@ -89,13 +82,13 @@ A package is a directory containing:
 Dependencies between packages are explicit: a package links against another
 package's library target, it does not reach into its source tree.
 
-### 2.2 A shared `core` library is non-negotiable
+### 2.2 A shared `core` library
 
 The GPU simulator and the step-by-step simulator must produce biologically
 equivalent behavior (modulo the documented non-determinism of contested moves).
 If the simulation model — genome representation, mutation operators, neural
 network culling, challenge evaluation, RNG — is duplicated across the two
-simulators, the two will drift apart within weeks.
+simulators, the two will drift apart.
 
 Consequence: every piece of logic that is *not* about "how the simulation is
 scheduled" belongs in `core`. The two simulator packages are thin shells
@@ -110,8 +103,6 @@ copies them next to the executable. Optionally, a CMake helper
 (`EmbedKernels.cmake`) can generate a C translation unit that embeds the kernel
 sources as string literals for a single-file distribution — controlled by a
 CMake option (`BIOSIM_EMBED_KERNELS`).
-
----
 
 ## 3. Top-Level Tree
 
@@ -159,8 +150,6 @@ biosim4-gpu/
 | `CMakePresets.json` | Build configurations for IDEs and CI |
 | `vcpkg.json` | Declarative list of C/C++ dependencies — resolved by vcpkg on all platforms |
 
----
-
 ## 4. Package Layout — `packages/`
 
 ```
@@ -184,10 +173,10 @@ packages/
         │  sim-gpu  │         │ sim-stepper │   (executables)
         └───────────┘         └─────────────┘
                                     │
-                              (trace output)
+                              (step output)
                                     │
                               ┌─────▼────┐
-                              │   viz    │    (future — consumes trace files)
+                              │   viz    │    (future — consumes step data)
                               └──────────┘
 ```
 
@@ -199,8 +188,6 @@ packages/
 This graph is **acyclic by construction**. Any attempt to introduce a reverse
 dependency (for example, `core` calling into `sim-gpu`) is an architectural
 regression and should be rejected at review time.
-
----
 
 ## 5. The `core` Package — Rationale and Boundaries
 
@@ -277,8 +264,6 @@ that the host-side xorshift produces bit-identical output to the OpenCL
 kernel's xorshift for the same seed and stream, which is a prerequisite for
 any GPU-vs-stepper equivalence check.
 
----
-
 ## 6. The `sim-gpu` Package
 
 ```
@@ -299,7 +284,7 @@ packages/sim-gpu/
 | OpenCL context | Device selection, platform queries, `cl_context` and `cl_command_queue` lifetime |
 | SoA buffers | Allocation, resizing, host/device transfer of the per-agent SoA buffers described in the GPU data-model document |
 | Kernel registry | Loading of `.cl` sources (file mode or embedded mode), build-time compilation, kernel argument binding |
-| Per-step pipeline | The orchestration of kernels K1 through K5 for one simStep |
+| Per-step pipeline | The orchestration of kernels K1, K2 ... Kn for one simStep |
 | CLI entry point | Argument parsing, generation loop, snapshot read/write |
 
 ### Kernel file naming — a deliberate exception
@@ -313,11 +298,11 @@ feedforward.cl    ← K1 (sensors + feedForward + actions)
 movement.cl       ← K2 (atomic CAS-based movement resolution)
 grid_cleanup.cl   ← K3 (post-death grid cell clearing)
 signal_fade.cl    ← K4 (signal decay pass)
-challenges.cl    ← K5 (per-agent challenge evaluation)
+challenges.cl     ← K5 (per-agent challenge evaluation)
 ```
 
 Rationale: the five-kernel decomposition is a design artifact of the GPU
-data-model document (Section 13 of `biosim4-gpu-data-model-design.md`), not
+data-model document (Section 13 of [02-gpu-data-model.md](02-gpu-data-model.md)), not
 an implementation detail. Each `.cl` file is a named chapter of that design.
 Renaming or merging kernels is a design change that deserves a new ADR, not
 a casual refactor. The file-per-kernel layout locks in this correspondence.
@@ -345,8 +330,6 @@ one with the stepper on the same input, then verifies that the per-agent
 neuron outputs match within a tolerance. Without this test, behavioral drift
 between the two simulators becomes invisible.
 
----
-
 ## 7. The `sim-stepper` Package
 
 ```
@@ -364,8 +347,8 @@ packages/sim-stepper/
 | Role | Description |
 |---|---|
 | Step engine | `step()` + `inspect()` API; runs one simulation step on host arrays |
-| Trace recorder | Emits a versioned per-step trace file for consumption by `viz` |
-| CLI entry point | Loads a snapshot, runs N steps, dumps state or trace |
+| Trace recorder | Emits a versioned per-step trace for consumption by `viz` |
+| CLI entry point | Loads a snapshot, runs N steps or accept stdin/socket controls, dumps state or trace |
 
 ### Purpose
 
@@ -387,14 +370,15 @@ effects immediately." Conflicts are resolved first-come-first-served by
 increasing index. This is deterministic, trivial to reason about, and
 sufficient for visualization purposes.
 
+If the single-thread stepper happens to be too slow, this single-thread design
+can be reverted.
+
 ### Trace format
 
-The stepper writes a trace file per run: a per-step record of every agent's
+The stepper writes a tracefile per run: a per-step record of every agent's
 position, orientation, and a compact neural-state snapshot. The format is
 versioned and documented in `docs/design/` as a small ADR. The visualization
 package consumes this format.
-
----
 
 ## 8. The `viz` Package — Placeholder
 
@@ -409,10 +393,7 @@ The visualization is not implemented yet. The package exists so that:
 - The trace format produced by the stepper has a named consumer from day one,
   preventing it from being designed in isolation.
 
-When we start on it, it will gain `include/`, `src/`, and `tests/` like any
-other package.
-
----
+Multiple visualization packages are planned: tty, web
 
 ## 9. Documentation Organization
 
@@ -420,9 +401,8 @@ other package.
 docs/
 ├── README.md                      ← index of the doc, reading order
 ├── design/
-│   ├── 01-cpu-data-model.md       ← the current CPU model reference
-│   ├── 02-gpu-data-model.md       ← the GPU/SoA proposal (Step 1)
-│   ├── 03-repository-structure.md ← this document
+│   ├── 01-repository-structure.md ← this document
+│   ├── 02-gpu-data-model.md       ← the GPU/SoA proposal
 │   └── adr/                       ← Architecture Decision Records
 │       └── README.md
 ├── build.md                       ← prerequisites, CMake options, build guide
@@ -470,8 +450,6 @@ starting content for this file.
 A shorter, higher-level view than this design document: the packaging model,
 the dependency graph, the data-flow between simulators and viz, intended as a
 five-minute onboarding read for someone new to the project.
-
----
 
 ## 10. Build System Scaffolding
 
@@ -528,8 +506,6 @@ remember the right flag combinations:
 
 The `ocl-cpu` preset is important: it lets the GPU simulator be developed and
 tested on a machine with no discrete GPU, which accelerates iteration.
-
----
 
 ## 11. Tooling — CMake Custom Targets, `tools/`, `benchmarks/`
 
@@ -598,8 +574,6 @@ criterion is different: tests pass/fail, benchmarks produce numbers that
 are compared to a baseline. Keeping them in a separate directory avoids
 polluting the test output and makes them easy to disable in CI.
 
----
-
 ## 12. Data — Configurations and Snapshots
 
 ```
@@ -627,8 +601,6 @@ Format choice is deferred (see Section 14) — likely TOML or INI. The
 Population snapshots are binary files, potentially megabytes each, produced
 on every run. They belong in the working tree but not in the commit history.
 The nested `.gitignore` excludes everything except `.gitkeep`.
-
----
 
 ## 13. Third-Party Dependencies
 
@@ -687,8 +659,6 @@ and package `CMakeLists.txt` files call `find_package(OpenCL)`, `find_package(un
 etc., exactly as they would for system-provided libraries. This keeps the
 build system agnostic of how dependencies are ultimately resolved.
 
----
-
 ## 14. Open Design Decisions
 
 These must be settled before the skeleton is populated with actual content.
@@ -744,8 +714,6 @@ so it is a cross-package contract.
 Not decided. BioSim4's original license is a starting point if the code is
 derived from it; a permissive license (MIT, Apache-2.0) is the natural
 choice otherwise.
-
----
 
 ## 15. Portability
 
@@ -859,8 +827,6 @@ executable-path resolution in `kernels_registry.c` (Section 15.4). If a
 second location ever needs it, it moves to `core/platform.h` with a clean
 portable API.
 
----
-
 ## 16. Implementation Conventions
 
 This section lists the structural rules that constrain how code is laid out
@@ -969,34 +935,3 @@ directly. A violation fails the link step. A lightweight CI check can also
 - The exact content of any given file.
 - The order of functions within a file.
 - Comment style beyond the portability-prologue rule of Section 16.3.
-
----
-
-## 17. What Is Intentionally Omitted
-
-Listed here so that the absence of these items is recognized as a decision,
-not an oversight.
-
-- **Dockerfile / devcontainer.** An OpenCL-ready container would freeze the
-  development environment and make CI reproducible. Worth adding once the
-  OpenCL toolchain is settled.
-- **A `sim-reference` package.** A purely-CPU simulator that reproduces the
-  original CPU BioSim4 bit-for-bit, used as a regression oracle. The stepper
-  is deliberately simplified for visualization, so it does not fill this role.
-  Worth considering if behavioral verification against the original becomes
-  important.
-- **Python scripts for plot generation / evolution analysis.** Eventually
-  useful (Matplotlib-based plots of fitness over generations, for instance),
-  but they belong in a separate `analysis/` tree that can be added without
-  restructuring.
-- **A language binding layer.** No Python or Lua bindings for the simulators.
-  If needed later, they would live in a new `bindings/` tree.
-- **Continuous deployment / release automation.** The CI covers build and
-  test; packaging releases is a later concern.
-
----
-
-**End of repository structure design document.** Once the open decisions of
-Section 14 are settled, the next step is to populate the structure guided by
-the module roles of Sections 5–7 and the conventions of Section 16, starting
-with the top-level `CMakeLists.txt` and the public headers of `core`.
