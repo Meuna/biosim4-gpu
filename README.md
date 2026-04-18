@@ -54,4 +54,4 @@ biosim4-gpu/
 
 ## License
  
-To be determined.
+MIT.

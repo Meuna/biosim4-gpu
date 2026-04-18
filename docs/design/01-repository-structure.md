@@ -121,7 +121,7 @@ biosim4-gpu/
 | File | Purpose |
 |---|---|
 | `README.md` | Elevator pitch, quickstart, pointer to `docs/` |
-| `LICENSE` | License of choice (to be picked) |
+| `LICENSE` | MIT |
 | `CHANGELOG.md` | Keep-a-Changelog format, per-release entries |
 | `.gitignore` | Standard C + CMake ignores plus `data/snapshots/*` |
 | `.gitattributes` | Enforce LF line endings on every platform (see [`03-portable-build.md`](03-portable-build.md)) |
