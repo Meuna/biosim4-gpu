@@ -14,7 +14,7 @@ and cross-validation.
 The port is 100% AI-assisted which is the main educational objective: for better
 or for worst, I think IA is here to stay and  I want a hands-on (or hands-off)
 experience building a complex software using IA. The approach I used is documented
-in the [design section](/docs/design/README.md).
+in the [design section](docs/design/README.md).
 
 The next motivations for this project are also educational:
 

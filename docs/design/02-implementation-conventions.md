@@ -5,13 +5,7 @@ inside every package. These rules are stable across the life of the project
 and apply to every contributor. Where possible, each rule is enforced by the
 build system or CI rather than by prose alone. Build-level conventions (modern
 CMake target-first discipline) are documented separately in
-`03-portable-build.md` Section 4.5.
-
-**Companion documents:**
-- `01-repository-structure.md` — package boundaries and module roles that
-  these conventions protect.
-- `03-portable-build.md` — build-system rules (CMake target-first, sanitizer
-  flags, CI matrix).
+[`03-portable-build.md`](03-portable-build.md).
 
 ## Table of Contents
 
@@ -58,8 +52,8 @@ directly. A violation fails the link step. A lightweight CI check can also
 - Every concerned header carries a prologue comment flagging the constraint
   so future edits don't silently break OpenCL compilation.
 
-See `03-portable-build.md` Section 3.3 for the language-level statement of
-this rule.
+See [`03-portable-build.md`](03-portable-build.md) for the language-level
+statement of this rule.
 
 ## 4. No Mutable Global State in `core`
 
@@ -113,7 +107,8 @@ this rule.
 
 - Specific `.c` / `.h` file names inside each package. That is an
   implementation decision made at coding time, guided by the module roles
-  described in `01-repository-structure.md` Sections 5, 6, and 7.
+  described in [`01-repository-structure.md`](01-repository-structure.md)
+  Sections 5, 6, and 7.
 - The exact content of any given file.
 - The order of functions within a file.
 - Comment style beyond the portability-prologue rule of Section 3.

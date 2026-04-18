@@ -124,7 +124,7 @@ biosim4-gpu/
 | `LICENSE` | License of choice (to be picked) |
 | `CHANGELOG.md` | Keep-a-Changelog format, per-release entries |
 | `.gitignore` | Standard C + CMake ignores plus `data/snapshots/*` |
-| `.gitattributes` | Enforce LF line endings on every platform (see `03-portable-build.md` Section 8.2) |
+| `.gitattributes` | Enforce LF line endings on every platform (see [`03-portable-build.md`](03-portable-build.md)) |
 | `.editorconfig` | Indent, trailing whitespace, final newline for all editors |
 | `.clang-format` | Formatting rules, invoked via the `format` CMake custom target |
 | `.clang-tidy` | Static analysis rules, invoked via the `lint` CMake custom target |
@@ -132,7 +132,7 @@ biosim4-gpu/
 | `CMakePresets.json` | Build configurations for IDEs and CI |
 | `vcpkg.json` | Declarative list of C/C++ dependencies — resolved by vcpkg on all platforms |
 
-The build-related files are documented in detail in `03-portable-build.md`.
+The build-related files are documented in detail in [`03-portable-build.md`](03-portable-build.md).
 
 ## 4. Package Layout — `packages/`
 
@@ -227,8 +227,8 @@ must compile under both the host C compiler and the OpenCL compiler. The
 headers that carry them are kept in a **C99 portable subset** with no
 host-specific includes (no `<stdio.h>`, no `<stdlib.h>`). The rest of `core`
 may use C11 features freely. This constraint is important enough to call out
-in the header prologue of any file concerned. See `03-portable-build.md`
-Section 3.3 for the language-level statement of this rule.
+in the header prologue of any file concerned. See [`03-portable-build.md`](03-portable-build.md)
+for the language-level statement of this rule.
 
 ### The abstract grid and signal APIs
 
@@ -443,8 +443,8 @@ five-minute onboarding read for someone new to the project.
 
 Developer workflow commands (format, lint, build, test, benchmark) are
 exposed as CMake custom targets, not as shell scripts. See
-`03-portable-build.md` Section 7 for the list of targets and how they are
-invoked.
+[`03-portable-build.md`](03-portable-build.md) for the list of targets and how
+they are invoked.
 
 ### `tools/` — auxiliary CLI utilities
 
@@ -493,8 +493,8 @@ Running a reproducible experiment requires a stable, committed parameter
 file. `data/configs/` holds named configurations (one per challenge scenario,
 typically), and every configuration file is under version control.
 
-Format choice is an open decision documented in `05-external-icd.md`
-Section 2. The `core/params.h` loader handles whatever is chosen.
+Format choice is an open decision documented in [`05-external-icd.md`](05-external-icd.md).
+The `core/params.h` loader handles whatever is chosen.
 
 ### Snapshots are not versioned
 

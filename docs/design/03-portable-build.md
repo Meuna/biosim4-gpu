@@ -356,10 +356,10 @@ Every CI job runs three things:
 1. A full build of all packages.
 2. The unit test suite, including the RNG equivalence test from `core`.
 3. The **cross-simulator equivalence test** described in
-   `01-repository-structure.md` (Section 6) — this is the ultimate
-   portability check: if the GPU kernel under PoCL and the stepper on the
-   host CPU produce matching outputs across all four configurations, the
-   port is behaviorally consistent on the entire matrix.
+   [`01-repository-structure.md`](01-repository-structure.md)
+   — this is the ultimate portability check: if the GPU kernel under PoCL
+   and the stepper on the host CPU produce matching outputs across all four
+   configurations, the port is behaviorally consistent on the entire matrix.
 
 ## 10. Library Portability and Non-Portable Code Quarantine
 
