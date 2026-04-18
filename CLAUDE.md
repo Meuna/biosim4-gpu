@@ -69,7 +69,7 @@ Movement conflict resolution: atomic CAS (no move queues). Death writes:
 idempotent (no death queues). Generation boundary (reproduction, mutation,
 spawn) stays on the host.
 
-## Code Conventions (§12 of `docs/design/01-repository-structure.md`)
+## Code Conventions (`docs/design/02-implementation-conventions.md`)
 
 - **Files:** `snake_case.c`, `snake_case.h`
 - **Public API:** `biosim_` prefix — e.g. `biosim_genome_mutate`
@@ -88,10 +88,12 @@ spawn) stays on the host.
 
 - `docs/design/01-repository-structure.md` — monorepo layout, package
   boundaries, build conventions, naming rules
-- `docs/design/02-gpu-data-model.md` — SoA layout, kernel decomposition,
-  conflict resolution strategy
+- `docs/design/02-implementation-conventions.md` — code layout invariants
+  (naming, headers, error handling, host/device portability)
 - `docs/design/03-portable-build.md` — CMake/vcpkg setup, preset list,
   CI matrix, platform-specific concerns
-- `docs/design/04-external-icd.md` — open decisions: config file format
+- `docs/design/04-gpu-data-model.md` — SoA layout, kernel decomposition,
+  conflict resolution strategy
+- `docs/design/05-external-icd.md` — open decisions: config file format
   (TOML recommended) and snapshot binary format
 - `docs/design/adr/` — Architecture Decision Records for specific choices

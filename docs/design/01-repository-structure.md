@@ -17,8 +17,6 @@ read before filling in any actual source or build files.
 9. [Documentation Organization](#9-documentation-organization)
 10. [Tooling — `tools/` and `benchmarks/`](#10-tooling--tools-and-benchmarks)
 11. [Data — Configurations and Snapshots](#11-data--configurations-and-snapshots)
-12. [Implementation Conventions](#12-implementation-conventions)
-
 ## 1. Goals and Non-Goals
 
 ### Goals
@@ -288,7 +286,7 @@ challenges.cl     ← K5 (per-agent challenge evaluation)
 ```
 
 Rationale: the five-kernel decomposition is a design artifact of the GPU
-data-model document (Section 13 of [02-gpu-data-model.md](02-gpu-data-model.md)), not
+data-model document (Section 13 of [04-gpu-data-model.md](04-gpu-data-model.md)), not
 an implementation detail. Each `.cl` file is a named chapter of that design.
 Renaming or merging kernels is a design change that deserves a new ADR, not
 a casual refactor. The file-per-kernel layout locks in this correspondence.
@@ -387,10 +385,11 @@ Multiple visualization packages are planned: tty, web
 docs/
 ├── README.md                      ← index of the doc, reading order
 ├── design/
-│   ├── 01-repository-structure.md ← this document
-│   ├── 02-gpu-data-model.md       ← the GPU/SoA proposal
-│   ├── 03-portable-build.md       ← build chain and portability
-│   ├── 04-external-icd.md         ← external interface formats (config, snapshot)
+│   ├── 01-repository-structure.md    ← this document
+│   ├── 02-implementation-conventions.md ← code layout invariants
+│   ├── 04-gpu-data-model.md          ← the GPU/SoA proposal
+│   ├── 03-portable-build.md          ← build chain and portability
+│   ├── 05-external-icd.md            ← external interface formats (config, snapshot)
 │   └── adr/                       ← Architecture Decision Records
 │       └── README.md
 ├── build.md                       ← prerequisites, CMake options, build guide
@@ -493,7 +492,7 @@ Running a reproducible experiment requires a stable, committed parameter
 file. `data/configs/` holds named configurations (one per challenge scenario,
 typically), and every configuration file is under version control.
 
-Format choice is an open decision documented in `04-external-icd.md`
+Format choice is an open decision documented in `05-external-icd.md`
 Section 2. The `core/params.h` loader handles whatever is chosen.
 
 ### Snapshots are not versioned
@@ -501,104 +500,3 @@ Section 2. The `core/params.h` loader handles whatever is chosen.
 Population snapshots are binary files, potentially megabytes each, produced
 on every run. They belong in the working tree but not in the commit history.
 The nested `.gitignore` excludes everything except `.gitkeep`.
-
-## 12. Implementation Conventions
-
-This section lists the structural rules that constrain how code is laid out
-inside each package. They are **invariants** — stable across the life of the
-project — and are meant to be respected by every contributor, human or
-otherwise. Whenever possible, a rule is also enforced by the build system or
-the CI, not just by prose. Build-level conventions (modern CMake
-target-first discipline) are documented separately in `03-portable-build.md`
-Section 4.5.
-
-### 12.1 Package boundaries and dependency direction
-
-- `core` depends only on the C standard library.
-- `sim-gpu` depends on `core` + OpenCL.
-- `sim-stepper` depends on `core` only.
-- `viz` (future) depends on `core` and on a rendering library.
-- Reverse dependencies are forbidden. `core` must never `#include` anything
-  from `sim-gpu`, `sim-stepper`, or `viz`.
-
-**Enforcement.** The CMake `target_link_libraries` graph expresses this
-directly. A violation fails the link step. A lightweight CI check can also
-`grep` for disallowed includes to give a clearer error message earlier.
-
-### 12.2 Public vs. private headers
-
-- **Public headers** live under `include/biosim/<package>/`. They form the
-  API consumed by other packages and by tests.
-- **Private headers** live alongside their implementation in `src/`. They
-  are never visible outside the package.
-- A header in `include/` must compile standalone (every symbol it uses is
-  either declared locally or included explicitly).
-
-### 12.3 Host/device portability of shared modules
-
-- Modules whose symbols are called from OpenCL kernels (the POD types and
-  the RNG, plus any future sharing) must compile both as C11 host code and
-  as OpenCL C.
-- This means: no `<stdio.h>`, no `<stdlib.h>`, no `<string.h>`, no host-only
-  macros inside those headers. Only fixed-width integer types, arithmetic,
-  and inline functions.
-- Every concerned header carries a prologue comment flagging the constraint
-  so future edits don't silently break OpenCL compilation.
-
-### 12.4 No mutable global state in `core`
-
-- `core` functions take their state by parameter. No file-scope mutable
-  variables, no singletons, no thread-local pseudo-globals.
-- Rationale: `core` is called from two different execution contexts (GPU
-  host thread, single-threaded stepper) and may later be called from a
-  third (GPU kernel compilation). Hidden global state would silently make
-  the two simulators behave differently.
-
-### 12.5 Tests mirror sources
-
-- When a source module `foo` in a package's `src/` has non-trivial logic, a
-  corresponding `test_foo.c` lives in the package's `tests/`.
-- Tests that span modules (integration-style) are named by intent, not by
-  source file (e.g. `test_cross_simulator_equivalence.c`).
-- The mirror rule is a soft convention, not a build-enforced rule — it
-  applies where it aids navigation, not dogmatically.
-
-### 12.6 Naming conventions
-
-- **Files and directories:** `snake_case.c`, `snake_case.h`. No hyphens in C
-  source file names (they confuse some build tools and debuggers). Package
-  directory names can use hyphens (`sim-gpu`, `sim-stepper`) because they
-  are not C identifiers.
-- **Public API symbols:** prefixed with `biosim_` to avoid collisions in
-  consumer code. Example: `biosim_genome_mutate`, not `mutate_genome`.
-- **Types:** the same prefix, `biosim_coord_t`, `biosim_gene_t`, etc., with
-  a `_t` suffix for typedef'd aggregates.
-- **OpenCL kernel entry points:** prefixed `k_` to visually distinguish them
-  from host functions in logs and diagnostics. Example: `k_feedforward`,
-  `k_movement`.
-
-### 12.7 File length and cohesion
-
-- No hard line limit. A file should contain exactly one cohesive module's
-  worth of code. If a `.c` file drifts past ~800 lines or accumulates
-  unrelated responsibilities, it is a candidate for splitting.
-- Splitting is an implementation decision made when the evidence is in the
-  code, not preemptively.
-
-### 12.8 Error handling
-
-- All functions that can fail return a status code (`biosim_status_t` or an
-  equivalent enum in `core`). No asserts as a substitute for error
-  handling.
-- Asserts are permitted for invariants that would indicate a bug
-  (`assert(alive[i] == 0 || alive[i] == 1)`), not for recoverable runtime
-  conditions.
-
-### 12.9 What this section deliberately does not prescribe
-
-- Specific `.c` / `.h` file names inside each package. That is an
-  implementation decision made at coding time, guided by the module roles
-  described in Sections 5, 6, and 7.
-- The exact content of any given file.
-- The order of functions within a file.
-- Comment style beyond the portability-prologue rule of Section 12.3.
