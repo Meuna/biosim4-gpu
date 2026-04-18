@@ -41,7 +41,8 @@ biosim4-gpu/
         ├── README.md                  ← describe the design approach
         ├── 01-repository-structure.md ← how this repo will be laid out
         ├── 02-gpu-data-model.md       ← the proposed GPU/SoA model
-        └── 03-portable-build.md       ← how the build chain support portability
+        ├── 03-portable-build.md       ← how the build chain supports portability
+        └── 04-external-icd.md         ← external interface formats (config, snapshot)
 ```
 
 ## Target platforms

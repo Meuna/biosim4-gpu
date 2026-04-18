@@ -17,8 +17,7 @@ read before filling in any actual source or build files.
 9. [Documentation Organization](#9-documentation-organization)
 10. [Tooling — `tools/` and `benchmarks/`](#10-tooling--tools-and-benchmarks)
 11. [Data — Configurations and Snapshots](#11-data--configurations-and-snapshots)
-12. [Open Design Decisions](#12-open-design-decisions)
-13. [Implementation Conventions](#13-implementation-conventions)
+12. [Implementation Conventions](#12-implementation-conventions)
 
 ## 1. Goals and Non-Goals
 
@@ -391,6 +390,7 @@ docs/
 │   ├── 01-repository-structure.md ← this document
 │   ├── 02-gpu-data-model.md       ← the GPU/SoA proposal
 │   ├── 03-portable-build.md       ← build chain and portability
+│   ├── 04-external-icd.md         ← external interface formats (config, snapshot)
 │   └── adr/                       ← Architecture Decision Records
 │       └── README.md
 ├── build.md                       ← prerequisites, CMake options, build guide
@@ -493,8 +493,8 @@ Running a reproducible experiment requires a stable, committed parameter
 file. `data/configs/` holds named configurations (one per challenge scenario,
 typically), and every configuration file is under version control.
 
-Format choice is deferred (see Section 12) — likely TOML or INI. The
-`core/params.h` loader handles whatever is chosen.
+Format choice is an open decision documented in `04-external-icd.md`
+Section 2. The `core/params.h` loader handles whatever is chosen.
 
 ### Snapshots are not versioned
 
@@ -502,33 +502,7 @@ Population snapshots are binary files, potentially megabytes each, produced
 on every run. They belong in the working tree but not in the commit history.
 The nested `.gitignore` excludes everything except `.gitkeep`.
 
-## 12. Open Design Decisions
-
-Structural decisions still to be settled before the skeleton is populated
-with actual content. Build-chain decisions (C standard, test framework,
-OpenCL version target) are listed in `03-portable-build.md`.
-
-### 12.1 Configuration file format
-
-TOML (via a small library like `tomlc99`) or INI (simpler, parseable by hand).
-Biosim4 originally used INI. Recommendation: **TOML** — more expressive,
-still human-readable, widely understood. The chosen library is declared in
-`vcpkg.json`.
-
-### 12.2 Snapshot binary format
-
-A small ADR is needed. Proposed: magic number, version header, per-buffer
-length-prefixed blocks in SoA order. Byte order is little-endian (the
-dominant platform — see `03-portable-build.md` Section 8.3). The format is
-consumed by both simulators and by `viz`, so it is a cross-package contract.
-
-### 12.3 License
-
-Not decided. BioSim4's original license is a starting point if the code is
-derived from it; a permissive license (MIT, Apache-2.0) is the natural
-choice otherwise.
-
-## 13. Implementation Conventions
+## 12. Implementation Conventions
 
 This section lists the structural rules that constrain how code is laid out
 inside each package. They are **invariants** — stable across the life of the
@@ -538,7 +512,7 @@ the CI, not just by prose. Build-level conventions (modern CMake
 target-first discipline) are documented separately in `03-portable-build.md`
 Section 4.5.
 
-### 13.1 Package boundaries and dependency direction
+### 12.1 Package boundaries and dependency direction
 
 - `core` depends only on the C standard library.
 - `sim-gpu` depends on `core` + OpenCL.
@@ -551,7 +525,7 @@ Section 4.5.
 directly. A violation fails the link step. A lightweight CI check can also
 `grep` for disallowed includes to give a clearer error message earlier.
 
-### 13.2 Public vs. private headers
+### 12.2 Public vs. private headers
 
 - **Public headers** live under `include/biosim/<package>/`. They form the
   API consumed by other packages and by tests.
@@ -560,7 +534,7 @@ directly. A violation fails the link step. A lightweight CI check can also
 - A header in `include/` must compile standalone (every symbol it uses is
   either declared locally or included explicitly).
 
-### 13.3 Host/device portability of shared modules
+### 12.3 Host/device portability of shared modules
 
 - Modules whose symbols are called from OpenCL kernels (the POD types and
   the RNG, plus any future sharing) must compile both as C11 host code and
@@ -571,7 +545,7 @@ directly. A violation fails the link step. A lightweight CI check can also
 - Every concerned header carries a prologue comment flagging the constraint
   so future edits don't silently break OpenCL compilation.
 
-### 13.4 No mutable global state in `core`
+### 12.4 No mutable global state in `core`
 
 - `core` functions take their state by parameter. No file-scope mutable
   variables, no singletons, no thread-local pseudo-globals.
@@ -580,7 +554,7 @@ directly. A violation fails the link step. A lightweight CI check can also
   third (GPU kernel compilation). Hidden global state would silently make
   the two simulators behave differently.
 
-### 13.5 Tests mirror sources
+### 12.5 Tests mirror sources
 
 - When a source module `foo` in a package's `src/` has non-trivial logic, a
   corresponding `test_foo.c` lives in the package's `tests/`.
@@ -589,7 +563,7 @@ directly. A violation fails the link step. A lightweight CI check can also
 - The mirror rule is a soft convention, not a build-enforced rule — it
   applies where it aids navigation, not dogmatically.
 
-### 13.6 Naming conventions
+### 12.6 Naming conventions
 
 - **Files and directories:** `snake_case.c`, `snake_case.h`. No hyphens in C
   source file names (they confuse some build tools and debuggers). Package
@@ -603,7 +577,7 @@ directly. A violation fails the link step. A lightweight CI check can also
   from host functions in logs and diagnostics. Example: `k_feedforward`,
   `k_movement`.
 
-### 13.7 File length and cohesion
+### 12.7 File length and cohesion
 
 - No hard line limit. A file should contain exactly one cohesive module's
   worth of code. If a `.c` file drifts past ~800 lines or accumulates
@@ -611,7 +585,7 @@ directly. A violation fails the link step. A lightweight CI check can also
 - Splitting is an implementation decision made when the evidence is in the
   code, not preemptively.
 
-### 13.8 Error handling
+### 12.8 Error handling
 
 - All functions that can fail return a status code (`biosim_status_t` or an
   equivalent enum in `core`). No asserts as a substitute for error
@@ -620,11 +594,11 @@ directly. A violation fails the link step. A lightweight CI check can also
   (`assert(alive[i] == 0 || alive[i] == 1)`), not for recoverable runtime
   conditions.
 
-### 13.9 What this section deliberately does not prescribe
+### 12.9 What this section deliberately does not prescribe
 
 - Specific `.c` / `.h` file names inside each package. That is an
   implementation decision made at coding time, guided by the module roles
   described in Sections 5, 6, and 7.
 - The exact content of any given file.
 - The order of functions within a file.
-- Comment style beyond the portability-prologue rule of Section 13.3.
+- Comment style beyond the portability-prologue rule of Section 12.3.
