@@ -47,9 +47,33 @@ The GPU port needs to replace it with something that is:
 - Expressive enough to support nested or grouped parameters if needed.
 - Version-controlable without binary noise.
 
-### 2.2 CLI flags options
+### 2.2 CLI flags
 
-**Status: open trade-off.** A CLI parsing library must be identified.
+**Status: partially decided.** The flags below are settled; a CLI parsing
+library is still an open decision (see Section 2.3).
+
+#### Flags common to both `sim-gpu` and `sim-stepper`
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `--config <path>` | file path | `data/configs/default.toml` | Path to the TOML simulation parameter file |
+| `--snapshot-in <path>` | file path | _(none)_ | Resume from a saved population snapshot |
+| `--snapshot-out <path>` | file path | _(none)_ | Write a snapshot at the end of the run |
+| `--generations <n>` | integer ≥ 1 | 1 | Number of generations to simulate |
+
+#### `sim-gpu`-only flags
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `--device cpu\|gpu\|any` | `cpu`, `gpu`, `any` | `any` | OpenCL device type to use: `cpu` → `CL_DEVICE_TYPE_CPU` (PoCL on CI/ARM), `gpu` → `CL_DEVICE_TYPE_GPU`, `any` → `CL_DEVICE_TYPE_DEFAULT` (driver picks best available) |
+
+`sim-stepper` does not expose `--device`; it always runs on the host CPU.
+
+#### Precedence
+
+CLI flags override the TOML config file. Any parameter not supplied on the
+command line falls back to the config file, and any parameter absent from the
+config file falls back to the compiled-in default.
 
 ### 2.3 File format options
 

@@ -37,7 +37,7 @@ Once scaffolded, the build will use **CMake + vcpkg**:
 
 ```sh
 # Configure (VCPKG_ROOT must be set)
-cmake --preset debug    # or: release, asan, ocl-cpu, ocl-gpu
+cmake --preset debug    # or: release, asan, ci
 
 # Build
 cmake --build build

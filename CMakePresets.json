@@ -51,29 +51,13 @@
     },
 
     {
-      "name": "ocl-cpu",
-      "displayName": "OpenCL CPU (PoCL)",
-      "description": "Release build that forces OpenCL to execute on the CPU via PoCL — no discrete GPU required; primary CI path",
+      "name": "ci",
+      "displayName": "CI",
+      "description": "Release build with tests enabled — used by all CI jobs",
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "BIOSIM_BUILD_TESTS": "ON"
-      },
-      "environment": {
-        "POCL_DEVICES": "cpu",
-        "OCL_ICD_FILENAMES": ""
-      }
-    },
-
-    {
-      "name": "ocl-gpu",
-      "displayName": "OpenCL GPU",
-      "description": "Release build targeting a discrete GPU — requires a vendor OpenCL ICD installed on the system",
-      "inherits": "base",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "BIOSIM_BUILD_TESTS": "ON",
-        "BIOSIM_EMBED_KERNELS": "ON"
       }
     }
   ],
@@ -95,14 +79,9 @@
       "description": "Build with sanitizers enabled"
     },
     {
-      "name": "ocl-cpu",
-      "configurePreset": "ocl-cpu",
-      "description": "Build targeting PoCL CPU runtime"
-    },
-    {
-      "name": "ocl-gpu",
-      "configurePreset": "ocl-gpu",
-      "description": "Build targeting a discrete GPU runtime"
+      "name": "ci",
+      "configurePreset": "ci",
+      "description": "Build for CI (release + tests)"
     }
   ],
 
@@ -120,9 +99,9 @@
       "output": { "outputOnFailure": true }
     },
     {
-      "name": "ocl-cpu",
-      "configurePreset": "ocl-cpu",
-      "description": "Run tests against the PoCL CPU runtime",
+      "name": "ci",
+      "configurePreset": "ci",
+      "description": "Run tests in CI",
       "output": { "outputOnFailure": true }
     }
   ]

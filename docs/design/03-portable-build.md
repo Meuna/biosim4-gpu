@@ -153,15 +153,9 @@ remember the right flag combinations:
 | Preset | Purpose |
 |---|---|
 | `debug` | Debug info, no optimization, asserts on |
-| `release` | O3, LTO, asserts off |
+| `release` | O3, LTO, asserts off, kernels embedded |
 | `asan` | Debug info + AddressSanitizer + UBSan |
-| `ocl-cpu` | Release, forces the OpenCL CPU runtime (PoCL, Intel OpenCL) |
-| `ocl-gpu` | Release, forces a discrete GPU runtime |
-
-The `ocl-cpu` preset is strategically important: it allows the GPU simulator
-to be developed and tested on machines without a discrete GPU, including the
-ARM cloud instances discussed in Section 2.1 and the CI runners discussed in
-Section 9.
+| `ci` | Release + tests enabled |
 
 ### 4.5 Modern CMake — target-first, no globals
 
@@ -329,10 +323,8 @@ Per-platform copy-pastable command lines live in `docs/build.md`:
 ### 8.5 ARM64 cloud instances — typically no discrete GPU
 
 Cloud ARM instances (AWS Graviton, Ampere Altra, Oracle Ampere A1) are pure
-CPU. The `ocl-cpu` preset described in Section 4.4 uses **PoCL**, an OpenCL
-CPU runtime that fully supports ARM64, making the GPU simulator testable on
-ARM servers with no GPU present. This is also the recommended setup for CI
-on non-GPU runners.
+CPU. Install **PoCL** (an OpenCL CPU runtime that fully supports ARM64) and
+pass `--device cpu` when invoking the simulator.
 
 ## 9. Continuous Integration
 
@@ -358,8 +350,9 @@ Every CI job runs three things:
 3. The **cross-simulator equivalence test** described in
    [`01-repository-structure.md`](01-repository-structure.md)
    — this is the ultimate portability check: if the GPU kernel under PoCL
-   and the stepper on the host CPU produce matching outputs across all four
-   configurations, the port is behaviorally consistent on the entire matrix.
+   (invoked with `--device cpu`) and the stepper on the host CPU produce
+   matching outputs across all four configurations, the port is behaviorally
+   consistent on the entire matrix.
 
 ## 10. Library Portability and Non-Portable Code Quarantine
 
