@@ -426,10 +426,7 @@ commit messages or lost.
 A single file defines every GPU-specific term used in the rest of the
 documentation: *warp*, *wavefront*, *coalescing*, *warp divergence*, *warp
 coherence*, *pointer chasing*, *AoS/SoA*, *atomic contention*, *local memory*,
-*image object*, *texture cache*. Every other design document links to
-anchors in this file (for example, `gpu-primer.md#warp-divergence`) rather
-than redefining the term. Section 2 of the GPU design document is the
-starting content for this file.
+*image object*, *texture cache*.
 
 ### `build.md` and `usage.md`
 

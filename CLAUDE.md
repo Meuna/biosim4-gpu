@@ -16,7 +16,7 @@ specification; implementation follows them.
   decision (new package, new directory, new top-level file), consult the
   relevant design document. When in doubt, ask the user rather than guessing.
 
-- **Conventions are normative.** The rules in Section 13 of
+- **Conventions are normative.** The rules in
   `01-repository-structure.md` (naming, error handling, host/device
   portability, no global state in `core`) apply to every file written in
   this repository. They are enforced by review, not by linters alone.

@@ -63,7 +63,7 @@ sorting implementation, fingerprint hash choice.
 
 ## 2. Design Principles
 
-Crystallized from the pitfalls identified in Section 14 of the source document
+Crystallized from the pitfalls identified in the source document
 and the GPU concepts in [`gpu-primer.md`](../gpu-primer.md):
 
 1. **Everything per-agent is SoA.** One flat `__global` buffer per field,
@@ -920,8 +920,8 @@ only multiplies by 16, yielding ~200 MiB — still trivial on a 4 GiB+ GPU.
 ## 16. Deferred Decisions for Step 2
 
 Each of the following is a discrete topic we will tackle one at a time in
-follow-up conversations. They correspond to the pitfalls from Section 14 of the
-source document, re-framed against the new architecture.
+follow-up conversations. They correspond to the pitfalls from the source document,
+re-framed against the new architecture.
 
 1. **Genome length distribution vs. warp coherence.** Quantify the divergence
    cost of the sort-then-iterate strategy vs. the uniform-loop-with-predicate
