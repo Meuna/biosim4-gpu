@@ -1,0 +1,43 @@
+# Comma-separated list of check globs; prefix with - to disable a check or group
+Checks: >
+  clang-analyzer-*,
+  bugprone-*,
+  misc-*,
+  portability-*,
+  readability-*,
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -misc-include-cleaner
+
+# Promote every enabled warning to an error — keeps the codebase warning-free
+WarningsAsErrors: "*"
+
+# Only report diagnostics for files whose path matches this pattern;
+# empty string means all files passed on the command line are checked
+HeaderFilterRegex: "packages/.*\\.h$"
+
+# Per-check configuration knobs
+CheckOptions:
+  # Require ALL_CAPS for macro names (biosim_* prefixed macros included)
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+
+  # Require snake_case for function names (biosim_ prefix enforced by review)
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+
+  # Require snake_case for local variables
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+
+  # Require snake_case for struct member names
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+
+  # Require snake_case for parameter names
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+
+  # Require UPPER_CASE for enum constants
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+
+  "name": "biosim4-gpu",
+
+  "version-string": "0.1.0",
+
+  "builtin-baseline": "Update by running: vcpkg x-update-baseline",
+
+  "dependencies": [
+    "opencl",
+    "unity",
+    "tomlc99"
+  ]
+}

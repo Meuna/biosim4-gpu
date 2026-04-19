@@ -1,0 +1,36 @@
+# Stop EditorConfig from looking in parent directories beyond this root
+root = true
+
+# ── Defaults for all files ─────────────────────────────────────────────────────
+[*]
+# All text files use UTF-8; avoids BOM issues with MSVC and OpenCL drivers
+charset = utf-8
+# Spaces only — tabs cause misalignment in diffs and across editors
+indent_style = space
+# 4-space indent matches the project's C style
+indent_size = 4
+# LF everywhere; .gitattributes handles checkout line endings per platform
+end_of_line = lf
+# Strip trailing spaces on save — prevents whitespace-only diff noise
+trim_trailing_whitespace = true
+# POSIX requires a newline at EOF; some tools warn without it
+insert_final_newline = true
+
+# ── CMake files ────────────────────────────────────────────────────────────────
+[{CMakeLists.txt,*.cmake}]
+# CMake convention is 2-space indentation
+indent_size = 2
+
+# ── Markdown ───────────────────────────────────────────────────────────────────
+[*.md]
+# Markdown uses two trailing spaces as a hard line break — don't strip them
+trim_trailing_whitespace = false
+
+# ── JSON manifests (vcpkg.json, CMakePresets.json) ────────────────────────────
+[*.json]
+indent_size = 2
+
+# ── OpenCL kernel sources ──────────────────────────────────────────────────────
+[*.cl]
+# Kernels follow the same C style as host code
+indent_size = 4

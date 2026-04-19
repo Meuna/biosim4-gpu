@@ -1,0 +1,61 @@
+# ── Build output ──────────────────────────────────────────────────────────────
+
+# CMake out-of-source build trees (all presets land here by convention)
+build/
+out/
+
+# vcpkg installs packages beside the build tree; exclude them from commits
+vcpkg_installed/
+
+# ── CMake user overrides ───────────────────────────────────────────────────────
+
+# Per-developer preset overrides (never committed; each dev keeps their own)
+CMakeUserPresets.json
+
+# MSVC / CLion per-user project settings
+*.vcxproj.user
+*.user
+.vs/
+
+# ── Compiled artifacts ─────────────────────────────────────────────────────────
+
+# Object files
+*.o
+*.obj
+
+# Static libraries
+*.a
+*.lib
+
+# Shared libraries / DLLs
+*.so
+*.so.*
+*.dll
+*.dylib
+
+# Executables
+*.exe
+*.out
+
+# ── Simulation data ────────────────────────────────────────────────────────────
+
+# Population snapshots: binary, potentially very large, not versioned
+data/snapshots/*
+!data/snapshots/.gitkeep
+
+# ── Editor metadata ────────────────────────────────────────────────────────────
+
+# VS Code (workspace settings are project-specific; launch.json is personal)
+.vscode/
+
+# JetBrains IDEs (CLion)
+.idea/
+cmake-build-*/
+
+# Vim swap / backup files
+*.swp
+*.swo
+*~
+
+# macOS Finder metadata
+.DS_Store

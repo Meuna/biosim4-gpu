@@ -1,0 +1,129 @@
+{
+  "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema/cmake-presets-schema.json",
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "description": "Shared defaults inherited by all visible presets — not selectable directly",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+      }
+    },
+
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug info, no optimization, asserts enabled — the default dev configuration",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BIOSIM_BUILD_TESTS": "ON"
+      }
+    },
+
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "O3 + LTO, asserts disabled — use for performance measurements and shipping",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BIOSIM_BUILD_TESTS": "OFF",
+        "BIOSIM_EMBED_KERNELS": "ON"
+      }
+    },
+
+    {
+      "name": "asan",
+      "displayName": "AddressSanitizer",
+      "description": "Debug info + AddressSanitizer + UBSan — GCC and Clang only",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BIOSIM_BUILD_TESTS": "ON",
+        "BIOSIM_SANITIZE": "ON"
+      }
+    },
+
+    {
+      "name": "ocl-cpu",
+      "displayName": "OpenCL CPU (PoCL)",
+      "description": "Release build that forces OpenCL to execute on the CPU via PoCL — no discrete GPU required; primary CI path",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BIOSIM_BUILD_TESTS": "ON"
+      },
+      "environment": {
+        "POCL_DEVICES": "cpu",
+        "OCL_ICD_FILENAMES": ""
+      }
+    },
+
+    {
+      "name": "ocl-gpu",
+      "displayName": "OpenCL GPU",
+      "description": "Release build targeting a discrete GPU — requires a vendor OpenCL ICD installed on the system",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BIOSIM_BUILD_TESTS": "ON",
+        "BIOSIM_EMBED_KERNELS": "ON"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "description": "Incremental build in debug mode"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "description": "Parallel release build"
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "description": "Build with sanitizers enabled"
+    },
+    {
+      "name": "ocl-cpu",
+      "configurePreset": "ocl-cpu",
+      "description": "Build targeting PoCL CPU runtime"
+    },
+    {
+      "name": "ocl-gpu",
+      "configurePreset": "ocl-gpu",
+      "description": "Build targeting a discrete GPU runtime"
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "description": "Run tests built under the debug preset",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "description": "Run sanitizer-instrumented tests",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "ocl-cpu",
+      "configurePreset": "ocl-cpu",
+      "description": "Run tests against the PoCL CPU runtime",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

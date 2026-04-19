@@ -1,0 +1,22 @@
+# Normalize all text files to LF in the repository; check out as platform-native
+* text=auto
+
+# Shell scripts must always have LF — they run under bash in CI even on Windows
+*.sh text eol=lf
+
+# OpenCL kernel sources must always have LF — the OpenCL runtime parses them as-is
+*.cl text eol=lf
+
+# CMake files: text, no forced EOL (CMake handles both on all platforms)
+CMakeLists.txt text
+*.cmake text
+
+# Markdown and documentation: text, platform-native checkout
+*.md text
+
+# JSON manifests: text (vcpkg and CMakePresets are parsed on all platforms)
+*.json text
+
+# Binary simulation snapshots: no EOL conversion, no diff
+*.snap binary
+*.bin binary
