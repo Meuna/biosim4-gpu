@@ -132,10 +132,12 @@ OpenCL on Windows, and not integrate with vcpkg's manifest mode.
 
 ```
 cmake/
+├── Dependencies.cmake             ← FetchContent for third-party dependencies w/o vcpkg port
 ├── FindOpenCL.cmake               ← fallback if the system-provided one is insufficient
 ├── CompilerWarnings.cmake         ← strict warnings, branching on compiler (MSVC vs GCC/Clang)
 ├── Sanitizers.cmake               ← opt-in sanitizers, advertising availability per compiler
-└── EmbedKernels.cmake             ← helper for packaging .cl files
+├── EmbedKernels.cmake             ← helper for packaging .cl files
+└── Version.cmake                  ← manage injection of git commit data
 ```
 
 Each module encapsulates one concern. `CompilerWarnings.cmake` branches on
@@ -173,30 +175,30 @@ These rules eliminate the pathologies that make old CMake codebases
 unreadable: global state, hidden dependencies, accidental leakage of private
 includes into public APIs.
 
-## 5. Third-Party Dependencies — vcpkg
+## 5. Third-Party Dependencies
 
 ### 5.1 Strategy
 
-The project uses **vcpkg** in manifest mode as its primary dependency
-mechanism. A `vcpkg.json` file at the repository root declares every
-third-party library the project needs. vcpkg reads this manifest at configure
-time and provides the dependencies through standard CMake `find_package`
-calls — no code needs to know whether a dependency came from vcpkg or from
-the system.
+Two mechanisms are used depending on whether a library has a port available
+in the vcpkg registry:
 
-Rationale:
-- **Cross-platform uniformity.** The same manifest resolves dependencies on
-  Linux, Windows, and (later) macOS and ARM64. This matters most on Windows,
-  where there is no system package manager that covers the C/C++ ecosystem.
-- **Version pinning.** The manifest pins versions via a `builtin-baseline`
-  field, so every contributor and every CI run gets the same library
-  versions.
-- **Zero commits to `third_party/`.** Source code of dependencies never
-  enters the Git history.
+- **vcpkg manifest mode** for libraries that have a vcpkg port. vcpkg reads
+  `vcpkg.json` at configure time and provides dependencies through standard
+  `find_package` calls. The build system is agnostic of how dependencies are
+  resolved.
+- **CMake `FetchContent`** for libraries that are not in the vcpkg registry.
+  Dependencies are downloaded at configure time into the build directory —
+  nothing is committed to the repository. The `FetchContent` declarations live
+  in `cmake/Dependencies.cmake`, included by the root `CMakeLists.txt`.
 
-### 5.2 Manifest content
+| Library | Mechanism | Reason |
+|---|---|---|
+| `opencl` | vcpkg | Available in registry; pulls headers + ICD loader |
+| `argtable3` | vcpkg | Available in registry |
+| `tomlc99` | FetchContent | No vcpkg port |
+| `unity` | FetchContent | No vcpkg port |
 
-Typical `vcpkg.json`:
+### 5.2 vcpkg manifest
 
 ```json
 {
@@ -204,32 +206,40 @@ Typical `vcpkg.json`:
   "version-string": "0.1.0",
   "dependencies": [
     "opencl",
-    "unity",
-    "tomlc99"
+    "argtable3"
   ],
   "builtin-baseline": "<pinned commit hash of the vcpkg registry>"
 }
 ```
 
-Note that `opencl` pulls both `opencl-headers` and `opencl-icd-loader`, which
-on Windows removes the single most common build failure (missing ICD loader).
+`opencl` pulls both `opencl-headers` and `opencl-icd-loader`, which on
+Windows removes the most common build failure (missing ICD loader). A CMake
+preset activates vcpkg by pointing `CMAKE_TOOLCHAIN_FILE` at
+`$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`.
 
-### 5.3 CMake integration
+### 5.3 FetchContent
 
-A CMake preset activates vcpkg by pointing `CMAKE_TOOLCHAIN_FILE` at
-`$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`. After that, `cmake/` modules
-and package `CMakeLists.txt` files call `find_package(OpenCL)`,
-`find_package(unity)`, etc., exactly as they would for system-provided
-libraries. The build system is agnostic of how dependencies are ultimately
-resolved.
+`FetchContent` declarations are centralized in `cmake/Dependencies.cmake`:
 
-### 5.4 When `third_party/` is used
+```cmake
+include(FetchContent)
 
-The in-tree `third_party/` directory exists for dependencies that vcpkg
-cannot or should not handle: typically single-header libraries where the
-round-trip through vcpkg is heavier than the library itself, or small
-patches to upstream code that need to be carried in-tree. Its README
-documents each vendored item's origin, version, and reason for vendoring.
+FetchContent_Declare(unity
+    GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
+    GIT_TAG        v2.6.1
+)
+
+FetchContent_Declare(tomlc17
+    GIT_REPOSITORY https://github.com/cktan/tomlc17.git
+    GIT_TAG        R260414
+)
+
+FetchContent_MakeAvailable(unity tomlc17)
+```
+
+Downloaded sources land in `build/` and are never committed. Version is
+pinned by tag or commit hash, so every contributor and every CI run gets the
+same source.
 
 ## 6. Unit Testing Framework
 

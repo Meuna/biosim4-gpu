@@ -23,7 +23,7 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 # ── Global options (user-facing knobs) ────────────────────────────────────────
 
-# Build unit test executables (requires Unity via vcpkg)
+# Build unit test executables (requires Unity via FetchContent)
 option(BIOSIM_BUILD_TESTS      "Build the test suite"                           ON)
 
 # Build standalone benchmark executables under benchmarks/
@@ -31,6 +31,9 @@ option(BIOSIM_BUILD_BENCHMARKS "Build benchmark executables"                   O
 
 # Enable AddressSanitizer + UBSan (GCC/Clang only; MSVC supports ASan but not UBSan)
 option(BIOSIM_SANITIZE         "Enable address and undefined-behaviour sanitizers" OFF)
+
+# ── Testing ────────────────────────────────────────────────────────────────────
+enable_testing()
 
 # ── CMake modules ──────────────────────────────────────────────────────────────
 
@@ -41,6 +44,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # Opt-in sanitizers; advertises which are available on the current compiler
 # include(Sanitizers)        # uncomment once cmake/Sanitizers.cmake exists
+
+# External dependencies without a vcpkg port (FetchContent)
+include(Dependencies)
 
 # Kernel embedding: kernels are always embedded at build time; EmbedKernels.cmake
 # generates the C translation unit that holds them as string literals
@@ -55,7 +61,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # add_subdirectory(packages/sim-gpu)     # depends on core + OpenCL
 
 # Single-threaded CPU reference simulator executable
-# add_subdirectory(packages/sim-stepper) # depends on core only
+add_subdirectory(packages/sim-stepper) # depends on core only
 
 # ── Benchmarks ────────────────────────────────────────────────────────────────
 

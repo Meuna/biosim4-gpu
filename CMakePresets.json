@@ -1,7 +1,7 @@
 {
-  "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema/cmake-presets-schema.json",
-  "version": 3,
-  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "$schema": "https://raw.githubusercontent.com/Kitware/CMake/v3.28.0/Help/manual/presets/schema.json",
+  "version": 8,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
 
   "configurePresets": [
     {

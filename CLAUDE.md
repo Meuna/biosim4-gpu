@@ -16,6 +16,12 @@ specification; implementation follows them.
   decision (new package, new directory, new top-level file), consult the
   relevant design document. When in doubt, ask the user rather than guessing.
 
+- **Design documents are lively during early iteration.** Keep the design
+  documentation aligned with the implementation as the scaffold progress. Some
+  early "not yet implemented" or "work in progress" mentions will need to be
+  removed; some approximation will need to be fixed; some design choices will
+  be challenged. Don't shy against updating the design documents.
+
 - **Conventions are normative.** The rules in
   `01-repository-structure.md` (naming, error handling, host/device
   portability, no global state in `core`) apply to every file written in
@@ -27,9 +33,10 @@ specification; implementation follows them.
 
 - **Scaffolding order.** The repository is pre-implementation. The next
   concrete step is to populate the CMake skeleton (top-level `CMakeLists.txt`,
-  per-package `CMakeLists.txt`, `CMakePresets.json`, `vcpkg.json`), *then*
-  the public headers of `core`, *then* module implementations. Avoid writing
-  simulation logic before the build can compile an empty target.
+  common CMake modules, per-package `CMakeLists.txt`, `CMakePresets.json`,
+  `vcpkg.json`) with a working main hello word, *then* the public headers of
+  `core`, *then* module implementations. Avoid writing simulation logic
+  before the build can compile an empty target.
 
 ## Build System (not yet implemented)
 
@@ -48,9 +55,6 @@ cmake --build build --target format     # run clang-format
 cmake --build build --target lint       # run clang-tidy
 cmake --build build --target benchmark  # run benchmarks
 ```
-
-The `ocl-cpu` preset (uses PoCL) is the primary dev/CI path on machines
-without a discrete GPU.
 
 ## Portability Pitfalls
 
