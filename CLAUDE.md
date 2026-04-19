@@ -38,22 +38,22 @@ specification; implementation follows them.
   `core`, *then* module implementations. Avoid writing simulation logic
   before the build can compile an empty target.
 
-## Build System (not yet implemented)
+## Build System
 
-Once scaffolded, the build will use **CMake + vcpkg**:
+The build uses **CMake + vcpkg** (VCPKG_ROOT must be set, see `docs/build.md`):
 
 ```sh
-# Configure (VCPKG_ROOT must be set)
+# Configure
 cmake --preset debug    # or: release, asan, ci
 
 # Build
-cmake --build build
+cmake --build --preset debug
 
 # Common targets
-cmake --build build --target check      # build + run all tests
-cmake --build build --target format     # run clang-format
-cmake --build build --target lint       # run clang-tidy
-cmake --build build --target benchmark  # run benchmarks
+cmake --build --preset debug --target check      # build + run all tests
+cmake --build --preset debug --target format     # run clang-format
+cmake --build --preset debug --target lint       # run clang-tidy
+cmake --build --preset debug --target benchmark  # run benchmarks
 ```
 
 ## Portability Pitfalls

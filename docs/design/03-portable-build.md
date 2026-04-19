@@ -272,9 +272,9 @@ top-level build:
 
 Invoked uniformly on every platform:
 
-```
-cmake --build build --target format
-cmake --build build --target check
+```sh
+cmake --build --preset debug --target format
+cmake --build --preset debug --target check
 ```
 
 ### 7.2 Environment prerequisites — documented, not scripted
