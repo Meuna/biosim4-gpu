@@ -29,79 +29,124 @@ is a breaking change that requires coordinated updates across all consumers.
 
 ## 2. CLI Flags and Configuration File Format
 
-**Status: open design decision.** The format must be chosen before
-`core`'s parameter loader is written.
-
 ### 2.1 Context
 
-The simulation is driven by a collection of flags that configure everything defining
-a simulation: the grid size, the population size, the genome length, mutation rate,
-challenge types, and dozens of other knobs. biosim4 originally used a custom INI-style
-format parsed by hand.
+The simulation is driven by a collection of flags that configure everything
+defining a simulation: the grid size, the population size, the genome length,
+mutation rate, challenge types, and dozens of other knobs. biosim4 originally
+used a custom INI-style format parsed by hand.
 
-The GPU port needs to replace it with something that is:
+The GPU port replaces it with a design that is:
 
-- Multi-source with precedence: CLI flags first, configuration file second
+- **Multi-source with precedence:** compiled-in defaults → TOML file → CLI
+  flags. Each layer overrides the previous.
 - Human-readable and human-editable.
-- Supported by a small, portable, C-compatible library available via vcpkg.
-- Expressive enough to support nested or grouped parameters if needed.
-- Version-controlable without binary noise.
+- Supported by small, portable, C-compatible libraries available via vcpkg.
+- Expressive enough to support nested or grouped parameters.
+- Version-controllable without binary noise.
 
-### 2.2 CLI flags
+### 2.2 Decisions
 
-**Status: partially decided.** The flags below are settled; a CLI parsing
-library is still an open decision (see Section 2.3).
-
-#### Flags common to both `sim-gpu` and `sim-stepper`
-
-| Flag | Values | Default | Description |
-|---|---|---|---|
-| `--config <path>` | file path | `data/configs/default.toml` | Path to the TOML simulation parameter file |
-| `--snapshot-in <path>` | file path | _(none)_ | Resume from a saved population snapshot |
-| `--snapshot-out <path>` | file path | _(none)_ | Write a snapshot at the end of the run |
-| `--generations <n>` | integer ≥ 1 | 1 | Number of generations to simulate |
-
-#### `sim-gpu`-only flags
-
-| Flag | Values | Default | Description |
-|---|---|---|---|
-| `--device cpu\|gpu\|any` | `cpu`, `gpu`, `any` | `any` | OpenCL device type to use: `cpu` → `CL_DEVICE_TYPE_CPU` (PoCL on CI/ARM), `gpu` → `CL_DEVICE_TYPE_GPU`, `any` → `CL_DEVICE_TYPE_DEFAULT` (driver picks best available) |
-
-`sim-stepper` does not expose `--device`; it always runs on the host CPU.
-
-#### Precedence
-
-CLI flags override the TOML config file. Any parameter not supplied on the
-command line falls back to the config file, and any parameter absent from the
-config file falls back to the compiled-in default.
-
-### 2.3 File format options
-
-| Format | Library | Pros | Cons |
-|---|---|---|---|
-| TOML | `tomlc99` | Expressive, typed, widely known, C99 library | One extra dependency |
-| INI | hand-rolled or `inih` | Trivial parser, no dependency | No types, flat structure |
-| JSON | `cJSON` | Universal | Noisy syntax, no comments |
-
-### 2.4 Recommendation
+| Concern | Choice | Status |
+|---|---|---|
+| Configuration file format | **TOML** via `tomlc99` | Decided |
+| CLI parsing library | **argtable3** | Decided |
+| Parameter model | Shared table in `core` with unified naming | Decided |
 
 **TOML via `tomlc99`.** TOML is more expressive than INI (typed values,
 arrays, grouped tables), still human-readable and diff-friendly, and
-`tomlc99` is a minimal pure-C library that integrates cleanly with vcpkg.
-The familiarity argument for INI is weak: the original format was not
-standard INI and required custom parsing anyway.
+`tomlc99` is a minimal pure-C library. The familiarity argument for INI is
+weak: the original format was not standard INI and required custom parsing
+anyway.
 
-**Decision required:** pick a CLI option, confirm TOML + `tomlc99` /
-pick an alternative, pick an ENV option. Once decided, add the chosen
-library to `vcpkg.json` and record the choice here.
+**argtable3.** Portable (Linux, Windows, macOS), typed (int, double, string,
+bool), available in vcpkg. Its declarative model — each argument is declared
+as a typed struct field — aligns naturally with the shared parameter table
+described in Section 2.4.
 
-### 2.5 File configuration versioning
+Both libraries are added to `vcpkg.json`.
 
-The parameter file must carry a `format_version` key at the top level. The
-`core` loader rejects files whose version it does not recognise rather than
-silently misinterpreting them. Version bumps are required when a key is
-removed or its semantics change; adding a new optional key with a default is
-backward-compatible and does not require a version bump.
+### 2.3 CLI flags
+
+The flags below are foreseen; they are provided as examples. The definitive
+list will be documented in the usage documentation and will grow as
+simulation parameters are implemented.
+
+#### Flags common to both `sim-gpu` and `sim-stepper`
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--config <path>` | string | `biosim4-gpu.toml` | Path to the TOML parameter file |
+| `--snapshot-in <path>` | string | _(none)_ | Resume from a saved population snapshot |
+| `--snapshot-out <path>` | string | _(none)_ | Write a snapshot at the end of the run |
+| `--generations <n>` | int | 1 | Number of generations to simulate |
+
+Any simulation parameter defined in the shared parameter table (Section 2.4)
+is also accepted as a CLI flag with the same name as its TOML key:
+`--population 5000` overrides `population = 3000` in the config file.
+
+#### `sim-gpu`-only flags
+
+| Flag | Type | Default | Description |
+|---|---|---|---|
+| `--device <type>` | string | `any` | OpenCL device selection: `cpu` → `CL_DEVICE_TYPE_CPU` (PoCL on CI/ARM), `gpu` → `CL_DEVICE_TYPE_GPU`, `any` → `CL_DEVICE_TYPE_DEFAULT` |
+| `--kernel-path <dir>` | string | _(none)_ | Directory to search for `.cl` overrides before falling back to embedded kernels |
+
+`sim-stepper` does not expose `--device` or `--kernel-path`; it always runs
+on the host CPU with no OpenCL dependency.
+
+### 2.4 Shared parameter table and three-pass resolution
+
+#### The parameter table
+
+A single table in `core` defines every simulation parameter — its name, its
+type, and its compiled-in default value:
+
+```c
+typedef enum {
+    PARAM_INT, PARAM_FLOAT, PARAM_BOOL, PARAM_STRING
+} biosim_param_type_t;
+
+typedef struct {
+    const char*         name;   // identical in TOML and on the CLI
+    biosim_param_type_t type;
+    union {
+        int         i;
+        double      f;
+        bool        b;
+        const char* s;
+    } value;
+} biosim_param_entry_t;
+```
+
+The `name` field is the single source of truth for the parameter's identity.
+It is the same string in the TOML key, the CLI flag (`--<name>`), and any
+future introspection mechanism. This naming convention is what makes the
+integration transparent — no mapping table, no translation layer.
+
+The parameter table struct, its type enum, and its compiled-in defaults live
+in `core`. The TOML loader and the CLI parser live in each executable's
+`main.c` — `core` knows neither `tomlc99` nor `argtable3`.
+
+#### Three-pass resolution
+
+Resolution happens at startup in the executable's `main.c`, in strict order:
+
+```
+Pass 1 — Compiled-in defaults    (the table as declared in core)
+Pass 2 — TOML file               (overrides defaults)
+Pass 3 — CLI flags               (overrides TOML)
+```
+
+Each pass iterates the same parameter table and overwrites the `value` union
+for any parameter it finds. After the three passes, the table is frozen and
+handed to the simulation as a read-only pointer — the same pattern as the
+original biosim4's `ParamManager::getParamRef()`.
+
+A parameter absent from both the CLI and the TOML file silently keeps its
+compiled-in default. An unknown key in the TOML file or an unknown flag on
+the CLI produces a warning (not an error), to ease forward compatibility
+when new parameters are added.
 
 ## 3. Snapshot Binary Format
 
