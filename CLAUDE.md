@@ -144,6 +144,6 @@ spawn) stays on the host.
   (naming, headers, error handling, host/device portability)
 - `docs/design/03-portable-build.md` — CMake/vcpkg setup, preset list,
   CI matrix, platform-specific concerns
-- `docs/design/04-gpu-data-model.md` — SoA layout, kernel decomposition,
+- `docs/design/05-gpu-data-model.md` — SoA layout, kernel decomposition,
   conflict resolution strategy
-- `docs/design/05-external-icd.md` — config file format and snapshot binary format
+- `docs/design/06-external-icd.md` — config file format and snapshot binary format

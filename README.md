@@ -42,8 +42,9 @@ biosim4-gpu/
         ├── 01-repository-structure.md ← how this repo will be laid out
         ├── 02-implementation-conventions.md ← code layout invariants
         ├── 03-portable-build.md       ← how the build chain supports portability
-        ├── 04-gpu-data-model.md       ← the proposed GPU/SoA model
-        └── 05-external-icd.md         ← external interface formats (config, snapshot)
+        ├── 04-legacy-data-model       ← analysis of the legacy CPU/AoS model
+        ├── 05-gpu-data-model.md       ← the proposed GPU/SoA model
+        └── 06-external-icd.md         ← external interface formats (config, snapshot)
 ```
 
 ## Target platforms

@@ -25,7 +25,7 @@ is a breaking change that requires coordinated updates across all consumers.
 
 - Defining the in-memory representation of parameters or agents — that is
   the responsibility of `core`'s types and
-  [`04-gpu-data-model.md`](04-gpu-data-model.md).
+  [`05-gpu-data-model.md`](05-gpu-data-model.md).
 
 ## 2. CLI Flags and Configuration File Format
 

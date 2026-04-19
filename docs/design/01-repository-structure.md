@@ -293,10 +293,9 @@ challenges.cl     ← K5 (per-agent challenge evaluation)
 ```
 
 Rationale: the five-kernel decomposition is a design artifact of the GPU
-data-model document ([04-gpu-data-model.md](04-gpu-data-model.md)), not
+data-model document ([05-gpu-data-model.md](05-gpu-data-model.md)), not
 an implementation detail. Each `.cl` file is a named chapter of that design.
-Renaming or merging kernels is a design change that deserves a new ADR, not
-a casual refactor. The file-per-kernel layout locks in this correspondence.
+Renaming or merging kernels is a design change that deserves a design update.
 
 ### Kernel distribution
 
@@ -365,13 +364,6 @@ sufficient for visualization purposes.
 If the single-thread stepper happens to be too slow, this single-thread design
 can be reverted.
 
-### Trace format
-
-The stepper writes a tracefile per run: a per-step record of every agent's
-position, orientation, and a compact neural-state snapshot. The format is
-versioned and documented in `docs/design/` as a small ADR. The visualization
-package consumes this format.
-
 ## 8. The `viz` Package — Placeholder
 
 ```
@@ -395,11 +387,10 @@ docs/
 ├── design/
 │   ├── 01-repository-structure.md    ← this document
 │   ├── 02-implementation-conventions.md ← code layout invariants
-│   ├── 04-gpu-data-model.md          ← the GPU/SoA proposal
 │   ├── 03-portable-build.md          ← build chain and portability
-│   ├── 05-external-icd.md            ← external interface formats (config, snapshot)
-│   └── adr/                       ← Architecture Decision Records
-│       └── README.md
+│   ├── 04-legacy-data-model       ← analysis of the legacy CPU/AoS model
+│   ├── 05-gpu-data-model.md          ← the GPU/SoA proposal
+│   └── 06-external-icd.md            ← external interface formats (config, snapshot)
 ├── build.md                       ← prerequisites, CMake options, build guide
 ├── usage.md                       ← CLI reference for both simulators
 ├── architecture.md                ← monorepo + package explanation
@@ -411,15 +402,6 @@ docs/
 Design documents are prefixed with a two-digit number that defines reading
 order. New design documents append to the sequence. They are long-form,
 narrative documents that explain **why** a design choice was made.
-
-### ADRs — Architecture Decision Records
-
-Under `design/adr/`. Each ADR is a short document (1–3 pages) capturing a
-single decision: context, options considered, choice, consequences.
-ADRs are born as Step 2 refinements crystallize — e.g. *"ADR-001: fingerprint
-hash function for GENETIC_SIM_FWD"*, *"ADR-002: sort strategy for warp
-coherence"*. Without ADRs, the rationale for a decision ends up buried in
-commit messages or lost.
 
 ### `gpu-primer.md` — the shared glossary
 
@@ -497,7 +479,7 @@ Running a reproducible experiment requires a stable, committed parameter
 file. `data/configs/` holds named configurations (one per challenge scenario,
 typically), and every configuration file is under version control.
 
-Format choice is an open decision documented in [`05-external-icd.md`](05-external-icd.md).
+Format choice is an open decision documented in [`06-external-icd.md`](06-external-icd.md).
 The `core/params.h` loader handles whatever is chosen.
 
 ### Snapshots are not versioned
