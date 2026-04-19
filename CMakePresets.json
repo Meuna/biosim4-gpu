@@ -33,8 +33,7 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BIOSIM_BUILD_TESTS": "OFF",
-        "BIOSIM_EMBED_KERNELS": "ON"
+        "BIOSIM_BUILD_TESTS": "OFF"
       }
     },
 

@@ -23,11 +23,8 @@ set(CMAKE_C_EXTENSIONS OFF)
 
 # ── Global options (user-facing knobs) ────────────────────────────────────────
 
-# Embed .cl kernel sources as C string literals; OFF = load from disk at runtime
-option(BIOSIM_EMBED_KERNELS   "Embed OpenCL kernel sources into the binary"    OFF)
-
 # Build unit test executables (requires Unity via vcpkg)
-option(BIOSIM_BUILD_TESTS     "Build the test suite"                           ON)
+option(BIOSIM_BUILD_TESTS      "Build the test suite"                           ON)
 
 # Build standalone benchmark executables under benchmarks/
 option(BIOSIM_BUILD_BENCHMARKS "Build benchmark executables"                   OFF)
@@ -45,10 +42,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # Opt-in sanitizers; advertises which are available on the current compiler
 # include(Sanitizers)        # uncomment once cmake/Sanitizers.cmake exists
 
-# Kernel embedding helper; only needed when BIOSIM_EMBED_KERNELS is ON
-if(BIOSIM_EMBED_KERNELS)
-  # include(EmbedKernels)    # uncomment once cmake/EmbedKernels.cmake exists
-endif()
+# Kernel embedding: kernels are always embedded at build time; EmbedKernels.cmake
+# generates the C translation unit that holds them as string literals
+# include(EmbedKernels)      # uncomment once cmake/EmbedKernels.cmake exists
 
 # ── Packages ──────────────────────────────────────────────────────────────────
 
