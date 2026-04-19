@@ -1,6 +1,6 @@
-#include <stdio.h>
+#include "biosim/core/core.h"
 
 int main(void) {
-    puts("biosim-stepper: not yet implemented");
+    biosim_hello();
     return 0;
 }

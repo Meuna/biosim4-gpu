@@ -55,7 +55,7 @@ include(Dependencies)
 # ── Packages ──────────────────────────────────────────────────────────────────
 
 # Shared simulation logic: genome, neural net, RNG, challenges (no OpenCL deps)
-# add_subdirectory(packages/core)        # uncomment once the package is scaffolded
+add_subdirectory(packages/core)
 
 # OpenCL batch simulator executable
 # add_subdirectory(packages/sim-gpu)     # depends on core + OpenCL
