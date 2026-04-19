@@ -293,7 +293,7 @@ challenges.cl     ← K5 (per-agent challenge evaluation)
 ```
 
 Rationale: the five-kernel decomposition is a design artifact of the GPU
-data-model document (Section 13 of [04-gpu-data-model.md](04-gpu-data-model.md)), not
+data-model document ([04-gpu-data-model.md](04-gpu-data-model.md)), not
 an implementation detail. Each `.cl` file is a named chapter of that design.
 Renaming or merging kernels is a design change that deserves a new ADR, not
 a casual refactor. The file-per-kernel layout locks in this correspondence.
