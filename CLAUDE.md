@@ -16,6 +16,10 @@ specification; implementation follows them.
   decision (new package, new directory, new top-level file), consult the
   relevant design document. When in doubt, ask the user rather than guessing.
 
+- **Open design decisions require confirmation.** When encountering an open
+  design point (config file format, binary format), do not settle them
+  unilaterally, flag them to the user when they come up.
+
 - **Design documents are lively during early iteration.** Keep the design
   documentation aligned with the implementation as the scaffold progress. Some
   early "not yet implemented" or "work in progress" mentions will need to be
@@ -27,16 +31,11 @@ specification; implementation follows them.
   portability, no global state in `core`) apply to every file written in
   this repository. They are enforced by review, not by linters alone.
 
-- **Open design decisions require confirmation.** When encountering an open
-  design point (config file format, binary format), do not settle them
-  unilaterally, flag them to the user when they come up.
-
-- **Scaffolding order.** The repository is pre-implementation. The next
-  concrete step is to populate the CMake skeleton (top-level `CMakeLists.txt`,
-  common CMake modules, per-package `CMakeLists.txt`, `CMakePresets.json`,
-  `vcpkg.json`) with a working main hello word, *then* the public headers of
-  `core`, *then* module implementations. Avoid writing simulation logic
-  before the build can compile an empty target.
+  - **Code Quality.** If you edited/created files, after tests compile
+  and succeed, run the linting command and apply the corrections, then
+  the format command, then test again, in this order. Do consider an
+  implementation task complete while the lint command return error or
+  warnings.
 
 ## Build System
 
@@ -50,7 +49,7 @@ cmake --preset debug    # or: release, asan, ci
 cmake --build --preset debug
 
 # Common targets
-cmake --build --preset debug --target check      # build + run all tests
+cmake --build --preset debug --target check      # run all tests
 cmake --build --preset debug --target format     # run clang-format
 cmake --build --preset debug --target lint       # run clang-tidy
 cmake --build --preset debug --target benchmark  # run benchmarks
@@ -151,3 +150,12 @@ spawn) stays on the host.
 - `docs/design/05-gpu-data-model.md` — SoA layout, kernel decomposition,
   conflict resolution strategy
 - `docs/design/06-external-icd.md` — config file format and snapshot binary format
+
+## Build Files
+
+Do not read from build/ — it is a derived artifact and may not exist
+
+## Third Party Files
+
+Do not edit files from third_party/ — they are vendored artifacts and must only
+change with a full version bump

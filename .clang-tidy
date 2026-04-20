@@ -1,13 +1,19 @@
-# Comma-separated list of check globs; prefix with - to disable a check or group
-Checks: >
-  clang-analyzer-*,
-  bugprone-*,
-  misc-*,
-  portability-*,
-  readability-*,
-  -readability-magic-numbers,
-  -readability-identifier-length,
-  -misc-include-cleaner
+Checks:
+  - bugprone-*
+  - cert-*
+  - clang-analyzer-*
+  - concurrency-*
+  - misc-*
+  - performance-*
+  - portability-*
+  - readability-*
+  - -bugprone-easily-swappable-parameters
+  - -readability-magic-numbers
+  - -readability-identifier-length
+  - -modernize-*
+  - -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+  - -concurrency-mt-unsafe
+  - -misc-include-cleaner
 
 # Promote every enabled warning to an error — keeps the codebase warning-free
 WarningsAsErrors: "*"

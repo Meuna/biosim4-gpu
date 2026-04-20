@@ -21,9 +21,9 @@ typedef union {
 
 typedef struct {
     const char *name;
-    biosim_param_type_t type;
     biosim_param_value_t default_value;
     biosim_param_value_t value;
+    biosim_param_type_t type;
     bool is_set;
 } biosim_param_entry_t;
 

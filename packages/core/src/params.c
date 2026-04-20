@@ -1,54 +1,60 @@
+#include "biosim/core/params.h"
+#include "biosim/core/status.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-
-static char *str_dup(const char *s) {
-    size_t n = strlen(s) + 1;
-    char *p = malloc(n);
-    if (p)
-        memcpy(p, s, n);
-    return p;
-}
-
-#include "biosim/core/params.h"
 
 #define INITIAL_CAPACITY 16
 
 /* ── core parameter table ───────────────────────────────────────────────── */
 
 static const biosim_param_entry_t s_core_defaults[] = {
-    {"sim-name", PARAM_STRING, {.s = "unnamed"}, {.s = "unnamed"}, false},
-    {"population", PARAM_INT, {.i = 3000}, {.i = 3000}, false},
-    {"size-x", PARAM_INT, {.i = 128}, {.i = 128}, false},
-    {"size-y", PARAM_INT, {.i = 128}, {.i = 128}, false},
-    {"steps-per-gen", PARAM_INT, {.i = 300}, {.i = 300}, false},
-    {"max-genome-length", PARAM_INT, {.i = 24}, {.i = 24}, false},
-    {"mutation-rate", PARAM_FLOAT, {.f = 0.001}, {.f = 0.001}, false},
-    {"challenge", PARAM_INT, {.i = 0}, {.i = 0}, false},
+    {"sim-name", {.s = "unnamed"}, {.s = "unnamed"}, PARAM_STRING, false},
+    {"population", {.i = 3000}, {.i = 3000}, PARAM_INT, false},
+    {"size-x", {.i = 128}, {.i = 128}, PARAM_INT, false},
+    {"size-y", {.i = 128}, {.i = 128}, PARAM_INT, false},
+    {"steps-per-gen", {.i = 300}, {.i = 300}, PARAM_INT, false},
+    {"max-genome-length", {.i = 24}, {.i = 24}, PARAM_INT, false},
+    {"mutation-rate", {.f = 0.001}, {.f = 0.001}, PARAM_FLOAT, false},
+    {"challenge", {.i = 0}, {.i = 0}, PARAM_INT, false},
 };
 #define CORE_DEFAULTS_COUNT (sizeof(s_core_defaults) / sizeof(s_core_defaults[0]))
 
 /* ── internal helpers ───────────────────────────────────────────────────── */
 
+static char *str_dup(const char *s) {
+    size_t n = strlen(s) + 1;
+    char *p = malloc(n);
+    if (p) {
+        memcpy(p, s, n);
+    }
+    return p;
+}
+
 static biosim_status_t params_grow(biosim_params_t *p, size_t needed) {
-    if (needed <= p->capacity)
+    if (needed <= p->capacity) {
         return BIOSIM_OK;
+    }
     size_t cap = p->capacity ? p->capacity * 2 : INITIAL_CAPACITY;
-    while (cap < needed)
+    while (cap < needed) {
         cap *= 2;
+    }
     biosim_param_entry_t *buf = realloc(p->entries, cap * sizeof(*buf));
-    if (!buf)
+    if (!buf) {
         return BIOSIM_ERR_NOMEM;
+    }
     p->entries = buf;
     p->capacity = cap;
     return BIOSIM_OK;
 }
 
 static biosim_param_entry_t *find_mutable(biosim_params_t *p, const char *key) {
-    for (size_t i = 0; i < p->count; i++)
-        if (strcmp(p->entries[i].name, key) == 0)
+    for (size_t i = 0; i < p->count; i++) {
+        if (strcmp(p->entries[i].name, key) == 0) {
             return &p->entries[i];
+        }
+    }
     return NULL;
 }
 
@@ -64,8 +70,9 @@ biosim_status_t biosim_params_init(biosim_params_t *p) {
 biosim_status_t biosim_params_extend(biosim_params_t *p, const biosim_param_entry_t *extras,
                                      size_t count) {
     biosim_status_t st = params_grow(p, p->count + count);
-    if (st != BIOSIM_OK)
+    if (st != BIOSIM_OK) {
         return st;
+    }
     for (size_t i = 0; i < count; i++) {
         biosim_param_entry_t *e = &p->entries[p->count++];
         *e = extras[i];
@@ -78,8 +85,9 @@ biosim_status_t biosim_params_extend(biosim_params_t *p, const biosim_param_entr
 void biosim_params_free(biosim_params_t *p) {
     for (size_t i = 0; i < p->count; i++) {
         biosim_param_entry_t *e = &p->entries[i];
-        if (e->type == PARAM_STRING && e->is_set)
+        if (e->type == PARAM_STRING && e->is_set) {
             free((void *)e->value.s);
+        }
     }
     free(p->entries);
     p->entries = NULL;
@@ -91,10 +99,12 @@ void biosim_params_free(biosim_params_t *p) {
 
 biosim_status_t biosim_params_set_int(biosim_params_t *p, const char *key, int val) {
     biosim_param_entry_t *e = find_mutable(p, key);
-    if (!e)
+    if (!e) {
         return BIOSIM_WARN_UNKNOWN_KEY;
-    if (e->type != PARAM_INT)
+    }
+    if (e->type != PARAM_INT) {
         return BIOSIM_ERR_TYPE;
+    }
     e->value.i = val;
     e->is_set = true;
     return BIOSIM_OK;
@@ -102,10 +112,12 @@ biosim_status_t biosim_params_set_int(biosim_params_t *p, const char *key, int v
 
 biosim_status_t biosim_params_set_float(biosim_params_t *p, const char *key, double val) {
     biosim_param_entry_t *e = find_mutable(p, key);
-    if (!e)
+    if (!e) {
         return BIOSIM_WARN_UNKNOWN_KEY;
-    if (e->type != PARAM_FLOAT)
+    }
+    if (e->type != PARAM_FLOAT) {
         return BIOSIM_ERR_TYPE;
+    }
     e->value.f = val;
     e->is_set = true;
     return BIOSIM_OK;
@@ -113,10 +125,12 @@ biosim_status_t biosim_params_set_float(biosim_params_t *p, const char *key, dou
 
 biosim_status_t biosim_params_set_bool(biosim_params_t *p, const char *key, bool val) {
     biosim_param_entry_t *e = find_mutable(p, key);
-    if (!e)
+    if (!e) {
         return BIOSIM_WARN_UNKNOWN_KEY;
-    if (e->type != PARAM_BOOL)
+    }
+    if (e->type != PARAM_BOOL) {
         return BIOSIM_ERR_TYPE;
+    }
     e->value.b = val;
     e->is_set = true;
     return BIOSIM_OK;
@@ -124,15 +138,19 @@ biosim_status_t biosim_params_set_bool(biosim_params_t *p, const char *key, bool
 
 biosim_status_t biosim_params_set_string(biosim_params_t *p, const char *key, const char *val) {
     biosim_param_entry_t *e = find_mutable(p, key);
-    if (!e)
+    if (!e) {
         return BIOSIM_WARN_UNKNOWN_KEY;
-    if (e->type != PARAM_STRING)
+    }
+    if (e->type != PARAM_STRING) {
         return BIOSIM_ERR_TYPE;
-    if (e->is_set)
+    }
+    if (e->is_set) {
         free((void *)e->value.s);
+    }
     char *copy = str_dup(val);
-    if (!copy)
+    if (!copy) {
         return BIOSIM_ERR_NOMEM;
+    }
     e->value.s = copy;
     e->is_set = true;
     return BIOSIM_OK;
@@ -167,9 +185,11 @@ const char *biosim_params_get_string(const biosim_params_t *p, const char *key) 
 /* ── introspection ──────────────────────────────────────────────────────── */
 
 const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const char *key) {
-    for (size_t i = 0; i < p->count; i++)
-        if (strcmp(p->entries[i].name, key) == 0)
+    for (size_t i = 0; i < p->count; i++) {
+        if (strcmp(p->entries[i].name, key) == 0) {
             return &p->entries[i];
+        }
+    }
     return NULL;
 }
 

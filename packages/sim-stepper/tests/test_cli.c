@@ -17,7 +17,7 @@ void tearDown(void) {
 
 void test_defaults(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", PARAM_STRING, {.s = "unset"}, {.s = "unset"}, false},
+        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
     TEST_ASSERT_EQUAL_STRING("unset", biosim_params_get_string(&p, "someparam"));
@@ -28,7 +28,7 @@ void test_defaults(void) {
 
 void test_toml_file_sets_values(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", PARAM_STRING, {.s = "unset"}, {.s = "unset"}, false},
+        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
 
@@ -41,7 +41,7 @@ void test_toml_file_sets_values(void) {
 
 void test_cli_sets_values(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", PARAM_STRING, {.s = "unset"}, {.s = "unset"}, false},
+        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
     char *argv[] = {"biosim-stepper", "--someparam", "from-cli", "--population", "9999", NULL};
@@ -54,12 +54,16 @@ void test_cli_sets_values(void) {
 
 void test_cli_overrides_toml(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", PARAM_STRING, {.s = "unset"}, {.s = "unset"}, false},
+        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
 
-    char *argv[] = {"biosim-stepper", "--config", TEST_FIXTURES_DIR "/basic.toml",
-                    "--someparam",    "from-cli", NULL};
+    char *argv[] = {"biosim-stepper",
+                    "--config",
+                    TEST_FIXTURES_DIR "/basic.toml", // NOLINT(bugprone-suspicious-missing-comma)
+                    "--someparam",
+                    "from-cli",
+                    NULL};
     stepper_cli_and_toml(&p, 5, argv);
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "someparam"));
     TEST_ASSERT_EQUAL_INT(42, biosim_params_get_int(&p, "population"));
