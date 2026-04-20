@@ -1,2 +1,2 @@
-sim-name = "fixture-run"
+someparam = "from-toml"
 population = 42

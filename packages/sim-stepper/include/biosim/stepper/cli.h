@@ -10,7 +10,6 @@
  *   Pass 2 — TOML file (if --config present in argv)
  *   Pass 3 — CLI flags (override TOML)
  */
-biosim_status_t stepper_params_resolve(biosim_params_t *p,
-                                       int argc, char **argv);
+biosim_status_t stepper_cli_and_toml(biosim_params_t *p, int argc, char **argv);
 
 #endif /* BIOSIM_STEPPER_CLI_H */
