@@ -1,10 +1,7 @@
-include(FetchContent)
+# tomlc17 — vendored in third_party/
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/tomlc17)
 
-FetchContent_Declare(tomlc17
-  GIT_REPOSITORY https://github.com/cktan/tomlc17.git
-  GIT_TAG        R260414
-)
-FetchContent_MakeAvailable(tomlc17)
+include(FetchContent)
 
 if(BIOSIM_BUILD_TESTS)
   FetchContent_Declare(unity
@@ -12,4 +9,5 @@ if(BIOSIM_BUILD_TESTS)
     GIT_TAG        v2.6.1
   )
   FetchContent_MakeAvailable(unity)
+  target_compile_definitions(unity PUBLIC UNITY_INCLUDE_DOUBLE)
 endif()

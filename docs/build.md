@@ -15,11 +15,13 @@ to do anything extra for them.
 
 ## Prerequisites
 
-You need a C compiler, CMake 3.28+, Ninja (or make), and optionally clang-format and
-clang-tidy. Install them through your system package manager. On Ubuntu/Debian:
+You need a C compiler, CMake 3.28+, Ninja (or make), pkg-config, and optionally
+clang-format and clang-tidy. Install them through your system package manager.
+
+On Ubuntu/Debian:
 
 ```sh
-sudo apt install cmake ninja-build gcc clang-format clang-tidy
+sudo apt install cmake ninja-build gcc pkg-config clang-format clang-tidy
 ```
 
 Check your CMake version with `cmake --version`. If the system package is older

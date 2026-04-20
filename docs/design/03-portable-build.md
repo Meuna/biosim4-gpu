@@ -179,24 +179,20 @@ includes into public APIs.
 
 ### 5.1 Strategy
 
-Two mechanisms are used depending on whether a library has a port available
-in the vcpkg registry:
+Three mechanisms are used depending on the library:
 
 - **vcpkg manifest mode** for libraries that have a vcpkg port. vcpkg reads
   `vcpkg.json` at configure time and provides dependencies through standard
   `find_package` calls. The build system is agnostic of how dependencies are
   resolved.
-- **CMake `FetchContent`** for libraries that are not in the vcpkg registry.
-  Dependencies are downloaded at configure time into the build directory —
-  nothing is committed to the repository. The `FetchContent` declarations live
-  in `cmake/Dependencies.cmake`, included by the root `CMakeLists.txt`.
-
-| Library | Mechanism | Reason |
-|---|---|---|
-| `opencl` | vcpkg | Available in registry; pulls headers + ICD loader |
-| `argtable3` | vcpkg | Available in registry |
-| `tomlc99` | FetchContent | No vcpkg port |
-| `unity` | FetchContent | No vcpkg port |
+- **`third_party/` vendoring** for small libraries (one or two files) with no
+  upstream CMake support. The source files are copied into `third_party/<name>/`
+  alongside a minimal handwritten `CMakeLists.txt`. Sources and licences are
+  committed to the repository. The subdirectory is included via
+  `cmake/Dependencies.cmake`.
+- **CMake `FetchContent`** for libraries that are not in the vcpkg registry and
+  are too large to vendor. Downloaded at configure time into `build/`; nothing
+  committed. Declarations live in `cmake/Dependencies.cmake`.
 
 ### 5.2 vcpkg manifest
 
@@ -217,29 +213,44 @@ Windows removes the most common build failure (missing ICD loader). A CMake
 preset activates vcpkg by pointing `CMAKE_TOOLCHAIN_FILE` at
 `$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake`.
 
-### 5.3 FetchContent
+Note: some vcpkg portfiles call `vcpkg_fixup_pkgconfig` internally to generate
+`.pc` files for pkg-config consumers. This requires `pkg-config` to be installed
+as a system tool (it is listed in the build prerequisites in `docs/build.md`).
+This is a vcpkg toolchain requirement, not a requirement of our own CMake files.
+
+### 5.3 Vendored dependencies (`third_party/`)
+
+Small libraries with no upstream CMake support are copied into `third_party/`:
+
+Example with tomlc17:
+
+```
+third_party/
+└── tomlc17/
+    ├── CMakeLists.txt   ← handwritten; defines the tomlc17 static library target
+    ├── tomlc17.c        ← vendored from https://github.com/cktan/tomlc17 tag R260414
+    └── tomlc17.h
+```
+
+The subdirectory is included from `cmake/Dependencies.cmake` before the
+packages, so the `tomlc17` target is available to any package that links it.
+
+### 5.4 FetchContent
 
 `FetchContent` declarations are centralized in `cmake/Dependencies.cmake`:
 
 ```cmake
 include(FetchContent)
 
-FetchContent_Declare(unity
-    GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
-    GIT_TAG        v2.6.1
-)
-
-FetchContent_Declare(tomlc17
-    GIT_REPOSITORY https://github.com/cktan/tomlc17.git
-    GIT_TAG        R260414
-)
-
-FetchContent_MakeAvailable(unity tomlc17)
+if(BIOSIM_BUILD_TESTS)
+  FetchContent_Declare(unity
+      GIT_REPOSITORY https://github.com/ThrowTheSwitch/Unity.git
+      GIT_TAG        v2.6.1
+  )
+  FetchContent_MakeAvailable(unity)
+  target_compile_definitions(unity PUBLIC UNITY_INCLUDE_DOUBLE)
+endif()
 ```
-
-Downloaded sources land in `build/` and are never committed. Version is
-pinned by tag or commit hash, so every contributor and every CI run gets the
-same source.
 
 ## 6. Unit Testing Framework
 
@@ -348,8 +359,6 @@ GitHub Actions workflows exercise the portability claims continuously:
 | `linux-x64-clang` | `ubuntu-latest` | Clang | PoCL (CPU) |
 | `windows-x64-msvc` | `windows-latest` | MSVC | vcpkg-provided ICD |
 | `linux-arm64-gcc` | `ubuntu-24.04-arm` | GCC | PoCL (CPU) |
-
-The last row is enabled when ARM support becomes a priority.
 
 ### 9.2 What every job verifies
 

@@ -1,0 +1,12 @@
+#ifndef BIOSIM_CORE_STATUS_H
+#define BIOSIM_CORE_STATUS_H
+
+typedef enum {
+    BIOSIM_OK             = 0,
+    BIOSIM_ERR_NOMEM,
+    BIOSIM_ERR_TYPE,
+    BIOSIM_ERR_NOTFOUND,
+    BIOSIM_WARN_UNKNOWN_KEY,
+} biosim_status_t;
+
+#endif /* BIOSIM_CORE_STATUS_H */
