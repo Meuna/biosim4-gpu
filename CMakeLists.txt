@@ -76,7 +76,7 @@ find_program(CLANG_FORMAT_EXECUTABLE clang-format)
 if(CLANG_FORMAT_EXECUTABLE)
   add_custom_target(format
     COMMAND ${CMAKE_COMMAND} -E echo "Running clang-format..."
-    COMMAND git ls-files -- "*.c" "*.h" "*.cl"
+    COMMAND git ls-files -- "*.c" "*.h" "*.cl" ":(exclude)third_party/**"
             | xargs ${CLANG_FORMAT_EXECUTABLE} -i
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Formatting source files with clang-format"
@@ -89,7 +89,7 @@ find_program(CLANG_TIDY_EXECUTABLE clang-tidy)
 if(CLANG_TIDY_EXECUTABLE)
   add_custom_target(lint
     COMMAND ${CMAKE_COMMAND} -E echo "Running clang-tidy..."
-    COMMAND git ls-files -- "*.c"
+    COMMAND git ls-files -- "*.c" ":(exclude)third_party/**"
             | xargs ${CLANG_TIDY_EXECUTABLE}
                     --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy
                     -p ${CMAKE_BINARY_DIR}

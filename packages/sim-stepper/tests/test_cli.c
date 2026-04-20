@@ -59,7 +59,7 @@ void test_cli_overrides_toml(void) {
     biosim_params_extend(&p, extra, 1);
 
     char *argv[] = {"biosim-stepper", "--config", TEST_FIXTURES_DIR "/basic.toml",
-                    "--someparam", "from-cli", NULL};
+                    "--someparam",    "from-cli", NULL};
     stepper_cli_and_toml(&p, 5, argv);
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "someparam"));
     TEST_ASSERT_EQUAL_INT(42, biosim_params_get_int(&p, "population"));

@@ -2,7 +2,7 @@
 #define BIOSIM_CORE_STATUS_H
 
 typedef enum {
-    BIOSIM_OK             = 0,
+    BIOSIM_OK = 0,
     BIOSIM_ERR_NOMEM,
     BIOSIM_ERR_TYPE,
     BIOSIM_ERR_NOTFOUND,
