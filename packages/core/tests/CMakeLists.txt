@@ -17,3 +17,8 @@ add_executable(core-agent-tests test_agents.c)
 target_link_libraries(core-agent-tests PRIVATE core unity)
 target_compile_features(core-agent-tests PRIVATE c_std_11)
 add_test(NAME core-agent-tests COMMAND core-agent-tests)
+
+add_executable(core-genome-tests test_genome.c)
+target_link_libraries(core-genome-tests PRIVATE core unity)
+target_compile_features(core-genome-tests PRIVATE c_std_11)
+add_test(NAME core-genome-tests COMMAND core-genome-tests)

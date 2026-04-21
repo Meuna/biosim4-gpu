@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `biosim_agents_init_slot`.
 - **CLI/TOML dual parameter stack** (`sim-stepper`): three-pass resolution —
   defaults → TOML file → CLI flags.
+- **Genome module** (`core/genome.h` + `core/genome.c`): transposed SoA genome
+  buffers (`conn[gene_slot * N + agent]`, `wgt[gene_slot * N + agent]`,
+  `length[agent]`) implementing GPU data model §5. Gene field encoding macros
+  (`BIOSIM_GENE_PACK`, `BIOSIM_GENE_SRC_TYPE`, etc.) are OpenCL-compatible.
+  Host-side operators: `biosim_genome_init_slot`, `biosim_genome_copy_slot`,
+  `biosim_genome_mutate` (point + insertion + deletion at configurable rate),
+  `biosim_genome_crossover` (single-point), `biosim_genome_fingerprint`
+  (Fibonacci hash), and `biosim_genome_sort_by_length` (counting sort +
+  in-place reorder for warp-divergence mitigation). `max-neurons` parameter
+  added to core defaults (default 5).
 - **Build version injection** (`cmake/BuildVersion.cmake`): `BIOSIM_GIT_VERSION`
   (from `git describe --tags --always --dirty`), `BIOSIM_BUILD_TIMESTAMP`, and
   `BIOSIM_BUILD_TYPE` injected as compile definitions into executables.

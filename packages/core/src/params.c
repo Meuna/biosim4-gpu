@@ -19,6 +19,7 @@ static const biosim_param_entry_t core_defaults[] = {
     {"mutation-rate", {.f = 0.001}, {.f = 0.001}, PARAM_FLOAT, false},
     {"challenge", {.i = 0}, {.i = 0}, PARAM_INT, false},
     {"long-probe-dist", {.i = 16}, {.i = 16}, PARAM_INT, false},
+    {"max-neurons", {.i = 5}, {.i = 5}, PARAM_INT, false},
 };
 #define CORE_DEFAULTS_COUNT (sizeof(core_defaults) / sizeof(core_defaults[0]))
 
