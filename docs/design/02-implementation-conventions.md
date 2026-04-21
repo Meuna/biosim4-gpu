@@ -52,6 +52,25 @@ directly. A violation fails the link step. A lightweight CI check can also
 - Every concerned header carries a prologue comment flagging the constraint
   so future edits don't silently break OpenCL compilation.
 
+**Implemented example — `packages/core/include/biosim/core/types.h`:**
+
+OpenCL C has no `<stdint.h>`, so `int16_t` / `uint16_t` are undefined there.
+Its scalar integer equivalents are `short` and `ushort`. The portability guard
+pattern resolves this:
+
+```c
+#ifdef __OPENCL_VERSION__   /* GPU kernel compilation */
+typedef short  int16_t;
+typedef ushort uint16_t;
+#else                       /* C11 host compilation */
+#include <stdint.h>
+#endif
+```
+
+Headers that are host-only (e.g. any struct with a heap pointer) must not use
+this guard — they are simply not included by kernel sources. Such headers
+carry the complementary note: `HOST-ONLY: do not include from .cl files.`
+
 See [`03-portable-build.md`](03-portable-build.md) for the language-level
 statement of this rule.
 

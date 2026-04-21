@@ -116,15 +116,12 @@ memory, no virtual tables. Helper functions become free functions (or OpenCL
 
 ### 3.1 `Coord` — 4 bytes (unchanged)
 
-```cpp
-struct Coord {
-    int16_t x;
-    int16_t y;
-};
+```c
+typedef struct { int16_t x; int16_t y; } biosim_coord_t;
 ```
 
 Stored as two separate SoA buffers when used per-agent: `int16_t loc_x[N]`,
-`int16_t loc_y[N]`. Packed back into a `Coord` inside the kernel when
+`int16_t loc_y[N]`. Packed back into a `biosim_coord_t` inside the kernel when
 convenient.
 
 **Rationale for splitting into two buffers:** Many sensors read only `x` or only
@@ -394,11 +391,20 @@ to decide whether to apply tanh or set the undriven-default of 0.5.
 
 ### 7.1 Layout: flat 2D buffer
 
-```cpp
+```c
+/* GPU struct */
 __global uint16_t grid[SIZE_X * SIZE_Y];   // row-major: grid[y * SIZE_X + x]
 ```
 
 Cell encoding unchanged: 0 = empty, 0xFFFF = barrier, otherwise an agent index.
+
+On the host, the grid size is only known at runtime (the nuance with on the GPU
+is that the kernel are compiled at run time) so it is managed as an opaque struct.
+
+```c
+/* host struct */
+typedef struct { uint16_t *cells; int16_t size_x; int16_t size_y; } biosim_grid_t;
+```
 
 **Row-major vs column-major:** the current CPU code is column-major
 (`data[x][y]`). Row-major is more standard in GPU/image contexts and aligns with
