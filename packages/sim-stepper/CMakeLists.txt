@@ -9,6 +9,7 @@ target_compile_features(biosim-stepper PRIVATE c_std_11)
 target_include_directories(biosim-stepper PRIVATE include)
 target_link_libraries(biosim-stepper PRIVATE core tomlc17 argtable3::argtable3)
 target_compile_definitions(biosim-stepper PRIVATE BIOSIM_PROGNAME="biosim-stepper")
+biosim_target_git_version(biosim-stepper)
 install(TARGETS biosim-stepper RUNTIME)
 
 if(BIOSIM_BUILD_TESTS)

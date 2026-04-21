@@ -48,6 +48,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # External dependencies without a vcpkg port (FetchContent)
 include(Dependencies)
 
+# Build metadata (git version, timestamp, build type) injected via compile definitions
+include(BuildVersion)
+
 # Kernel embedding: kernels are always embedded at build time; EmbedKernels.cmake
 # generates the C translation unit that holds them as string literals
 # include(EmbedKernels)      # uncomment once cmake/EmbedKernels.cmake exists
