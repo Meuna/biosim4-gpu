@@ -136,6 +136,8 @@ spawn) stays on the host.
 - **Public API:** `biosim_` prefix — e.g. `biosim_genome_mutate`
 - **Types:** `biosim_*_t` — e.g. `biosim_coord_t`
 - **OpenCL kernels entrypoints:** `k_` prefix — e.g. `k_feedforward`
+- **Scope prefix:** `k_` prefix for OpenCL kernel entrypoints
+  — e.g. `k_feedforward`. No other scope prefix(no `s_`, no `g_` etc.)
 - **No mutable global state** in `core` — all state passed by parameter
 - **Error handling:** functions return `biosim_status_t`; asserts only for
   invariants that indicate bugs

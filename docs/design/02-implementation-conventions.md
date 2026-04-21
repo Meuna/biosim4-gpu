@@ -102,10 +102,7 @@ statement of this rule.
   consumer code. Example: `biosim_genome_mutate`, not `mutate_genome`.
 - **Types:** the same prefix, `biosim_coord_t`, `biosim_gene_t`, etc., with
   a `_t` suffix for typedef'd aggregates.
-- **OpenCL kernel entry points:** prefixed `k_` to visually distinguish them
-  from host functions in logs and diagnostics. Example: `k_feedforward`,
-  `k_movement`.
-- **scope prefix:** only prefix OpenCL kernel entry pmoint with `k_` to
+- **scope prefix:** only prefix OpenCL kernel entry point with `k_` to
   visually distinguish them from host functions in logs and diagnostics.
   Example: `k_feedforward`, `k_movement`. Do not use any other scope
   prefix (s_, g_ etc.). Rely on IDE scope resolution and syntax highlighting.
