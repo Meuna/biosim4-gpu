@@ -30,11 +30,18 @@ specification; implementation follows them.
   `core`) apply to every file written in this repository. They are enforced
   by review, not by linters alone.
 
-  - **Code Quality.** If you edited/created files, after tests compile
-  and succeed, run the linting command and apply the corrections, then
-  the format command, then test again, in this order. Do consider an
-  implementation task complete while the lint command return error or
-  warnings.
+  - **Code Quality.** Every time you edit or create files, you MUST
+  complete this sequence before considering the task done:
+    1. `cmake --build --preset debug` — must compile with zero errors
+    2. `cmake --build --preset debug --target check` — all tests must pass
+    3. `cmake --build --preset debug --target lint` — fix every error or
+       warning reported; repeat until the output is clean
+    4. `cmake --build --preset debug --target format` — apply formatting
+    5. `cmake --build --preset debug` — re-compile to confirm formatting
+       did not break anything
+    6. `cmake --build --preset debug --target check` — re-run tests to
+       confirm formatting did not break anything
+  A task is NOT complete while lint reports any error or warning.
 
 ## Build System
 
