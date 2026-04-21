@@ -86,6 +86,10 @@ statement of this rule.
 - **OpenCL kernel entry points:** prefixed `k_` to visually distinguish them
   from host functions in logs and diagnostics. Example: `k_feedforward`,
   `k_movement`.
+- **scope prefix:** only prefix OpenCL kernel entry pmoint with `k_` to
+  visually distinguish them from host functions in logs and diagnostics.
+  Example: `k_feedforward`, `k_movement`. Do not use any other scope
+  prefix (s_, g_ etc.). Rely on IDE scope resolution and syntax highlighting.
 
 ## 7. File Length and Cohesion
 

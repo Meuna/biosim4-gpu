@@ -26,10 +26,10 @@ specification; implementation follows them.
   removed; some approximation will need to be fixed; some design choices will
   be challenged. Don't shy against updating the design documents.
 
-- **Conventions are normative.** The rules in
-  `01-repository-structure.md` (naming, error handling, host/device
-  portability, no global state in `core`) apply to every file written in
-  this repository. They are enforced by review, not by linters alone.
+- **Conventions are normative.** The rules in `02-implementation-conventions.md`
+  (naming, error handling, host/device portability, no global state in
+  `core`) apply to every file written in this repository. They are enforced
+  by review, not by linters alone.
 
   - **Code Quality.** If you edited/created files, after tests compile
   and succeed, run the linting command and apply the corrections, then
@@ -157,5 +157,5 @@ Do not read from build/ — it is a derived artifact and may not exist
 
 ## Third Party Files
 
-Do not edit files from third_party/ — they are vendored artifacts and must only
-change with a full version bump
+Vendored libraries in third_party/ are read only, except when instructed to
+bump the version

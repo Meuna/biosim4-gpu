@@ -9,7 +9,7 @@
 
 /* ── core parameter table ───────────────────────────────────────────────── */
 
-static const biosim_param_entry_t s_core_defaults[] = {
+static const biosim_param_entry_t core_defaults[] = {
     {"sim-name", {.s = "unnamed"}, {.s = "unnamed"}, PARAM_STRING, false},
     {"population", {.i = 3000}, {.i = 3000}, PARAM_INT, false},
     {"size-x", {.i = 128}, {.i = 128}, PARAM_INT, false},
@@ -19,7 +19,7 @@ static const biosim_param_entry_t s_core_defaults[] = {
     {"mutation-rate", {.f = 0.001}, {.f = 0.001}, PARAM_FLOAT, false},
     {"challenge", {.i = 0}, {.i = 0}, PARAM_INT, false},
 };
-#define CORE_DEFAULTS_COUNT (sizeof(s_core_defaults) / sizeof(s_core_defaults[0]))
+#define CORE_DEFAULTS_COUNT (sizeof(core_defaults) / sizeof(core_defaults[0]))
 
 /* ── internal helpers ───────────────────────────────────────────────────── */
 
@@ -64,7 +64,7 @@ biosim_status_t biosim_params_init(biosim_params_t *p) {
     p->entries = NULL;
     p->count = 0;
     p->capacity = 0;
-    return biosim_params_extend(p, s_core_defaults, CORE_DEFAULTS_COUNT);
+    return biosim_params_extend(p, core_defaults, CORE_DEFAULTS_COUNT);
 }
 
 biosim_status_t biosim_params_extend(biosim_params_t *p, const biosim_param_entry_t *extras,

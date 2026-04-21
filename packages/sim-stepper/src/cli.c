@@ -10,14 +10,13 @@
 static const char progname[] = BIOSIM_PROGNAME;
 
 /* sim-stepper-specific parameter extensions */
-static const biosim_param_entry_t s_stepper_params[] = {
+static const biosim_param_entry_t stepper_params[] = {
     {"trace-out", {.s = ""}, {.s = ""}, PARAM_STRING, false},
 };
 
 biosim_status_t stepper_cli_and_toml(biosim_params_t *p, int argc, char **argv) {
     biosim_status_t st =
-        biosim_params_extend(p, s_stepper_params,
-                             sizeof(s_stepper_params) / sizeof(s_stepper_params[0]));
+        biosim_params_extend(p, stepper_params, sizeof(stepper_params) / sizeof(stepper_params[0]));
     if (st != BIOSIM_OK) {
         return st;
     }
