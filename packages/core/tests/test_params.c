@@ -12,6 +12,8 @@ void tearDown(void) {
     biosim_params_free(&p);
 }
 
+/* ── Tests ──────────────────────────────────────────────────────────────── */
+
 void test_init_population_default(void) {
     TEST_ASSERT_EQUAL_INT(3000, biosim_params_get_int(&p, "population"));
 }
@@ -71,6 +73,8 @@ void test_set_string_roundtrip(void) {
     biosim_params_set_string(&p, "sim-name", "myrun");
     TEST_ASSERT_EQUAL_STRING("myrun", biosim_params_get_string(&p, "sim-name"));
 }
+
+/* ── Runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

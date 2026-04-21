@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* ── lifecycle ──────────────────────────────────────────────────────────── */
+
 biosim_status_t biosim_agents_create(uint32_t capacity, biosim_agents_t *out) {
     assert(out != NULL);
     assert(capacity > 0);
@@ -13,11 +15,11 @@ biosim_status_t biosim_agents_create(uint32_t capacity, biosim_agents_t *out) {
     out->capacity = capacity;
 
 /* calloc one buffer; on failure release everything allocated so far and bail */
-#define ALLOC(field, type)                              \
-    out->field = calloc(capacity, sizeof(type));        \
-    if (!out->field) {                                  \
-        biosim_agents_free(out);                        \
-        return BIOSIM_ERR_NOMEM;                        \
+#define ALLOC(field, type)                                                                         \
+    out->field = calloc(capacity, sizeof(type));                                                   \
+    if (!out->field) {                                                                             \
+        biosim_agents_free(out);                                                                   \
+        return BIOSIM_ERR_NOMEM;                                                                   \
     }
 
     ALLOC(loc_x, int16_t)
@@ -62,6 +64,8 @@ void biosim_agents_free(biosim_agents_t *agents) {
     free(agents->desired_y);
     memset(agents, 0, sizeof(*agents));
 }
+
+/* ── slot initialisation ────────────────────────────────────────────────── */
 
 void biosim_agents_init_slot(biosim_agents_t *agents, uint32_t idx, biosim_coord_t loc,
                              uint8_t long_probe_dist, uint64_t rng_seed) {

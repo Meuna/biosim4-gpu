@@ -133,6 +133,8 @@ spawn) stays on the host.
 ## Code Conventions (`docs/design/02-implementation-conventions.md`)
 
 - **Files:** `snake_case.c`, `snake_case.h`
+- **Section separators:** `.c` files with multiples logical groups
+  must seperate them with titled 79 char banner using U+2500
 - **Public API:** `biosim_` prefix — e.g. `biosim_genome_mutate`
 - **Types:** `biosim_*_t` — e.g. `biosim_coord_t`
 - **OpenCL kernels entrypoints:** `k_` prefix — e.g. `k_feedforward`

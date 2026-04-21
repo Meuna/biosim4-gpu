@@ -6,6 +6,8 @@ void setUp(void) {
 void tearDown(void) {
 }
 
+/* ── Tests ──────────────────────────────────────────────────────────────── */
+
 void test_next_advances_state(void) {
     uint64_t state = 0xdeadbeefcafeULL;
     for (int i = 0; i < 1000; i++) {
@@ -36,6 +38,8 @@ void test_seed_different_indices_differ(void) {
     TEST_ASSERT_NOT_EQUAL_UINT64(s1, s2);
     TEST_ASSERT_NOT_EQUAL_UINT64(s0, s2);
 }
+
+/* ── Runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

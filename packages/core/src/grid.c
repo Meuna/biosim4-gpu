@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* ── lifecycle ──────────────────────────────────────────────────────────── */
+
 biosim_status_t biosim_grid_create(int16_t size_x, int16_t size_y, biosim_grid_t *out) {
     assert(out != NULL);
     assert(size_x > 0 && size_y > 0);
@@ -34,6 +36,8 @@ void biosim_grid_zero_fill(biosim_grid_t *grid) {
     memset(grid->cells, 0, (size_t)grid->size_x * (size_t)grid->size_y * sizeof(uint16_t));
 }
 
+/* ── bounds and access ──────────────────────────────────────────────────── */
+
 bool biosim_grid_in_bounds(const biosim_grid_t *grid, biosim_coord_t coord) {
     return coord.x >= 0 && coord.x < grid->size_x && coord.y >= 0 && coord.y < grid->size_y;
 }
@@ -48,6 +52,8 @@ void biosim_grid_set(biosim_grid_t *grid, biosim_coord_t coord, uint16_t value) 
     grid->cells[(size_t)coord.y * (size_t)grid->size_x + (size_t)coord.x] = value;
 }
 
+/* ── predicates ─────────────────────────────────────────────────────────── */
+
 bool biosim_grid_is_empty(const biosim_grid_t *grid, biosim_coord_t coord) {
     return biosim_grid_at(grid, coord) == BIOSIM_GRID_EMPTY;
 }
@@ -60,6 +66,8 @@ bool biosim_grid_is_occupied(const biosim_grid_t *grid, biosim_coord_t coord) {
     uint16_t cell = biosim_grid_at(grid, coord);
     return cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER;
 }
+
+/* ── search ─────────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_state,
                                        biosim_coord_t *out) {
@@ -87,6 +95,8 @@ biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_
 
     return BIOSIM_ERR_NOTFOUND;
 }
+
+/* ── neighborhood ───────────────────────────────────────────────────────── */
 
 void biosim_grid_visit_neighborhood(const biosim_grid_t *grid, biosim_coord_t center,
                                     int16_t radius, biosim_grid_visitor_t visitor, void *ctx) {
