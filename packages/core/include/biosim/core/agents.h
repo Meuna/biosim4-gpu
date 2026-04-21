@@ -1,0 +1,54 @@
+/*
+ * HOST-ONLY: this header uses heap pointers and host standard types.
+ * Do NOT include it from OpenCL kernel sources (.cl files).
+ * GPU kernels receive individual uint16_t * / float * buffer arguments.
+ */
+#ifndef BIOSIM_CORE_AGENTS_H
+#define BIOSIM_CORE_AGENTS_H
+
+#include "biosim/core/status.h"
+#include "biosim/core/types.h"
+#include <stdint.h>
+
+/*
+ * Per-agent data in Structure of Arrays layout.
+ * Slots are indexed 0..capacity-1. All buffers are always allocated;
+ * alive[i] == 0 marks a slot as inactive.
+ */
+typedef struct {
+    uint32_t capacity;
+
+    /* Position (split SoA for independent coalesced access on GPU) */
+    int16_t *loc_x;
+    int16_t *loc_y;
+    int16_t *birth_x;
+    int16_t *birth_y;
+
+    /* Per-agent state */
+    uint8_t *alive;
+    uint16_t *age;
+    uint16_t *osc_period;
+    float *responsiveness;
+    uint8_t *long_probe_dist;
+    uint8_t *last_move_dir;
+    uint32_t *challenge_bits;
+    uint64_t *rng_state;
+    uint64_t *genome_fingerprint; /* zeroed until genome module is implemented */
+
+    /* Transient per-step movement targets (feedforward → movement kernel) */
+    int16_t *desired_x;
+    int16_t *desired_y;
+} biosim_agents_t;
+
+/* Lifecycle */
+biosim_status_t biosim_agents_create(uint32_t capacity, biosim_agents_t *out);
+void biosim_agents_free(biosim_agents_t *agents);
+
+/*
+ * Initialise one slot ready for simulation: marks it alive, sets position,
+ * applies biological defaults, and seeds its RNG from (idx, rng_seed).
+ */
+void biosim_agents_init_slot(biosim_agents_t *agents, uint32_t idx, biosim_coord_t loc,
+                             uint8_t long_probe_dist, uint64_t rng_seed);
+
+#endif /* BIOSIM_CORE_AGENTS_H */

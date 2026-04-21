@@ -1,4 +1,6 @@
 #include "biosim/core/grid.h"
+#include "biosim/core/rng.h"
+#include "biosim/core/status.h"
 #include "biosim/core/types.h"
 #include "unity.h"
 
@@ -111,6 +113,43 @@ void test_visit_neighborhood_clips_at_corner(void) {
     TEST_ASSERT_EQUAL_INT(6, count);
 }
 
+void test_find_empty_returns_valid_coord(void) {
+    uint64_t rng = biosim_rng_seed(0, 1);
+    biosim_coord_t c;
+    biosim_status_t st = biosim_grid_find_empty(&g, &rng, &c);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, st);
+    TEST_ASSERT_TRUE(biosim_grid_in_bounds(&g, c));
+    TEST_ASSERT_TRUE(biosim_grid_is_empty(&g, c));
+}
+
+void test_find_empty_full_grid_returns_notfound(void) {
+    /* Fill every cell with an agent index */
+    for (int16_t y = 0; y < g.size_y; y++) {
+        for (int16_t x = 0; x < g.size_x; x++) {
+            biosim_grid_set(&g, coord(x, y), 1);
+        }
+    }
+    uint64_t rng = biosim_rng_seed(0, 1);
+    biosim_coord_t c;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_NOTFOUND, biosim_grid_find_empty(&g, &rng, &c));
+}
+
+void test_find_last_empty_cell_returns_valid_coord(void) {
+    /* Occupy every cell except (3,5) — find_empty must return exactly that coord */
+    for (int16_t y = 0; y < g.size_y; y++) {
+        for (int16_t x = 0; x < g.size_x; x++) {
+            biosim_grid_set(&g, coord(x, y), 1);
+        }
+    }
+    biosim_grid_set(&g, coord(3, 5), BIOSIM_GRID_EMPTY);
+
+    uint64_t rng = biosim_rng_seed(0, 1);
+    biosim_coord_t c;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_grid_find_empty(&g, &rng, &c));
+    TEST_ASSERT_EQUAL_INT16(3, c.x);
+    TEST_ASSERT_EQUAL_INT16(5, c.y);
+}
+
 /* ── Runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -127,5 +166,8 @@ int main(void) {
     RUN_TEST(test_visit_neighborhood_radius0);
     RUN_TEST(test_visit_neighborhood_radius1_center);
     RUN_TEST(test_visit_neighborhood_clips_at_corner);
+    RUN_TEST(test_find_empty_returns_valid_coord);
+    RUN_TEST(test_find_empty_full_grid_returns_notfound);
+    RUN_TEST(test_find_last_empty_cell_returns_valid_coord);
     return UNITY_END();
 }

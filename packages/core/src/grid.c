@@ -1,4 +1,5 @@
 #include "biosim/core/grid.h"
+#include "biosim/core/rng.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -13,7 +14,7 @@ biosim_status_t biosim_grid_create(int16_t size_x, int16_t size_y, biosim_grid_t
         return BIOSIM_ERR_NOMEM;
     }
 
-    out->cells  = cells;
+    out->cells = cells;
     out->size_x = size_x;
     out->size_y = size_y;
     return BIOSIM_OK;
@@ -22,7 +23,7 @@ biosim_status_t biosim_grid_create(int16_t size_x, int16_t size_y, biosim_grid_t
 void biosim_grid_free(biosim_grid_t *grid) {
     if (grid) {
         free(grid->cells);
-        grid->cells  = NULL;
+        grid->cells = NULL;
         grid->size_x = 0;
         grid->size_y = 0;
     }
@@ -60,13 +61,40 @@ bool biosim_grid_is_occupied(const biosim_grid_t *grid, biosim_coord_t coord) {
     return cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER;
 }
 
+biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_state,
+                                       biosim_coord_t *out) {
+    assert(grid && rng_state && out);
+    int32_t total = (int32_t)grid->size_x * (int32_t)grid->size_y;
+
+    /* Random probe phase — succeeds quickly on a sparse grid */
+    for (int i = 0; i < 200; i++) {
+        int32_t idx = (int32_t)(biosim_rng_next(rng_state) % (uint64_t)total);
+        if (grid->cells[idx] == BIOSIM_GRID_EMPTY) {
+            out->x = (int16_t)(idx % grid->size_x);
+            out->y = (int16_t)(idx / grid->size_x);
+            return BIOSIM_OK;
+        }
+    }
+
+    /* Linear scan fallback — guaranteed to find one if any empty cell exists */
+    for (int32_t idx = 0; idx < total; idx++) {
+        if (grid->cells[idx] == BIOSIM_GRID_EMPTY) {
+            out->x = (int16_t)(idx % grid->size_x);
+            out->y = (int16_t)(idx / grid->size_x);
+            return BIOSIM_OK;
+        }
+    }
+
+    return BIOSIM_ERR_NOTFOUND;
+}
+
 void biosim_grid_visit_neighborhood(const biosim_grid_t *grid, biosim_coord_t center,
                                     int16_t radius, biosim_grid_visitor_t visitor, void *ctx) {
     assert(grid && visitor);
 
-    for (int16_t dy = -radius; dy <= radius; dy++) {
-        for (int16_t dx = -radius; dx <= radius; dx++) {
-            if ((int32_t)dx * dx + (int32_t)dy * dy > (int32_t)radius * radius) {
+    for (int32_t dy = -radius; dy <= radius; dy++) {
+        for (int32_t dx = -radius; dx <= radius; dx++) {
+            if (dx * dx + dy * dy > (int32_t)radius * radius) {
                 continue;
             }
             biosim_coord_t c = {(int16_t)(center.x + dx), (int16_t)(center.y + dy)};

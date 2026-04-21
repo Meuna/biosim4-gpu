@@ -7,7 +7,7 @@
 #define BIOSIM_CORE_TYPES_H
 
 #ifdef __OPENCL_VERSION__
-typedef short  int16_t;
+typedef short int16_t;
 typedef ushort uint16_t;
 #else
 #include <stdint.h>
@@ -20,7 +20,7 @@ typedef struct {
 } biosim_coord_t;
 
 /* Grid cell sentinel values */
-#define BIOSIM_GRID_EMPTY   ((uint16_t)0x0000u)
-#define BIOSIM_GRID_BARRIER ((uint16_t)0xFFFFu)
+#define BIOSIM_GRID_EMPTY   ((uint16_t)0x0000U)
+#define BIOSIM_GRID_BARRIER ((uint16_t)0xFFFFU)
 
 #endif /* BIOSIM_CORE_TYPES_H */
