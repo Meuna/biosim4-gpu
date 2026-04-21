@@ -20,11 +20,10 @@ specification; implementation follows them.
   design point (config file format, binary format), do not settle them
   unilaterally, flag them to the user when they come up.
 
-- **Design documents are lively during early iteration.** Keep the design
-  documentation aligned with the implementation as the scaffold progress. Some
-  early "not yet implemented" or "work in progress" mentions will need to be
-  removed; some approximation will need to be fixed; some design choices will
-  be challenged. Don't shy against updating the design documents.
+- **Keep the documentation up-to-date.** When implementing a feature,
+  ensure that the documentation remain aligned with the implementation.
+  Notably, remove the mentions like "feature not yet implemented" as
+  needed when related to the feature you implemented.
 
 - **Conventions are normative.** The rules in `02-implementation-conventions.md`
   (naming, error handling, host/device portability, no global state in
