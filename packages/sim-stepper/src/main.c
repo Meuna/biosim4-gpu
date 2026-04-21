@@ -3,10 +3,17 @@
 #include "biosim/core/params.h"
 #include "biosim/stepper/cli.h"
 
+static const biosim_build_info_t build_info = {
+    .progname = BIOSIM_PROGNAME,
+    .version = BIOSIM_GIT_VERSION,
+    .build_timestamp = BIOSIM_BUILD_TIMESTAMP,
+    .build_type = BIOSIM_BUILD_TYPE,
+};
+
 int main(int argc, char **argv) {
     biosim_params_t p;
     biosim_params_init(&p);
-    stepper_cli_and_toml(&p, argc, argv);
+    stepper_cli_and_toml(&p, &build_info, argc, argv);
 
     printf("sim-name:   %s\n", biosim_params_get_string(&p, "sim-name"));
     printf("population: %d\n", biosim_params_get_int(&p, "population"));

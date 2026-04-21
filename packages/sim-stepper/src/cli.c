@@ -7,17 +7,13 @@
 #include "biosim/stepper/cli.h"
 #include "biosim/stepper/toml.h"
 
-static const char progname[] = BIOSIM_PROGNAME;
-static const char git_version[] = BIOSIM_GIT_VERSION;
-static const char build_timestamp[] = BIOSIM_BUILD_TIMESTAMP;
-static const char build_type[] = BIOSIM_BUILD_TYPE;
-
 /* sim-stepper-specific parameter extensions */
 static const biosim_param_entry_t stepper_params[] = {
     {"trace-out", {.s = ""}, {.s = ""}, PARAM_STRING, false},
 };
 
-biosim_status_t stepper_cli_and_toml(biosim_params_t *p, int argc, char **argv) {
+biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info_t *info, int argc,
+                                     char **argv) {
     biosim_status_t st =
         biosim_params_extend(p, stepper_params, sizeof(stepper_params) / sizeof(stepper_params[0]));
     if (st != BIOSIM_OK) {
@@ -66,22 +62,23 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, int argc, char **argv) 
     int nerrors = arg_parse(argc, argv, argtable);
 
     if (arg_help->count > 0) {
-        printf("Usage: %s", progname);
+        printf("Usage: %s", info->progname);
         arg_print_syntax(stdout, argtable, "\n\n");
-        printf("%s — biosim4-gpu single-threaded CPU reference simulator\n\n", progname);
+        printf("%s — biosim4-gpu single-threaded CPU reference simulator\n\n", info->progname);
         arg_print_glossary(stdout, argtable, "  %-25s %s\n");
         arg_freetable(argtable, total);
         free((void *)argtable);
         exit(0);
     }
     if (arg_version->count > 0) {
-        printf("%s %s (%s) [%s]\n", progname, git_version, build_timestamp, build_type);
+        printf("%s %s (%s) [%s]\n", info->progname, info->version, info->build_timestamp,
+               info->build_type);
         arg_freetable(argtable, total);
         free((void *)argtable);
         exit(0);
     }
     if (nerrors > 0) {
-        arg_print_errors(stderr, arg_end_s, progname);
+        arg_print_errors(stderr, arg_end_s, info->progname);
         arg_freetable(argtable, total);
         free((void *)argtable);
         return BIOSIM_ERR_NOTFOUND;

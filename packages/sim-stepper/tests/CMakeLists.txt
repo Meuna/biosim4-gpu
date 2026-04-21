@@ -12,8 +12,6 @@ target_include_directories(stepper-tests PRIVATE
 )
 target_compile_definitions(stepper-tests PRIVATE
   TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
-  BIOSIM_PROGNAME="biosim-stepper"
 )
-biosim_target_git_version(stepper-tests)
 
 add_test(NAME stepper-tests COMMAND stepper-tests)

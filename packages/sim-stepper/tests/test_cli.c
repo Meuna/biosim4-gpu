@@ -3,6 +3,13 @@
 #include "biosim/stepper/toml.h"
 #include "unity.h"
 
+static const biosim_build_info_t stub_info = {
+    .progname = "biosim-stepper",
+    .version = "test",
+    .build_timestamp = "1970-01-01T00:00:00Z",
+    .build_type = "Test",
+};
+
 static biosim_params_t p;
 
 void setUp(void) {
@@ -45,7 +52,7 @@ void test_cli_sets_values(void) {
     };
     biosim_params_extend(&p, extra, 1);
     char *argv[] = {"biosim-stepper", "--someparam", "from-cli", "--population", "9999", NULL};
-    stepper_cli_and_toml(&p, 5, argv);
+    stepper_cli_and_toml(&p, &stub_info, 5, argv);
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "someparam"));
     TEST_ASSERT_EQUAL_INT(9999, biosim_params_get_int(&p, "population"));
 }
@@ -64,7 +71,7 @@ void test_cli_overrides_toml(void) {
                     "--someparam",
                     "from-cli",
                     NULL};
-    stepper_cli_and_toml(&p, 5, argv);
+    stepper_cli_and_toml(&p, &stub_info, 5, argv);
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "someparam"));
     TEST_ASSERT_EQUAL_INT(42, biosim_params_get_int(&p, "population"));
 }
