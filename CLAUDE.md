@@ -45,9 +45,12 @@ specification; implementation follows them.
 
 ## Build System
 
-The build uses **CMake + vcpkg** (VCPKG_ROOT must be set, see `docs/build.md`):
+The build uses **CMake + vcpkg**:
 
 ```sh
+# Set VCPKG_ROOT with sensible default if not set yet
+if [ -z "$VCPKG_ROOT" ]; then export VCPKG_ROOT=~/vcpkg; fi
+
 # Configure
 cmake --preset debug    # or: release, asan, ci
 
