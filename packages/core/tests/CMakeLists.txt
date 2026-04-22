@@ -27,3 +27,8 @@ add_executable(core-nnet-tests test_nnet.c)
 target_link_libraries(core-nnet-tests PRIVATE core unity)
 target_compile_features(core-nnet-tests PRIVATE c_std_11)
 add_test(NAME core-nnet-tests COMMAND core-nnet-tests)
+
+add_executable(core-io-catalogue-tests test_io_catalogue.c)
+target_link_libraries(core-io-catalogue-tests PRIVATE core unity)
+target_compile_features(core-io-catalogue-tests PRIVATE c_std_11)
+add_test(NAME core-io-catalogue-tests COMMAND core-io-catalogue-tests)
