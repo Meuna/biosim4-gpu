@@ -392,6 +392,110 @@ void test_fingerprint_phenotypic_equivalence(void) {
     TEST_ASSERT_EQUAL_UINT64(biosim_nnet_fingerprint(&nnet, 0), biosim_nnet_fingerprint(&nnet, 1));
 }
 
+/* ── Feedforward ─────────────────────────────────────────────────────────── */
+
+void test_feedforward_sensor_to_action_direct(void) {
+    /* S0→A0, weight=8192 (one scale unit): sensor=1.0 → action_vals[0]=1.0 */
+    set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 8192);
+    genome.length[AGENT_IDX] = 1;
+    biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS);
+
+    float sensor_vals[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
+    float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F, action_vals[0]);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, action_vals[1]);
+}
+
+void test_feedforward_sensor_neuron_action_chain(void) {
+    /* S0→N0 (w=8192), N0→A0 (w=8192).
+     * On the first call neuron_output[N0] starts at 0, so A0 receives 0.
+     * After the call neuron_output[N0] = tanhf(1.0). */
+    set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
+    set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
+    genome.length[AGENT_IDX] = 2;
+    biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS);
+
+    float sensor_vals[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
+    float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), nnet.neuron_output[0 * CAP + AGENT_IDX]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 0.0F, action_vals[0]);
+}
+
+void test_feedforward_neuron_state_carry(void) {
+    /* Same S0→N0→A0 chain.  After a warm-up call with sensor=1.0, a second
+     * call with sensor=0.0 reads the stored neuron_output as the source for
+     * the N0→A0 connection, so action_vals[0] ≈ tanhf(1.0). */
+    set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
+    set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
+    genome.length[AGENT_IDX] = 2;
+    biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS);
+
+    float sv1[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
+    float av1[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sv1, NUM_SENSORS, av1, NUM_ACTIONS);
+
+    float sv2[NUM_SENSORS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    float av2[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sv2, NUM_SENSORS, av2, NUM_ACTIONS);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), av2[0]);
+}
+
+void test_feedforward_undriven_neuron_defaults_to_half(void) {
+    /* compile_slot only keeps neurons with driven=1.  Forcing driven=0 after
+     * compilation exercises the undriven branch (output fixed to 0.5F). */
+    set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
+    set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
+    genome.length[AGENT_IDX] = 2;
+    biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS);
+
+    nnet.neuron_driven[0 * CAP + AGENT_IDX] = 0;
+
+    float sensor_vals[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
+    float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, nnet.neuron_output[0 * CAP + AGENT_IDX]);
+}
+
+void test_feedforward_multiple_sensors_sum_to_action(void) {
+    /* S0→A0 (w=8192) + S1→A0 (w=4096), both sensors=1.0:
+     * action_vals[0] = 1.0*(8192/8192) + 1.0*(4096/8192) = 1.5 */
+    set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 8192);
+    set_gene(AGENT_IDX, 1, BIOSIM_GENE_IO, 1, BIOSIM_GENE_IO, 0, 4096);
+    genome.length[AGENT_IDX] = 2;
+    biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS);
+
+    float sensor_vals[NUM_SENSORS] = {1.0F, 1.0F, 0.0F, 0.0F};
+    float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.5F, action_vals[0]);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, action_vals[1]);
+}
+
+void test_feedforward_no_connections_noop(void) {
+    /* Empty genome: no connections, no neurons.  action_vals must stay zero
+     * and any pre-existing neuron_output value must remain untouched. */
+    genome.length[AGENT_IDX] = 0;
+    biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS);
+
+    nnet.neuron_output[0 * CAP + AGENT_IDX] = 99.0F;
+
+    float sensor_vals[NUM_SENSORS] = {0.5F, 0.5F, 0.5F, 0.5F};
+    float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+
+    for (uint8_t a = 0; a < NUM_ACTIONS; a++) {
+        TEST_ASSERT_EQUAL_FLOAT(0.0F, action_vals[a]);
+    }
+    TEST_ASSERT_EQUAL_FLOAT(99.0F, nnet.neuron_output[0 * CAP + AGENT_IDX]);
+}
+
 /* ── Runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -426,5 +530,11 @@ int main(void) {
     RUN_TEST(test_fingerprint_compiled_nnet_deterministic);
     RUN_TEST(test_fingerprint_differs_for_different_nnets);
     RUN_TEST(test_fingerprint_phenotypic_equivalence);
+    RUN_TEST(test_feedforward_sensor_to_action_direct);
+    RUN_TEST(test_feedforward_sensor_neuron_action_chain);
+    RUN_TEST(test_feedforward_neuron_state_carry);
+    RUN_TEST(test_feedforward_undriven_neuron_defaults_to_half);
+    RUN_TEST(test_feedforward_multiple_sensors_sum_to_action);
+    RUN_TEST(test_feedforward_no_connections_noop);
     return UNITY_END();
 }

@@ -1,6 +1,7 @@
 #include "biosim/core/nnet.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -257,4 +258,58 @@ uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx) {
         h *= 0x9e3779b97f4a7c15ULL;
     }
     return h;
+}
+
+/* ── feedforward ────────────────────────────────────────────────────────── */
+
+void biosim_nnet_feedforward(biosim_nnet_t *n, uint32_t idx, const float *sensor_vals,
+                             uint8_t num_sensors, float *action_vals, uint8_t num_actions) {
+    assert(n != NULL);
+    assert(idx < n->capacity);
+    assert(sensor_vals != NULL && num_sensors > 0);
+    assert(action_vals != NULL && num_actions > 0);
+
+    uint32_t cap = n->capacity;
+    uint16_t nconn = n->conn_length[idx];
+    uint8_t ncount = n->neuron_count[idx];
+
+    /* Stack-allocated neuron accumulator.  max_neurons ≤ 128 is an invariant
+     * enforced by compile_slot, so this array always has enough slots.
+     * Clearing all 128 avoids any stale-slot bugs if ncount is wrong. */
+    float nacc[128];
+    memset(nacc, 0, sizeof nacc);
+
+    /* Single pass over compiled connections.  compile_slot places all
+     * neuron-sink connections before action-sink connections, so neuron
+     * accumulators are fully populated before any action accumulator is
+     * written.  Neuron sources read from the previous step's neuron_output,
+     * which has not yet been overwritten in this call. */
+    for (uint16_t j = 0; j < nconn; j++) {
+        size_t slot = (size_t)j * cap + idx;
+        uint16_t packed = n->genome_conn[slot];
+        int16_t raw_wgt = n->genome_wgt[slot];
+
+        uint8_t src_type = (uint8_t)BIOSIM_GENE_SRC_TYPE(packed);
+        uint8_t src_num = (uint8_t)BIOSIM_GENE_SRC_NUM(packed);
+        uint8_t sink_type = (uint8_t)BIOSIM_GENE_SINK_TYPE(packed);
+        uint8_t sink_num = (uint8_t)BIOSIM_GENE_SINK_NUM(packed);
+
+        float source = (src_type == BIOSIM_GENE_IO) ? sensor_vals[src_num]
+                                                    : n->neuron_output[(size_t)src_num * cap + idx];
+
+        float weighted = source * ((float)raw_wgt / BIOSIM_GENE_WEIGHT_SCALE);
+
+        if (sink_type == BIOSIM_GENE_NEURON) {
+            nacc[sink_num] += weighted;
+        } else {
+            action_vals[sink_num] += weighted;
+        }
+    }
+
+    /* Apply tanh to driven neurons; undriven neurons hold the quiescent
+     * baseline of 0.5F (midpoint of the [0,1] sensor range). */
+    for (uint8_t k = 0; k < ncount; k++) {
+        size_t nslot = (size_t)k * cap + idx;
+        n->neuron_output[nslot] = n->neuron_driven[nslot] ? tanhf(nacc[k]) : 0.5F;
+    }
 }

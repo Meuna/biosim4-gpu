@@ -61,4 +61,19 @@ void biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome, u
  * biosim_nnet_compile_slot must be called before this function. */
 uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx);
 
+/* ── feedforward ────────────────────────────────────────────────────────── */
+
+/* Run one feedforward pass for agent idx.
+ *
+ * sensor_vals[0..num_sensors-1]  — caller-evaluated sensor outputs in [0,1].
+ * action_vals[0..num_actions-1]  — caller-zeroed; receives raw weighted sums.
+ *   Responsiveness is NOT applied here; biosim_action_apply handles that.
+ * neuron_output in the SoA is updated in-place; state carries across calls,
+ * producing step-delayed recurrent behaviour.
+ *
+ * Relies on the neuron-sink-before-action-sink ordering invariant established
+ * by biosim_nnet_compile_slot. */
+void biosim_nnet_feedforward(biosim_nnet_t *n, uint32_t idx, const float *sensor_vals,
+                             uint8_t num_sensors, float *action_vals, uint8_t num_actions);
+
 #endif /* BIOSIM_CORE_NNET_H */

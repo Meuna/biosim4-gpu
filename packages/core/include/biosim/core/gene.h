@@ -22,6 +22,13 @@
 #define BIOSIM_GENE_NEURON 0U
 #define BIOSIM_GENE_IO     1U
 
+/* ── weight scaling ──────────────────────────────────────────────────────── */
+
+/* int16_t gene weights are divided by this value to produce a float weight
+ * in roughly ±4.0 range.  Must be shared between the host nnet module and
+ * the OpenCL feedforward kernel so both produce byte-identical conversions. */
+#define BIOSIM_GENE_WEIGHT_SCALE 8192.0F
+
 #define BIOSIM_GENE_SRC_TYPE(c)  (((c) >> 15) & 1U)
 #define BIOSIM_GENE_SRC_NUM(c)   (((c) >> 8) & 0x7FU)
 #define BIOSIM_GENE_SINK_TYPE(c) (((c) >> 7) & 1U)
