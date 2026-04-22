@@ -4,6 +4,7 @@ add_executable(biosim-stepper
   src/main.c
   src/cli.c
   src/toml.c
+  src/step.c
 )
 target_compile_features(biosim-stepper PRIVATE c_std_11)
 target_include_directories(biosim-stepper PRIVATE include)
