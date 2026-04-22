@@ -151,10 +151,8 @@ void test_crossover_child_has_parents_genome(void) {
     for (uint32_t j = 0; j < child_len; j++) {
         uint16_t c_conn = g.conn[j * g.capacity + 2];
         int16_t c_wgt = g.wgt[j * g.capacity + 2];
-        int from_a = (c_conn == g.conn[j * g.capacity + 0]) &&
-                     (c_wgt == g.wgt[j * g.capacity + 0]);
-        int from_b = (c_conn == g.conn[j * g.capacity + 1]) &&
-                     (c_wgt == g.wgt[j * g.capacity + 1]);
+        int from_a = (c_conn == g.conn[j * g.capacity + 0]) && (c_wgt == g.wgt[j * g.capacity + 0]);
+        int from_b = (c_conn == g.conn[j * g.capacity + 1]) && (c_wgt == g.wgt[j * g.capacity + 1]);
         TEST_ASSERT_TRUE(from_a || from_b);
     }
 }
@@ -165,8 +163,7 @@ void test_fingerprint_deterministic(void) {
     uint64_t rng = 23ULL;
     biosim_genome_init_slot(&g, 0, 8, &rng);
     biosim_genome_copy_slot(&g, 1, 0);
-    TEST_ASSERT_EQUAL_UINT64(biosim_genome_fingerprint(&g, 0),
-                             biosim_genome_fingerprint(&g, 1));
+    TEST_ASSERT_EQUAL_UINT64(biosim_genome_fingerprint(&g, 0), biosim_genome_fingerprint(&g, 1));
 }
 
 void test_fingerprint_differs_for_different_genomes(void) {

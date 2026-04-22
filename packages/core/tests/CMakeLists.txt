@@ -22,3 +22,8 @@ add_executable(core-genome-tests test_genome.c)
 target_link_libraries(core-genome-tests PRIVATE core unity)
 target_compile_features(core-genome-tests PRIVATE c_std_11)
 add_test(NAME core-genome-tests COMMAND core-genome-tests)
+
+add_executable(core-nnet-tests test_nnet.c)
+target_link_libraries(core-nnet-tests PRIVATE core unity)
+target_compile_features(core-nnet-tests PRIVATE c_std_11)
+add_test(NAME core-nnet-tests COMMAND core-nnet-tests)

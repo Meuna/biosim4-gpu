@@ -316,14 +316,14 @@ per-neuron running output.
 ### 6.1 Connections — padded, transposed SoA
 
 Identical layout to the genome. The compiled connections after culling are
-stored as gene-equivalent entries, up to `MAX_CONNECTIONS` per agent.
+stored as gene-equivalent entries, up to `MAX_CONN` per agent.
 
 ```cpp
-#define MAX_CONNECTIONS  (2 * GENOME_MAX_LENGTH)   // culling may preserve or add
+#define MAX_CONN  (2 * GENOME_MAX_LENGTH)   // culling may preserve or add
 
-__global uint16_t conn_packed[MAX_CONNECTIONS * N];
-__global int16_t  conn_weight[MAX_CONNECTIONS * N];
-__global uint8_t  conn_length[N];
+__global uint16_t conn_packed[MAX_CONN * N];
+__global int16_t  conn_weight[MAX_CONN * N];
+__global uint16_t conn_length[N];
 ```
 
 `conn_packed` encodes source type (1 bit), source index (7 bits), sink type (1
@@ -906,7 +906,7 @@ direction. Negligible compared to a generation's worth of simSteps.
 ## 15. Memory Budget Estimate
 
 For a typical configuration `N = 4096`, `SIZE_X = SIZE_Y = 128`, `LAYERS = 1`,
-`GENOME_MAX_LENGTH = 256`, `MAX_NEURONS = 32`, `MAX_CONNECTIONS = 512`:
+`GENOME_MAX_LENGTH = 256`, `MAX_NEURONS = 32`, `MAX_CONN = 512`:
 
 | Buffer | Size |
 |---|---|

@@ -21,11 +21,17 @@ typedef ulong uint64_t;
 
 /* ── gene field encoding ─────────────────────────────────────────────────── */
 /* conn layout: [srcType:1][srcNum:7][sinkType:1][sinkNum:7]
- * srcType  1 = SENSOR, 0 = NEURON
- * sinkType 1 = ACTION, 0 = NEURON
+ *
+ * Both srcType and sinkType share the same two values:
+ *   BIOSIM_GENE_NEURON (0) — internal node; neuron as source or sink
+ *   BIOSIM_GENE_IO     (1) — peripheral; sensor as source, action as sink
+ *
  * Source/sink numbers are raw 7-bit values remapped modulo valid range
  * by the feedforward kernel.
  */
+
+#define BIOSIM_GENE_NEURON 0U
+#define BIOSIM_GENE_IO     1U
 
 #define BIOSIM_GENE_SRC_TYPE(c)  (((c) >> 15) & 1U)
 #define BIOSIM_GENE_SRC_NUM(c)   (((c) >> 8) & 0x7FU)
