@@ -111,7 +111,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
         if (steps <= 0) {
             steps = 1;
         }
-        return (float)agents->age[idx] / (float)steps;
+        return (float)ctx->sim_step / (float)steps;
     }
 
     case BIOSIM_SENSOR_RANDOM:

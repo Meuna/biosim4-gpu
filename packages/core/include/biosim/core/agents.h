@@ -26,7 +26,6 @@ typedef struct {
 
     /* Per-agent state */
     uint8_t *alive;
-    uint16_t *age;
     uint16_t *osc_period;
     float *responsiveness;
     uint8_t *long_probe_dist;

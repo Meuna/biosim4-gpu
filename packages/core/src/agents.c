@@ -27,7 +27,6 @@ biosim_status_t biosim_agents_create(uint32_t capacity, biosim_agents_t *out) {
     ALLOC(birth_x, int16_t)
     ALLOC(birth_y, int16_t)
     ALLOC(alive, uint8_t)
-    ALLOC(age, uint16_t)
     ALLOC(osc_period, uint16_t)
     ALLOC(responsiveness, float)
     ALLOC(long_probe_dist, uint8_t)
@@ -52,7 +51,6 @@ void biosim_agents_free(biosim_agents_t *agents) {
     free(agents->birth_x);
     free(agents->birth_y);
     free(agents->alive);
-    free(agents->age);
     free(agents->osc_period);
     free(agents->responsiveness);
     free(agents->long_probe_dist);
@@ -77,7 +75,6 @@ void biosim_agents_init_slot(biosim_agents_t *agents, uint32_t idx, biosim_coord
     agents->loc_y[idx] = loc.y;
     agents->birth_x[idx] = loc.x;
     agents->birth_y[idx] = loc.y;
-    agents->age[idx] = 0;
     agents->osc_period[idx] = 34;
     agents->responsiveness[idx] = 0.5F;
     agents->long_probe_dist[idx] = long_probe_dist;

@@ -37,7 +37,6 @@ void test_create_position_buffers_non_null(void) {
 
 void test_create_state_buffers_non_null(void) {
     TEST_ASSERT_NOT_NULL(agents.alive);
-    TEST_ASSERT_NOT_NULL(agents.age);
     TEST_ASSERT_NOT_NULL(agents.osc_period);
     TEST_ASSERT_NOT_NULL(agents.responsiveness);
     TEST_ASSERT_NOT_NULL(agents.long_probe_dist);

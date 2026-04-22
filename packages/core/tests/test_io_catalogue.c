@@ -213,15 +213,13 @@ void test_osc1_half_cycle(void) {
 /* ── AGE ────────────────────────────────────────────────────────────────── */
 
 void test_age_zero(void) {
-    agents.age[0] = 0;
     biosim_sense_ctx_t ctx = make_sense(0, 0);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_AGE, &ctx, &params));
 }
 
 void test_age_max(void) {
     int steps = biosim_params_get_int(&params, "steps-per-gen");
-    agents.age[0] = (uint16_t)steps;
-    biosim_sense_ctx_t ctx = make_sense(0, 0);
+    biosim_sense_ctx_t ctx = make_sense(0, (uint32_t)steps);
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F, biosim_sensor_eval(BIOSIM_SENSOR_AGE, &ctx, &params));
 }
 
