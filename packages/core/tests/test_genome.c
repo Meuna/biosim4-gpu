@@ -157,24 +157,6 @@ void test_crossover_child_has_parents_genome(void) {
     }
 }
 
-/* ── Fingerprint ─────────────────────────────────────────────────────────── */
-
-void test_fingerprint_deterministic(void) {
-    uint64_t rng = 23ULL;
-    biosim_genome_init_slot(&g, 0, 8, &rng);
-    biosim_genome_copy_slot(&g, 1, 0);
-    TEST_ASSERT_EQUAL_UINT64(biosim_genome_fingerprint(&g, 0), biosim_genome_fingerprint(&g, 1));
-}
-
-void test_fingerprint_differs_for_different_genomes(void) {
-    uint64_t rng_a = 29ULL;
-    uint64_t rng_b = 31ULL;
-    biosim_genome_init_slot(&g, 0, 4, &rng_a);
-    biosim_genome_init_slot(&g, 1, 4, &rng_b);
-    TEST_ASSERT_NOT_EQUAL_UINT64(biosim_genome_fingerprint(&g, 0),
-                                 biosim_genome_fingerprint(&g, 1));
-}
-
 /* ── Sort ───────────────────────────────────────────────────────────────── */
 
 void test_sort_descending_order(void) {
@@ -251,8 +233,6 @@ int main(void) {
     RUN_TEST(test_crossover_child_length_equals_parent_b);
     RUN_TEST(test_crossover_length_within_max);
     RUN_TEST(test_crossover_child_has_parents_genome);
-    RUN_TEST(test_fingerprint_deterministic);
-    RUN_TEST(test_fingerprint_differs_for_different_genomes);
     RUN_TEST(test_sort_descending_order);
     RUN_TEST(test_sort_permutation_valid);
     RUN_TEST(test_sort_preserves_genes);

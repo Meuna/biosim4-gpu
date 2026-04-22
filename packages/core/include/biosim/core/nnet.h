@@ -2,12 +2,13 @@
  *
  * HOST-ONLY: this header uses heap pointers and host standard types.
  * Do NOT include from OpenCL kernel sources (.cl files).
- * GPU kernels receive conn_packed*, conn_weight*, etc. as bare buffer arguments.
+ * GPU kernels receive these buffers (e.g. genome_conn/genome_wgt) as bare buffer arguments.
  */
 
 #ifndef BIOSIM_CORE_NNET_H
 #define BIOSIM_CORE_NNET_H
 
+#include "biosim/core/gene.h"
 #include "biosim/core/genome.h"
 #include "biosim/core/status.h"
 #include <stdint.h>
@@ -23,8 +24,8 @@ typedef struct {
     uint32_t capacity;     /* number of agent slots (N) */
     uint16_t max_conn;     /* connection slots per agent (MAX_CONN) */
     uint8_t max_neurons;   /* neuron slots per agent (MAX_NEURONS, ≤ 128) */
-    uint16_t *conn_packed; /* [conn_slot * capacity + agent_idx] */
-    int16_t *conn_weight;  /* [conn_slot * capacity + agent_idx] */
+    uint16_t *genome_conn; /* packed conn genes [conn_slot * capacity + agent_idx] */
+    int16_t *genome_wgt;   /* conn weights      [conn_slot * capacity + agent_idx] */
     uint16_t *conn_length; /* active connection count [agent_idx] */
     float *neuron_output;  /* [neuron_slot * capacity + agent_idx], init 0.0f */
     uint8_t
@@ -51,5 +52,13 @@ void biosim_nnet_free(biosim_nnet_t *n);
  * max_neurons must be ≤ 128 (upper bound of the 7-bit gene field). */
 void biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome, uint32_t idx,
                               uint8_t num_sensors, uint8_t num_actions);
+
+/* ── fingerprint ────────────────────────────────────────────────────────── */
+
+/* Phenotypic fingerprint: hash the compiled connection list for agent idx.
+ * Two agents whose genomes compile to identical networks (same connections
+ * after culling and compact renumbering) receive the same fingerprint.
+ * biosim_nnet_compile_slot must be called before this function. */
+uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx);
 
 #endif /* BIOSIM_CORE_NNET_H */

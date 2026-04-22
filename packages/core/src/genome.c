@@ -172,21 +172,6 @@ void biosim_genome_crossover(biosim_genome_t *g, uint32_t child, uint32_t parent
     g->length[child] = (uint16_t)child_len;
 }
 
-uint64_t biosim_genome_fingerprint(const biosim_genome_t *g, uint32_t idx) {
-    assert(g != NULL && idx < g->capacity);
-
-    uint64_t h = 0x9e3779b97f4a7c15ULL;
-    uint32_t len = g->length[idx];
-    for (uint32_t j = 0; j < len; j++) {
-        size_t slot = (size_t)j * g->capacity + idx;
-        h ^= (uint64_t)g->conn[slot];
-        h *= 0x9e3779b97f4a7c15ULL;
-        h ^= (uint64_t)(uint16_t)g->wgt[slot];
-        h *= 0x9e3779b97f4a7c15ULL;
-    }
-    return h;
-}
-
 /* ── warp-divergence mitigation ─────────────────────────────────────────── */
 
 void biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out) {

@@ -19,13 +19,13 @@ biosim_status_t biosim_nnet_create(uint32_t capacity, uint16_t max_conn, uint8_t
     size_t conn_slots = (size_t)max_conn * (size_t)capacity;
     size_t neuron_slots = (size_t)max_neurons * (size_t)capacity;
 
-    out->conn_packed = calloc(conn_slots, sizeof(uint16_t));
-    if (!out->conn_packed) {
+    out->genome_conn = calloc(conn_slots, sizeof(uint16_t));
+    if (!out->genome_conn) {
         biosim_nnet_free(out);
         return BIOSIM_ERR_NOMEM;
     }
-    out->conn_weight = calloc(conn_slots, sizeof(int16_t));
-    if (!out->conn_weight) {
+    out->genome_wgt = calloc(conn_slots, sizeof(int16_t));
+    if (!out->genome_wgt) {
         biosim_nnet_free(out);
         return BIOSIM_ERR_NOMEM;
     }
@@ -56,8 +56,8 @@ void biosim_nnet_free(biosim_nnet_t *n) {
     if (!n) {
         return;
     }
-    free(n->conn_packed);
-    free(n->conn_weight);
+    free(n->genome_conn);
+    free(n->genome_wgt);
     free(n->conn_length);
     free(n->neuron_output);
     free(n->neuron_driven);
@@ -149,8 +149,8 @@ static uint16_t emit_neuron_sink(biosim_nnet_t *n, const remapped_gene_t *genes,
             (genes[j].src_type == BIOSIM_GENE_NEURON) ? remap[genes[j].src_num] : genes[j].src_num;
         uint8_t new_dn = remap[dn];
         uint16_t packed = BIOSIM_GENE_PACK(genes[j].src_type, new_sn, BIOSIM_GENE_NEURON, new_dn);
-        n->conn_packed[(size_t)out_slot * cap + idx] = packed;
-        n->conn_weight[(size_t)out_slot * cap + idx] = genes[j].weight;
+        n->genome_conn[(size_t)out_slot * cap + idx] = packed;
+        n->genome_wgt[(size_t)out_slot * cap + idx] = genes[j].weight;
         out_slot++;
     }
     return out_slot;
@@ -171,8 +171,8 @@ static uint16_t emit_action_sink(biosim_nnet_t *n, const remapped_gene_t *genes,
             (genes[j].src_type == BIOSIM_GENE_NEURON) ? remap[genes[j].src_num] : genes[j].src_num;
         uint16_t packed =
             BIOSIM_GENE_PACK(genes[j].src_type, new_sn, BIOSIM_GENE_IO, genes[j].sink_num);
-        n->conn_packed[(size_t)out_slot * cap + idx] = packed;
-        n->conn_weight[(size_t)out_slot * cap + idx] = genes[j].weight;
+        n->genome_conn[(size_t)out_slot * cap + idx] = packed;
+        n->genome_wgt[(size_t)out_slot * cap + idx] = genes[j].weight;
         out_slot++;
     }
     return out_slot;
@@ -239,4 +239,22 @@ void biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome, u
     }
 
     free(genes);
+}
+
+/* ── fingerprint ────────────────────────────────────────────────────────── */
+
+uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx) {
+    assert(n != NULL && idx < n->capacity);
+
+    uint64_t h = 0x9e3779b97f4a7c15ULL;
+    uint32_t cap = n->capacity;
+    uint16_t len = n->conn_length[idx];
+    for (uint16_t j = 0; j < len; j++) {
+        size_t slot = (size_t)j * cap + idx;
+        h ^= (uint64_t)n->genome_conn[slot];
+        h *= 0x9e3779b97f4a7c15ULL;
+        h ^= (uint64_t)(uint16_t)n->genome_wgt[slot];
+        h *= 0x9e3779b97f4a7c15ULL;
+    }
+    return h;
 }

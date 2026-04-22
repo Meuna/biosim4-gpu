@@ -199,10 +199,10 @@ taken when the code is written with concrete size and cohesion in mind.
 
 | Role | Description |
 |---|---|
-| Shared POD types | `Coord`, `Dir`, `Gene`, and any other packed value types shared with OpenCL kernels |
+| Shared POD types | `Coord`, `Dir`, gene bit-layout macros (`gene.h`, shared with OpenCL kernels), and any other packed value types |
 | Simulation parameters | The `SimParams` struct plus its TOML loader |
-| Genome operators | Mutation (point, insertion, deletion), crossover, fingerprint computation |
-| Neural network compilation | Culling of dead neurons, connection reordering, per-agent NN build |
+| Genome operators | Mutation (point, insertion, deletion), crossover |
+| Neural network compilation | Culling of dead neurons, connection reordering, per-agent NN build, phenotypic fingerprint |
 | Abstract grid API | Query, neighborhood iteration, cell write — backing store provided by each simulator |
 | Abstract signal API | Read, increment, fade — backing store provided by each simulator |
 | Sensor and action catalogues | Enums, constants, dispatch tables common to both simulators |

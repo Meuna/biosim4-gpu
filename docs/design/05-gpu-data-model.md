@@ -327,7 +327,10 @@ __global uint16_t conn_length[N];
 ```
 
 `conn_packed` encodes source type (1 bit), source index (7 bits), sink type (1
-bit), sink index (7 bits) — same 16-bit layout as the genome's `conn` field.
+bit), sink index (7 bits) — same 16-bit layout as the genome's `conn` field,
+decoded with the `BIOSIM_GENE_*` macros defined in `biosim/core/gene.h`. That
+header has no host-only dependencies and is included by both the host nnet module
+and OpenCL kernel sources.
 
 **Why separate from genome:** the compiled network is shorter in general than
 the genome (useless neurons are pruned) and is produced by a culling function at
