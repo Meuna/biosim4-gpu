@@ -24,13 +24,6 @@ The next motivations for this project are also educational:
 Hopefully, the project will also accelerate the biosim4 simulator and unlock
 playing with advanced behaviors.
 
-## Status
- 
-**Pre-implementation.** The repository currently contains only the design
-documentation. No source code, build files, or tests exist yet. The next step
-is to populate the structure described in
-[`docs/design/01-repository-structure.md`](docs/design/01-repository-structure.md).
-
 ## Repository map
  
 ```
