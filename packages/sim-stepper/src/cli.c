@@ -281,33 +281,27 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
     argtable[nstatic + ndyn] = arg_end_s;
 
     int nerrors = arg_parse(argc, argv, argtable);
+    biosim_status_t returncode = BIOSIM_OK;
+    bool exit_instead_of_return = false;
 
     if (arg_help->count > 0) {
         print_synopsis(stdout, info->progname, argtable, nstatic, p, ndyn);
         printf("%s — biosim4-gpu single-threaded CPU reference simulator\n\n", info->progname);
         print_glossary(stdout, argtable, nstatic, p, ndyn);
-        arg_freetable(argtable, total);
-        free_generated(generated, ndyn);
-        free_generated(glossaries, ndyn);
-        free((void *)argtable);
-        exit(0);
+        exit_instead_of_return = true;
+        goto exit;
     }
     if (arg_version->count > 0) {
         printf("%s %s (%s) [%s]\n", info->progname, info->version, info->build_timestamp,
                info->build_type);
-        arg_freetable(argtable, total);
-        free_generated(generated, ndyn);
-        free_generated(glossaries, ndyn);
-        free((void *)argtable);
-        exit(0);
+        exit_instead_of_return = true;
+        goto exit;
     }
     if (nerrors > 0) {
         arg_print_errors(stderr, arg_end_s, info->progname);
-        arg_freetable(argtable, total);
-        free_generated(generated, ndyn);
-        free_generated(glossaries, ndyn);
-        free((void *)argtable);
-        return BIOSIM_ERR_NOTFOUND;
+        returncode = BIOSIM_ERR_NOTFOUND;
+        exit_instead_of_return = true;
+        goto exit;
     }
 
     /* Pass 2: TOML file overrides defaults */
@@ -318,9 +312,13 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
     /* Pass 3: CLI flags override TOML */
     apply_cli_args(argtable, nstatic, p, ndyn);
 
+exit:
     arg_freetable(argtable, total);
     free_generated(generated, ndyn);
     free_generated(glossaries, ndyn);
     free((void *)argtable);
-    return BIOSIM_OK;
+    if (exit_instead_of_return) {
+        exit(returncode);
+    }
+    return returncode;
 }
