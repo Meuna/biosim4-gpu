@@ -14,13 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ── direction table ────────────────────────────────────────────────────── */
-
-/* 0=E, counter-clockwise: E NE N NW W SW S SE.
- * Duplicated from io_catalogue.c — not exported by core. */
-static const int8_t S_DIR_DX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
-static const int8_t S_DIR_DY[8] = {0, -1, -1, -1, 0, 1, 1, 1};
-
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params) {
@@ -87,9 +80,10 @@ static void step_agent(biosim_stepper_t *stepper, uint32_t i) {
 
     biosim_action_finalize_movement(i, ctx);
 
-    const int16_t dx = (int16_t)(stepper->base.agents.desired_x[i] - stepper->base.agents.loc_x[i]);
-    const int16_t dy = (int16_t)(stepper->base.agents.desired_y[i] - stepper->base.agents.loc_y[i]);
+    const int dx = (int)stepper->base.agents.desired_x[i] - (int)stepper->base.agents.loc_x[i];
+    const int dy = (int)stepper->base.agents.desired_y[i] - (int)stepper->base.agents.loc_y[i];
 
+    /* Agent don't want to move, early exit */
     if (dx == 0 && dy == 0) {
         return;
     }
@@ -98,11 +92,12 @@ static void step_agent(biosim_stepper_t *stepper, uint32_t i) {
     target.x = stepper->base.agents.desired_x[i];
     target.y = stepper->base.agents.desired_y[i];
 
-    /* Dead agents retain their grid cell (v1 artifact); only move into EMPTY cells. */
+    /* Agent can't move, early exit */
     if (biosim_grid_at(&stepper->base.grid, target) != BIOSIM_GRID_EMPTY) {
         return;
     }
 
+    /* Agent can move, update agent and grid */
     biosim_coord_t old_loc;
     old_loc.x = stepper->base.agents.loc_x[i];
     old_loc.y = stepper->base.agents.loc_y[i];
@@ -111,13 +106,7 @@ static void step_agent(biosim_stepper_t *stepper, uint32_t i) {
     biosim_grid_set(&stepper->base.grid, target, (uint16_t)(i + 1U));
     stepper->base.agents.loc_x[i] = target.x;
     stepper->base.agents.loc_y[i] = target.y;
-
-    for (uint8_t d = 0; d < 8U; d++) {
-        if ((int)S_DIR_DX[d] == (int)dx && (int)S_DIR_DY[d] == (int)dy) {
-            stepper->base.agents.last_move_dir[i] = d;
-            break;
-        }
-    }
+    stepper->base.agents.last_move_dir[i] = biosim_get_dir(dx, dy);
 }
 
 void biosim_stepper_step(biosim_stepper_t *stepper) {

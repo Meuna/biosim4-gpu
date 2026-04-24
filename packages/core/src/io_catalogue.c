@@ -40,6 +40,18 @@ static void pop_visitor(biosim_coord_t coord, uint16_t cell, void *ctx) {
     }
 }
 
+/* ── compute direction ──────────────────────────────────────────────────── */
+
+uint8_t biosim_get_dir(int dx, int dy) {
+    uint8_t d;
+    for (d = 0; d < 8U; d++) {
+        if ((int)DIR_DX[d] == dx && (int)DIR_DY[d] == dy) {
+            break;
+        }
+    }
+    return d;
+}
+
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)

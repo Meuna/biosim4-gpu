@@ -70,20 +70,24 @@ typedef enum {
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
+/* Compute the direction of the movement, according to the convention used by
+ * the agent IO */
+uint8_t biosim_get_dir(int dx, int dy);
+
 /* Evaluate one sensor for agent idx at step sim_step; returns float in [0,1].
  * agents.rng_state[idx] may be mutated by BIOSIM_SENSOR_RANDOM.
  * Asserts on an invalid sensor value (out-of-range enum). */
 float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_context_t *ctx,
                          uint32_t sim_step);
 
-/* Apply one action to agent idx, writing into ctx->agents.dx_sum[idx] /
- * dy_sum[idx] and agent self-fields.
+/* Apply one action to agent idx, writing into ctx->agents.dx_sum[idx] / dy_sum[idx]
+ * and agent self-fields.
  * Caller must zero dx_sum[idx]/dy_sum[idx] before the first call per agent.
  * Asserts on an invalid action value (out-of-range enum). */
 void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim_context_t *ctx);
 
 /* Convert ctx->agents.dx_sum[idx]/dy_sum[idx] to desired_x/desired_y using a
- * probabilistic step.  Call once per agent after all actions have fired. */
+ * probabilistic step. Call once per agent after all actions have fired. */
 void biosim_action_finalize_movement(uint32_t idx, biosim_context_t *ctx);
 
 #endif /* BIOSIM_CORE_IO_CATALOGUE_H */
