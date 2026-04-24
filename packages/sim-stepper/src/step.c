@@ -25,8 +25,8 @@ biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params
     const int16_t size_y = (int16_t)biosim_params_get_int(params, "grid-size-y");
     const int steps_per_gen = biosim_params_get_int(params, "steps-per-gen");
     const uint16_t max_gen_len = (uint16_t)biosim_params_get_int(params, "max-genome-length");
-    const uint8_t long_probe_dist = (uint8_t)biosim_params_get_int(params, "long-probe-dist");
     const uint8_t max_neurons = (uint8_t)biosim_params_get_int(params, "max-neurons");
+    const uint8_t long_probe_dist = (uint8_t)biosim_params_get_int(params, "long-probe-dist");
     const int pop_sensor_radius = biosim_params_get_int(params, "population-sensor-radius");
 
     memset(out, 0, sizeof(*out));

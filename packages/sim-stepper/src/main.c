@@ -6,18 +6,14 @@
 
 // clang-format off
 static const biosim_param_entry_t sim_params[] = {
-    {"sim-name",                 "simulation", {.s = "unnamed"}, PARAM_STRING, false, true,  "sim-name",                 "s"},
-    {"population",               "simulation", {.i = 3000},      PARAM_INT,    false, true,  "population",               "p"},
-    {"grid-size-x",              "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-x",              NULL},
-    {"grid-size-y",              "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-y",              NULL},
-    {"steps-per-gen",            "simulation", {.i = 300},       PARAM_INT,    false, true,  "steps-per-gen",            NULL},
-    {"max-genome-length",        "simulation", {.i = 24},        PARAM_INT,    false, true,  "max-genome-length",        NULL},
-    {"mutation-rate",            "simulation", {.f = 0.001},     PARAM_FLOAT,  false, true,  "mutation-rate",            NULL},
-    {"challenge",                "simulation", {.i = 0},         PARAM_INT,    false, true,  "challenge",                NULL},
-    {"long-probe-dist",          "simulation", {.i = 16},        PARAM_INT,    false, true,  "long-probe-dist",          NULL},
-    {"max-neurons",              "simulation", {.i = 5},         PARAM_INT,    false, true,  "max-neurons",              NULL},
-    {"population-sensor-radius", "simulation", {.i = 2},         PARAM_INT,    false, true,  "population-sensor-radius", NULL},
-    {"trace-out",                NULL,         {.s = ""},        PARAM_STRING, false, false, NULL,                       NULL},
+    {"population",               "simulation", {.i = 3000}, PARAM_INT,    false, true,  "pop",               "p"},
+    {"grid-size-x",              "simulation", {.i = 128},  PARAM_INT,    false, true,  "grid-size-x",       "x"},
+    {"grid-size-y",              "simulation", {.i = 128},  PARAM_INT,    false, true,  "grid-size-y",       "y"},
+    {"steps-per-gen",            "simulation", {.i = 300},  PARAM_INT,    false, true,  "steps-per-gen",     NULL},
+    {"max-genome-length",        "genome",     {.i = 24},   PARAM_INT,    false, true,  "max-genome-length", NULL},
+    {"max-neurons",              "genome",     {.i = 5},    PARAM_INT,    false, true,  "max-neurons",       NULL},
+    {"long-probe-dist",          "sensors",    {.i = 16},   PARAM_INT,    false, true,  "long-probe-dist",   NULL},
+    {"population-sensor-radius", "sensors",    {.i = 2},    PARAM_INT,    false, true,  "pop-sensor-radius", NULL},
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))
