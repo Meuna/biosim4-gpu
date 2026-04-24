@@ -1,4 +1,6 @@
+#include "biosim/core/status.h"
 #include "biosim/params/params.h"
+
 #include "unity.h"
 
 // clang-format off
@@ -77,6 +79,16 @@ void test_cli_long_flag(void) {
     TEST_ASSERT_EQUAL_INT(7777, biosim_params_get_int(&p, "flag-param"));
 }
 
+/* ── error: bad toml file ───────────────────────────────────────────────── */
+
+void test_bad_path_returns_notfound(void) {
+    char *argv[] = {"test-prog", "--config", TEST_FIXTURES_DIR "/nonexistent/path.toml", NULL};
+    biosim_status_t st = biosim_params_parse(&p, "test-prog", "test-version", 3, argv);
+    TEST_ASSERT_EQUAL(BIOSIM_ERR_NOTFOUND, st);
+}
+
+/* ── Runner ─────────────────────────────────────────────────────────────── */
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_defaults);
@@ -84,5 +96,6 @@ int main(void) {
     RUN_TEST(test_cli_sets_values);
     RUN_TEST(test_cli_overrides_toml);
     RUN_TEST(test_cli_short_flag);
+    RUN_TEST(test_bad_path_returns_notfound);
     return UNITY_END();
 }
