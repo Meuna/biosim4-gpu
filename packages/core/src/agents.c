@@ -36,6 +36,8 @@ biosim_status_t biosim_agents_create(uint32_t capacity, biosim_agents_t *out) {
     ALLOC(genome_fingerprint, uint64_t)
     ALLOC(desired_x, int16_t)
     ALLOC(desired_y, int16_t)
+    ALLOC(dx_sum, float)
+    ALLOC(dy_sum, float)
 
 #undef ALLOC
 
@@ -60,6 +62,8 @@ void biosim_agents_free(biosim_agents_t *agents) {
     free(agents->genome_fingerprint);
     free(agents->desired_x);
     free(agents->desired_y);
+    free(agents->dx_sum);
+    free(agents->dy_sum);
     memset(agents, 0, sizeof(*agents));
 }
 

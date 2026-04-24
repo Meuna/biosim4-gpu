@@ -207,7 +207,7 @@ taken when the code is written with concrete size and cohesion in mind.
 | Role | Description |
 |---|---|
 | Shared POD types | `Coord`, `Dir`, gene bit-layout macros (`gene.h`, shared with OpenCL kernels), and any other packed value types |
-| Simulation context | `biosim_context_t` — scalar configuration values extracted from params and passed to core algorithms |
+| Simulation context | `biosim_context_t` — full simulation state: scalar configuration values plus all resource buffers (`agents`, `grid`, `genome`, `nnet`, `signal`). Owned by each simulator; populated via the individual `biosim_*_create` helpers during simulator init |
 | Genome operators | Mutation (point, insertion, deletion), crossover |
 | Neural network compilation | Culling of dead neurons, connection reordering, per-agent NN build, phenotypic fingerprint |
 | Abstract grid API | Query, neighborhood iteration, cell write — backing store provided by each simulator |

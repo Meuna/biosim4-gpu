@@ -37,6 +37,8 @@ typedef struct {
     /* Transient per-step movement targets (feedforward → movement kernel) */
     int16_t *desired_x;
     int16_t *desired_y;
+    float *dx_sum; /* accumulated action movement in x before finalisation */
+    float *dy_sum; /* accumulated action movement in y before finalisation */
 } biosim_agents_t;
 
 /* Lifecycle */

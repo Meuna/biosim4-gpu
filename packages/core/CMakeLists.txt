@@ -1,4 +1,5 @@
 add_library(core STATIC
+  src/context.c
   src/core.c
   src/grid.c
   src/rng.c

@@ -5,25 +5,19 @@
 #ifndef BIOSIM_STEPPER_STEP_H
 #define BIOSIM_STEPPER_STEP_H
 
-#include "biosim/core/agents.h"
 #include "biosim/core/context.h"
-#include "biosim/core/genome.h"
-#include "biosim/core/grid.h"
-#include "biosim/core/nnet.h"
 #include "biosim/core/status.h"
 #include "biosim/params/params.h"
-#include <stddef.h>
 #include <stdint.h>
 
+/*
+ * biosim_stepper_t extends biosim_context_t via first-member embedding.
+ * A biosim_stepper_t * can be safely cast to biosim_context_t * because C
+ * guarantees the first member is at offset 0.
+ */
 typedef struct {
-    biosim_context_t ctx; /* extracted from params at create time */
-    biosim_agents_t agents;
-    biosim_grid_t grid;
-    biosim_genome_t genome;
-    biosim_nnet_t nnet;
-    uint32_t *signal;  /* flat [size_y * size_x], row-major, values clamped [0, 255] */
-    size_t signal_len; /* cached size_x * size_y */
-    uint32_t step;     /* step index within the current generation */
+    biosim_context_t base; /* FIRST — offset 0, safe up-cast to biosim_context_t * */
+    uint32_t step;         /* step index within the current generation */
 } biosim_stepper_t;
 
 biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params);

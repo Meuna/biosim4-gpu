@@ -53,6 +53,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (from `git describe --tags --always --dirty`), `BIOSIM_BUILD_TIMESTAMP`, and
   `BIOSIM_BUILD_TYPE` injected as compile definitions into executables.
 
+### Changed
+- **`biosim_context_t` expanded** (`core/context.h` + new `core/context.c`):
+  now holds the full simulation state — `agents`, `grid`, `genome`, `nnet`,
+  `signal`, `signal_len` — in addition to the existing scalar config fields.
+  `biosim_context_free` releases all owned resources in one call.
+- **`biosim_stepper_t` refactored** (`sim-stepper/step.h`): uses C first-member
+  embedding (`biosim_context_t base` at offset 0) so a stepper pointer up-casts
+  safely to `biosim_context_t *`. Only stepper-specific state (`step`) remains
+  outside the base.
+- **`biosim_sense_ctx_t` and `biosim_act_ctx_t` removed** (`core/io_catalogue.h`):
+  replaced by flat function parameters. `biosim_sensor_eval` now takes
+  `(sensor, idx, ctx, sim_step)`; `biosim_action_apply` takes
+  `(action, val, idx, ctx)`; `biosim_action_finalize_movement` takes
+  `(idx, ctx)`. Removes two intermediate structs that bundled references already
+  available in the context.
+- **`dx_sum` / `dy_sum` added to `biosim_agents_t`** (`core/agents.h`): transient
+  per-step movement accumulators now live in the agent SoA alongside
+  `desired_x`/`desired_y`, making them GPU-buffer-compatible and eliminating
+  the per-agent accumulator fields that previously lived in `biosim_act_ctx_t`.
+
 ### Removed
 - `biosim_params_t` and all param functions removed from `core`; they now live
   exclusively in the `params` package.

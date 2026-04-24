@@ -44,8 +44,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    const int steps = biosim_params_get_int(&p, "steps-per-gen");
-    for (int s = 0; s < steps; s++) {
+    for (int s = 0; s < sim.base.steps_per_gen; s++) {
         biosim_stepper_step(&sim);
     }
 

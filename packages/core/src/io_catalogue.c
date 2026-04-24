@@ -1,5 +1,4 @@
 #include "biosim/core/io_catalogue.h"
-#include "biosim/core/context.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/types.h"
 
@@ -44,16 +43,12 @@ static void pop_visitor(biosim_coord_t coord, uint16_t cell, void *ctx) {
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
-                         const biosim_context_t *cfg) {
+float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_context_t *ctx,
+                         uint32_t sim_step) {
     assert(ctx != NULL);
-    assert(ctx->agents != NULL);
-    assert(ctx->grid != NULL);
-    assert(cfg != NULL);
 
-    const uint32_t idx = ctx->idx;
-    const biosim_agents_t *agents = ctx->agents;
-    const biosim_grid_t *grid = ctx->grid;
+    const biosim_agents_t *agents = &ctx->agents;
+    const biosim_grid_t *grid = &ctx->grid;
     const int16_t sx = grid->size_x;
     const int16_t sy = grid->size_y;
     const int16_t x = agents->loc_x[idx];
@@ -103,23 +98,23 @@ float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
         if (period == 0U) {
             period = 1U;
         }
-        float phase = (float)(ctx->sim_step % (uint32_t)period) / (float)period;
+        float phase = (float)(sim_step % (uint32_t)period) / (float)period;
         return (1.0F - cosf(phase * 6.28318530F)) * 0.5F;
     }
 
     case BIOSIM_SENSOR_AGE: {
-        int steps = cfg->steps_per_gen;
+        int steps = ctx->steps_per_gen;
         if (steps <= 0) {
             steps = 1;
         }
-        return (float)ctx->sim_step / (float)steps;
+        return (float)sim_step / (float)steps;
     }
 
     case BIOSIM_SENSOR_RANDOM:
         return rng_float(&agents->rng_state[idx]);
 
     case BIOSIM_SENSOR_POPULATION: {
-        int r = cfg->population_sensor_radius;
+        int r = ctx->population_sensor_radius;
         if (r <= 0) {
             r = 1;
         }
@@ -175,13 +170,10 @@ float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
 /* ── action application ─────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ctx) {
+void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim_context_t *ctx) {
     assert(ctx != NULL);
-    assert(ctx->agents != NULL);
-    assert(ctx->grid != NULL);
 
-    const uint32_t idx = ctx->idx;
-    biosim_agents_t *agents = ctx->agents;
+    biosim_agents_t *agents = &ctx->agents;
     const float resp = agents->responsiveness[idx];
 
     switch (action) {
@@ -221,38 +213,38 @@ void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ct
         /* ── Group B: movement accumulators ──────────────────────────────── */
 
     case BIOSIM_ACTION_MOVE_X:
-        ctx->dx_sum += resp * val;
+        agents->dx_sum[idx] += resp * val;
         break;
 
     case BIOSIM_ACTION_MOVE_Y:
-        ctx->dy_sum += resp * val;
+        agents->dy_sum[idx] += resp * val;
         break;
 
     case BIOSIM_ACTION_MOVE_FORWARD: {
         uint8_t dir = agents->last_move_dir[idx] & 7U;
-        ctx->dx_sum += resp * val * (float)DIR_DX[dir];
-        ctx->dy_sum += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_REVERSE: {
         uint8_t dir = (uint8_t)((agents->last_move_dir[idx] + 4U) & 7U);
-        ctx->dx_sum += resp * val * (float)DIR_DX[dir];
-        ctx->dy_sum += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_LEFT: {
         uint8_t dir = (uint8_t)((agents->last_move_dir[idx] + 2U) & 7U);
-        ctx->dx_sum += resp * val * (float)DIR_DX[dir];
-        ctx->dy_sum += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_RIGHT: {
         uint8_t dir = (uint8_t)((agents->last_move_dir[idx] + 6U) & 7U);
-        ctx->dx_sum += resp * val * (float)DIR_DX[dir];
-        ctx->dy_sum += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
         break;
     }
 
@@ -264,36 +256,36 @@ void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ct
         float t = tanhf(val);
         float rw = (t + 1.0F) * 0.5F;
         float lw = 1.0F - rw;
-        ctx->dx_sum += resp * ((float)DIR_DX[rdir] * rw + (float)DIR_DX[ldir] * lw);
-        ctx->dy_sum += resp * ((float)DIR_DY[rdir] * rw + (float)DIR_DY[ldir] * lw);
+        agents->dx_sum[idx] += resp * ((float)DIR_DX[rdir] * rw + (float)DIR_DX[ldir] * lw);
+        agents->dy_sum[idx] += resp * ((float)DIR_DY[rdir] * rw + (float)DIR_DY[ldir] * lw);
         break;
     }
 
     case BIOSIM_ACTION_MOVE_RANDOM: {
         uint8_t dir = (uint8_t)(biosim_rng_next(&agents->rng_state[idx]) % 8U);
-        ctx->dx_sum += resp * (float)DIR_DX[dir];
-        ctx->dy_sum += resp * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * (float)DIR_DX[dir];
+        agents->dy_sum[idx] += resp * (float)DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_EAST:
-        ctx->dx_sum += resp * (float)DIR_DX[0];
-        ctx->dy_sum += resp * (float)DIR_DY[0];
+        agents->dx_sum[idx] += resp * (float)DIR_DX[0];
+        agents->dy_sum[idx] += resp * (float)DIR_DY[0];
         break;
 
     case BIOSIM_ACTION_MOVE_WEST:
-        ctx->dx_sum += resp * (float)DIR_DX[4];
-        ctx->dy_sum += resp * (float)DIR_DY[4];
+        agents->dx_sum[idx] += resp * (float)DIR_DX[4];
+        agents->dy_sum[idx] += resp * (float)DIR_DY[4];
         break;
 
     case BIOSIM_ACTION_MOVE_NORTH:
-        ctx->dx_sum += resp * (float)DIR_DX[2];
-        ctx->dy_sum += resp * (float)DIR_DY[2];
+        agents->dx_sum[idx] += resp * (float)DIR_DX[2];
+        agents->dy_sum[idx] += resp * (float)DIR_DY[2];
         break;
 
     case BIOSIM_ACTION_MOVE_SOUTH:
-        ctx->dx_sum += resp * (float)DIR_DX[6];
-        ctx->dy_sum += resp * (float)DIR_DY[6];
+        agents->dx_sum[idx] += resp * (float)DIR_DX[6];
+        agents->dy_sum[idx] += resp * (float)DIR_DY[6];
         break;
 
         /* ── Group C: signal emission ─────────────────────────────────────── */
@@ -305,8 +297,8 @@ void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ct
         }
         const int16_t ex = agents->loc_x[idx];
         const int16_t ey = agents->loc_y[idx];
-        const int16_t gsz_x = ctx->grid->size_x;
-        const int16_t gsz_y = ctx->grid->size_y;
+        const int16_t gsz_x = ctx->grid.size_x;
+        const int16_t gsz_y = ctx->grid.size_y;
         /* center cell: +2 */
         size_t ci = (size_t)ey * (size_t)gsz_x + (size_t)ex;
         uint32_t cv = ctx->signal[ci] + 2U;
@@ -339,10 +331,10 @@ void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ct
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         biosim_coord_t fwd = {(int16_t)(agents->loc_x[idx] + DIR_DX[dir]),
                               (int16_t)(agents->loc_y[idx] + DIR_DY[dir])};
-        if (!biosim_grid_in_bounds(ctx->grid, fwd)) {
+        if (!biosim_grid_in_bounds(&ctx->grid, fwd)) {
             break;
         }
-        uint16_t cell = biosim_grid_at(ctx->grid, fwd);
+        uint16_t cell = biosim_grid_at(&ctx->grid, fwd);
         if (cell == BIOSIM_GRID_EMPTY || cell == BIOSIM_GRID_BARRIER) {
             break;
         }
@@ -358,19 +350,16 @@ void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ct
 
 /* ── movement finalisation ──────────────────────────────────────────────── */
 
-void biosim_action_finalize_movement(biosim_act_ctx_t *ctx) {
+void biosim_action_finalize_movement(uint32_t idx, biosim_context_t *ctx) {
     assert(ctx != NULL);
-    assert(ctx->agents != NULL);
-    assert(ctx->grid != NULL);
 
-    const uint32_t idx = ctx->idx;
-    biosim_agents_t *agents = ctx->agents;
-    const int16_t size_x = ctx->grid->size_x;
-    const int16_t size_y = ctx->grid->size_y;
+    biosim_agents_t *agents = &ctx->agents;
+    const int16_t size_x = ctx->grid.size_x;
+    const int16_t size_y = ctx->grid.size_y;
 
     /* Squash accumulated sums to a probability magnitude in (-1, 1). */
-    float lx = tanhf(ctx->dx_sum * 0.5F);
-    float ly = tanhf(ctx->dy_sum * 0.5F);
+    float lx = tanhf(agents->dx_sum[idx] * 0.5F);
+    float ly = tanhf(agents->dy_sum[idx] * 0.5F);
 
     /* Compare magnitude against a uniform random; take a step if it wins. */
     int16_t step_x;
