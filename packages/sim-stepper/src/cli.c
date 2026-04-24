@@ -1,4 +1,5 @@
 #include <argtable3.h>
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,89 +8,158 @@
 #include "biosim/stepper/cli.h"
 #include "biosim/stepper/toml.h"
 
-/* sim-stepper-specific parameter extensions */
+/* ── static data ────────────────────────────────────────────────────────── */
+
 static const biosim_param_entry_t stepper_params[] = {
-    {"trace-out", {.s = ""}, {.s = ""}, PARAM_STRING, false},
+    {"trace-out", NULL, {.s = ""}, {.s = ""}, PARAM_STRING, false},
 };
 
-biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info_t *info, int argc,
-                                     char **argv) {
-    biosim_status_t st =
-        biosim_params_extend(p, stepper_params, sizeof(stepper_params) / sizeof(stepper_params[0]));
-    if (st != BIOSIM_OK) {
-        return st;
+/* Glossary section order — NULL first (top-level params), then named tables. */
+static const char *const glossary_tables_order[] = {NULL, "simulation"};
+#define GLOSSARY_TABLES_COUNT (sizeof(glossary_tables_order) / sizeof(glossary_tables_order[0]))
+
+/* ── internal helpers ───────────────────────────────────────────────────── */
+
+static bool str_eq_nullable(const char *a, const char *b) {
+    if (a == NULL && b == NULL) {
+        return true;
     }
-
-    /* Static flags — always first in the argtable */
-    struct arg_lit *arg_help = arg_lit0("h", "help", "print help and exit");
-    struct arg_lit *arg_version = arg_lit0(NULL, "version", "print version and exit");
-    struct arg_file *arg_config = arg_file0(NULL, "config", "<path>", "TOML config file");
-    void *static_flags[] = {arg_help, arg_version, arg_config};
-    size_t nstatic = sizeof(static_flags) / sizeof(static_flags[0]);
-
-    size_t ndyn = biosim_params_count(p);
-    size_t total = nstatic + ndyn + 1; /* +1 for arg_end */
-
-    void **argtable = (void **)calloc(total, sizeof(void *));
-    if (!argtable) {
-        return BIOSIM_ERR_NOMEM;
+    if (a == NULL || b == NULL) {
+        return false;
     }
+    return strcmp(a, b) == 0;
+}
 
-    memcpy((void *)argtable, (const void *)static_flags, nstatic * sizeof(void *));
-
-    /* Build param-driven argtable entries after the static flags */
+/* Prints the usage one-liner using arg_print_syntax on a filtered shallow copy of argtable. */
+static void print_synopsis(FILE *fp, const char *progname, void **argtable, size_t nstatic,
+                           const biosim_params_t *p, size_t ndyn) {
+    size_t nsyn = 0;
     for (size_t i = 0; i < ndyn; i++) {
-        const biosim_param_entry_t *e = biosim_params_entry(p, i);
-        switch (e->type) {
-        case PARAM_INT:
-            argtable[nstatic + i] = arg_int0(NULL, e->name, "<n>", "");
-            break;
-        case PARAM_FLOAT:
-            argtable[nstatic + i] = arg_dbl0(NULL, e->name, "<v>", "");
-            break;
-        case PARAM_BOOL:
-            argtable[nstatic + i] = arg_lit0(NULL, e->name, "");
-            break;
-        case PARAM_STRING:
-            argtable[nstatic + i] = arg_str0(NULL, e->name, "<s>", "");
-            break;
+        if (biosim_params_entry(p, i)->cli_long != NULL) {
+            nsyn++;
         }
     }
 
-    struct arg_end *arg_end_s = arg_end(20);
-    argtable[nstatic + ndyn] = arg_end_s;
-
-    int nerrors = arg_parse(argc, argv, argtable);
-
-    if (arg_help->count > 0) {
-        printf("Usage: %s", info->progname);
-        arg_print_syntax(stdout, argtable, "\n\n");
-        printf("%s — biosim4-gpu single-threaded CPU reference simulator\n\n", info->progname);
-        arg_print_glossary(stdout, argtable, "  %-25s %s\n");
-        arg_freetable(argtable, total);
-        free((void *)argtable);
-        exit(0);
+    void **syn = (void **)malloc((nstatic + nsyn + 1) * sizeof(void *));
+    if (!syn) {
+        (void)fprintf(stderr, "fatal: unhandled allocation error\n");
+        return;
     }
-    if (arg_version->count > 0) {
-        printf("%s %s (%s) [%s]\n", info->progname, info->version, info->build_timestamp,
-               info->build_type);
-        arg_freetable(argtable, total);
-        free((void *)argtable);
-        exit(0);
+    memcpy((void *)syn, (const void *)argtable, nstatic * sizeof(void *));
+
+    size_t k = nstatic;
+    for (size_t i = 0; i < ndyn; i++) {
+        if (biosim_params_entry(p, i)->cli_long != NULL) {
+            syn[k++] = argtable[nstatic + i];
+        }
     }
-    if (nerrors > 0) {
-        arg_print_errors(stderr, arg_end_s, info->progname);
-        arg_freetable(argtable, total);
-        free((void *)argtable);
-        return BIOSIM_ERR_NOTFOUND;
+    struct arg_end *syn_end = arg_end(1);
+    syn[k] = syn_end;
+
+    (void)fprintf(fp, "Usage: %s", progname);
+    arg_print_syntax(fp, syn, "\n\n");
+
+    /* We only free the shallow copy including the dedicated arg_end(1) */
+    arg_freetable(&syn[k], 1);
+    free((void *)syn);
+}
+
+/* Prints full glossary using arg_print_glossary, shallow grouped by params table. */
+static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const biosim_params_t *p,
+                           size_t ndyn) {
+    void **stbl = (void **)malloc((nstatic + 1) * sizeof(void *));
+    if (!stbl) {
+        (void)fprintf(stderr, "fatal: unhandled allocation error\n");
+        return;
     }
 
-    /* Pass 2: TOML file overrides defaults */
-    if (arg_config->count > 0) {
-        stepper_load_toml_file(p, arg_config->filename[0]);
-    }
+    /* The convention is argtable[:nstatic] are static arguments */
+    memcpy((void *)stbl, (const void *)argtable, nstatic * sizeof(void *));
+    struct arg_end *stbl_end = arg_end(1);
+    stbl[nstatic] = stbl_end;
+    arg_print_glossary(fp, stbl, "  %-25s %s\n");
+    /* We only free the shallow copy including the dedicated arg_end(1) */
+    arg_freetable(&stbl[nstatic], 1);
+    free((void *)stbl);
 
-    /* Pass 3: CLI flags override TOML */
+    for (size_t t = 0; t < GLOSSARY_TABLES_COUNT; t++) {
+        const char *tname = glossary_tables_order[t];
+        size_t ntable = 0;
+        for (size_t i = 0; i < ndyn; i++) {
+            if (str_eq_nullable(biosim_params_entry(p, i)->table, tname)) {
+                ntable++;
+            }
+        }
+        if (ntable == 0) {
+            continue;
+        }
+
+        (void)fprintf(fp, "\n");
+        if (tname != NULL) {
+            (void)fprintf(fp, "[%s] parameters\n", tname);
+        }
+
+        void **tbl = (void **)malloc((ntable + 1) * sizeof(void *));
+        if (!tbl) {
+            (void)fprintf(stderr, "fatal: unhandled allocation error\n");
+            return;
+        }
+        size_t k = 0;
+        for (size_t i = 0; i < ndyn; i++) {
+            if (str_eq_nullable(biosim_params_entry(p, i)->table, tname)) {
+                tbl[k++] = argtable[nstatic + i];
+            }
+        }
+        struct arg_end *tbl_end = arg_end(1);
+        tbl[k] = tbl_end;
+        arg_print_glossary(fp, tbl, "  %-25s %s\n");
+
+        /* We only free the shallow copy including the dedicated arg_end(1) */
+        arg_freetable(&tbl[k], 1);
+        free((void *)tbl);
+    }
+    (void)fprintf(fp, "\n");
+}
+
+/* Appends argtable3 entries for every param (1-to-1: param i → argtable[nstatic+i]).
+ * Auto-generated long flag names are malloc'd into generated[i]; NULL otherwise. */
+static void build_argtable(void **argtable, size_t nstatic, const biosim_params_t *p, size_t ndyn,
+                           char **generated) {
+    for (size_t i = 0; i < ndyn; i++) {
+        const biosim_param_entry_t *e = biosim_params_entry(p, i);
+
+        generated[i] = NULL;
+        const char *longflag;
+        if (e->cli_long != NULL) {
+            longflag = e->cli_long;
+        } else if (e->table != NULL) {
+            size_t len = strlen(e->table) + 1 + strlen(e->name) + 1;
+            generated[i] = (char *)malloc(len);
+            (void)snprintf(generated[i], len, "%s-%s", e->table, e->name);
+            longflag = generated[i];
+        } else {
+            longflag = e->name;
+        }
+
+        switch (e->type) {
+        case PARAM_INT:
+            argtable[nstatic + i] = arg_int0(e->cli_short, longflag, "<n>", "");
+            break;
+        case PARAM_FLOAT:
+            argtable[nstatic + i] = arg_dbl0(e->cli_short, longflag, "<v>", "");
+            break;
+        case PARAM_BOOL:
+            argtable[nstatic + i] = arg_lit0(e->cli_short, longflag, "");
+            break;
+        case PARAM_STRING:
+            argtable[nstatic + i] = arg_str0(e->cli_short, longflag, "<s>", "");
+            break;
+        }
+    }
+}
+
+/* Reads parsed CLI values back into params (1-to-1: param i → argtable[nstatic+i]). */
+static void apply_cli_args(void **argtable, size_t nstatic, biosim_params_t *p, size_t ndyn) {
     for (size_t i = 0; i < ndyn; i++) {
         const biosim_param_entry_t *e = biosim_params_entry(p, i);
         switch (e->type) {
@@ -123,8 +193,87 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
         }
         }
     }
+}
+
+static void free_generated(char **generated, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        free(generated[i]);
+    }
+    free((void *)generated);
+}
+
+/* ── public API ─────────────────────────────────────────────────────────── */
+
+biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info_t *info, int argc,
+                                     char **argv) {
+    biosim_status_t st =
+        biosim_params_extend(p, stepper_params, sizeof(stepper_params) / sizeof(stepper_params[0]));
+    if (st != BIOSIM_OK) {
+        return st;
+    }
+
+    struct arg_lit *arg_help = arg_lit0("h", "help", "print help and exit");
+    struct arg_lit *arg_version = arg_lit0(NULL, "version", "print version and exit");
+    struct arg_file *arg_config = arg_file0(NULL, "config", "<path>", "TOML config file");
+    void *static_flags[] = {arg_help, arg_version, arg_config};
+    size_t nstatic = sizeof(static_flags) / sizeof(static_flags[0]);
+
+    size_t ndyn = biosim_params_count(p);
+    size_t total = nstatic + ndyn + 1;
+
+    void **argtable = (void **)calloc(total, sizeof(void *));
+    if (!argtable) {
+        return BIOSIM_ERR_NOMEM;
+    }
+
+    char **generated = (char **)calloc(ndyn, sizeof(char *));
+    if (!generated) {
+        free((void *)argtable);
+        return BIOSIM_ERR_NOMEM;
+    }
+
+    memcpy((void *)argtable, (const void *)static_flags, nstatic * sizeof(void *));
+    build_argtable(argtable, nstatic, p, ndyn, generated);
+    struct arg_end *arg_end_s = arg_end(20);
+    argtable[nstatic + ndyn] = arg_end_s;
+
+    int nerrors = arg_parse(argc, argv, argtable);
+
+    if (arg_help->count > 0) {
+        print_synopsis(stdout, info->progname, argtable, nstatic, p, ndyn);
+        printf("%s — biosim4-gpu single-threaded CPU reference simulator\n\n", info->progname);
+        print_glossary(stdout, argtable, nstatic, p, ndyn);
+        arg_freetable(argtable, total);
+        free_generated(generated, ndyn);
+        free((void *)argtable);
+        exit(0);
+    }
+    if (arg_version->count > 0) {
+        printf("%s %s (%s) [%s]\n", info->progname, info->version, info->build_timestamp,
+               info->build_type);
+        arg_freetable(argtable, total);
+        free_generated(generated, ndyn);
+        free((void *)argtable);
+        exit(0);
+    }
+    if (nerrors > 0) {
+        arg_print_errors(stderr, arg_end_s, info->progname);
+        arg_freetable(argtable, total);
+        free_generated(generated, ndyn);
+        free((void *)argtable);
+        return BIOSIM_ERR_NOTFOUND;
+    }
+
+    /* Pass 2: TOML file overrides defaults */
+    if (arg_config->count > 0) {
+        stepper_load_toml_file(p, arg_config->filename[0]);
+    }
+
+    /* Pass 3: CLI flags override TOML */
+    apply_cli_args(argtable, nstatic, p, ndyn);
 
     arg_freetable(argtable, total);
+    free_generated(generated, ndyn);
     free((void *)argtable);
     return BIOSIM_OK;
 }

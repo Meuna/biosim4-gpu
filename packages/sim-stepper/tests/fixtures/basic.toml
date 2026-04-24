@@ -1,2 +1,4 @@
 someparam = "from-toml"
+
+[simulation]
 population = 42

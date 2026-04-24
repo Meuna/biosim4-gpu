@@ -9,19 +9,21 @@
 
 /* ── core parameter table ───────────────────────────────────────────────── */
 
+// clang-format off
 static const biosim_param_entry_t core_defaults[] = {
-    {"sim-name", {.s = "unnamed"}, {.s = "unnamed"}, PARAM_STRING, false},
-    {"population", {.i = 3000}, {.i = 3000}, PARAM_INT, false},
-    {"size-x", {.i = 128}, {.i = 128}, PARAM_INT, false},
-    {"size-y", {.i = 128}, {.i = 128}, PARAM_INT, false},
-    {"steps-per-gen", {.i = 300}, {.i = 300}, PARAM_INT, false},
-    {"max-genome-length", {.i = 24}, {.i = 24}, PARAM_INT, false},
-    {"mutation-rate", {.f = 0.001}, {.f = 0.001}, PARAM_FLOAT, false},
-    {"challenge", {.i = 0}, {.i = 0}, PARAM_INT, false},
-    {"long-probe-dist", {.i = 16}, {.i = 16}, PARAM_INT, false},
-    {"max-neurons", {.i = 5}, {.i = 5}, PARAM_INT, false},
-    {"population-sensor-radius", {.i = 2}, {.i = 2}, PARAM_INT, false},
+    {"sim-name", "simulation", {.s = "unnamed"}, {.s = "unnamed"}, PARAM_STRING, false, "sim-name", "s"},
+    {"population", "simulation", {.i = 3000}, {.i = 3000}, PARAM_INT, false, "population", "p"},
+    {"size-x", "simulation", {.i = 128}, {.i = 128}, PARAM_INT, false, "size-x", NULL},
+    {"size-y", "simulation", {.i = 128}, {.i = 128}, PARAM_INT, false, "size-y", NULL},
+    {"steps-per-gen", "simulation", {.i = 300}, {.i = 300}, PARAM_INT, false, "steps-per-gen", NULL},
+    {"max-genome-length", "simulation", {.i = 24}, {.i = 24}, PARAM_INT, false, "max-genome-length", NULL},
+    {"mutation-rate", "simulation", {.f = 0.001}, {.f = 0.001}, PARAM_FLOAT, false, "mutation-rate", NULL},
+    {"challenge", "simulation", {.i = 0}, {.i = 0}, PARAM_INT, false, "challenge", NULL},
+    {"long-probe-dist", "simulation", {.i = 16}, {.i = 16}, PARAM_INT, false, "long-probe-dist", NULL},
+    {"max-neurons", "simulation", {.i = 5}, {.i = 5}, PARAM_INT, false, "max-neurons", NULL},
+    {"population-sensor-radius", "simulation", {.i = 2}, {.i = 2}, PARAM_INT, false, "population-sensor-radius", NULL},
 };
+// clang-format on
 #define CORE_DEFAULTS_COUNT (sizeof(core_defaults) / sizeof(core_defaults[0]))
 
 /* ── internal helpers ───────────────────────────────────────────────────── */

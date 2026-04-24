@@ -24,7 +24,7 @@ void tearDown(void) {
 
 void test_defaults(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
     TEST_ASSERT_EQUAL_STRING("unset", biosim_params_get_string(&p, "someparam"));
@@ -35,7 +35,7 @@ void test_defaults(void) {
 
 void test_toml_file_sets_values(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
 
@@ -48,7 +48,7 @@ void test_toml_file_sets_values(void) {
 
 void test_cli_sets_values(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
     char *argv[] = {"biosim-stepper", "--someparam", "from-cli", "--population", "9999", NULL};
@@ -57,11 +57,29 @@ void test_cli_sets_values(void) {
     TEST_ASSERT_EQUAL_INT(9999, biosim_params_get_int(&p, "population"));
 }
 
+/* ── CLI flag overwrite ────────────────────────────────────────────────── */
+
+void test_cli_short_flag(void) {
+    char *argv[] = {"biosim-stepper", "-p", "7777", NULL};
+    stepper_cli_and_toml(&p, &stub_info, 3, argv);
+    TEST_ASSERT_EQUAL_INT(7777, biosim_params_get_int(&p, "population"));
+}
+
+void test_cli_auto_table_flag(void) {
+    static const biosim_param_entry_t extra[] = {
+        {"count", "test-group", {.i = 0}, {.i = 0}, PARAM_INT, false},
+    };
+    biosim_params_extend(&p, extra, 1);
+    char *argv[] = {"biosim-stepper", "--test-group-count", "42", NULL};
+    stepper_cli_and_toml(&p, &stub_info, 3, argv);
+    TEST_ASSERT_EQUAL_INT(42, biosim_params_get_int(&p, "count"));
+}
+
 /* ── Precedence: CLI overrides TOML ────────────────────────────────────── */
 
 void test_cli_overrides_toml(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
     };
     biosim_params_extend(&p, extra, 1);
 
@@ -81,6 +99,8 @@ int main(void) {
     RUN_TEST(test_defaults);
     RUN_TEST(test_toml_file_sets_values);
     RUN_TEST(test_cli_sets_values);
+    RUN_TEST(test_cli_short_flag);
+    RUN_TEST(test_cli_auto_table_flag);
     RUN_TEST(test_cli_overrides_toml);
     return UNITY_END();
 }

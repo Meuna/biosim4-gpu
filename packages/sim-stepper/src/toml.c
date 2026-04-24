@@ -5,29 +5,39 @@
 static void apply_table(biosim_params_t *p, toml_datum_t toptab) {
     for (size_t i = 0; i < biosim_params_count(p); i++) {
         const biosim_param_entry_t *e = biosim_params_entry(p, i);
-        toml_datum_t d = toml_get(toptab, e->name);
+
+        toml_datum_t src;
+        if (e->table != NULL) {
+            toml_datum_t subtab = toml_get(toptab, e->table);
+            if (subtab.type != TOML_TABLE) {
+                continue;
+            }
+            src = toml_get(subtab, e->name);
+        } else {
+            src = toml_get(toptab, e->name);
+        }
 
         switch (e->type) {
         case PARAM_INT:
-            if (d.type == TOML_INT64) {
-                biosim_params_set_int(p, e->name, (int)d.u.int64);
+            if (src.type == TOML_INT64) {
+                biosim_params_set_int(p, e->name, (int)src.u.int64);
             }
             break;
         case PARAM_FLOAT:
-            if (d.type == TOML_FP64) {
-                biosim_params_set_float(p, e->name, d.u.fp64);
-            } else if (d.type == TOML_INT64) {
-                biosim_params_set_float(p, e->name, (double)d.u.int64);
+            if (src.type == TOML_FP64) {
+                biosim_params_set_float(p, e->name, src.u.fp64);
+            } else if (src.type == TOML_INT64) {
+                biosim_params_set_float(p, e->name, (double)src.u.int64);
             }
             break;
         case PARAM_BOOL:
-            if (d.type == TOML_BOOLEAN) {
-                biosim_params_set_bool(p, e->name, d.u.boolean);
+            if (src.type == TOML_BOOLEAN) {
+                biosim_params_set_bool(p, e->name, src.u.boolean);
             }
             break;
         case PARAM_STRING:
-            if (d.type == TOML_STRING) {
-                biosim_params_set_string(p, e->name, d.u.s);
+            if (src.type == TOML_STRING) {
+                biosim_params_set_string(p, e->name, src.u.s);
             }
             break;
         }

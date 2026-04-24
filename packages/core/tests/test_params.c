@@ -53,22 +53,22 @@ void test_set_float_roundtrip(void) {
 void test_extend_adds_entries(void) {
     size_t before = biosim_params_count(&p);
 
-    biosim_param_entry_t extra = {
-        "sim-name", {.s = "unnamed"}, {.s = "unnamed"}, PARAM_STRING, false};
+    biosim_param_entry_t extra = {"sim-name",       NULL,         {.s = "unnamed"},
+                                  {.s = "unnamed"}, PARAM_STRING, false};
     biosim_params_extend(&p, &extra, 1);
     TEST_ASSERT_EQUAL_UINT(before + 1, biosim_params_count(&p));
 }
 
 void test_get_string_default_after_extend(void) {
-    biosim_param_entry_t extra = {
-        "sim-name", {.s = "unnamed"}, {.s = "unnamed"}, PARAM_STRING, false};
+    biosim_param_entry_t extra = {"sim-name",       NULL,         {.s = "unnamed"},
+                                  {.s = "unnamed"}, PARAM_STRING, false};
     biosim_params_extend(&p, &extra, 1);
     TEST_ASSERT_EQUAL_STRING("unnamed", biosim_params_get_string(&p, "sim-name"));
 }
 
 void test_set_string_roundtrip(void) {
-    biosim_param_entry_t extra = {
-        "sim-name", {.s = "unnamed"}, {.s = "unnamed"}, PARAM_STRING, false};
+    biosim_param_entry_t extra = {"sim-name",       NULL,         {.s = "unnamed"},
+                                  {.s = "unnamed"}, PARAM_STRING, false};
     biosim_params_extend(&p, &extra, 1);
     biosim_params_set_string(&p, "sim-name", "myrun");
     TEST_ASSERT_EQUAL_STRING("myrun", biosim_params_get_string(&p, "sim-name"));

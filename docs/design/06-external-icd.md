@@ -87,18 +87,34 @@ typedef union {
 } biosim_param_value_t;
 
 typedef struct {
-    const char*           name;          // identical in TOML key and CLI flag
-    biosim_param_type_t   type;
+    const char*           name;          // in-memory key (getters/setters/introspection)
+    const char*           table;         // TOML table name; NULL = top-level key
     biosim_param_value_t  default_value; // compiled-in default
     biosim_param_value_t  value;         // resolved value after three-pass
+    biosim_param_type_t   type;
     bool                  is_set;        // true if overridden by TOML or CLI
+    const char*           cli_long;      // NULL = auto ({table}-{name} or {name}); else override
+    const char*           cli_short;     // NULL = no short flag; else e.g. "p" for -p
 } biosim_param_entry_t;
 ```
 
-The `name` field is the **single identifier** for the parameter everywhere:
-TOML key, CLI flag (`--<name>`), and introspection. This naming convention is
-what makes the integration transparent — no mapping table, no translation
-layer.
+**`name`** is the in-memory key used by getters, setters, and introspection.
+Parameter names must be globally unique regardless of table assignment.
+
+**`table`** controls TOML-file routing: `NULL` means the parameter is a
+top-level key; a non-NULL string means the parameter lives under `[table]`
+in the config file. Getter/setter lookups are unaffected — they still use
+`name`.
+
+**`cli_long`** is an optional override for the CLI long flag name (without
+the `--` prefix). When `NULL`, the long flag is auto-generated as
+`{table}-{name}` for table parameters, or just `{name}` for top-level
+parameters. Set an override to shorten a verbose auto-generated flag
+(e.g., `cli_long = "population"` on a `[simulation]` parameter keeps the
+flag as `--population` rather than `--simulation-population`).
+
+**`cli_short`** is an optional single-character short flag (e.g., `"p"` adds
+`-p` as an alias). `NULL` means no short flag.
 
 The `default_value` / `value` / `is_set` separation allows introspection
 after resolution: the simulator can distinguish "user explicitly set this"
@@ -202,35 +218,33 @@ as a `const biosim_params_t*` — the same pattern as the original biosim4's
 
 ### 2.5 Table-driven CLI generation
 
-Each simulator generates its argtable3 declarations by iterating the
-parameter table, not by hardcoding flags:
+Every parameter in the table gets a CLI long flag. The long flag name is
+resolved in priority order:
 
-```c
-// in sim-gpu/main.c (or sim-stepper/main.c)
-void** argtable = calloc(biosim_params_count(&params) + EXTRA, sizeof(void*));
-size_t n = 0;
+1. `e->cli_long` if non-NULL — explicit override (e.g., `"population"`)
+2. `{table}-{name}` if `e->table != NULL` — auto-generated (e.g., `simulation-max-neurons`)
+3. `{name}` — for top-level parameters with no table
 
-for (size_t i = 0; i < biosim_params_count(&params); i++) {
-    const biosim_param_entry_t* e = biosim_params_entry(&params, i);
-    switch (e->type) {
-        case PARAM_INT:
-            argtable[n++] = arg_intn(NULL, e->name, "<n>", 0, 1, "");
-            break;
-        case PARAM_FLOAT:
-            argtable[n++] = arg_dbln(NULL, e->name, "<v>", 0, 1, "");
-            break;
-        case PARAM_BOOL:
-            argtable[n++] = arg_litn(NULL, e->name, 0, 1, "");
-            break;
-        case PARAM_STRING:
-            argtable[n++] = arg_strn(NULL, e->name, "<s>", 0, 1, "");
-            break;
-    }
-}
-// add non-param flags: --help, --version, --config
-argtable[n++] = arg_file0(NULL, "config", "<path>", "TOML config file");
-argtable[n++] = arg_lit0("h", "help", "print help");
-argtable[n++] = arg_end(20);
+An optional short flag (`-p`) is registered when `e->cli_short != NULL`.
+
+The **one-line synopsis** shows only parameters from a hard-coded list of
+prominent tables (currently `{"simulation"}`); parameters from other tables
+are summarised with `...`. The full flag list for all tables appears in the
+**glossary**, grouped by table.
+
+```
+Usage: biosim-stepper [-h] [--version] [--config=<path>] \
+    [-s/--sim-name=<s>] [-p/--population=<n>] [--size-x=<n>] ... 
+
+  -h, --help               print help and exit
+  --version                print version and exit
+  --config=<path>          TOML config file
+
+[simulation]
+  -s, --sim-name=<s>
+  -p, --population=<n>
+  --size-x=<n>
+  ...
 ```
 
 **Consequence: adding a simulation parameter = adding one entry in `core`'s
@@ -240,32 +254,40 @@ changes to `sim-gpu` or `sim-stepper`.
 ### 2.6 Table-driven TOML loading
 
 Same principle — the TOML glue iterates the parameter table, not a hardcoded
-list of keys:
+list of keys. When a parameter has a non-NULL `table`, the key is looked up
+in the corresponding TOML sub-table; missing sections are silently skipped:
 
 ```c
-// in sim-gpu/main.c (or sim-stepper/main.c)
 for (size_t i = 0; i < biosim_params_count(&params); i++) {
     const biosim_param_entry_t* e = biosim_params_entry(&params, i);
-    toml_datum_t d;
+
+    toml_datum_t src;
+    if (e->table != NULL) {
+        toml_datum_t subtab = toml_get(toptab, e->table);
+        if (subtab.type != TOML_TABLE) continue;
+        src = toml_get(subtab, e->name);
+    } else {
+        src = toml_get(toptab, e->name);
+    }
+
     switch (e->type) {
         case PARAM_INT:
-            d = toml_int_in(conf, e->name);
-            if (d.ok) biosim_params_set_int(&params, e->name, (int)d.u.i);
+            if (src.type == TOML_INT64)
+                biosim_params_set_int(&params, e->name, (int)src.u.int64);
             break;
         case PARAM_FLOAT:
-            d = toml_double_in(conf, e->name);
-            if (d.ok) biosim_params_set_float(&params, e->name, d.u.d);
+            if (src.type == TOML_FP64)
+                biosim_params_set_float(&params, e->name, src.u.fp64);
+            else if (src.type == TOML_INT64)
+                biosim_params_set_float(&params, e->name, (double)src.u.int64);
             break;
         case PARAM_BOOL:
-            d = toml_bool_in(conf, e->name);
-            if (d.ok) biosim_params_set_bool(&params, e->name, d.u.b);
+            if (src.type == TOML_BOOLEAN)
+                biosim_params_set_bool(&params, e->name, src.u.boolean);
             break;
         case PARAM_STRING:
-            d = toml_string_in(conf, e->name);
-            if (d.ok) {
-                biosim_params_set_string(&params, e->name, d.u.s);
-                free(d.u.s);  // tomlc17 allocates strings
-            }
+            if (src.type == TOML_STRING)
+                biosim_params_set_string(&params, e->name, src.u.s);
             break;
     }
 }
