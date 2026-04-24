@@ -325,6 +325,13 @@ biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, co
     /* Pass 2: TOML file overrides defaults */
     if (arg_config->count > 0) {
         params_load_toml_file(p, arg_config->filename[0]);
+        size_t path_len = strlen(arg_config->filename[0]) + 1;
+        p->config_path = (char *)malloc(path_len);
+        if (!p->config_path) {
+            returncode = BIOSIM_ERR_NOMEM;
+            goto exit;
+        }
+        memcpy(p->config_path, arg_config->filename[0], path_len);
     }
 
     /* Pass 3: CLI flags override TOML */

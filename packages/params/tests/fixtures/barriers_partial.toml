@@ -1,0 +1,11 @@
+[barriers]
+num-barriers = 2
+
+[barrier-1]
+kind = "hbar"
+x = 64
+# y, length, width omitted → random
+
+[barrier-2]
+kind = "circle"
+# all optional → fully random

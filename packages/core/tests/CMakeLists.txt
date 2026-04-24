@@ -27,3 +27,8 @@ add_executable(core-io-catalogue-tests test_io_catalogue.c)
 target_link_libraries(core-io-catalogue-tests PRIVATE core unity)
 target_compile_features(core-io-catalogue-tests PRIVATE c_std_11)
 add_test(NAME core-io-catalogue-tests COMMAND core-io-catalogue-tests)
+
+add_executable(core-barriers-tests test_barriers.c)
+target_link_libraries(core-barriers-tests PRIVATE core unity)
+target_compile_features(core-barriers-tests PRIVATE c_std_11)
+add_test(NAME core-barriers-tests COMMAND core-barriers-tests)

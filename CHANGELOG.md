@@ -53,6 +53,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (from `git describe --tags --always --dirty`), `BIOSIM_BUILD_TIMESTAMP`, and
   `BIOSIM_BUILD_TYPE` injected as compile definitions into executables.
 
+- **Barrier system** (`core/barriers.h` + `core/barriers.c`, `params/barriers.h` +
+  `params/barriers.c`): data-driven barrier placement driven entirely by the TOML
+  config file. Supports four shapes — `hbar`, `vbar`, `square`, `circle` — each
+  with optional position and dimension fields that default to grid-relative random
+  values seeded from `biosim_rng_seed(0, 0)`. Configuration: `[barriers]
+  num-barriers = N` plus `[barrier-1]` … `[barrier-N]` tables. No config file
+  means no barriers. Barriers are placed on the grid before agents, so
+  `biosim_grid_find_empty` (used during agent spawning) correctly avoids them.
+  `biosim_context_create` gains two new parameters: `barriers` and `n_barriers`.
+  `biosim_stepper_create` likewise; `main.c` loads specs via
+  `biosim_barrier_params_load` and passes them through.
+- **`BIOSIM_ERR_INVALID`** (`core/status.h`): new status code for malformed input
+  (e.g. unknown barrier kind string), distinct from `BIOSIM_ERR_NOTFOUND`.
+
 ### Changed
 - **`biosim_context_t` expanded** (`core/context.h` + new `core/context.c`):
   now holds the full simulation state — `agents`, `grid`, `genome`, `nnet`,

@@ -34,6 +34,7 @@ typedef struct {
     biosim_param_entry_t *entries;
     size_t count;
     size_t capacity;
+    char *config_path; /* heap copy of --config path, or NULL if none */
 } biosim_params_t;
 
 /* Lifecycle */

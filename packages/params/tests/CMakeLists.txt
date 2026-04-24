@@ -10,3 +10,11 @@ target_compile_definitions(params-cli-tests PRIVATE
   TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 add_test(NAME params-cli-tests COMMAND params-cli-tests)
+
+add_executable(params-barriers-tests test_barriers.c)
+target_link_libraries(params-barriers-tests PRIVATE params unity)
+target_compile_features(params-barriers-tests PRIVATE c_std_11)
+target_compile_definitions(params-barriers-tests PRIVATE
+  TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+)
+add_test(NAME params-barriers-tests COMMAND params-barriers-tests)

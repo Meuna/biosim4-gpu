@@ -9,7 +9,8 @@ is a breaking change that requires coordinated updates across all consumers.
 
 1. [Goals and Non-Goals](#1-goals-and-non-goals)
 2. [CLI Flags and Configuration File Format](#2-cli-flags-and-configuration-file-format)
-3. [Snapshot Binary Format](#3-snapshot-binary-format)
+3. [Barrier Configuration](#3-barrier-configuration)
+4. [Snapshot Binary Format](#4-snapshot-binary-format)
 
 ## 1. Goals and Non-Goals
 
@@ -294,7 +295,141 @@ for (size_t i = 0; i < biosim_params_count(&params); i++) {
 }
 ```
 
-## 3. Snapshot Binary Format
+## 3 Barrier Configuration
+
+#### 3.1 Context
+
+Barriers are static obstacles that block agent movement. They are declared
+entirely in the TOML configuration file — there are no CLI flags for barriers,
+and no barriers are created when no config file is supplied.
+
+Barrier configuration uses a section-per-barrier layout rather than the
+flat key-value model used for simulation parameters. The flat `biosim_param_entry_t`
+table cannot express a variable number of named shapes, so barriers are parsed
+by a dedicated module (`params/barriers.c`) that reads the TOML file independently.
+
+#### 3.2 TOML Format
+
+```toml
+[barriers]
+num-barriers = 3          # required; 0 or absent = no barriers
+
+[barrier-1]
+kind = "hbar"             # required; one of: hbar | vbar | square | circle
+x = 64                    # optional; int — omit for random position
+y = 32                    # optional; int — omit for random position
+length = 40               # optional; number — omit for random dimension
+width = 2                 # optional; number — omit for random dimension (bars only)
+
+[barrier-2]
+kind = "vbar"
+x = 96
+length = 30               # bar length along vertical axis
+
+[barrier-3]
+kind = "circle"
+x = 50
+y = 80
+radius = 7.5              # alias for length on circle shapes; float accepted
+```
+
+Rules:
+
+- No `[barriers]` section, or `num-barriers = 0`, produces zero barriers.
+- `[barrier-N]` tables are numbered `1..num-barriers` consecutively.
+  A missing table is a parse error (`BIOSIM_ERR_INVALID`).
+- `kind` is the only required key; all position and dimension keys are optional.
+- `radius` is accepted as an alias for `length` on `circle` shapes.
+- Missing optional fields resolve to random values at simulation start (see §3.4).
+
+#### 3.3 Shape Kinds and Parameters
+
+| Kind | `length` | `width` | Description |
+|---|---|---|---|
+| `hbar` | horizontal extent (cells) | vertical thickness (cells) | Horizontal bar centred on (`x`, `y`) |
+| `vbar` | vertical extent (cells) | horizontal thickness (cells) | Vertical bar centred on (`x`, `y`) |
+| `square` | side length (cells) | ignored | Square centred on (`x`, `y`) |
+| `circle` | radius (cells, float) | ignored | Disc centred on (`x`, `y`) |
+
+`x` and `y` are the centre coordinates of the shape in grid cells (0-based,
+origin at bottom-left). Out-of-bounds cells are clipped silently.
+
+#### 3.4 Random Defaults
+
+When a position or dimension is omitted, a value is drawn from the simulation's
+`xorshift64` RNG seeded with `biosim_rng_seed(0, 0)`. This seed is fixed and
+independent of any user-supplied seed, so random barrier layouts are fully
+reproducible across runs with the same config file.
+
+Default ranges (relative to grid dimensions `size_x`, `size_y`):
+
+| Field | Default range |
+|---|---|
+| `x` | [`size_x/10`, `size_x*9/10`] |
+| `y` | [`size_y/10`, `size_y*9/10`] |
+| `hbar` / `vbar` length | [`size/4`, `size/2`] along the bar axis |
+| `hbar` / `vbar` width | [1, 3] cells |
+| `square` length (side) | [`size_x/8`, `size_x/4`] |
+| `circle` length (radius) | [3.0, 10.0] cells |
+
+#### 3.5 C Types and API
+
+**`core` package** (`core/barriers.h`):
+
+```c
+typedef enum {
+    BIOSIM_BARRIER_HBAR,
+    BIOSIM_BARRIER_VBAR,
+    BIOSIM_BARRIER_SQUARE,
+    BIOSIM_BARRIER_CIRCLE,
+} biosim_barrier_kind_t;
+
+/* Sentinels for omitted fields */
+#define BIOSIM_BARRIER_POS_UNSET ((int16_t)INT16_MIN)  /* x or y: random */
+#define BIOSIM_BARRIER_DIM_UNSET (0.0F)                /* length or width: random */
+
+typedef struct {
+    biosim_barrier_kind_t kind;
+    int16_t x;      /* centre x; BIOSIM_BARRIER_POS_UNSET = random */
+    int16_t y;      /* centre y; BIOSIM_BARRIER_POS_UNSET = random */
+    float   length; /* primary dimension; BIOSIM_BARRIER_DIM_UNSET = random */
+    float   width;  /* bar thickness; BIOSIM_BARRIER_DIM_UNSET = random */
+} biosim_barrier_spec_t;
+
+/* Place all n specs onto grid as BIOSIM_GRID_BARRIER cells.
+ * rng_state is advanced in-place; same initial state → same layout. */
+biosim_status_t biosim_barriers_place(biosim_grid_t *grid,
+                                      const biosim_barrier_spec_t *specs, int n,
+                                      uint64_t *rng_state);
+```
+
+**`params` package** (`params/barriers.h`):
+
+```c
+/* Parse barrier specs from a TOML file.
+ * Returns BIOSIM_OK with *n_out = 0 when path is NULL or [barriers] is absent.
+ * *specs_out is heap-allocated; caller must free(). */
+biosim_status_t biosim_barrier_params_load(const char *toml_path,
+                                           biosim_barrier_spec_t **specs_out,
+                                           int *n_out);
+```
+
+#### 3.6 Integration Contract
+
+Barriers are placed on the grid **before** agents are spawned. This is
+enforced inside `biosim_context_create`: it calls `biosim_barriers_place` on
+the zero-filled grid, then places agents via `biosim_grid_find_empty`, which
+already treats `BIOSIM_GRID_BARRIER` cells as occupied. The simulator is
+therefore guaranteed that no agent starts inside a barrier cell.
+
+The caller's responsibility:
+
+1. Parse barrier specs from the TOML file with `biosim_barrier_params_load`.
+2. Pass the resulting array and count to `biosim_context_create` (or the
+   simulator's own create function, e.g. `biosim_stepper_create`).
+3. `free()` the spec array after `context_create` returns.
+
+## 4. Snapshot Binary Format
 
 **Status: open design decision.** The format must be specified before any
 snapshot read/write code is written, because it is generated by `sim-gpu`,

@@ -1,6 +1,9 @@
 #include <stdio.h>
+#include <stdlib.h>
 
+#include "biosim/core/barriers.h"
 #include "biosim/core/status.h"
+#include "biosim/params/barriers.h"
 #include "biosim/params/params.h"
 #include "biosim/stepper/step.h"
 
@@ -32,8 +35,18 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    biosim_barrier_spec_t *barriers = NULL;
+    int n_barriers = 0;
+    st = biosim_barrier_params_load(p.config_path, &barriers, &n_barriers);
+    if (st != BIOSIM_OK) {
+        (void)fprintf(stderr, "biosim-stepper: barrier config error (status %d)\n", (int)st);
+        biosim_params_free(&p);
+        return 1;
+    }
+
     biosim_stepper_t sim;
-    st = biosim_stepper_create(&sim, &p);
+    st = biosim_stepper_create(&sim, &p, barriers, n_barriers);
+    free(barriers);
     if (st != BIOSIM_OK) {
         (void)fprintf(stderr, "biosim-stepper: init failed (status %d)\n", (int)st);
         biosim_params_free(&p);

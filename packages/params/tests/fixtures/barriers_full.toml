@@ -1,0 +1,34 @@
+[simulation]
+population = 100
+grid-size-x = 128
+grid-size-y = 128
+steps-per-gen = 10
+
+[barriers]
+num-barriers = 4
+
+[barrier-1]
+kind = "hbar"
+x = 64
+y = 32
+length = 40
+width = 2
+
+[barrier-2]
+kind = "vbar"
+x = 96
+y = 64
+length = 30
+width = 3
+
+[barrier-3]
+kind = "square"
+x = 20
+y = 20
+length = 12
+
+[barrier-4]
+kind = "circle"
+x = 100
+y = 80
+radius = 7.5

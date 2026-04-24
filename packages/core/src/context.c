@@ -1,4 +1,5 @@
 #include "biosim/core/context.h"
+#include "biosim/core/barriers.h"
 #include "biosim/core/io_catalogue.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/status.h"
@@ -10,6 +11,7 @@
 biosim_status_t biosim_context_create(uint32_t pop, int16_t size_x, int16_t size_y,
                                       int steps_per_gen, uint16_t max_gen_len, uint8_t max_neurons,
                                       uint8_t long_probe_dist, int pop_sensor_radius,
+                                      const biosim_barrier_spec_t *barriers, int n_barriers,
                                       biosim_context_t *out) {
     out->steps_per_gen = steps_per_gen;
     out->population_sensor_radius = pop_sensor_radius;
@@ -20,6 +22,11 @@ biosim_status_t biosim_context_create(uint32_t pop, int16_t size_x, int16_t size
     if (st != BIOSIM_OK) {
         biosim_context_free(out);
         return st;
+    }
+
+    if (n_barriers > 0) {
+        uint64_t barrier_rng = biosim_rng_seed(0, 0);
+        biosim_barriers_place(&out->grid, barriers, n_barriers, &barrier_rng);
     }
 
     st = biosim_agents_create(pop, &out->agents);

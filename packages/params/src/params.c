@@ -51,6 +51,7 @@ biosim_status_t biosim_params_init(biosim_params_t *p, const biosim_param_entry_
     p->entries = NULL;
     p->count = 0;
     p->capacity = 0;
+    p->config_path = NULL;
     biosim_status_t st = params_grow(p, count);
     if (st != BIOSIM_OK) {
         return st;
@@ -71,7 +72,9 @@ void biosim_params_free(biosim_params_t *p) {
         }
     }
     free(p->entries);
+    free(p->config_path);
     p->entries = NULL;
+    p->config_path = NULL;
     p->count = 0;
     p->capacity = 0;
 }

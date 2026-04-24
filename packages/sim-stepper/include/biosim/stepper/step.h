@@ -5,6 +5,7 @@
 #ifndef BIOSIM_STEPPER_STEP_H
 #define BIOSIM_STEPPER_STEP_H
 
+#include "biosim/core/barriers.h"
 #include "biosim/core/context.h"
 #include "biosim/core/status.h"
 #include "biosim/params/params.h"
@@ -20,7 +21,8 @@ typedef struct {
     uint32_t step;         /* step index within the current generation */
 } biosim_stepper_t;
 
-biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params);
+biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params,
+                                      const biosim_barrier_spec_t *barriers, int n_barriers);
 void biosim_stepper_free(biosim_stepper_t *stepper);
 void biosim_stepper_step(biosim_stepper_t *stepper);
 

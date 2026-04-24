@@ -1,5 +1,6 @@
 #include "biosim/stepper/step.h"
 
+#include "biosim/core/barriers.h"
 #include "biosim/core/context.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/io_catalogue.h"
@@ -16,7 +17,8 @@
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params) {
+biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params,
+                                      const biosim_barrier_spec_t *barriers, int n_barriers) {
     assert(out != NULL);
     assert(params != NULL);
 
@@ -32,7 +34,7 @@ biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params
     memset(out, 0, sizeof(*out));
     biosim_status_t st =
         biosim_context_create(pop, size_x, size_y, steps_per_gen, max_gen_len, max_neurons,
-                              long_probe_dist, pop_sensor_radius, &out->base);
+                              long_probe_dist, pop_sensor_radius, barriers, n_barriers, &out->base);
     if (st != BIOSIM_OK) {
         biosim_stepper_free(out);
         return st;
