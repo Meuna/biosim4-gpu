@@ -24,7 +24,7 @@ void tearDown(void) {
 
 void test_defaults(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, PARAM_STRING, false, false},
     };
     biosim_params_extend(&p, extra, 1);
     TEST_ASSERT_EQUAL_STRING("unset", biosim_params_get_string(&p, "someparam"));
@@ -35,7 +35,7 @@ void test_defaults(void) {
 
 void test_toml_file_sets_values(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, PARAM_STRING, false, false},
     };
     biosim_params_extend(&p, extra, 1);
 
@@ -48,7 +48,7 @@ void test_toml_file_sets_values(void) {
 
 void test_cli_sets_values(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, PARAM_STRING, false, false},
     };
     biosim_params_extend(&p, extra, 1);
     char *argv[] = {"biosim-stepper", "--someparam", "from-cli", "--population", "9999", NULL};
@@ -67,7 +67,7 @@ void test_cli_short_flag(void) {
 
 void test_cli_auto_table_flag(void) {
     static const biosim_param_entry_t extra[] = {
-        {"count", "test-group", {.i = 0}, {.i = 0}, PARAM_INT, false},
+        {"count", "test-group", {.i = 0}, PARAM_INT, false, false},
     };
     biosim_params_extend(&p, extra, 1);
     char *argv[] = {"biosim-stepper", "--test-group-count", "42", NULL};
@@ -79,7 +79,7 @@ void test_cli_auto_table_flag(void) {
 
 void test_cli_overrides_toml(void) {
     static const biosim_param_entry_t extra[] = {
-        {"someparam", NULL, {.s = "unset"}, {.s = "unset"}, PARAM_STRING, false},
+        {"someparam", NULL, {.s = "unset"}, PARAM_STRING, false, false},
     };
     biosim_params_extend(&p, extra, 1);
 

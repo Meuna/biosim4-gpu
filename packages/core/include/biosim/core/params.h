@@ -22,10 +22,10 @@ typedef union {
 typedef struct {
     const char *name;
     const char *table; /* NULL = top-level TOML key; non-NULL = [table] section */
-    biosim_param_value_t default_value;
     biosim_param_value_t value;
     biosim_param_type_t type;
     bool is_set;
+    bool has_default;      /* true = value holds the default to display in --help */
     const char *cli_long;  /* NULL = auto ({table}-{name} or {name}); else override */
     const char *cli_short; /* NULL = no short flag; else single-char string e.g. "p" */
 } biosim_param_entry_t;

@@ -11,7 +11,7 @@
 /* ── static data ────────────────────────────────────────────────────────── */
 
 static const biosim_param_entry_t stepper_params[] = {
-    {"trace-out", NULL, {.s = ""}, {.s = ""}, PARAM_STRING, false},
+    {"trace-out", NULL, {.s = ""}, PARAM_STRING, false, false},
 };
 
 /* Glossary section order — NULL first (top-level params), then named tables. */
@@ -121,14 +121,42 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
     (void)fprintf(fp, "\n");
 }
 
+/* Formats the default value of e into a malloc'd "default: <val>" string, or NULL on failure. */
+static char *format_default(const biosim_param_entry_t *e) {
+    char buf[256];
+    switch (e->type) {
+    case PARAM_INT:
+        (void)snprintf(buf, sizeof(buf), "default: %d", e->value.i);
+        break;
+    case PARAM_FLOAT:
+        (void)snprintf(buf, sizeof(buf), "default: %g", e->value.f);
+        break;
+    case PARAM_BOOL:
+        (void)snprintf(buf, sizeof(buf), "default: %s", e->value.b ? "true" : "false");
+        break;
+    case PARAM_STRING:
+        (void)snprintf(buf, sizeof(buf), "default: %s", e->value.s);
+        break;
+    }
+    size_t n = strlen(buf) + 1;
+    char *out = (char *)malloc(n);
+    if (out) {
+        memcpy(out, buf, n);
+    }
+    return out;
+}
+
 /* Appends argtable3 entries for every param (1-to-1: param i → argtable[nstatic+i]).
- * Auto-generated long flag names are malloc'd into generated[i]; NULL otherwise. */
+ * Auto-generated long flag names are malloc'd into generated[i]; NULL otherwise.
+ * Formatted default strings are malloc'd into glossaries[i]; NULL otherwise. */
 static void build_argtable(void **argtable, size_t nstatic, const biosim_params_t *p, size_t ndyn,
-                           char **generated) {
+                           char **generated, char **glossaries) {
     for (size_t i = 0; i < ndyn; i++) {
         const biosim_param_entry_t *e = biosim_params_entry(p, i);
 
         generated[i] = NULL;
+        glossaries[i] = NULL;
+
         const char *longflag;
         if (e->cli_long != NULL) {
             longflag = e->cli_long;
@@ -141,18 +169,26 @@ static void build_argtable(void **argtable, size_t nstatic, const biosim_params_
             longflag = e->name;
         }
 
+        const char *glossary = "";
+        if (e->has_default) {
+            glossaries[i] = format_default(e);
+            if (glossaries[i]) {
+                glossary = glossaries[i];
+            }
+        }
+
         switch (e->type) {
         case PARAM_INT:
-            argtable[nstatic + i] = arg_int0(e->cli_short, longflag, "<n>", "");
+            argtable[nstatic + i] = arg_int0(e->cli_short, longflag, "<n>", glossary);
             break;
         case PARAM_FLOAT:
-            argtable[nstatic + i] = arg_dbl0(e->cli_short, longflag, "<v>", "");
+            argtable[nstatic + i] = arg_dbl0(e->cli_short, longflag, "<v>", glossary);
             break;
         case PARAM_BOOL:
-            argtable[nstatic + i] = arg_lit0(e->cli_short, longflag, "");
+            argtable[nstatic + i] = arg_lit0(e->cli_short, longflag, glossary);
             break;
         case PARAM_STRING:
-            argtable[nstatic + i] = arg_str0(e->cli_short, longflag, "<s>", "");
+            argtable[nstatic + i] = arg_str0(e->cli_short, longflag, "<s>", glossary);
             break;
         }
     }
@@ -232,8 +268,15 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
         return BIOSIM_ERR_NOMEM;
     }
 
+    char **glossaries = (char **)calloc(ndyn, sizeof(char *));
+    if (!glossaries) {
+        free_generated(generated, ndyn);
+        free((void *)argtable);
+        return BIOSIM_ERR_NOMEM;
+    }
+
     memcpy((void *)argtable, (const void *)static_flags, nstatic * sizeof(void *));
-    build_argtable(argtable, nstatic, p, ndyn, generated);
+    build_argtable(argtable, nstatic, p, ndyn, generated, glossaries);
     struct arg_end *arg_end_s = arg_end(20);
     argtable[nstatic + ndyn] = arg_end_s;
 
@@ -245,6 +288,7 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
         print_glossary(stdout, argtable, nstatic, p, ndyn);
         arg_freetable(argtable, total);
         free_generated(generated, ndyn);
+        free_generated(glossaries, ndyn);
         free((void *)argtable);
         exit(0);
     }
@@ -253,6 +297,7 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
                info->build_type);
         arg_freetable(argtable, total);
         free_generated(generated, ndyn);
+        free_generated(glossaries, ndyn);
         free((void *)argtable);
         exit(0);
     }
@@ -260,6 +305,7 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
         arg_print_errors(stderr, arg_end_s, info->progname);
         arg_freetable(argtable, total);
         free_generated(generated, ndyn);
+        free_generated(glossaries, ndyn);
         free((void *)argtable);
         return BIOSIM_ERR_NOTFOUND;
     }
@@ -274,6 +320,7 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
 
     arg_freetable(argtable, total);
     free_generated(generated, ndyn);
+    free_generated(glossaries, ndyn);
     free((void *)argtable);
     return BIOSIM_OK;
 }
