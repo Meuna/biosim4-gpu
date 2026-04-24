@@ -53,7 +53,7 @@ void test_set_marks_is_set(void) {
     biosim_params_set_float(&p, "mutation-rate", 1.0F);
     biosim_params_set_string(&p, "sim-name", "1");
     biosim_params_set_bool(&p, "enable-kill", true);
-    
+
     char *keys[] = {"population", "mutation-rate", "sim-name", "enable-kill"};
     int len = sizeof(keys) / sizeof(keys[0]);
     for (int i = 0; i < len; i++) {
@@ -85,7 +85,6 @@ void test_unknown_key_returns_warn(void) {
     st = biosim_params_set_bool(&p, "no-such-key", false);
     TEST_ASSERT_EQUAL_INT(BIOSIM_WARN_UNKNOWN_KEY, st);
 }
-
 
 /* ── Runner ─────────────────────────────────────────────────────────────── */
 

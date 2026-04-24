@@ -10,12 +10,6 @@
 /* Forward declaration of internal TOML loader defined in toml.c */
 biosim_status_t params_load_toml_file(biosim_params_t *p, const char *path);
 
-/* ── static data ────────────────────────────────────────────────────────── */
-
-/* Glossary section order — NULL first (top-level params), then named tables. */
-static const char *const glossary_tables_order[] = {NULL, "simulation"};
-#define GLOSSARY_TABLES_COUNT (sizeof(glossary_tables_order) / sizeof(glossary_tables_order[0]))
-
 /* ── internal helpers ───────────────────────────────────────────────────── */
 
 static bool str_eq_nullable(const char *a, const char *b) {
@@ -26,6 +20,25 @@ static bool str_eq_nullable(const char *a, const char *b) {
         return false;
     }
     return strcmp(a, b) == 0;
+}
+
+static void collect_table_order(const biosim_params_t *p, size_t ndyn, const char **out_order,
+                                size_t *out_count) {
+    size_t n = 0;
+    for (size_t i = 0; i < ndyn; i++) {
+        const char *tname = biosim_params_entry(p, i)->table;
+        bool found = false;
+        for (size_t j = 0; j < n; j++) {
+            if (str_eq_nullable(out_order[j], tname)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            out_order[n++] = tname;
+        }
+    }
+    *out_count = n;
 }
 
 /* Prints the usage one-liner using arg_print_syntax on a filtered shallow copy of argtable. */
@@ -80,8 +93,20 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
     arg_freetable(&stbl[nstatic], 1);
     free((void *)stbl);
 
-    for (size_t t = 0; t < GLOSSARY_TABLES_COUNT; t++) {
-        const char *tname = glossary_tables_order[t];
+    /* Collect the tables declared by the parameters */
+    size_t ntables = 0;
+    const char **table_order = NULL;
+    if (ndyn > 0) {
+        table_order = (const char **)malloc(ndyn * sizeof(const char *));
+        if (!table_order) {
+            (void)fprintf(stderr, "fatal: unhandled allocation error\n");
+            return;
+        }
+        collect_table_order(p, ndyn, table_order, &ntables);
+    }
+
+    for (size_t t = 0; t < ntables; t++) {
+        const char *tname = table_order[t];
         size_t ntable = 0;
         for (size_t i = 0; i < ndyn; i++) {
             if (str_eq_nullable(biosim_params_entry(p, i)->table, tname)) {
@@ -100,6 +125,7 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
         void **tbl = (void **)malloc((ntable + 1) * sizeof(void *));
         if (!tbl) {
             (void)fprintf(stderr, "fatal: unhandled allocation error\n");
+            free((void *)table_order);
             return;
         }
         size_t k = 0;
@@ -116,6 +142,7 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
         arg_freetable(&tbl[k], 1);
         free((void *)tbl);
     }
+    free((void *)table_order);
     (void)fprintf(fp, "\n");
 }
 
