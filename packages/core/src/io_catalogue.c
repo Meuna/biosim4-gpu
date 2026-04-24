@@ -1,4 +1,5 @@
 #include "biosim/core/io_catalogue.h"
+#include "biosim/core/context.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/types.h"
 
@@ -44,11 +45,11 @@ static void pop_visitor(biosim_coord_t coord, uint16_t cell, void *ctx) {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
-                         const biosim_params_t *params) {
+                         const biosim_context_t *cfg) {
     assert(ctx != NULL);
     assert(ctx->agents != NULL);
     assert(ctx->grid != NULL);
-    assert(params != NULL);
+    assert(cfg != NULL);
 
     const uint32_t idx = ctx->idx;
     const biosim_agents_t *agents = ctx->agents;
@@ -107,7 +108,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
     }
 
     case BIOSIM_SENSOR_AGE: {
-        int steps = biosim_params_get_int(params, "steps-per-gen");
+        int steps = cfg->steps_per_gen;
         if (steps <= 0) {
             steps = 1;
         }
@@ -118,7 +119,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
         return rng_float(&agents->rng_state[idx]);
 
     case BIOSIM_SENSOR_POPULATION: {
-        int r = biosim_params_get_int(params, "population-sensor-radius");
+        int r = cfg->population_sensor_radius;
         if (r <= 0) {
             r = 1;
         }
@@ -174,12 +175,10 @@ float biosim_sensor_eval(biosim_sensor_t sensor, const biosim_sense_ctx_t *ctx,
 /* ── action application ─────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ctx,
-                         const biosim_params_t *params) {
+void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ctx) {
     assert(ctx != NULL);
     assert(ctx->agents != NULL);
     assert(ctx->grid != NULL);
-    (void)params;
 
     const uint32_t idx = ctx->idx;
     biosim_agents_t *agents = ctx->agents;
@@ -359,11 +358,10 @@ void biosim_action_apply(biosim_action_t action, float val, biosim_act_ctx_t *ct
 
 /* ── movement finalisation ──────────────────────────────────────────────── */
 
-void biosim_action_finalize_movement(biosim_act_ctx_t *ctx, const biosim_params_t *params) {
+void biosim_action_finalize_movement(biosim_act_ctx_t *ctx) {
     assert(ctx != NULL);
     assert(ctx->agents != NULL);
     assert(ctx->grid != NULL);
-    (void)params;
 
     const uint32_t idx = ctx->idx;
     biosim_agents_t *agents = ctx->agents;

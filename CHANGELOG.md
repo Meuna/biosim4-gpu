@@ -26,6 +26,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `challenge_bits`, `rng_state`, `genome_fingerprint`) plus transient movement
   targets (`desired_x/y`). Lifecycle: `biosim_agents_create` / `biosim_agents_free` /
   `biosim_agents_init_slot`.
+- **`params` package** (`packages/params/`): new static library owning all
+  CLI/TOML/parameter logic. `biosim_params_init(p, entries, count)` accepts
+  the caller's complete entry table; `biosim_params_parse(p, progname,
+  version, argc, argv)` performs three-pass resolution (defaults → TOML →
+  CLI). The extension mechanism (`biosim_params_extend`) is removed — each
+  simulator's `main.c` defines its own exhaustive entry table.
+- **`biosim_context_t`** (`core/context.h`): new core module holding scalar
+  configuration values (`steps_per_gen`, `population_sensor_radius`) that
+  core algorithms need at runtime. Populated from `biosim_params_t` by the
+  simulator before the simulation loop; replaces direct param lookups inside
+  `core`.
 - **CLI/TOML dual parameter stack** (`sim-stepper`): three-pass resolution —
   defaults → TOML file → CLI flags.
 - **Genome module** (`core/genome.h` + `core/genome.c`): transposed SoA genome
@@ -41,5 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Build version injection** (`cmake/BuildVersion.cmake`): `BIOSIM_GIT_VERSION`
   (from `git describe --tags --always --dirty`), `BIOSIM_BUILD_TIMESTAMP`, and
   `BIOSIM_BUILD_TYPE` injected as compile definitions into executables.
+
+### Removed
+- `biosim_params_t` and all param functions removed from `core`; they now live
+  exclusively in the `params` package.
+- `biosim_params_extend` removed entirely (no extension mechanism needed).
 
 [Unreleased]: https://github.com/example/biosim4-gpu/compare/HEAD

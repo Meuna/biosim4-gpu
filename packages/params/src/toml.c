@@ -1,5 +1,4 @@
-#include "biosim/stepper/toml.h"
-#include "biosim/core/params.h"
+#include "biosim/params/params.h"
 #include "tomlc17.h"
 
 static void apply_table(biosim_params_t *p, toml_datum_t toptab) {
@@ -44,7 +43,7 @@ static void apply_table(biosim_params_t *p, toml_datum_t toptab) {
     }
 }
 
-biosim_status_t stepper_load_toml_file(biosim_params_t *p, const char *path) {
+biosim_status_t params_load_toml_file(biosim_params_t *p, const char *path) {
     toml_result_t result = toml_parse_file_ex(path);
     if (!result.ok) {
         return BIOSIM_ERR_NOTFOUND;

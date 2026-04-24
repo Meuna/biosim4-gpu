@@ -57,14 +57,17 @@ include(BuildVersion)
 
 # ── Packages ──────────────────────────────────────────────────────────────────
 
-# Shared simulation logic: genome, neural net, RNG, challenges (no OpenCL deps)
+# Shared simulation logic: genome, neural net, RNG, challenges (no deps)
 add_subdirectory(packages/core)
 
+# CLI/TOML parameter parsing library (depends on core + argtable3 + tomlc17)
+add_subdirectory(packages/params)
+
 # OpenCL batch simulator executable
-# add_subdirectory(packages/sim-gpu)     # depends on core + OpenCL
+# add_subdirectory(packages/sim-gpu)     # depends on core + params + OpenCL
 
 # Single-threaded CPU reference simulator executable
-add_subdirectory(packages/sim-stepper) # depends on core only
+add_subdirectory(packages/sim-stepper) # depends on core + params
 
 # ── Benchmarks ────────────────────────────────────────────────────────────────
 

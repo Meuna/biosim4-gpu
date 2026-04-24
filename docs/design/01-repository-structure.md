@@ -11,12 +11,13 @@ read before filling in any actual source or build files.
 3. [Top-Level Tree](#3-top-level-tree)
 4. [Package Layout — `packages/`](#4-package-layout--packages)
 5. [The `core` Package — Rationale and Boundaries](#5-the-core-package--rationale-and-boundaries)
-6. [The `sim-gpu` Package](#6-the-sim-gpu-package)
-7. [The `sim-stepper` Package](#7-the-sim-stepper-package)
-8. [The `viz` Package — Placeholder](#8-the-viz-package--placeholder)
-9. [Documentation Organization](#9-documentation-organization)
-10. [Tooling — `tools/` and `benchmarks/`](#10-tooling--tools-and-benchmarks)
-11. [Data — Configurations and Snapshots](#11-data--configurations-and-snapshots)
+6. [The `params` Package](#6-the-params-package)
+7. [The `sim-gpu` Package](#7-the-sim-gpu-package)
+8. [The `sim-stepper` Package](#8-the-sim-stepper-package)
+9. [The `viz` Package — Placeholder](#9-the-viz-package--placeholder)
+10. [Documentation Organization](#10-documentation-organization)
+11. [Tooling — `tools/` and `benchmarks/`](#11-tooling--tools-and-benchmarks)
+12. [Data — Configurations and Snapshots](#12-data--configurations-and-snapshots)
 
 ## 1. Goals and Non-Goals
 
@@ -145,6 +146,7 @@ The build-related files are documented in detail in [`03-portable-build.md`](03-
 ```
 packages/
 ├── core/                              ← shared simulation logic (static library)
+├── params/                            ← CLI/TOML/parameter management (static library)
 ├── sim-gpu/                           ← OpenCL batch simulator (executable)
 ├── sim-stepper/                       ← step-by-step CPU simulator (executable)
 └── viz/                               ← placeholder for future visualization
@@ -155,6 +157,10 @@ packages/
 ```
                    ┌──────────┐
                    │   core   │    (static library, no external deps beyond libc)
+                   └─────┬────┘
+                         │
+                   ┌─────▼────┐
+                   │  params  │    (static library; PRIVATE: argtable3, tomlc17)
                    └─────┬────┘
                          │
               ┌──────────┴──────────┐
@@ -171,8 +177,9 @@ packages/
 ```
 
 `core` depends on nothing other than the C standard library.
-`sim-gpu` depends on `core` and on OpenCL.
-`sim-stepper` depends on `core` only.
+`params` depends on `core` (PUBLIC) and on argtable3 and tomlc17 (PRIVATE).
+`sim-gpu` depends on `core` and `params`, and on OpenCL.
+`sim-stepper` depends on `core` and `params`.
 `viz` eventually depends on `core` (for types) and a rendering library.
 
 This graph is **acyclic by construction**. Any attempt to introduce a reverse
@@ -200,7 +207,7 @@ taken when the code is written with concrete size and cohesion in mind.
 | Role | Description |
 |---|---|
 | Shared POD types | `Coord`, `Dir`, gene bit-layout macros (`gene.h`, shared with OpenCL kernels), and any other packed value types |
-| Simulation parameters | The `SimParams` struct plus its TOML loader |
+| Simulation context | `biosim_context_t` — scalar configuration values extracted from params and passed to core algorithms |
 | Genome operators | Mutation (point, insertion, deletion), crossover |
 | Neural network compilation | Culling of dead neurons, connection reordering, per-agent NN build, phenotypic fingerprint |
 | Abstract grid API | Query, neighborhood iteration, cell write — backing store provided by each simulator |
@@ -224,7 +231,9 @@ longer comparable.
 - The per-simStep orchestration loop (kernel pipeline vs. single-threaded
   stepping) → each simulator's own code.
 - Visualization formats, image encoders → `viz`.
-- CLI argument parsing → each executable's `main.c`.
+- CLI argument parsing, TOML loading, parameter table management → `params`
+  package; each simulator's `main.c` defines its own exhaustive entry table
+  and calls `biosim_params_parse`.
 
 ### The host/device portability constraint
 
@@ -255,7 +264,47 @@ that the host-side xorshift produces bit-identical output to the OpenCL
 kernel's xorshift for the same seed and stream, which is a prerequisite for
 any GPU-vs-stepper equivalence check.
 
-## 6. The `sim-gpu` Package
+## 6. The `params` Package
+
+```
+packages/params/
+├── CMakeLists.txt
+├── include/
+│   └── biosim/params/     ← single public header: params.h
+├── src/
+│   ├── params.c           ← lifecycle, setters, getters, introspection
+│   ├── cli.c              ← CLI parsing (argtable3); three-pass orchestration
+│   └── toml.c             ← TOML loader (tomlc17)
+└── tests/
+    ├── CMakeLists.txt
+    ├── test_params.c
+    ├── test_cli.c
+    └── fixtures/
+        └── basic.toml
+```
+
+### Module responsibilities
+
+| Role | Description |
+|---|---|
+| Parameter table | `biosim_params_t` — dynamically-sized array of `biosim_param_entry_t`; lifecycle, setters, getters, and introspection |
+| TOML loading | Reads a TOML file into the parameter table via `--config`; table-driven — no hardcoded key list |
+| CLI generation | Derives a full argtable3 argument table from the entries; three-pass resolution (defaults → TOML → CLI) |
+| Parsing entry point | `biosim_params_parse(p, progname, version, argc, argv)` — the single call a simulator `main.c` makes |
+
+### The "each main defines its own table" contract
+
+Each simulator's `main.c` declares a `static const biosim_param_entry_t[]`
+that contains **every** parameter it needs — simulation defaults and
+simulator-specific entries alike.
+
+### Dependencies
+
+`params` links `PUBLIC core` (needs `biosim_status_t`) and `PRIVATE
+argtable3::argtable3` and `PRIVATE tomlc17`. Consumers see only
+`biosim/params/params.h`; argtable3 and tomlc17 are fully encapsulated.
+
+## 7. The `sim-gpu` Package
 
 ```
 packages/sim-gpu/
@@ -321,7 +370,7 @@ one with the stepper on the same input, then verifies that the per-agent
 neuron outputs match within a tolerance. Without this test, behavioral drift
 between the two simulators becomes invisible.
 
-## 7. The `sim-stepper` Package
+## 8. The `sim-stepper` Package
 
 ```
 packages/sim-stepper/
@@ -364,7 +413,7 @@ sufficient for visualization purposes.
 If the single-thread stepper happens to be too slow, this single-thread design
 can be reverted.
 
-## 8. The `viz` Package — Placeholder
+## 9. The `viz` Package — Placeholder
 
 ```
 packages/viz/
@@ -379,7 +428,7 @@ The visualization is not implemented yet. The package exists so that:
 
 Multiple visualization packages are planned: tty, web
 
-## 9. Documentation Organization
+## 10. Documentation Organization
 
 ```
 docs/
@@ -425,7 +474,7 @@ A shorter, higher-level view than this design document: the packaging model,
 the dependency graph, the data-flow between simulators and viz, intended as a
 five-minute onboarding read for someone new to the project.
 
-## 10. Tooling — `tools/` and `benchmarks/`
+## 11. Tooling — `tools/` and `benchmarks/`
 
 Developer workflow commands (format, lint, build, test, benchmark) are
 exposed as CMake custom targets, not as shell scripts. See
@@ -460,7 +509,7 @@ criterion is different: tests pass/fail, benchmarks produce numbers that
 are compared to a baseline. Keeping them in a separate directory avoids
 polluting the test output and makes them easy to disable in CI.
 
-## 11. Data — Configurations and Snapshots
+## 12. Data — Configurations and Snapshots
 
 ```
 data/
@@ -479,8 +528,8 @@ Running a reproducible experiment requires a stable, committed parameter
 file. `data/configs/` holds named configurations (one per challenge scenario,
 typically), and every configuration file is under version control.
 
-Format choice is an open decision documented in [`06-external-icd.md`](06-external-icd.md).
-The `core/params.h` loader handles whatever is chosen.
+The TOML format is documented in [`06-external-icd.md`](06-external-icd.md).
+The `params` package loader handles it.
 
 ### Snapshots are not versioned
 

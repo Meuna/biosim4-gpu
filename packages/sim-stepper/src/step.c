@@ -1,14 +1,15 @@
 #include "biosim/stepper/step.h"
 
 #include "biosim/core/agents.h"
+#include "biosim/core/context.h"
 #include "biosim/core/genome.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/io_catalogue.h"
 #include "biosim/core/nnet.h"
-#include "biosim/core/params.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/status.h"
 #include "biosim/core/types.h"
+#include "biosim/params/params.h"
 
 #include <assert.h>
 #include <stddef.h>
@@ -30,11 +31,12 @@ biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params
     assert(params != NULL);
 
     memset(out, 0, sizeof(*out));
-    out->params = params;
+    out->ctx.steps_per_gen = biosim_params_get_int(params, "steps-per-gen");
+    out->ctx.population_sensor_radius = biosim_params_get_int(params, "population-sensor-radius");
 
     const int population = biosim_params_get_int(params, "population");
-    const int16_t size_x = (int16_t)biosim_params_get_int(params, "size-x");
-    const int16_t size_y = (int16_t)biosim_params_get_int(params, "size-y");
+    const int16_t size_x = (int16_t)biosim_params_get_int(params, "grid-size-x");
+    const int16_t size_y = (int16_t)biosim_params_get_int(params, "grid-size-y");
     const uint16_t max_gen_len = (uint16_t)biosim_params_get_int(params, "max-genome-length");
     const uint8_t long_probe_dist = (uint8_t)biosim_params_get_int(params, "long-probe-dist");
     const uint8_t max_neurons = (uint8_t)biosim_params_get_int(params, "max-neurons");
@@ -112,7 +114,6 @@ void biosim_stepper_free(biosim_stepper_t *stepper) {
     free(stepper->signal);
     stepper->signal = NULL;
     stepper->signal_len = 0;
-    stepper->params = NULL;
     stepper->step = 0;
 }
 
@@ -130,7 +131,7 @@ static void step_agent(biosim_stepper_t *stepper, uint32_t i) {
     sense_ctx.sim_step = stepper->step;
 
     for (uint32_t s = 0; s < BIOSIM_NUM_SENSORS; s++) {
-        sensor_vals[s] = biosim_sensor_eval((biosim_sensor_t)s, &sense_ctx, stepper->params);
+        sensor_vals[s] = biosim_sensor_eval((biosim_sensor_t)s, &sense_ctx, &stepper->ctx);
     }
 
     memset(action_vals, 0, sizeof(action_vals));
@@ -146,7 +147,7 @@ static void step_agent(biosim_stepper_t *stepper, uint32_t i) {
     act_ctx.dy_sum = 0.0F;
 
     for (uint32_t a = 0; a < BIOSIM_NUM_ACTIONS; a++) {
-        biosim_action_apply((biosim_action_t)a, action_vals[a], &act_ctx, stepper->params);
+        biosim_action_apply((biosim_action_t)a, action_vals[a], &act_ctx);
     }
 
     /* KILL_FORWARD targets others, not self; still guard in case a prior agent
@@ -155,7 +156,7 @@ static void step_agent(biosim_stepper_t *stepper, uint32_t i) {
         return;
     }
 
-    biosim_action_finalize_movement(&act_ctx, stepper->params);
+    biosim_action_finalize_movement(&act_ctx);
 
     const int16_t dx = (int16_t)(stepper->agents.desired_x[i] - stepper->agents.loc_x[i]);
     const int16_t dy = (int16_t)(stepper->agents.desired_y[i] - stepper->agents.loc_y[i]);

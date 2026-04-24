@@ -1,4 +1,4 @@
-#include "biosim/core/params.h"
+#include "biosim/params/params.h"
 #include "biosim/core/status.h"
 #include <assert.h>
 #include <stdbool.h>
@@ -6,25 +6,6 @@
 #include <string.h>
 
 #define INITIAL_CAPACITY 16
-
-/* ── core parameter table ───────────────────────────────────────────────── */
-
-// clang-format off
-static const biosim_param_entry_t core_defaults[] = {
-    {"sim-name",                 "simulation", {.s = "unnamed"}, PARAM_STRING, false, true, "sim-name",                 "s"},
-    {"population",               "simulation", {.i = 3000},      PARAM_INT,    false, true, "population",               "p"},
-    {"size-x",                   "simulation", {.i = 128},       PARAM_INT,    false, true, "size-x",                   NULL},
-    {"size-y",                   "simulation", {.i = 128},       PARAM_INT,    false, true, "size-y",                   NULL},
-    {"steps-per-gen",            "simulation", {.i = 300},       PARAM_INT,    false, true, "steps-per-gen",            NULL},
-    {"max-genome-length",        "simulation", {.i = 24},        PARAM_INT,    false, true, "max-genome-length",        NULL},
-    {"mutation-rate",            "simulation", {.f = 0.001},     PARAM_FLOAT,  false, true, "mutation-rate",            NULL},
-    {"challenge",                "simulation", {.i = 0},         PARAM_INT,    false, true, "challenge",                NULL},
-    {"long-probe-dist",          "simulation", {.i = 16},        PARAM_INT,    false, true, "long-probe-dist",          NULL},
-    {"max-neurons",              "simulation", {.i = 5},         PARAM_INT,    false, true, "max-neurons",              NULL},
-    {"population-sensor-radius", "simulation", {.i = 2},         PARAM_INT,    false, true, "population-sensor-radius", NULL},
-};
-// clang-format on
-#define CORE_DEFAULTS_COUNT (sizeof(core_defaults) / sizeof(core_defaults[0]))
 
 /* ── internal helpers ───────────────────────────────────────────────────── */
 
@@ -65,22 +46,18 @@ static biosim_param_entry_t *find_mutable(biosim_params_t *p, const char *key) {
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_params_init(biosim_params_t *p) {
+biosim_status_t biosim_params_init(biosim_params_t *p, const biosim_param_entry_t *entries,
+                                   size_t count) {
     p->entries = NULL;
     p->count = 0;
     p->capacity = 0;
-    return biosim_params_extend(p, core_defaults, CORE_DEFAULTS_COUNT);
-}
-
-biosim_status_t biosim_params_extend(biosim_params_t *p, const biosim_param_entry_t *extras,
-                                     size_t count) {
-    biosim_status_t st = params_grow(p, p->count + count);
+    biosim_status_t st = params_grow(p, count);
     if (st != BIOSIM_OK) {
         return st;
     }
     for (size_t i = 0; i < count; i++) {
         biosim_param_entry_t *e = &p->entries[p->count++];
-        *e = extras[i];
+        *e = entries[i];
         e->is_set = false;
     }
     return BIOSIM_OK;

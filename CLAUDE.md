@@ -81,19 +81,26 @@ Windows or on OpenCL but compile cleanly on Linux host:
 
 ## Architecture
 
-Monorepo under `packages/` with four packages and a strict acyclic dependency
+Monorepo under `packages/` with five packages and a strict acyclic dependency
 graph:
 
 ```
 core (static lib, libc only)
-  ├── sim-gpu   (executable — OpenCL batch simulator)
-  └── sim-stepper (executable — single-threaded CPU reference)
-                    └── viz (future — consumes stepper trace)
+  └── params (static lib — CLI/TOML/parameter management)
+               ├── sim-gpu   (executable — OpenCL batch simulator)
+               └── sim-stepper (executable — single-threaded CPU reference)
+                                 └── viz (future — consumes stepper trace)
 ```
 
 **`core`** — all shared simulation logic: genome operators, neural network
 compilation, sensor/action catalogues, challenge evaluation, portable xorshift64
 RNG, snapshot serialization. Nothing about *how* the simulation is scheduled.
+Provides `biosim_context_t` as the canonical configuration interface for core
+algorithms.
+
+**`params`** — CLI/TOML/parameter management. Each simulator's `main.c` defines
+its own exhaustive entry table and calls `biosim_params_parse`. No shared
+defaults; no extension mechanism.
 
 **`sim-gpu`** — OpenCL host orchestration + 5-kernel-per-step pipeline:
 `feedforward.cl` → `movement.cl` → `grid_cleanup.cl` → `signal_fade.cl` → `challenges.cl`.
@@ -111,7 +118,7 @@ per-agent neuron outputs match within tolerance.
 ## Module Granularity
 
 The design documents list **module responsibilities**, not file names.
-`01-repository-structure.md` Sections 5, 6, and 7 describe what each package
+`01-repository-structure.md` Sections 5–8 describe what each package
 must cover; the split into `.c` / `.h` files is decided at implementation
 time, guided by cohesion rather than a fixed list.
 

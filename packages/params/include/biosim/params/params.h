@@ -1,5 +1,5 @@
-#ifndef BIOSIM_CORE_PARAMS_H
-#define BIOSIM_CORE_PARAMS_H
+#ifndef BIOSIM_PARAMS_H
+#define BIOSIM_PARAMS_H
 
 #include "biosim/core/status.h"
 #include <stdbool.h>
@@ -37,10 +37,15 @@ typedef struct {
 } biosim_params_t;
 
 /* Lifecycle */
-biosim_status_t biosim_params_init(biosim_params_t *p);
-biosim_status_t biosim_params_extend(biosim_params_t *p, const biosim_param_entry_t *extras,
-                                     size_t count);
+biosim_status_t biosim_params_init(biosim_params_t *p, const biosim_param_entry_t *entries,
+                                   size_t count);
 void biosim_params_free(biosim_params_t *p);
+
+/* Three-pass parsing: defaults (already in entries) → TOML (--config) → CLI flags.
+ * progname: argv[0] shown in --help / --version output.
+ * version:  version string shown in --version output.                        */
+biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, const char *version,
+                                    int argc, char **argv);
 
 /* Setters — write value and set is_set = true */
 biosim_status_t biosim_params_set_int(biosim_params_t *p, const char *key, int val);
@@ -59,4 +64,4 @@ const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const c
 size_t biosim_params_count(const biosim_params_t *p);
 const biosim_param_entry_t *biosim_params_entry(const biosim_params_t *p, size_t index);
 
-#endif /* BIOSIM_CORE_PARAMS_H */
+#endif /* BIOSIM_PARAMS_H */

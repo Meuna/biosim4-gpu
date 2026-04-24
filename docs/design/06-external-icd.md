@@ -23,9 +23,8 @@ is a breaking change that requires coordinated updates across all consumers.
 
 ### Non-Goals
 
-- Defining the in-memory representation of parameters or agents — that is
-  the responsibility of `core`'s types and
-  [`05-gpu-data-model.md`](05-gpu-data-model.md).
+- Defining the in-memory representation of agents — that is the responsibility
+  of `core`'s types and [`05-gpu-data-model.md`](05-gpu-data-model.md).
 
 ## 2. CLI Flags and Configuration File Format
 
@@ -40,10 +39,10 @@ The GPU port replaces it with a design that is:
 
 - **Multi-source with precedence:** compiled-in defaults → TOML file → CLI
   flags. Each layer overrides the previous.
-- **Table-driven:** a single parameter table in `core` is the source of truth
-  for what parameters exist, their types, their names, and their defaults.
-  CLI flags and TOML keys are derived from this table, not declared
-  separately.
+- **Table-driven:** each simulator's `main.c` owns a static entry table that
+  is the source of truth for what parameters exist, their types, their names,
+  and their defaults. CLI flags and TOML keys are derived from this table, not
+  declared separately.
 - Human-readable and human-editable.
 - Supported by small, portable, C-compatible libraries available via vcpkg
   or vendored.
@@ -54,7 +53,7 @@ The GPU port replaces it with a design that is:
 |---|---|---|
 | Configuration file format | **TOML** via `tomlc17` | Decided |
 | CLI parsing library | **argtable3** | Decided |
-| Parameter model | Shared table in `core` with unified naming | Decided |
+| Parameter model | Per-simulator table in each `main.c`; `params` package handles mechanics | Decided |
 
 **TOML via `tomlc17`.** TOML is more expressive than INI (typed values,
 arrays, grouped tables), still human-readable and diff-friendly, and
@@ -67,7 +66,7 @@ upstream CMake support).
 bool), available in vcpkg. Its declarative model — each argument is declared
 as a typed struct field — aligns naturally with the shared parameter table.
 
-### 2.3 Parameter Table — the core of the system
+### 2.3 Parameter Table — the `params` package
 
 #### 2.3.1 Types
 
@@ -130,38 +129,41 @@ typedef struct {
 } biosim_params_t;
 ```
 
-The container is a dynamically-sized array of entries. `core` provides
-the base entries; each simulator appends its own before resolution begins.
+The container is a dynamically-sized array of entries. Each simulator's
+`main.c` supplies the complete entry table at init time.
 
-#### 2.3.3 Core API
+#### 2.3.3 `params` API
 
-All functions below live in `core`. None of them knows about tomlc17 or
-argtable3 — they operate on native C types only.
+All functions below live in `biosim/params/params.h` (`params` package).
+The setters, getters, and introspection functions operate on native C types
+only and are unaware of tomlc17 or argtable3.
 
 **Lifecycle:**
 
 ```c
-// Initialize with compiled-in simulation defaults
-biosim_status_t biosim_params_init(biosim_params_t* p);
-
-// Add simulator-specific entries (called before resolution)
-biosim_status_t biosim_params_extend(biosim_params_t* p,
-                                     const biosim_param_entry_t* extras,
-                                     size_t count);
+// Initialize from caller-supplied entry table (entries are copied in)
+biosim_status_t biosim_params_init(biosim_params_t* p,
+                                   const biosim_param_entry_t* entries,
+                                   size_t count);
 
 // Release resources
 void biosim_params_free(biosim_params_t* p);
+
+// Three-pass resolution: defaults (in entries) → TOML (--config) → CLI flags
+biosim_status_t biosim_params_parse(biosim_params_t* p,
+                                    const char* progname,
+                                    const char* version,
+                                    int argc, char** argv);
 ```
 
-`biosim_params_init` populates the table with every simulation parameter
-that is common to both simulators: population size, grid dimensions, genome
-length, mutation rate, steps per generation, challenge type, etc. The full
-list is implementation-dependent and will grow as features are ported.
+`biosim_params_init` copies the caller-supplied table and resets `is_set` on
+every entry. Each simulator's `main.c` owns the complete table — no shared
+defaults, no extension step.
 
-`biosim_params_extend` appends simulator-specific entries. For `sim-gpu`
-this includes `device` and `kernel-path`; for `sim-stepper` this may include
-trace-related options. Extension happens once, before the three-pass
-resolution.
+`biosim_params_parse` performs the full three-pass resolution (see §2.4) and
+returns before the simulation loop. `progname` is shown in `--help` output;
+`version` is shown in `--version` output. Both are plain strings so that
+tests require no injected build-time macros.
 
 **Setters (used by the TOML and CLI glue):**
 
@@ -202,7 +204,7 @@ the glue code loops over the entries, not over a hardcoded list of flags.
 Resolution happens at startup in each simulator's `main.c`, in strict order:
 
 ```
-Pass 1 — biosim_params_init() + biosim_params_extend()
+Pass 1 — biosim_params_init() copies entries; defaults are in the entry table
           → table is populated with compiled-in defaults
 
 Pass 2 — TOML glue iterates the TOML file, calls biosim_params_set_*()
@@ -212,9 +214,8 @@ Pass 3 — CLI glue iterates parsed arguments, calls biosim_params_set_*()
           → overrides TOML (and defaults) for any flag on the command line
 ```
 
-After the three passes, the table is frozen and handed to the simulation
-as a `const biosim_params_t*` — the same pattern as the original biosim4's
-`ParamManager::getParamRef()`.
+All three passes happen inside `biosim_params_parse`. After it returns, the
+table is frozen and the simulation uses getters to read individual values.
 
 ### 2.5 Table-driven CLI generation
 
@@ -234,7 +235,7 @@ are summarised with `...`. The full flag list for all tables appears in the
 
 ```
 Usage: biosim-stepper [-h] [--version] [--config=<path>] \
-    [-s/--sim-name=<s>] [-p/--population=<n>] [--size-x=<n>] ... 
+    [-s/--sim-name=<s>] [-p/--population=<n>] [--grid-size-x=<n>] ... 
 
   -h, --help               print help and exit
   --version                print version and exit
@@ -243,13 +244,13 @@ Usage: biosim-stepper [-h] [--version] [--config=<path>] \
 [simulation]
   -s, --sim-name=<s>
   -p, --population=<n>
-  --size-x=<n>
+  --grid-size-x=<n>
   ...
 ```
 
-**Consequence: adding a simulation parameter = adding one entry in `core`'s
-init function.** The CLI and TOML parsing pick it up automatically with no
-changes to `sim-gpu` or `sim-stepper`.
+**Consequence: adding a simulation parameter = adding one entry to the
+simulator's static entry table.** The CLI and TOML parsing pick it up
+automatically with no changes to the `params` package.
 
 ### 2.6 Table-driven TOML loading
 

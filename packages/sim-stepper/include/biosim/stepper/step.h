@@ -6,16 +6,17 @@
 #define BIOSIM_STEPPER_STEP_H
 
 #include "biosim/core/agents.h"
+#include "biosim/core/context.h"
 #include "biosim/core/genome.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/nnet.h"
-#include "biosim/core/params.h"
 #include "biosim/core/status.h"
+#include "biosim/params/params.h"
 #include <stddef.h>
 #include <stdint.h>
 
 typedef struct {
-    const biosim_params_t *params; /* borrowed — caller owns, must outlive stepper */
+    biosim_context_t ctx; /* extracted from params at create time */
     biosim_agents_t agents;
     biosim_grid_t grid;
     biosim_genome_t genome;

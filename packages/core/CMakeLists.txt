@@ -1,6 +1,5 @@
 add_library(core STATIC
   src/core.c
-  src/params.c
   src/grid.c
   src/rng.c
   src/agents.c

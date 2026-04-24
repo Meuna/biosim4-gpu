@@ -5,14 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "biosim/stepper/cli.h"
-#include "biosim/stepper/toml.h"
+#include "biosim/params/params.h"
+
+/* Forward declaration of internal TOML loader defined in toml.c */
+biosim_status_t params_load_toml_file(biosim_params_t *p, const char *path);
 
 /* ── static data ────────────────────────────────────────────────────────── */
-
-static const biosim_param_entry_t stepper_params[] = {
-    {"trace-out", NULL, {.s = ""}, PARAM_STRING, false, false},
-};
 
 /* Glossary section order — NULL first (top-level params), then named tables. */
 static const char *const glossary_tables_order[] = {NULL, "simulation"};
@@ -240,18 +238,12 @@ static void free_generated(char **generated, size_t n) {
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
-biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info_t *info, int argc,
-                                     char **argv) {
-    biosim_status_t st =
-        biosim_params_extend(p, stepper_params, sizeof(stepper_params) / sizeof(stepper_params[0]));
-    if (st != BIOSIM_OK) {
-        return st;
-    }
-
+biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, const char *version,
+                                    int argc, char **argv) {
     struct arg_lit *arg_help = arg_lit0("h", "help", "print help and exit");
-    struct arg_lit *arg_version = arg_lit0(NULL, "version", "print version and exit");
+    struct arg_lit *arg_ver = arg_lit0(NULL, "version", "print version and exit");
     struct arg_file *arg_config = arg_file0(NULL, "config", "<path>", "TOML config file");
-    void *static_flags[] = {arg_help, arg_version, arg_config};
+    void *static_flags[] = {arg_help, arg_ver, arg_config};
     size_t nstatic = sizeof(static_flags) / sizeof(static_flags[0]);
 
     size_t ndyn = biosim_params_count(p);
@@ -285,20 +277,19 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
     bool exit_instead_of_return = false;
 
     if (arg_help->count > 0) {
-        print_synopsis(stdout, info->progname, argtable, nstatic, p, ndyn);
-        printf("%s — biosim4-gpu single-threaded CPU reference simulator\n\n", info->progname);
+        print_synopsis(stdout, progname, argtable, nstatic, p, ndyn);
+        printf("%s — biosim4-gpu simulator\n\n", progname);
         print_glossary(stdout, argtable, nstatic, p, ndyn);
         exit_instead_of_return = true;
         goto exit;
     }
-    if (arg_version->count > 0) {
-        printf("%s %s (%s) [%s]\n", info->progname, info->version, info->build_timestamp,
-               info->build_type);
+    if (arg_ver->count > 0) {
+        printf("%s %s\n", progname, version);
         exit_instead_of_return = true;
         goto exit;
     }
     if (nerrors > 0) {
-        arg_print_errors(stderr, arg_end_s, info->progname);
+        arg_print_errors(stderr, arg_end_s, progname);
         returncode = BIOSIM_ERR_NOTFOUND;
         exit_instead_of_return = true;
         goto exit;
@@ -306,7 +297,7 @@ biosim_status_t stepper_cli_and_toml(biosim_params_t *p, const biosim_build_info
 
     /* Pass 2: TOML file overrides defaults */
     if (arg_config->count > 0) {
-        stepper_load_toml_file(p, arg_config->filename[0]);
+        params_load_toml_file(p, arg_config->filename[0]);
     }
 
     /* Pass 3: CLI flags override TOML */
