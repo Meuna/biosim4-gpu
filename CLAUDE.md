@@ -6,9 +6,11 @@ code in this repository.
 ## Project
 
 GPU port of [biosim4](https://github.com/davidrmiller/biosim4) (by David R.
-Miller) using OpenCL. The project is in the **design phase** — no source code
-exists yet. Design documents in `docs/design/` are the authoritative
-specification; implementation follows them.
+Miller) using OpenCL. The project is in the **early implementation phase**.
+Design documents in `docs/design/` are the authoritative specification;
+implementation follows them. Do not follow this blindly though, early
+implementation will ground the design to the reality: many re-design are
+expected at this stage.
 
 ## Working with this repository
 
@@ -18,12 +20,19 @@ specification; implementation follows them.
 
 - **Open design decisions require confirmation.** When encountering an open
   design point (config file format, binary format), do not settle them
-  unilaterally, flag them to the user when they come up.
+  unilaterally, ask the user when they come up.
 
-- **Keep the documentation up-to-date.** When implementing a feature,
-  ensure that the documentation remain aligned with the implementation.
-  Notably, remove the mentions like "feature not yet implemented" as
-  needed when related to the feature you implemented.
+- **Keep the changelog up-to-date.**
+
+- **Keep the design up-to-date.** in case of re-design, also apply the
+  associated change to the design documentation. Do not trace the design
+  changes 
+
+- **Documentation must reflect the current implementation only.**
+  When implementing a feature, update the documentation so it describes
+  the system as it exists after your change, not how it evolved. Remove
+  any outdated statements (e.g. mentions of unimplemented features).
+
 
 - **Conventions are normative.** The rules in `02-implementation-conventions.md`
   (naming, error handling, host/device portability, no global state in
