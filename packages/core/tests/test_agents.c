@@ -6,7 +6,7 @@
 static biosim_agents_t agents;
 
 void setUp(void) {
-    biosim_agents_create(8, &agents);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_agents_create(8, &agents));
 }
 
 void tearDown(void) {
@@ -61,7 +61,7 @@ void test_create_all_slots_dead(void) {
 
 void test_free_clears_struct(void) {
     biosim_agents_t a;
-    biosim_agents_create(4, &a);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_agents_create(4, &a));
     biosim_agents_free(&a);
     TEST_ASSERT_NULL(a.loc_x);
     TEST_ASSERT_EQUAL_UINT32(0, a.capacity);

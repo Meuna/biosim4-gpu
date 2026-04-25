@@ -15,8 +15,8 @@ static biosim_context_t sim;
 
 void setUp(void) {
     memset(&sim, 0, sizeof(sim));
-    biosim_agents_create(CAP, &sim.agents);
-    biosim_grid_create(GRID_W, GRID_H, &sim.grid);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_agents_create(CAP, &sim.agents));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_grid_create(GRID_W, GRID_H, &sim.grid));
     sim.signal_len = (size_t)GRID_W * (size_t)GRID_H;
     sim.signal = calloc(sim.signal_len, sizeof(uint32_t));
     sim.steps_per_gen = 300;

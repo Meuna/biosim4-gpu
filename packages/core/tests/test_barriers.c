@@ -8,7 +8,7 @@
 static biosim_grid_t g;
 
 void setUp(void) {
-    biosim_grid_create(64, 64, &g);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_grid_create(64, 64, &g));
 }
 
 void tearDown(void) {
@@ -126,12 +126,12 @@ void test_random_deterministic(void) {
                                   BIOSIM_BARRIER_DIM_UNSET};
 
     uint64_t rng1 = biosim_rng_seed(0, 0);
-    biosim_barriers_place(&g, &spec, 1, &rng1);
+    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng1));
     int count1 = count_barriers(&g);
 
     biosim_grid_zero_fill(&g);
     uint64_t rng2 = biosim_rng_seed(0, 0);
-    biosim_barriers_place(&g, &spec, 1, &rng2);
+    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng2));
     int count2 = count_barriers(&g);
 
     TEST_ASSERT_EQUAL_INT(count1, count2);

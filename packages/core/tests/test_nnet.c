@@ -21,8 +21,8 @@ static void set_gene(uint32_t agent, uint16_t j, uint8_t st, uint8_t sn, uint8_t
 }
 
 void setUp(void) {
-    biosim_nnet_create(CAP, MAX_CONN, MAX_NEURONS, &nnet);
-    biosim_genome_create(CAP, MAX_GENES, &genome);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_create(CAP, MAX_CONN, MAX_NEURONS, &nnet));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_create(CAP, MAX_GENES, &genome));
 }
 
 void tearDown(void) {
@@ -338,7 +338,7 @@ void test_max_conn_not_exceeded(void) {
     /* Create nnet with max_conn=2; genome has 4 SENSOR→ACTION genes that
      * all survive culling.  conn_length must be capped at 2. */
     biosim_nnet_t small;
-    biosim_nnet_create(CAP, 2, MAX_NEURONS, &small);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_create(CAP, 2, MAX_NEURONS, &small));
 
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_IO, 1, BIOSIM_GENE_IO, 1, 100);

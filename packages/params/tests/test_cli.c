@@ -15,7 +15,7 @@ static const biosim_param_entry_t test_entries[] = {
 static biosim_params_t p;
 
 void setUp(void) {
-    biosim_params_init(&p, test_entries, TEST_ENTRIES_COUNT);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_init(&p, test_entries, TEST_ENTRIES_COUNT));
 }
 
 void tearDown(void) {
@@ -34,7 +34,7 @@ void test_defaults(void) {
 
 void test_toml_file_sets_values(void) {
     char *argv[] = {"test-prog", "--config", TEST_FIXTURES_DIR "/basic.toml", NULL};
-    biosim_params_parse(&p, "test-prog", "test-version", 3, argv);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_parse(&p, "test-prog", "test-version", 3, argv));
     TEST_ASSERT_EQUAL_STRING("from-toml", biosim_params_get_string(&p, "toplevel-param"));
     TEST_ASSERT_EQUAL_INT(3333, biosim_params_get_int(&p, "table-param"));
 }
@@ -44,7 +44,7 @@ void test_toml_file_sets_values(void) {
 void test_cli_sets_values(void) {
     char *argv[] = {"test-prog", "--toplevel-param", "from-cli", "--test-table-table-param", "4444",
                     NULL};
-    biosim_params_parse(&p, "test-prog", "test-version", 5, argv);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_parse(&p, "test-prog", "test-version", 5, argv));
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "toplevel-param"));
     TEST_ASSERT_EQUAL_INT(4444, biosim_params_get_int(&p, "table-param"));
 }
@@ -60,7 +60,7 @@ void test_cli_overrides_toml(void) {
                     "--test-table-table-param",
                     "5555",
                     NULL};
-    biosim_params_parse(&p, "test-prog", "test-version", 7, argv);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_parse(&p, "test-prog", "test-version", 7, argv));
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "toplevel-param"));
     TEST_ASSERT_EQUAL_INT(5555, biosim_params_get_int(&p, "table-param"));
 }
@@ -69,13 +69,13 @@ void test_cli_overrides_toml(void) {
 
 void test_cli_short_flag(void) {
     char *argv[] = {"test-prog", "-s", "6666", NULL};
-    biosim_params_parse(&p, "test-prog", "test-version", 3, argv);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_parse(&p, "test-prog", "test-version", 3, argv));
     TEST_ASSERT_EQUAL_INT(6666, biosim_params_get_int(&p, "flag-param"));
 }
 
 void test_cli_long_flag(void) {
     char *argv[] = {"test-prog", "--long-flag", "7777", NULL};
-    biosim_params_parse(&p, "test-prog", "test-version", 3, argv);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_parse(&p, "test-prog", "test-version", 3, argv));
     TEST_ASSERT_EQUAL_INT(7777, biosim_params_get_int(&p, "flag-param"));
 }
 
@@ -96,6 +96,7 @@ int main(void) {
     RUN_TEST(test_cli_sets_values);
     RUN_TEST(test_cli_overrides_toml);
     RUN_TEST(test_cli_short_flag);
+    RUN_TEST(test_cli_long_flag);
     RUN_TEST(test_bad_path_returns_notfound);
     return UNITY_END();
 }

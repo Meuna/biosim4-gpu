@@ -7,7 +7,7 @@
 static biosim_grid_t g;
 
 void setUp(void) {
-    biosim_grid_create(8, 8, &g);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_grid_create(8, 8, &g));
 }
 
 void tearDown(void) {

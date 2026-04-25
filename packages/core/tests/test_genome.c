@@ -5,7 +5,7 @@
 static biosim_genome_t g;
 
 void setUp(void) {
-    biosim_genome_create(8, 16, &g);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_create(8, 16, &g));
 }
 
 void tearDown(void) {
@@ -33,7 +33,7 @@ void test_create_metadata_stored(void) {
 
 void test_free_zeroes_struct(void) {
     biosim_genome_t local;
-    biosim_genome_create(4, 8, &local);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_create(4, 8, &local));
     biosim_genome_free(&local);
     TEST_ASSERT_NULL(local.conn);
     TEST_ASSERT_EQUAL_UINT32(0, local.capacity);

@@ -15,7 +15,7 @@ static const biosim_param_entry_t test_entries[] = {
 static biosim_params_t p;
 
 void setUp(void) {
-    biosim_params_init(&p, test_entries, TEST_ENTRIES_COUNT);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_init(&p, test_entries, TEST_ENTRIES_COUNT));
 }
 
 void tearDown(void) {
