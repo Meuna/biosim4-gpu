@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Multi-generation loop** (`sim-stepper`): outer generation loop driven by the new
+  `max-generations` parameter (default 1000). Each generation runs the full step
+  loop, then calls `biosim_stepper_advance_gen` to evaluate the challenge, reproduce
+  survivors (asexual: random-parent copy + point mutation), recompile all neural
+  networks, and respawn the population.
+- **`point-mutation-rate` parameter** (`genome` table, default 0.001): per-gene
+  mutation rate passed to `biosim_genome_mutate` at each generation boundary.
+- **Generation statistics** (`sim-stepper/gen.h` + `gen.c`): `biosim_gen_stats_t`
+  collects per-generation metrics — survival rate, mean/std-dev genome length
+  (variability), phenotype diversity (% unique compiled-nnet fingerprints among
+  survivors), and mean challenge score. `biosim_gen_stats_print_header` /
+  `biosim_gen_stats_print` emit aligned fixed-width columns; each generation fits
+  on one line and all fields stay aligned across all generations.
+- **`biosim_stepper_t` extended** (`sim-stepper/step.h`): three new fields — `gen`
+  (current generation index), `mutation_rate` (loaded from params), `gen_rng`
+  (RNG state seeded at startup for all generation-boundary random choices).
+
+
 - Repository skeleton: design documents, root config files, CMake/vcpkg scaffolding.
 - **Portable primitive types** (`core/types.h`): `biosim_coord_t`,
   `BIOSIM_GRID_EMPTY`, `BIOSIM_GRID_BARRIER`. Compiles as both C11 and OpenCL C

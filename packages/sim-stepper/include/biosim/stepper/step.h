@@ -19,6 +19,9 @@
 typedef struct {
     biosim_context_t base; /* FIRST — offset 0, safe up-cast to biosim_context_t * */
     uint32_t step;         /* step index within the current generation */
+    uint32_t gen;          /* current generation index (0-based) */
+    float mutation_rate;   /* per-gene point-mutation rate for reproduction */
+    uint64_t gen_rng;      /* RNG state for generation-boundary operations */
 } biosim_stepper_t;
 
 biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params,

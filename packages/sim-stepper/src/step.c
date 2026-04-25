@@ -2,6 +2,7 @@
 
 #include "biosim/core/challenges.h"
 #include "biosim/core/io_catalogue.h"
+#include "biosim/core/rng.h"
 
 #include <assert.h>
 #include <string.h>
@@ -33,6 +34,9 @@ biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params
     out->base.population_sensor_radius = biosim_params_get_int(params, "population-sensor-radius");
     out->base.challenge = challenge;
     out->step = 0;
+    out->gen = 0;
+    out->mutation_rate = (float)biosim_params_get_float(params, "point-mutation-rate");
+    out->gen_rng = biosim_rng_seed(0, 1);
     return BIOSIM_OK;
 }
 

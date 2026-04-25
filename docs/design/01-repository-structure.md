@@ -386,9 +386,10 @@ packages/sim-stepper/
 
 | Role | Description |
 |---|---|
-| Step engine | `step()` + `inspect()` API; runs one simulation step on host arrays |
-| Trace recorder | Emits a versioned per-step trace for consumption by `viz` |
-| CLI entry point | Loads a snapshot, runs N steps or accept stdin/socket controls, dumps state or trace |
+| Step engine | `biosim_stepper_step()`: runs one simulation step on host arrays |
+| Generation boundary | `biosim_stepper_advance_gen()`: evaluates the challenge, reproduces survivors (asexual: copy + mutate), recompiles neural networks, and respawns the full population |
+| Generation statistics | `biosim_gen_stats_t` and aligned-column print functions: survival rate, genome-length variability, phenotype diversity, mean challenge score |
+| CLI entry point | Argument parsing, multi-generation loop, per-generation statistics to stdout |
 
 ### Purpose
 
