@@ -7,13 +7,10 @@
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_context_create(uint32_t pop, int16_t size_x, int16_t size_y,
-                                      int steps_per_gen, uint16_t max_gen_len, uint8_t max_neurons,
-                                      uint8_t long_probe_dist, int pop_sensor_radius,
+                                      uint16_t max_gen_len, uint8_t max_neurons,
+                                      uint8_t long_probe_dist,
                                       const biosim_barrier_spec_t *barriers, int n_barriers,
                                       biosim_context_t *out) {
-    out->steps_per_gen = steps_per_gen;
-    out->population_sensor_radius = pop_sensor_radius;
-
     biosim_status_t st;
 
     st = biosim_grid_create(size_x, size_y, &out->grid);

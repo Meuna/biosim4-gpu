@@ -18,3 +18,11 @@ target_compile_definitions(params-barriers-tests PRIVATE
   TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
 )
 add_test(NAME params-barriers-tests COMMAND params-barriers-tests)
+
+add_executable(params-challenge-tests test_challenges.c)
+target_link_libraries(params-challenge-tests PRIVATE params unity)
+target_compile_features(params-challenge-tests PRIVATE c_std_11)
+target_compile_definitions(params-challenge-tests PRIVATE
+  TEST_FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+)
+add_test(NAME params-challenge-tests COMMAND params-challenge-tests)

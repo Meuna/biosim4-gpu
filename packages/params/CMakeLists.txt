@@ -2,6 +2,7 @@ find_package(Argtable3 CONFIG REQUIRED)
 
 add_library(params STATIC
   src/barriers.c
+  src/challenges.c
   src/params.c
   src/cli.c
   src/toml.c

@@ -36,9 +36,9 @@ typedef enum {
     BIOSIM_SENSOR_SIGNAL0_LR = 19,  /* placeholder */
     /* Group D — cross-agent */
     BIOSIM_SENSOR_GENETIC_SIM_FWD = 20,
+    /* Sentinel */
+    BIOSIM_NUM_SENSORS
 } biosim_sensor_t;
-
-#define BIOSIM_NUM_SENSORS 21U
 
 /* ── action catalogue ───────────────────────────────────────────────────── */
 
@@ -64,9 +64,9 @@ typedef enum {
     BIOSIM_ACTION_EMIT_SIGNAL0 = 15,
     /* Group D — kill */
     BIOSIM_ACTION_KILL_FORWARD = 16,
+    /* Sentinel */
+    BIOSIM_NUM_ACTIONS
 } biosim_action_t;
-
-#define BIOSIM_NUM_ACTIONS 17U
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 

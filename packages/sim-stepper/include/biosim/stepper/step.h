@@ -22,7 +22,8 @@ typedef struct {
 } biosim_stepper_t;
 
 biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params,
-                                      const biosim_barrier_spec_t *barriers, int n_barriers);
+                                      const biosim_barrier_spec_t *barriers, int n_barriers,
+                                      biosim_challenge_spec_t challenge);
 void biosim_stepper_free(biosim_stepper_t *stepper);
 void biosim_stepper_step(biosim_stepper_t *stepper);
 

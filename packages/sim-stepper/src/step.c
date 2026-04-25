@@ -8,28 +8,29 @@
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params_t *params,
-                                      const biosim_barrier_spec_t *barriers, int n_barriers) {
+                                      const biosim_barrier_spec_t *barriers, int n_barriers,
+                                      biosim_challenge_spec_t challenge) {
     assert(out != NULL);
     assert(params != NULL);
 
     const uint32_t pop = (uint32_t)biosim_params_get_int(params, "population");
     const int16_t size_x = (int16_t)biosim_params_get_int(params, "grid-size-x");
     const int16_t size_y = (int16_t)biosim_params_get_int(params, "grid-size-y");
-    const int steps_per_gen = biosim_params_get_int(params, "steps-per-gen");
     const uint16_t max_gen_len = (uint16_t)biosim_params_get_int(params, "max-genome-length");
     const uint8_t max_neurons = (uint8_t)biosim_params_get_int(params, "max-neurons");
     const uint8_t long_probe_dist = (uint8_t)biosim_params_get_int(params, "long-probe-dist");
-    const int pop_sensor_radius = biosim_params_get_int(params, "population-sensor-radius");
 
     memset(out, 0, sizeof(*out));
-    biosim_status_t st =
-        biosim_context_create(pop, size_x, size_y, steps_per_gen, max_gen_len, max_neurons,
-                              long_probe_dist, pop_sensor_radius, barriers, n_barriers, &out->base);
+    biosim_status_t st = biosim_context_create(pop, size_x, size_y, max_gen_len, max_neurons,
+                                               long_probe_dist, barriers, n_barriers, &out->base);
     if (st != BIOSIM_OK) {
         biosim_stepper_free(out);
         return st;
     }
 
+    out->base.steps_per_gen = biosim_params_get_int(params, "steps-per-gen");
+    out->base.population_sensor_radius = biosim_params_get_int(params, "population-sensor-radius");
+    out->base.challenge = challenge;
     out->step = 0;
     return BIOSIM_OK;
 }
