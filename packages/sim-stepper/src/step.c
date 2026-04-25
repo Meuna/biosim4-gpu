@@ -1,18 +1,8 @@
 #include "biosim/stepper/step.h"
 
-#include "biosim/core/barriers.h"
-#include "biosim/core/context.h"
-#include "biosim/core/grid.h"
 #include "biosim/core/io_catalogue.h"
-#include "biosim/core/rng.h"
-#include "biosim/core/status.h"
-#include "biosim/core/types.h"
-#include "biosim/params/params.h"
 
 #include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */

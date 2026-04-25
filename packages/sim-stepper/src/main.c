@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "biosim/core/barriers.h"
-#include "biosim/core/status.h"
 #include "biosim/params/barriers.h"
 #include "biosim/params/params.h"
 #include "biosim/stepper/step.h"

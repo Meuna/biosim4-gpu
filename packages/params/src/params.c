@@ -1,7 +1,5 @@
 #include "biosim/params/params.h"
-#include "biosim/core/status.h"
 #include <assert.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 

@@ -1,8 +1,6 @@
 #include "biosim/core/context.h"
-#include "biosim/core/barriers.h"
 #include "biosim/core/io_catalogue.h"
 #include "biosim/core/rng.h"
-#include "biosim/core/status.h"
 
 #include <stdlib.h>
 

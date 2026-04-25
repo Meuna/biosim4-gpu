@@ -5,7 +5,6 @@
 #include <assert.h>
 #include <math.h>
 #include <stdint.h>
-#include <stdlib.h>
 
 /* ── direction tables (0=E, CCW: E NE N NW W SW S SE) ──────────────────── */
 

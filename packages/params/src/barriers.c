@@ -1,6 +1,4 @@
 #include "biosim/params/barriers.h"
-#include "biosim/core/barriers.h"
-#include "biosim/core/status.h"
 #include "tomlc17.h"
 
 #include <stdio.h>
