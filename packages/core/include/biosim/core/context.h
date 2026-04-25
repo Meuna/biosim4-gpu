@@ -7,7 +7,7 @@
 
 #include "biosim/core/agents.h"
 #include "biosim/core/barriers.h"
-#include "biosim/core/challenges.h"
+#include "biosim/core/challenge_spec.h"
 #include "biosim/core/genome.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/nnet.h"
@@ -34,6 +34,11 @@ typedef struct {
     biosim_nnet_t nnet;
     uint32_t *signal;  /* flat [size_y * size_x], row-major */
     size_t signal_len; /* cached size_x * size_y */
+
+    /* barrier centres resolved at creation time; used by near_barrier and
+     * location_sequence challenge kinds; NULL when n_barrier_ctrs == 0 */
+    biosim_coord_t *barrier_ctrs;
+    int n_barrier_ctrs;
 } biosim_context_t;
 
 /* Lifecycle */

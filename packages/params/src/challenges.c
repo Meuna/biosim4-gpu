@@ -84,7 +84,49 @@ biosim_status_t biosim_challenge_spec_from_params(const biosim_params_t *p,
         out->x_band.mirror = biosim_params_get_bool(p, "mirror");
         break;
 
-    default:
+    case BIOSIM_CHALLENGE_DISC:
+        out->disc.x = (float)biosim_params_get_float(p, "x");
+        out->disc.y = (float)biosim_params_get_float(p, "y");
+        out->disc.radius = (float)biosim_params_get_float(p, "radius");
+        out->disc.weighted = biosim_params_get_bool(p, "weighted");
+        break;
+
+    case BIOSIM_CHALLENGE_CORNERS:
+        out->corners.radius = (float)biosim_params_get_float(p, "radius");
+        out->corners.weighted = biosim_params_get_bool(p, "weighted");
+        break;
+
+    case BIOSIM_CHALLENGE_NEIGHBOR_COUNT:
+        out->neighbor_count.radius = (float)biosim_params_get_float(p, "radius");
+        out->neighbor_count.min_n = (float)biosim_params_get_float(p, "min-n");
+        out->neighbor_count.max_n = (float)biosim_params_get_float(p, "max-n");
+        out->neighbor_count.exclude_border = biosim_params_get_bool(p, "exclude-border");
+        break;
+
+    case BIOSIM_CHALLENGE_CENTER_SPARSE:
+        out->center_sparse.x = (float)biosim_params_get_float(p, "x");
+        out->center_sparse.y = (float)biosim_params_get_float(p, "y");
+        out->center_sparse.outer_r = (float)biosim_params_get_float(p, "outer-r");
+        out->center_sparse.inner_r = (float)biosim_params_get_float(p, "inner-r");
+        out->center_sparse.min_n = (float)biosim_params_get_float(p, "min-n");
+        out->center_sparse.max_n = (float)biosim_params_get_float(p, "max-n");
+        out->center_sparse.weighted = biosim_params_get_bool(p, "weighted");
+        break;
+
+    case BIOSIM_CHALLENGE_NEAR_BARRIER:
+        out->near_barrier.radius = (float)biosim_params_get_float(p, "radius");
+        break;
+
+    case BIOSIM_CHALLENGE_LOCATION_SEQUENCE:
+        out->location_sequence.radius = (float)biosim_params_get_float(p, "radius");
+        break;
+
+    case BIOSIM_CHALLENGE_AGAINST_WALL:
+    case BIOSIM_CHALLENGE_MIGRATE_DISTANCE:
+    case BIOSIM_CHALLENGE_TOUCH_ANY_WALL:
+    case BIOSIM_CHALLENGE_RADIOACTIVE_WALLS:
+    case BIOSIM_CHALLENGE_PAIRS:
+    case BIOSIM_CHALLENGE_ALTRUISM:
         break;
     }
 

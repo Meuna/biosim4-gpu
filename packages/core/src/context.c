@@ -3,6 +3,7 @@
 #include "biosim/core/rng.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
@@ -19,13 +20,22 @@ biosim_status_t biosim_context_create(uint32_t pop, int16_t size_x, int16_t size
         return st;
     }
 
+    out->barrier_ctrs = NULL;
+    out->n_barrier_ctrs = 0;
     if (n_barriers > 0) {
+        out->barrier_ctrs = (biosim_coord_t *)malloc((size_t)n_barriers * sizeof(biosim_coord_t));
+        if (out->barrier_ctrs == NULL) {
+            biosim_context_free(out);
+            return BIOSIM_ERR_NOMEM;
+        }
         uint64_t barrier_rng = biosim_rng_seed(0, 0);
-        st = biosim_barriers_place(&out->grid, barriers, n_barriers, &barrier_rng);
+        st = biosim_barriers_place(&out->grid, barriers, n_barriers, &barrier_rng,
+                                   out->barrier_ctrs);
         if (st != BIOSIM_OK) {
             biosim_context_free(out);
             return st;
         }
+        out->n_barrier_ctrs = n_barriers;
     }
 
     st = biosim_agents_create(pop, &out->agents);
@@ -91,4 +101,7 @@ void biosim_context_free(biosim_context_t *ctx) {
     free(ctx->signal);
     ctx->signal = NULL;
     ctx->signal_len = 0;
+    free(ctx->barrier_ctrs);
+    ctx->barrier_ctrs = NULL;
+    ctx->n_barrier_ctrs = 0;
 }

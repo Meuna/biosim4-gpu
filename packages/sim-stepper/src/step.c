@@ -1,5 +1,6 @@
 #include "biosim/stepper/step.h"
 
+#include "biosim/core/challenges.h"
 #include "biosim/core/io_catalogue.h"
 
 #include <assert.h>
@@ -117,6 +118,9 @@ void biosim_stepper_step(biosim_stepper_t *stepper) {
     for (size_t j = 0; j < stepper->base.signal_len; j++) {
         stepper->base.signal[j] >>= 1;
     }
+
+    biosim_challenge_step(&stepper->base.challenge, &stepper->base, (int)stepper->step,
+                          stepper->base.steps_per_gen);
 
     stepper->step++;
 }

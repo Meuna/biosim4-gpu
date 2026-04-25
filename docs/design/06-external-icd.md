@@ -467,10 +467,11 @@ per-simulator compiled-in defaults when absent.
 | Kind | Parameters | Description |
 |------|-----------|-------------|
 | `x_band` | `x-min`, `x-max` (float, fraction of grid), `mirror` (bool) | Agents survive if `x ∈ [x_min·W, x_max·W)`. With `mirror = true` the mirrored band `[(1−x_max)·W, (1−x_min)·W)` also passes. |
-| `disc` | `cx`, `cy`, `radius` (float, fractions), `weighted` (bool) | Agents within `radius` of centre (`cx·W`, `cy·H`). Weighted: score = `(r − d) / r`; unweighted: score = 1. |
+| `disc` | `x`, `y`, `radius` (float, fractions), `weighted` (bool) | Agents within `radius` of centre (`cx·W`, `y·H`). Weighted: score = `(r − d) / r`; unweighted: score = 1. |
 | `corners` | `radius` (float, fraction), `weighted` (bool) | Agents within `radius` of any of the four grid corners. |
-| `neighbor_count` | `radius`, `min-n`, `max-n` (floats), `exclude-border` (bool) | Agents not on border whose occupied-cell neighbor count within `radius` is in `[min_n, max_n]`. |
-| `center_sparse` | `cx`, `cy`, `outer-r`, `inner-r`, `min-n`, `max-n` (floats), `weighted` (bool) | Agents within `outer_r` of centre whose neighborhood within `inner_r` has agent count in `[min_n, max_n]`. |
+| `neighbor_count` | `radius`, `min-n`, `max-n` (floats), `exclude-border` (bool) | Agents not on border whose occupied-cell neighbour count within `radius` is in `[min_n, max_n]`. |
+| `center_sparse` | `x`, `y`, `outer-r`, `inner-r`, `min-n`, `max-n` (floats), `weighted` (bool) | Agents within `outer_r` of centre whose neighbourhood within `inner_r` has agent count in `[min_n, max_n]`. |
+| `near_barrier` | `radius` (float, fraction) | Survive if within `radius·W` of any barrier centre. Score = `1 − dist / radius`. |
 
 #### Dedicated kinds (no kind-specific parameters)
 
@@ -482,7 +483,6 @@ per-simulator compiled-in defaults when absent.
 | `radioactive_walls` | Deaths handled each step by a probabilistic wall-proximity kill; evaluator returns `{passed: true, score: 1.0}` for all living agents. |
 | `pairs` | Survive if agent has exactly one 8-connected neighbour that itself has no other neighbours. |
 | `location_sequence` | Score = number of barrier centres visited in sequence / 32. Requires `challenge_bits` step tracking. |
-| `near_barrier` | `radius` (float, fraction). Survive if within `radius` of any barrier centre. Score weighted by proximity. |
 | `altruism` | **Placeholder** — blocked on `genome_similarity`; evaluator returns `{false, 0.0f}`. |
 
 ### 4.4 Integration Contract
@@ -492,9 +492,12 @@ per-simulator compiled-in defaults when absent.
 2. After `biosim_params_parse`, call `biosim_challenge_spec_from_params` to
    build the spec.
 3. Assign the spec to `ctx.challenge` (where `ctx` is the `biosim_context_t`).
-4. At the end of each generation, iterate over agents and call
-   `biosim_challenge_eval(&ctx.challenge, loc_x, loc_y, size_x, size_y, challenge_bits)`
-   per agent to determine survivors.
+4. Each simulation step, call `biosim_challenge_step(&ctx.challenge, &ctx, step, steps_per_gen)`
+   after agent movement and signal fade. Step-hook kinds update `challenge_bits` or kill
+   agents in-place.
+5. At the end of each generation, iterate over agents and call
+   `biosim_challenge_eval(&ctx.challenge, agent_idx, &ctx)` per agent to determine
+   survivors.
 
 ## 5. Snapshot Binary Format
 

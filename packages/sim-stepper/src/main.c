@@ -16,10 +16,19 @@ static const biosim_param_entry_t sim_params[] = {
     {"max-neurons",              "genome",     {.i = 5},         PARAM_INT,    false, true, "max-neurons",       NULL},
     {"long-probe-dist",          "sensors",    {.i = 16},        PARAM_INT,    false, true, "long-probe-dist",   NULL},
     {"population-sensor-radius", "sensors",    {.i = 2},         PARAM_INT,    false, true, "pop-sensor-radius", NULL},
-    {"kind",                     "challenge",  {.s = "x_band"},  PARAM_STRING, false, true, "challenge-kind",    NULL},
-    {"x-min",                    "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true, "challenge-x-min",   NULL},
-    {"x-max",                    "challenge",  {.f = 1.0},       PARAM_FLOAT,  false, true, "challenge-x-max",   NULL},
-    {"mirror",                   "challenge",  {.b = false},     PARAM_BOOL,   false, true, "challenge-mirror",  NULL},
+    {"kind",                     "challenge",  {.s = "x_band"},  PARAM_STRING, false, true, NULL,                NULL},
+    {"x-min",                    "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"x-max",                    "challenge",  {.f = 1.0},       PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"mirror",                   "challenge",  {.b = false},     PARAM_BOOL,   false, true, NULL,                NULL},
+    {"x",                        "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"y",                        "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"radius",                   "challenge",  {.f = 0.333},     PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"weighted",                 "challenge",  {.b = true},      PARAM_BOOL,   false, true, NULL,                NULL},
+    {"min-n",                    "challenge",  {.f = 5.0},       PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"max-n",                    "challenge",  {.f = 8.0},       PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"exclude-border",           "challenge",  {.b = false},     PARAM_BOOL,   false, true, NULL,                NULL},
+    {"outer-r",                  "challenge",  {.f = 0.25},      PARAM_FLOAT,  false, true, NULL,                NULL},
+    {"inner-r",                  "challenge",  {.f = 0.012},     PARAM_FLOAT,  false, true, NULL,                NULL},
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))

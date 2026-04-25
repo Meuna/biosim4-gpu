@@ -42,9 +42,11 @@ typedef struct {
  * Write all barriers described by specs[0..n-1] onto grid as BIOSIM_GRID_BARRIER cells.
  * rng_state drives random position/dimension resolution; it is advanced in-place so
  * multiple calls with the same initial state produce the same layout (deterministic).
+ * If centers_out is non-NULL it must point to an array of n biosim_coord_t elements;
+ * centers_out[i] receives the resolved centre of barrier i after random draws.
  * Returns BIOSIM_OK; placement is tolerant of out-of-bounds — cells are clipped silently.
  */
 biosim_status_t biosim_barriers_place(biosim_grid_t *grid, const biosim_barrier_spec_t *specs,
-                                      int n, uint64_t *rng_state);
+                                      int n, uint64_t *rng_state, biosim_coord_t *centers_out);
 
 #endif /* BIOSIM_CORE_BARRIERS_H */

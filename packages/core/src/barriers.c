@@ -2,6 +2,7 @@
 #include "biosim/core/rng.h"
 #include "biosim/core/types.h"
 
+#include <stddef.h>
 #include <stdint.h>
 
 /* ── RNG helpers ────────────────────────────────────────────────────────── */
@@ -49,7 +50,10 @@ static void barrier_visitor(biosim_coord_t coord, uint16_t cell, void *ctx) {
     biosim_grid_set((biosim_grid_t *)ctx, coord, BIOSIM_GRID_BARRIER);
 }
 
-static void place_hbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng) {
+/* Each place_* function returns the resolved centre. */
+
+static biosim_coord_t place_hbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
+                                 uint64_t *rng) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -62,17 +66,21 @@ static void place_hbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec, u
     int half_len = len / 2;
     int half_w = w / 2;
 
-    int cx = (spec->x != BIOSIM_BARRIER_POS_UNSET)
-                 ? (int)spec->x
-                 : rand_range_i(rng, margin_x + half_len, sx - margin_x - half_len);
-    int cy = (spec->y != BIOSIM_BARRIER_POS_UNSET) ? (int)spec->y
-                                                   : rand_range_i(rng, margin_y, sy - margin_y);
+    int x = (spec->x != BIOSIM_BARRIER_POS_UNSET)
+                ? (int)spec->x
+                : rand_range_i(rng, margin_x + half_len, sx - margin_x - half_len);
+    int y = (spec->y != BIOSIM_BARRIER_POS_UNSET) ? (int)spec->y
+                                                  : rand_range_i(rng, margin_y, sy - margin_y);
 
-    fill_box(grid, (int16_t)(cx - half_len), (int16_t)(cy - half_w), (int16_t)(cx + half_len),
-             (int16_t)(cy + half_w));
+    fill_box(grid, (int16_t)(x - half_len), (int16_t)(y - half_w), (int16_t)(x + half_len),
+             (int16_t)(y + half_w));
+
+    biosim_coord_t centre = {(int16_t)x, (int16_t)y};
+    return centre;
 }
 
-static void place_vbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng) {
+static biosim_coord_t place_vbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
+                                 uint64_t *rng) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -85,17 +93,21 @@ static void place_vbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec, u
     int half_len = len / 2;
     int half_w = w / 2;
 
-    int cx = (spec->x != BIOSIM_BARRIER_POS_UNSET) ? (int)spec->x
-                                                   : rand_range_i(rng, margin_x, sx - margin_x);
-    int cy = (spec->y != BIOSIM_BARRIER_POS_UNSET)
-                 ? (int)spec->y
-                 : rand_range_i(rng, margin_y + half_len, sy - margin_y - half_len);
+    int x = (spec->x != BIOSIM_BARRIER_POS_UNSET) ? (int)spec->x
+                                                  : rand_range_i(rng, margin_x, sx - margin_x);
+    int y = (spec->y != BIOSIM_BARRIER_POS_UNSET)
+                ? (int)spec->y
+                : rand_range_i(rng, margin_y + half_len, sy - margin_y - half_len);
 
-    fill_box(grid, (int16_t)(cx - half_w), (int16_t)(cy - half_len), (int16_t)(cx + half_w),
-             (int16_t)(cy + half_len));
+    fill_box(grid, (int16_t)(x - half_w), (int16_t)(y - half_len), (int16_t)(x + half_w),
+             (int16_t)(y + half_len));
+
+    biosim_coord_t centre = {(int16_t)x, (int16_t)y};
+    return centre;
 }
 
-static void place_square(biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng) {
+static biosim_coord_t place_square(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
+                                   uint64_t *rng) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -106,18 +118,22 @@ static void place_square(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
 
     int half = side / 2;
 
-    int cx = (spec->x != BIOSIM_BARRIER_POS_UNSET)
-                 ? (int)spec->x
-                 : rand_range_i(rng, margin_x + half, sx - margin_x - half);
-    int cy = (spec->y != BIOSIM_BARRIER_POS_UNSET)
-                 ? (int)spec->y
-                 : rand_range_i(rng, margin_y + half, sy - margin_y - half);
+    int x = (spec->x != BIOSIM_BARRIER_POS_UNSET)
+                ? (int)spec->x
+                : rand_range_i(rng, margin_x + half, sx - margin_x - half);
+    int y = (spec->y != BIOSIM_BARRIER_POS_UNSET)
+                ? (int)spec->y
+                : rand_range_i(rng, margin_y + half, sy - margin_y - half);
 
-    fill_box(grid, (int16_t)(cx - half), (int16_t)(cy - half), (int16_t)(cx + half),
-             (int16_t)(cy + half));
+    fill_box(grid, (int16_t)(x - half), (int16_t)(y - half), (int16_t)(x + half),
+             (int16_t)(y + half));
+
+    biosim_coord_t centre = {(int16_t)x, (int16_t)y};
+    return centre;
 }
 
-static void place_circle(biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng) {
+static biosim_coord_t place_circle(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
+                                   uint64_t *rng) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -127,36 +143,45 @@ static void place_circle(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
         (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? spec->length : rand_range_f(rng, 3.0F, 10.0F);
     int r = (int)(radius + 0.5F);
 
-    int cx = (spec->x != BIOSIM_BARRIER_POS_UNSET)
-                 ? (int)spec->x
-                 : rand_range_i(rng, margin_x + r, sx - margin_x - r);
-    int cy = (spec->y != BIOSIM_BARRIER_POS_UNSET)
-                 ? (int)spec->y
-                 : rand_range_i(rng, margin_y + r, sy - margin_y - r);
+    int x = (spec->x != BIOSIM_BARRIER_POS_UNSET)
+                ? (int)spec->x
+                : rand_range_i(rng, margin_x + r, sx - margin_x - r);
+    int y = (spec->y != BIOSIM_BARRIER_POS_UNSET)
+                ? (int)spec->y
+                : rand_range_i(rng, margin_y + r, sy - margin_y - r);
 
-    biosim_coord_t center = {(int16_t)cx, (int16_t)cy};
-    biosim_grid_visit_neighborhood(grid, center, (int16_t)r, barrier_visitor, grid);
+    biosim_coord_t centre = {(int16_t)x, (int16_t)y};
+    biosim_grid_visit_neighborhood(grid, centre, (int16_t)r, barrier_visitor, grid);
+    return centre;
 }
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_barriers_place(biosim_grid_t *grid, const biosim_barrier_spec_t *specs,
-                                      int n, uint64_t *rng_state) {
+                                      int n, uint64_t *rng_state, biosim_coord_t *centers_out) {
     for (int i = 0; i < n; i++) {
         const biosim_barrier_spec_t *s = &specs[i];
+        biosim_coord_t centre;
         switch (s->kind) {
         case BIOSIM_BARRIER_HBAR:
-            place_hbar(grid, s, rng_state);
+            centre = place_hbar(grid, s, rng_state);
             break;
         case BIOSIM_BARRIER_VBAR:
-            place_vbar(grid, s, rng_state);
+            centre = place_vbar(grid, s, rng_state);
             break;
         case BIOSIM_BARRIER_SQUARE:
-            place_square(grid, s, rng_state);
+            centre = place_square(grid, s, rng_state);
             break;
         case BIOSIM_BARRIER_CIRCLE:
-            place_circle(grid, s, rng_state);
+            centre = place_circle(grid, s, rng_state);
             break;
+        default:
+            centre.x = 0;
+            centre.y = 0;
+            break;
+        }
+        if (centers_out != NULL) {
+            centers_out[i] = centre;
         }
     }
     return BIOSIM_OK;

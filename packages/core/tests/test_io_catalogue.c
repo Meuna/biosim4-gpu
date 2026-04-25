@@ -200,11 +200,11 @@ void test_population_all_neighbors_occupied(void) {
     /* Fill a 3×3 area around agent with other agents (indices 1..8) so every
      * cell in the default radius-2 neighbourhood is occupied. */
     biosim_grid_zero_fill(&sim.grid);
-    int16_t cx = sim.agents.loc_x[0];
-    int16_t cy = sim.agents.loc_y[0];
+    int16_t x = sim.agents.loc_x[0];
+    int16_t y = sim.agents.loc_y[0];
     for (int16_t dy = -1; dy <= 1; dy++) {
         for (int16_t dx = -1; dx <= 1; dx++) {
-            biosim_coord_t c = {(int16_t)(cx + dx), (int16_t)(cy + dy)};
+            biosim_coord_t c = {(int16_t)(x + dx), (int16_t)(y + dy)};
             biosim_grid_set(&sim.grid, c, 1U); /* mark as occupied */
         }
     }
@@ -235,7 +235,7 @@ void test_signal0_midrange(void) {
 /* ── GENETIC_SIM_FWD ────────────────────────────────────────────────────── */
 
 void test_genetic_sim_fwd_empty_forward(void) {
-    /* dir=0 (E): forward cell is (cx+1, cy) — ensure it is empty */
+    /* dir=0 (E): forward cell is (x+1, y) — ensure it is empty */
     sim.agents.last_move_dir[0] = 0;
     biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);

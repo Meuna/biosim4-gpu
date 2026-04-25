@@ -1,7 +1,7 @@
 #ifndef BIOSIM_PARAMS_CHALLENGES_H
 #define BIOSIM_PARAMS_CHALLENGES_H
 
-#include "biosim/core/challenges.h"
+#include "biosim/core/challenge_spec.h"
 #include "biosim/core/status.h"
 #include "biosim/params/params.h"
 
