@@ -490,6 +490,7 @@ void test_kill_forward_below_threshold(void) {
 }
 
 void test_kill_forward_above_threshold(void) {
+    sim.enable_kill = true;
     sim.agents.last_move_dir[0] = 0;
     biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, 2U); /* agent 1 */
@@ -502,6 +503,7 @@ void test_kill_forward_above_threshold(void) {
 }
 
 void test_kill_forward_empty_cell_no_crash(void) {
+    sim.enable_kill = true;
     sim.agents.last_move_dir[0] = 0;
     biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);

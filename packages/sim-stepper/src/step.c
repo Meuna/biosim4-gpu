@@ -33,6 +33,7 @@ biosim_status_t biosim_stepper_create(biosim_stepper_t *out, const biosim_params
     out->base.steps_per_gen = biosim_params_get_int(params, "steps-per-gen");
     out->base.population_sensor_radius = biosim_params_get_int(params, "population-sensor-radius");
     out->base.challenge = challenge;
+    out->base.enable_kill = biosim_params_get_bool(params, "enable-kill");
     out->step = 0;
     out->gen = 0;
     out->mutation_rate = (float)biosim_params_get_float(params, "point-mutation-rate");

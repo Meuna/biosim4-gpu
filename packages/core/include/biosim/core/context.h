@@ -12,6 +12,7 @@
 #include "biosim/core/grid.h"
 #include "biosim/core/nnet.h"
 #include "biosim/core/status.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -25,6 +26,7 @@ typedef struct {
     /* configuration */
     int steps_per_gen;
     int population_sensor_radius;
+    bool enable_kill;
     biosim_challenge_spec_t challenge;
 
     /* simulation resources */
@@ -39,6 +41,9 @@ typedef struct {
      * location_sequence challenge kinds; NULL when n_barrier_ctrs == 0 */
     biosim_coord_t *barrier_ctrs;
     int n_barrier_ctrs;
+
+    /* kill tracking — reset to 0 at each generation boundary */
+    uint32_t kills;
 } biosim_context_t;
 
 /* Lifecycle */

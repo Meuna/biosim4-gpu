@@ -64,6 +64,9 @@ biosim_status_t biosim_context_create(uint32_t pop, int16_t size_x, int16_t size
         return BIOSIM_ERR_NOMEM;
     }
 
+    out->enable_kill = false;
+    out->kills = 0;
+
     for (uint32_t i = 0; i < pop; i++) {
         uint64_t rng = biosim_rng_seed(i, 0);
 

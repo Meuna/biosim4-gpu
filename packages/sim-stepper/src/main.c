@@ -32,6 +32,7 @@ static const biosim_param_entry_t sim_params[] = {
     {"exclude-border",           "challenge",  {.b = false},     PARAM_BOOL,   false, true, NULL,             NULL},
     {"outer-r",                  "challenge",  {.f = 0.25},      PARAM_FLOAT,  false, true, NULL,             NULL},
     {"inner-r",                  "challenge",  {.f = 0.012},     PARAM_FLOAT,  false, true, NULL,             NULL},
+    {"enable-kill",              "actions",    {.b = false},     PARAM_BOOL,   false, true, "enable-kill",    NULL},
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))

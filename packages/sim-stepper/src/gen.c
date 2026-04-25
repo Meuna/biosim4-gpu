@@ -31,7 +31,7 @@ static uint32_t collect_survivors(biosim_stepper_t *stepper, uint32_t *survivors
     biosim_context_t *ctx = &stepper->base;
     const uint32_t pop = ctx->agents.capacity;
 
-    uint32_t n = 0;
+    uint32_t n = 0; /* alive AND passed challenge */
     double score_sum = 0.0;
     double len_sum = 0.0;
     double len_sq = 0.0;
@@ -54,9 +54,10 @@ static uint32_t collect_survivors(biosim_stepper_t *stepper, uint32_t *survivors
     stats->gen = stepper->gen;
     stats->population = pop;
     stats->survivors = n;
+    stats->kills = ctx->kills;
+    stats->survival_rate = (float)n / (float)pop;
 
     if (n == 0) {
-        stats->survival_rate = 0.0F;
         stats->genome_len_mean = 0.0F;
         stats->genome_len_std = 0.0F;
         stats->unique_phenotypes = 0;
@@ -66,7 +67,6 @@ static uint32_t collect_survivors(biosim_stepper_t *stepper, uint32_t *survivors
     }
 
     double dn = (double)n;
-    stats->survival_rate = (float)n / (float)pop;
     stats->genome_len_mean = (float)(len_sum / dn);
     stats->score_mean = (float)(score_sum / dn);
 
@@ -235,6 +235,7 @@ biosim_gen_stats_t biosim_stepper_advance_gen(biosim_stepper_t *stepper) {
     reproduce(stepper, survivors, n_survivors);
     free(survivors);
 
+    stepper->base.kills = 0;
     stepper->step = 0;
     stepper->gen++;
 
@@ -244,13 +245,13 @@ biosim_gen_stats_t biosim_stepper_advance_gen(biosim_stepper_t *stepper) {
 /* ── print ──────────────────────────────────────────────────────────────────*/
 
 void biosim_gen_stats_print_header(void) {
-    (void)printf("%5s %7s %7s %8s %8s %7s %9s\n", "gen", "alive", "surv%", "glen.m", "glen.s",
-                 "pdiv%", "score.m");
+    (void)printf("%5s %7s %7s %6s %8s %8s %7s %9s\n", "gen", "surv", "kills", "surv%", "glen.m",
+                 "glen.s", "pdiv%", "score.m");
 }
 
 void biosim_gen_stats_print(const biosim_gen_stats_t *stats) {
-    (void)printf("%5u %7u %6.1f%% %8.2f %8.2f %6.1f%% %9.4f\n", stats->gen, stats->survivors,
-                 (double)(stats->survival_rate * 100.0F), (double)stats->genome_len_mean,
-                 (double)stats->genome_len_std, (double)(stats->phenotype_div * 100.0F),
-                 (double)stats->score_mean);
+    (void)printf("%5u %7u %7u %5.1f%% %8.2f %8.2f %6.1f%% %9.4f\n", stats->gen, stats->survivors,
+                 stats->kills, (double)(stats->survival_rate * 100.0F),
+                 (double)stats->genome_len_mean, (double)stats->genome_len_std,
+                 (double)(stats->phenotype_div * 100.0F), (double)stats->score_mean);
 }

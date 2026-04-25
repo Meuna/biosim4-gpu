@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`KILL_FORWARD` corpse bug** (`core/io_catalogue.c`): when `KILL_FORWARD` killed
+  an agent it set `alive[B] = 0` but left the dead agent's grid cell occupied.
+  Corpses accumulated throughout the generation, blocking movement and causing
+  cascading kills. The fix clears the dead agent's grid cell immediately alongside
+  marking it dead. This was the primary cause of the anomalously low initial
+  survival rates.
+
 ### Added
 - **Multi-generation loop** (`sim-stepper`): outer generation loop driven by the new
   `max-generations` parameter (default 1000). Each generation runs the full step
@@ -15,8 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   networks, and respawn the population.
 - **`point-mutation-rate` parameter** (`genome` table, default 0.001): per-gene
   mutation rate passed to `biosim_genome_mutate` at each generation boundary.
+- **`enable-kill` parameter** (`actions` table, default `false`): gates
+  `BIOSIM_ACTION_KILL_FORWARD`. When `false` the kill action is a no-op, giving a
+  clean baseline without inter-agent mortality. Set to `true` to enable.
 - **Generation statistics** (`sim-stepper/gen.h` + `gen.c`): `biosim_gen_stats_t`
-  collects per-generation metrics — survival rate, mean/std-dev genome length
+  collects per-generation metrics — `surv` / `surv%` (agents that passed the
+  challenge and will reproduce), `kills` (agents killed by `KILL_FORWARD` during
+  the generation, 0 when `enable-kill` is false), mean/std-dev genome length
   (variability), phenotype diversity (% unique compiled-nnet fingerprints among
   survivors), and mean challenge score. `biosim_gen_stats_print_header` /
   `biosim_gen_stats_print` emit aligned fixed-width columns; each generation fits
@@ -24,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`biosim_stepper_t` extended** (`sim-stepper/step.h`): three new fields — `gen`
   (current generation index), `mutation_rate` (loaded from params), `gen_rng`
   (RNG state seeded at startup for all generation-boundary random choices).
+- **`biosim_context_t` kill tracking** (`core/context.h`): `enable_kill` (bool,
+  set by simulator at creation) and `kills` (uint32_t, reset to 0 each generation
+  boundary by `biosim_stepper_advance_gen`).
 
 
 - Repository skeleton: design documents, root config files, CMake/vcpkg scaffolding.

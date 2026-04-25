@@ -336,7 +336,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         /* ── Group D: kill ────────────────────────────────────────────────── */
 
     case BIOSIM_ACTION_KILL_FORWARD: {
-        if (val < 0.5F) {
+        if (!ctx->enable_kill || val < 0.5F) {
             break;
         }
         uint8_t dir = agents->last_move_dir[idx] & 7U;
@@ -350,6 +350,8 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
             break;
         }
         agents->alive[(uint32_t)(cell - 1U)] = 0U;
+        biosim_grid_set(&ctx->grid, fwd, BIOSIM_GRID_EMPTY);
+        ctx->kills++;
         break;
     }
 

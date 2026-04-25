@@ -10,13 +10,19 @@
 
 /*
  * Per-generation statistics collected from the population at generation end,
- * before reproduction.  All fields refer to agents that passed the challenge
- * (survivors), except population which is the full agent count.
+ * before reproduction.
+ *
+ * survivors    — agents that passed the challenge (will reproduce)
+ * kills        — agents killed by KILL_FORWARD during the generation
+ *                (0 when enable-kill is false)
+ *
+ * survival_rate = survivors / population — overall selection rate
  */
 typedef struct {
     uint32_t gen;
     uint32_t population;
     uint32_t survivors;         /* agents that passed the challenge */
+    uint32_t kills;             /* agents killed by KILL_FORWARD */
     float survival_rate;        /* survivors / population */
     float genome_len_mean;      /* mean genome length of survivors */
     float genome_len_std;       /* std dev of genome lengths — variability */
