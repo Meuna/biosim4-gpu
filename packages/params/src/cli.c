@@ -227,28 +227,28 @@ static void apply_cli_args(void **argtable, size_t nstatic, biosim_params_t *p, 
         case PARAM_INT: {
             struct arg_int *a = argtable[nstatic + i];
             if (a->count > 0) {
-                biosim_params_set_int(p, e->name, a->ival[0]);
+                (void)biosim_params_set_int(p, e->name, a->ival[0]);
             }
             break;
         }
         case PARAM_FLOAT: {
             struct arg_dbl *a = argtable[nstatic + i];
             if (a->count > 0) {
-                biosim_params_set_float(p, e->name, a->dval[0]);
+                (void)biosim_params_set_float(p, e->name, a->dval[0]);
             }
             break;
         }
         case PARAM_BOOL: {
             struct arg_lit *a = argtable[nstatic + i];
             if (a->count > 0) {
-                biosim_params_set_bool(p, e->name, true);
+                (void)biosim_params_set_bool(p, e->name, true);
             }
             break;
         }
         case PARAM_STRING: {
             struct arg_str *a = argtable[nstatic + i];
             if (a->count > 0) {
-                biosim_params_set_string(p, e->name, a->sval[0]);
+                (void)biosim_params_set_string(p, e->name, a->sval[0]);
             }
             break;
         }

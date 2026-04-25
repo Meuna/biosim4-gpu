@@ -23,16 +23,19 @@ static const biosim_param_entry_t sim_params[] = {
 
 int main(int argc, char **argv) {
     biosim_params_t p;
-    biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
+    biosim_status_t st = biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
+    if (st != BIOSIM_OK) {
+        return st;
+    }
 
     char version_buf[256];
     (void)snprintf(version_buf, sizeof(version_buf), "%s (%s, %s)", BIOSIM_GIT_VERSION,
                    BIOSIM_BUILD_TYPE, BIOSIM_BUILD_TIMESTAMP);
 
-    biosim_status_t st = biosim_params_parse(&p, BIOSIM_PROGNAME, version_buf, argc, argv);
+    st = biosim_params_parse(&p, BIOSIM_PROGNAME, version_buf, argc, argv);
     if (st != BIOSIM_OK) {
         biosim_params_free(&p);
-        return 1;
+        return st;
     }
 
     biosim_barrier_spec_t *barriers = NULL;
@@ -41,7 +44,7 @@ int main(int argc, char **argv) {
     if (st != BIOSIM_OK) {
         (void)fprintf(stderr, "biosim-stepper: barrier config error (status %d)\n", (int)st);
         biosim_params_free(&p);
-        return 1;
+        return st;
     }
 
     biosim_stepper_t sim;
@@ -50,7 +53,7 @@ int main(int argc, char **argv) {
     if (st != BIOSIM_OK) {
         (void)fprintf(stderr, "biosim-stepper: init failed (status %d)\n", (int)st);
         biosim_params_free(&p);
-        return 1;
+        return st;
     }
 
     for (int s = 0; s < sim.base.steps_per_gen; s++) {

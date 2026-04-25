@@ -26,7 +26,11 @@ biosim_status_t biosim_context_create(uint32_t pop, int16_t size_x, int16_t size
 
     if (n_barriers > 0) {
         uint64_t barrier_rng = biosim_rng_seed(0, 0);
-        biosim_barriers_place(&out->grid, barriers, n_barriers, &barrier_rng);
+        st = biosim_barriers_place(&out->grid, barriers, n_barriers, &barrier_rng);
+        if (st != BIOSIM_OK) {
+            biosim_context_free(out);
+            return st;
+        }
     }
 
     st = biosim_agents_create(pop, &out->agents);
