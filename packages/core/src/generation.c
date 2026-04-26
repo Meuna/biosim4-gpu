@@ -1,4 +1,4 @@
-#include "biosim/core/gen.h"
+#include "biosim/core/generation.h"
 
 #include "biosim/core/challenges.h"
 #include "biosim/core/grid.h"

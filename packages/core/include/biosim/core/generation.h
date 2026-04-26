@@ -2,8 +2,8 @@
  * HOST-ONLY: references biosim_sim_t which carries heap pointers.
  * Do NOT include from OpenCL kernel sources (.cl files).
  */
-#ifndef BIOSIM_CORE_GEN_H
-#define BIOSIM_CORE_GEN_H
+#ifndef BIOSIM_CORE_GENERATION_H
+#define BIOSIM_CORE_GENERATION_H
 
 #include "biosim/core/sim.h"
 #include <stdint.h>
@@ -41,4 +41,4 @@ typedef struct {
  */
 void biosim_sim_advance_gen(biosim_sim_t *sim, biosim_gen_stats_t *stats);
 
-#endif /* BIOSIM_CORE_GEN_H */
+#endif /* BIOSIM_CORE_GENERATION_H */

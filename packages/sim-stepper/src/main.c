@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "biosim/core/challenges.h"
-#include "biosim/core/gen.h"
+#include "biosim/core/generation.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/step.h"
