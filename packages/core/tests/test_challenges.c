@@ -4,11 +4,19 @@
 #include "unity.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 static biosim_context_t ctx;
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_context_create(1, 128, 128, 8, 3, 8, NULL, 0, &ctx));
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.population = 1;
+    ctx.size_x = 128;
+    ctx.size_y = 128;
+    ctx.max_gen_len = 8;
+    ctx.max_neurons = 3;
+    ctx.long_probe_dist = 8;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_context_create(&ctx, NULL, 0));
     ctx.agents.loc_x[0] = 64;
     ctx.agents.loc_y[0] = 64;
     ctx.agents.birth_x[0] = 64;

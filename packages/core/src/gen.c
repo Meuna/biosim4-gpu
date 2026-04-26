@@ -1,4 +1,4 @@
-#include "biosim/stepper/gen.h"
+#include "biosim/core/gen.h"
 
 #include "biosim/core/challenges.h"
 #include "biosim/core/grid.h"
@@ -8,11 +8,10 @@
 #include "biosim/core/types.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* ── survivor collection ────────────────────────────────────────────────────*/
+/* ── survivor collection ────────────────────────────────────────────────── */
 
 static int cmp_u64(const void *a, const void *b) {
     uint64_t x = *(const uint64_t *)a;
@@ -26,12 +25,11 @@ static int cmp_u64(const void *a, const void *b) {
  * survivors must point to a caller-allocated array with at least pop elements.
  * Returns the number of survivors found.
  */
-static uint32_t collect_survivors(biosim_stepper_t *stepper, uint32_t *survivors,
+static uint32_t collect_survivors(biosim_context_t *ctx, uint32_t *survivors,
                                   biosim_gen_stats_t *stats) {
-    biosim_context_t *ctx = &stepper->base;
     const uint32_t pop = ctx->agents.capacity;
 
-    uint32_t n = 0; /* alive AND passed challenge */
+    uint32_t n = 0;
     double score_sum = 0.0;
     double len_sum = 0.0;
     double len_sq = 0.0;
@@ -51,7 +49,7 @@ static uint32_t collect_survivors(biosim_stepper_t *stepper, uint32_t *survivors
         len_sq += glen * glen;
     }
 
-    stats->gen = stepper->gen;
+    stats->gen = ctx->gen;
     stats->population = pop;
     stats->survivors = n;
     stats->kills = ctx->kills;
@@ -98,7 +96,7 @@ static uint32_t collect_survivors(biosim_stepper_t *stepper, uint32_t *survivors
     return n;
 }
 
-/* ── reproduction ───────────────────────────────────────────────────────────*/
+/* ── reproduction ───────────────────────────────────────────────────────── */
 
 /*
  * Copy survivor genome data into a compact flat array before overwriting any
@@ -125,7 +123,6 @@ static void snapshot_survivor_genomes(const biosim_genome_t *genome, const uint3
     }
 }
 
-/* Write snapshot entry parent_s into genome slot dst. */
 static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uint16_t *temp_conn,
                                 const int16_t *temp_wgt, const uint16_t *temp_len,
                                 uint32_t parent_s) {
@@ -140,8 +137,7 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
     }
 }
 
-static void reproduce(biosim_stepper_t *stepper, const uint32_t *survivors, uint32_t n_survivors) {
-    biosim_context_t *ctx = &stepper->base;
+static void reproduce(biosim_context_t *ctx, const uint32_t *survivors, uint32_t n_survivors) {
     biosim_genome_t *genome = &ctx->genome;
     biosim_nnet_t *nnet = &ctx->nnet;
     biosim_agents_t *agents = &ctx->agents;
@@ -149,7 +145,7 @@ static void reproduce(biosim_stepper_t *stepper, const uint32_t *survivors, uint
 
     const uint32_t pop = agents->capacity;
     const uint16_t max_len = genome->max_length;
-    const uint8_t long_probe_dist = agents->long_probe_dist[0];
+    const uint8_t long_probe_dist = ctx->long_probe_dist;
 
     /* clear non-barrier grid cells */
     for (int y = 0; y < (int)grid->size_y; y++) {
@@ -161,7 +157,6 @@ static void reproduce(biosim_stepper_t *stepper, const uint32_t *survivors, uint
         }
     }
 
-    /* clear signal layer */
     memset(ctx->signal, 0, ctx->signal_len * sizeof(uint32_t));
 
     /* snapshot survivor genomes before any slot is overwritten */
@@ -187,25 +182,24 @@ static void reproduce(biosim_stepper_t *stepper, const uint32_t *survivors, uint
         }
     }
 
-    const uint64_t gen_seed = biosim_rng_next(&stepper->gen_rng);
+    const uint64_t gen_seed = biosim_rng_next(&ctx->gen_rng);
 
     for (uint32_t i = 0; i < pop; i++) {
         if (n_survivors == 0 || temp_conn == NULL) {
             uint16_t rand_len =
-                (uint16_t)(1U + (uint16_t)(biosim_rng_next(&stepper->gen_rng) % (uint64_t)max_len));
-            biosim_genome_init_slot(genome, i, rand_len, &stepper->gen_rng);
+                (uint16_t)(1U + (uint16_t)(biosim_rng_next(&ctx->gen_rng) % (uint64_t)max_len));
+            biosim_genome_init_slot(genome, i, rand_len, &ctx->gen_rng);
         } else {
-            uint32_t parent_s =
-                (uint32_t)(biosim_rng_next(&stepper->gen_rng) % (uint64_t)n_survivors);
+            uint32_t parent_s = (uint32_t)(biosim_rng_next(&ctx->gen_rng) % (uint64_t)n_survivors);
             restore_genome_slot(genome, i, temp_conn, temp_wgt, temp_len, parent_s);
-            biosim_genome_mutate(genome, i, stepper->mutation_rate, &stepper->gen_rng);
+            biosim_genome_mutate(genome, i, ctx->mutation_rate, &ctx->gen_rng);
         }
 
         biosim_nnet_compile_slot(nnet, genome, i, BIOSIM_NUM_SENSORS, BIOSIM_NUM_ACTIONS);
         const uint64_t fp = biosim_nnet_fingerprint(nnet, i);
 
         biosim_coord_t loc;
-        (void)biosim_grid_find_empty(grid, &stepper->gen_rng, &loc);
+        (void)biosim_grid_find_empty(grid, &ctx->gen_rng, &loc);
         biosim_agents_init_slot(agents, i, loc, long_probe_dist, biosim_rng_seed(i, gen_seed));
         agents->genome_fingerprint[i] = fp;
         biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
@@ -216,42 +210,25 @@ static void reproduce(biosim_stepper_t *stepper, const uint32_t *survivors, uint
     free(temp_len);
 }
 
-/* ── public API ─────────────────────────────────────────────────────────────*/
+/* ── public API ─────────────────────────────────────────────────────────── */
 
-biosim_gen_stats_t biosim_stepper_advance_gen(biosim_stepper_t *stepper) {
-    const uint32_t pop = stepper->base.agents.capacity;
+void biosim_context_advance_gen(biosim_context_t *ctx, biosim_gen_stats_t *stats) {
+    const uint32_t pop = ctx->agents.capacity;
 
-    biosim_gen_stats_t stats;
-    memset(&stats, 0, sizeof(stats));
-    stats.gen = stepper->gen;
-    stats.population = pop;
+    memset(stats, 0, sizeof(*stats));
+    stats->gen = ctx->gen;
+    stats->population = pop;
 
     uint32_t *survivors = malloc(pop * sizeof(uint32_t));
     uint32_t n_survivors = 0;
     if (survivors != NULL) {
-        n_survivors = collect_survivors(stepper, survivors, &stats);
+        n_survivors = collect_survivors(ctx, survivors, stats);
     }
 
-    reproduce(stepper, survivors, n_survivors);
+    reproduce(ctx, survivors, n_survivors);
     free(survivors);
 
-    stepper->base.kills = 0;
-    stepper->step = 0;
-    stepper->gen++;
-
-    return stats;
-}
-
-/* ── print ──────────────────────────────────────────────────────────────────*/
-
-void biosim_gen_stats_print_header(void) {
-    (void)printf("%5s %7s %7s %6s %8s %8s %7s %9s\n", "gen", "surv", "kills", "surv%", "glen.m",
-                 "glen.s", "pdiv%", "score.m");
-}
-
-void biosim_gen_stats_print(const biosim_gen_stats_t *stats) {
-    (void)printf("%5u %7u %7u %5.1f%% %8.2f %8.2f %6.1f%% %9.4f\n", stats->gen, stats->survivors,
-                 stats->kills, (double)(stats->survival_rate * 100.0F),
-                 (double)stats->genome_len_mean, (double)stats->genome_len_std,
-                 (double)(stats->phenotype_div * 100.0F), (double)stats->score_mean);
+    ctx->kills = 0;
+    ctx->step = 0;
+    ctx->gen++;
 }

@@ -1,7 +1,5 @@
 add_executable(biosim-stepper
   src/main.c
-  src/step.c
-  src/gen.c
 )
 target_compile_features(biosim-stepper PRIVATE c_std_11)
 target_include_directories(biosim-stepper PRIVATE include)

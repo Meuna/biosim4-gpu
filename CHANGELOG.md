@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Multi-generation loop** (`sim-stepper`): outer generation loop driven by the new
   `max-generations` parameter (default 1000). Each generation runs the full step
-  loop, then calls `biosim_stepper_advance_gen` to evaluate the challenge, reproduce
+  loop, then calls `biosim_context_advance_gen` to evaluate the challenge, reproduce
   survivors (asexual: random-parent copy + point mutation), recompile all neural
   networks, and respawn the population.
 - **`point-mutation-rate` parameter** (`genome` table, default 0.001): per-gene
@@ -26,20 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`enable-kill` parameter** (`actions` table, default `false`): gates
   `BIOSIM_ACTION_KILL_FORWARD`. When `false` the kill action is a no-op, giving a
   clean baseline without inter-agent mortality. Set to `true` to enable.
-- **Generation statistics** (`sim-stepper/gen.h` + `gen.c`): `biosim_gen_stats_t`
+- **Generation statistics** (`core/gen.h` + `core/gen.c`): `biosim_gen_stats_t`
   collects per-generation metrics — `surv` / `surv%` (agents that passed the
   challenge and will reproduce), `kills` (agents killed by `KILL_FORWARD` during
   the generation, 0 when `enable-kill` is false), mean/std-dev genome length
   (variability), phenotype diversity (% unique compiled-nnet fingerprints among
-  survivors), and mean challenge score. `biosim_gen_stats_print_header` /
-  `biosim_gen_stats_print` emit aligned fixed-width columns; each generation fits
-  on one line and all fields stay aligned across all generations.
-- **`biosim_stepper_t` extended** (`sim-stepper/step.h`): three new fields — `gen`
-  (current generation index), `mutation_rate` (loaded from params), `gen_rng`
-  (RNG state seeded at startup for all generation-boundary random choices).
+  survivors), and mean challenge score. `sim-stepper/main.c` prints aligned
+  fixed-width columns; each generation fits on one line.
 - **`biosim_context_t` kill tracking** (`core/context.h`): `enable_kill` (bool,
   set by simulator at creation) and `kills` (uint32_t, reset to 0 each generation
-  boundary by `biosim_stepper_advance_gen`).
+  boundary by `biosim_context_advance_gen`).
 
 
 - Repository skeleton: design documents, root config files, CMake/vcpkg scaffolding.
@@ -95,21 +91,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   num-barriers = N` plus `[barrier-1]` … `[barrier-N]` tables. No config file
   means no barriers. Barriers are placed on the grid before agents, so
   `biosim_grid_find_empty` (used during agent spawning) correctly avoids them.
-  `biosim_context_create` gains two new parameters: `barriers` and `n_barriers`.
-  `biosim_stepper_create` likewise; `main.c` loads specs via
-  `biosim_barrier_params_load` and passes them through.
+  `biosim_context_create` accepts `barriers` and `n_barriers` parameters.
+  `main.c` loads specs via `biosim_barrier_params_load` and passes them through.
 - **`BIOSIM_ERR_INVALID`** (`core/status.h`): new status code for malformed input
   (e.g. unknown barrier kind string), distinct from `BIOSIM_ERR_NOTFOUND`.
 
 ### Changed
-- **`biosim_context_t` expanded** (`core/context.h` + new `core/context.c`):
-  now holds the full simulation state — `agents`, `grid`, `genome`, `nnet`,
-  `signal`, `signal_len` — in addition to the existing scalar config fields.
-  `biosim_context_free` releases all owned resources in one call.
-- **`biosim_stepper_t` refactored** (`sim-stepper/step.h`): uses C first-member
-  embedding (`biosim_context_t base` at offset 0) so a stepper pointer up-casts
-  safely to `biosim_context_t *`. Only stepper-specific state (`step`) remains
-  outside the base.
+- **`core` package is now the single-thread reference implementation**
+  (`core/step.h`, `core/step.c`, `core/gen.h`, `core/gen.c`): step logic
+  (`step_agent`) and generation logic (`biosim_context_advance_gen`,
+  `biosim_gen_stats_t`) moved from `sim-stepper` into `core`. The stepper is
+  now a thin orchestration shell — `main()` fills `biosim_context_t` and
+  drives a triple-nested `for` loop with no simulation logic of its own.
+- **`biosim_context_t` is now the complete simulation state**
+  (`core/context.h`): six allocation-time configuration fields (`population`,
+  `size_x`, `size_y`, `max_gen_len`, `max_neurons`, `long_probe_dist`) and
+  four generation-state fields (`step`, `gen`, `mutation_rate`, `gen_rng`)
+  added. `biosim_context_create` now takes only `(ctx, barriers, n_barriers)`
+  — the caller pre-populates the configuration fields, then `create` allocates
+  all heap resources and spawns the initial population.
+- **`biosim_stepper_t` removed** (`sim-stepper/step.h`): superseded by the
+  expanded `biosim_context_t`. All stepper-specific fields (`step`, `gen`,
+  `mutation_rate`, `gen_rng`) now live directly on the context.
 - **`biosim_sense_ctx_t` and `biosim_act_ctx_t` removed** (`core/io_catalogue.h`):
   replaced by flat function parameters. `biosim_sensor_eval` now takes
   `(sensor, idx, ctx, sim_step)`; `biosim_action_apply` takes

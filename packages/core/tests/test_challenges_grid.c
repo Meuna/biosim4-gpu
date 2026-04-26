@@ -5,6 +5,7 @@
 #include "unity.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 static biosim_context_t ctx;
 
@@ -22,7 +23,14 @@ static void place_agent(uint32_t i, int16_t x, int16_t y) {
 }
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_context_create(10, 64, 64, 8, 3, 8, NULL, 0, &ctx));
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.population = 10;
+    ctx.size_x = 64;
+    ctx.size_y = 64;
+    ctx.max_gen_len = 8;
+    ctx.max_neurons = 3;
+    ctx.long_probe_dist = 8;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_context_create(&ctx, NULL, 0));
     biosim_grid_zero_fill(&ctx.grid);
     for (uint32_t i = 0; i < ctx.agents.capacity; i++) {
         ctx.agents.alive[i] = 0;

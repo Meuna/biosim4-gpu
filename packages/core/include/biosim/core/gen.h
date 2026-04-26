@@ -1,11 +1,11 @@
 /*
- * HOST-ONLY: references biosim_stepper_t which embeds heap-pointer structs.
+ * HOST-ONLY: references biosim_context_t which carries heap pointers.
  * Do NOT include from OpenCL kernel sources (.cl files).
  */
-#ifndef BIOSIM_STEPPER_GEN_H
-#define BIOSIM_STEPPER_GEN_H
+#ifndef BIOSIM_CORE_GEN_H
+#define BIOSIM_CORE_GEN_H
 
-#include "biosim/stepper/step.h"
+#include "biosim/core/context.h"
 #include <stdint.h>
 
 /*
@@ -14,9 +14,9 @@
  *
  * survivors    — agents that passed the challenge (will reproduce)
  * kills        — agents killed by KILL_FORWARD during the generation
- *                (0 when enable-kill is false)
+ *                (0 when enable_kill is false)
  *
- * survival_rate = survivors / population — overall selection rate
+ * survival_rate = survivors / population
  */
 typedef struct {
     uint32_t gen;
@@ -36,15 +36,9 @@ typedef struct {
  * statistics, reproduce survivors (asexual: copy + mutate), recompile neural
  * networks, and respawn the full population on the grid.
  *
- * After the call: step is reset to 0 and gen is incremented.
- * Returns statistics computed from the just-completed generation.
+ * After the call: ctx->step is reset to 0 and ctx->gen is incremented.
+ * stats receives the metrics computed from the just-completed generation.
  */
-biosim_gen_stats_t biosim_stepper_advance_gen(biosim_stepper_t *stepper);
+void biosim_context_advance_gen(biosim_context_t *ctx, biosim_gen_stats_t *stats);
 
-/* Print the aligned column header — call once before the generation loop. */
-void biosim_gen_stats_print_header(void);
-
-/* Print one generation's statistics aligned to the header columns. */
-void biosim_gen_stats_print(const biosim_gen_stats_t *stats);
-
-#endif /* BIOSIM_STEPPER_GEN_H */
+#endif /* BIOSIM_CORE_GEN_H */

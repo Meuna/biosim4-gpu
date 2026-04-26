@@ -7,87 +7,90 @@
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_context_create(uint32_t pop, int16_t size_x, int16_t size_y,
-                                      uint16_t max_gen_len, uint8_t max_neurons,
-                                      uint8_t long_probe_dist,
-                                      const biosim_barrier_spec_t *barriers, int n_barriers,
-                                      biosim_context_t *out) {
+biosim_status_t biosim_context_create(biosim_context_t *ctx, const biosim_barrier_spec_t *barriers,
+                                      int n_barriers) {
     biosim_status_t st;
 
-    st = biosim_grid_create(size_x, size_y, &out->grid);
+    const uint32_t pop = ctx->population;
+    const int16_t size_x = ctx->size_x;
+    const int16_t size_y = ctx->size_y;
+    const uint16_t max_gen_len = ctx->max_gen_len;
+    const uint8_t max_neurons = ctx->max_neurons;
+    const uint8_t long_probe_dist = ctx->long_probe_dist;
+
+    ctx->kills = 0;
+
+    st = biosim_grid_create(size_x, size_y, &ctx->grid);
     if (st != BIOSIM_OK) {
-        biosim_context_free(out);
+        biosim_context_free(ctx);
         return st;
     }
 
-    out->barrier_ctrs = NULL;
-    out->n_barrier_ctrs = 0;
+    ctx->barrier_ctrs = NULL;
+    ctx->n_barrier_ctrs = 0;
     if (n_barriers > 0) {
-        out->barrier_ctrs = (biosim_coord_t *)malloc((size_t)n_barriers * sizeof(biosim_coord_t));
-        if (out->barrier_ctrs == NULL) {
-            biosim_context_free(out);
+        ctx->barrier_ctrs = (biosim_coord_t *)malloc((size_t)n_barriers * sizeof(biosim_coord_t));
+        if (ctx->barrier_ctrs == NULL) {
+            biosim_context_free(ctx);
             return BIOSIM_ERR_NOMEM;
         }
         uint64_t barrier_rng = biosim_rng_seed(0, 0);
-        st = biosim_barriers_place(&out->grid, barriers, n_barriers, &barrier_rng,
-                                   out->barrier_ctrs);
+        st = biosim_barriers_place(&ctx->grid, barriers, n_barriers, &barrier_rng,
+                                   ctx->barrier_ctrs);
         if (st != BIOSIM_OK) {
-            biosim_context_free(out);
+            biosim_context_free(ctx);
             return st;
         }
-        out->n_barrier_ctrs = n_barriers;
+        ctx->n_barrier_ctrs = n_barriers;
     }
 
-    st = biosim_agents_create(pop, &out->agents);
+    st = biosim_agents_create(pop, &ctx->agents);
     if (st != BIOSIM_OK) {
-        biosim_context_free(out);
+        biosim_context_free(ctx);
         return st;
     }
 
-    st = biosim_genome_create(pop, max_gen_len, &out->genome);
+    st = biosim_genome_create(pop, max_gen_len, &ctx->genome);
     if (st != BIOSIM_OK) {
-        biosim_context_free(out);
+        biosim_context_free(ctx);
         return st;
     }
 
     /* max_conn = max_gen_len: worst case every gene survives culling */
-    st = biosim_nnet_create(pop, max_gen_len, max_neurons, &out->nnet);
+    st = biosim_nnet_create(pop, max_gen_len, max_neurons, &ctx->nnet);
     if (st != BIOSIM_OK) {
-        biosim_context_free(out);
+        biosim_context_free(ctx);
         return st;
     }
 
-    out->signal_len = (size_t)size_x * (size_t)size_y;
-    out->signal = (uint32_t *)calloc(out->signal_len, sizeof(uint32_t));
-    if (out->signal == NULL) {
-        biosim_context_free(out);
+    ctx->signal_len = (size_t)size_x * (size_t)size_y;
+    ctx->signal = (uint32_t *)calloc(ctx->signal_len, sizeof(uint32_t));
+    if (ctx->signal == NULL) {
+        biosim_context_free(ctx);
         return BIOSIM_ERR_NOMEM;
     }
-
-    out->enable_kill = false;
-    out->kills = 0;
 
     for (uint32_t i = 0; i < pop; i++) {
         uint64_t rng = biosim_rng_seed(i, 0);
 
-        biosim_genome_init_slot(&out->genome, i, max_gen_len, &rng);
-        biosim_nnet_compile_slot(&out->nnet, &out->genome, i, BIOSIM_NUM_SENSORS,
+        biosim_genome_init_slot(&ctx->genome, i, max_gen_len, &rng);
+        biosim_nnet_compile_slot(&ctx->nnet, &ctx->genome, i, BIOSIM_NUM_SENSORS,
                                  BIOSIM_NUM_ACTIONS);
 
         biosim_coord_t loc;
-        st = biosim_grid_find_empty(&out->grid, &rng, &loc);
+        st = biosim_grid_find_empty(&ctx->grid, &rng, &loc);
         if (st != BIOSIM_OK) {
-            biosim_context_free(out);
+            biosim_context_free(ctx);
             return st;
         }
 
-        biosim_agents_init_slot(&out->agents, i, loc, long_probe_dist, 0);
+        biosim_agents_init_slot(&ctx->agents, i, loc, long_probe_dist, 0);
         /* Overwrite the seed stored by init_slot with the already-advanced rng,
          * preserving continuity across genome init and grid placement. */
-        out->agents.rng_state[i] = rng;
+        ctx->agents.rng_state[i] = rng;
 
-        biosim_grid_set(&out->grid, loc, (uint16_t)(i + 1U));
-        out->agents.genome_fingerprint[i] = biosim_nnet_fingerprint(&out->nnet, i);
+        biosim_grid_set(&ctx->grid, loc, (uint16_t)(i + 1U));
+        ctx->agents.genome_fingerprint[i] = biosim_nnet_fingerprint(&ctx->nnet, i);
     }
 
     return BIOSIM_OK;

@@ -207,7 +207,9 @@ taken when the code is written with concrete size and cohesion in mind.
 | Role | Description |
 |---|---|
 | Shared POD types | `Coord`, `Dir`, gene bit-layout macros (`gene.h`, shared with OpenCL kernels), and any other packed value types |
-| Simulation context | `biosim_context_t` — full simulation state: scalar configuration values plus all resource buffers (`agents`, `grid`, `genome`, `nnet`, `signal`). Owned by each simulator; populated via the individual `biosim_*_create` helpers during simulator init |
+| Simulation context | `biosim_context_t` — complete simulation state: allocation-time configuration, runtime configuration, per-generation state (step counter, generation counter, mutation rate, RNG), and all resource buffers (`agents`, `grid`, `genome`, `nnet`, `signal`). `biosim_context_create` allocates heap resources from the pre-populated configuration fields; `biosim_context_free` releases them |
+| Step logic | `step_agent()`: advance one simulation step for one agent — evaluate sensors, run feedforward, apply actions, finalise movement, invoke challenge step hook |
+| Generation logic | `biosim_context_advance_gen()`: evaluate the challenge for all alive agents, collect generation statistics (`biosim_gen_stats_t`), reproduce survivors (asexual: copy + mutate), recompile neural networks, and respawn the full population |
 | Genome operators | Mutation (point, insertion, deletion), crossover |
 | Neural network compilation | Culling of dead neurons, connection reordering, per-agent NN build, phenotypic fingerprint |
 | Abstract grid API | Query, neighborhood iteration, cell write — backing store provided by each simulator |
@@ -217,13 +219,12 @@ taken when the code is written with concrete size and cohesion in mind.
 | Portable RNG | xorshift64, with an implementation usable verbatim on both host and device |
 | Snapshot format | Serialization and deserialization of a full population to/from the versioned binary format |
 
-### What belongs in `core` (the test)
+### What belongs in `core`
 
-A function belongs in `core` if and only if **both** simulators need exactly
-the same behavior from it. Genome mutation is the canonical example: the GPU
-simulator uses it at the generation boundary on the host; the step-by-step
-simulator uses it identically. If the two diverge, the two simulators are no
-longer comparable.
+`core` is the **single-thread reference implementation** of the simulation.
+It owns the full simulation state and all logic needed to advance it. Code
+that both simulators need with identical behavior (genome operators, neural
+network compilation, challenge evaluation, RNG) belongs here by definition.
 
 ### What does *not* belong in `core`
 
@@ -386,20 +387,14 @@ packages/sim-stepper/
 
 | Role | Description |
 |---|---|
-| Step engine | `biosim_stepper_step()`: runs one simulation step on host arrays |
-| Generation boundary | `biosim_stepper_advance_gen()`: evaluates the challenge, reproduces survivors (asexual: copy + mutate), recompiles neural networks, and respawns the full population |
-| Generation statistics | `biosim_gen_stats_t` and aligned-column print functions: survival rate, genome-length variability, phenotype diversity, mean challenge score |
-| CLI entry point | Argument parsing, multi-generation loop, per-generation statistics to stdout |
+| Orchestration loop | `main()`: parse parameters, initialise `biosim_context_t`, run the triple-nested generation > step > agent loop by calling `step_agent` and `biosim_context_advance_gen` from `core` |
+| CLI entry point | Argument parsing and TOML loading via the `params` package |
 
 ### Purpose
 
-The stepper is the **reference implementation** for per-step behavior. It
-runs purely on the CPU, single-threaded, with no OpenMP, no queues, and no
-parallelism at all. Its role is:
-
-1. To serve as the ground truth for cross-simulator tests.
-2. To be the execution engine for visualization — the user loads a population
-   from a GPU snapshot and replays a generation step by step.
+The stepper owns nothing but the orchestration loop: it parses parameters,
+fills `biosim_context_t`, and drives the triple-nested `for` loop. All
+simulation logic lives in `core`.
 
 ### Why single-threaded and not the original OpenMP model
 

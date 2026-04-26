@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include "biosim/core/challenges.h"
+#include "biosim/core/context.h"
+#include "biosim/core/gen.h"
+#include "biosim/core/rng.h"
+#include "biosim/core/step.h"
 #include "biosim/params/barriers.h"
 #include "biosim/params/challenges.h"
 #include "biosim/params/params.h"
-#include "biosim/stepper/gen.h"
-#include "biosim/stepper/step.h"
 
 // clang-format off
 static const biosim_param_entry_t sim_params[] = {
@@ -36,6 +40,22 @@ static const biosim_param_entry_t sim_params[] = {
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))
+
+/* ── statistics printing ────────────────────────────────────────────────── */
+
+static void print_stats_header(void) {
+    (void)printf("%5s %7s %7s %6s %8s %8s %7s %9s\n", "gen", "surv", "kills", "surv%", "glen.m",
+                 "glen.s", "pdiv%", "score.m");
+}
+
+static void print_stats(const biosim_gen_stats_t *s) {
+    (void)printf("%5u %7u %7u %5.1f%% %8.2f %8.2f %6.1f%% %9.4f\n", s->gen, s->survivors, s->kills,
+                 (double)(s->survival_rate * 100.0F), (double)s->genome_len_mean,
+                 (double)s->genome_len_std, (double)(s->phenotype_div * 100.0F),
+                 (double)s->score_mean);
+}
+
+/* ── entry point ────────────────────────────────────────────────────────── */
 
 int main(int argc, char **argv) {
     biosim_params_t p;
@@ -72,28 +92,56 @@ int main(int argc, char **argv) {
         return st;
     }
 
-    biosim_stepper_t sim;
-    st = biosim_stepper_create(&sim, &p, barriers, n_barriers, challenge);
+    biosim_context_t ctx;
+    memset(&ctx, 0, sizeof(ctx));
+    ctx.population = (uint32_t)biosim_params_get_int(&p, "population");
+    ctx.size_x = (int16_t)biosim_params_get_int(&p, "grid-size-x");
+    ctx.size_y = (int16_t)biosim_params_get_int(&p, "grid-size-y");
+    ctx.max_gen_len = (uint16_t)biosim_params_get_int(&p, "max-genome-length");
+    ctx.max_neurons = (uint8_t)biosim_params_get_int(&p, "max-neurons");
+    ctx.long_probe_dist = (uint8_t)biosim_params_get_int(&p, "long-probe-dist");
+    ctx.steps_per_gen = biosim_params_get_int(&p, "steps-per-gen");
+    ctx.population_sensor_radius = biosim_params_get_int(&p, "population-sensor-radius");
+    ctx.challenge = challenge;
+    ctx.enable_kill = biosim_params_get_bool(&p, "enable-kill");
+    ctx.mutation_rate = (float)biosim_params_get_float(&p, "point-mutation-rate");
+    ctx.gen_rng = biosim_rng_seed(0, 1);
+
+    st = biosim_context_create(&ctx, barriers, n_barriers);
     free(barriers);
     if (st != BIOSIM_OK) {
         (void)fprintf(stderr, "biosim-stepper: init failed (status %d)\n", (int)st);
         biosim_params_free(&p);
         return st;
     }
-    sim.base.challenge = challenge;
 
     const int max_gens = biosim_params_get_int(&p, "max-generations");
 
-    biosim_gen_stats_print_header();
+    print_stats_header();
     for (int g = 0; g < max_gens; g++) {
-        for (int s = 0; s < sim.base.steps_per_gen; s++) {
-            biosim_stepper_step(&sim);
+        for (int s = 0; s < ctx.steps_per_gen; s++) {
+            for (uint32_t i = 0; i < ctx.agents.capacity; i++) {
+                if (!ctx.agents.alive[i]) {
+                    continue;
+                }
+                step_agent(&ctx, i);
+            }
+
+            // Fade the signals
+            for (size_t j = 0; j < ctx.signal_len; j++) {
+                ctx.signal[j]--;
+            }
+
+            biosim_challenge_step(&ctx.challenge, &ctx, (int)ctx.step, ctx.steps_per_gen);
+
+            ctx.step++;
         }
-        biosim_gen_stats_t stats = biosim_stepper_advance_gen(&sim);
-        biosim_gen_stats_print(&stats);
+        biosim_gen_stats_t stats;
+        biosim_context_advance_gen(&ctx, &stats);
+        print_stats(&stats);
     }
 
-    biosim_stepper_free(&sim);
+    biosim_context_free(&ctx);
     biosim_params_free(&p);
     return 0;
 }
