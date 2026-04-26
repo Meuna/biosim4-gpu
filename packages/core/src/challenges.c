@@ -343,7 +343,7 @@ biosim_challenge_result_t biosim_challenge_eval(const biosim_challenge_spec_t *s
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void biosim_challenge_step(const biosim_challenge_spec_t *spec, biosim_context_t *ctx, int sim_step,
                            int steps_per_gen) {
-    uint32_t n = ctx->agents.capacity;
+    uint32_t n = ctx->agents.population;
     int16_t w = ctx->grid.size_x;
     int16_t h = ctx->grid.size_y;
 

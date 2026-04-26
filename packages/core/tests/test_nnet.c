@@ -48,7 +48,7 @@ void test_create_pointers_non_null(void) {
 }
 
 void test_create_metadata_stored(void) {
-    TEST_ASSERT_EQUAL_UINT32(CAP, nnet.capacity);
+    TEST_ASSERT_EQUAL_UINT32(CAP, nnet.population);
     TEST_ASSERT_EQUAL_UINT16(MAX_CONN, nnet.max_conn);
     TEST_ASSERT_EQUAL_UINT8(MAX_NEURONS, nnet.max_neurons);
 }
@@ -58,7 +58,7 @@ void test_free_zeroes_struct(void) {
     biosim_nnet_create(4, 16, 8, &local);
     biosim_nnet_free(&local);
     TEST_ASSERT_NULL(local.genome_conn);
-    TEST_ASSERT_EQUAL_UINT32(0, local.capacity);
+    TEST_ASSERT_EQUAL_UINT32(0, local.population);
 }
 
 /* ── Empty and Trivial Genomes ──────────────────────────────────────────── */

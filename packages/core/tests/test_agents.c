@@ -50,11 +50,11 @@ void test_create_misc_buffers_non_null(void) {
 }
 
 void test_create_capacity_stored(void) {
-    TEST_ASSERT_EQUAL_UINT32(8, agents.capacity);
+    TEST_ASSERT_EQUAL_UINT32(8, agents.population);
 }
 
 void test_create_all_slots_dead(void) {
-    for (uint32_t i = 0; i < agents.capacity; i++) {
+    for (uint32_t i = 0; i < agents.population; i++) {
         TEST_ASSERT_EQUAL_UINT8(0, agents.alive[i]);
     }
 }
@@ -64,7 +64,7 @@ void test_free_clears_struct(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_agents_create(4, &a));
     biosim_agents_free(&a);
     TEST_ASSERT_NULL(a.loc_x);
-    TEST_ASSERT_EQUAL_UINT32(0, a.capacity);
+    TEST_ASSERT_EQUAL_UINT32(0, a.population);
 }
 
 /* ── init_slot ──────────────────────────────────────────────────────────── */

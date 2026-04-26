@@ -12,11 +12,11 @@
 
 /*
  * Per-agent data in Structure of Arrays layout.
- * Slots are indexed 0..capacity-1. All buffers are always allocated;
+ * Slots are indexed 0..population-1. All buffers are always allocated;
  * alive[i] == 0 marks a slot as inactive.
  */
 typedef struct {
-    uint32_t capacity;
+    uint32_t population;
 
     /* Position (split SoA for independent coalesced access on GPU) */
     int16_t *loc_x;
@@ -42,7 +42,7 @@ typedef struct {
 } biosim_agents_t;
 
 /* Lifecycle */
-biosim_status_t biosim_agents_create(uint32_t capacity, biosim_agents_t *out);
+biosim_status_t biosim_agents_create(uint32_t population, biosim_agents_t *out);
 void biosim_agents_free(biosim_agents_t *agents);
 
 /*

@@ -26,12 +26,12 @@ typedef struct {
     /* ── allocation-time configuration ───────────────────────────────────────
      * Set these before calling biosim_context_create(); they are read once
      * during allocation and remain valid for the lifetime of the context.*/
-    uint32_t population;     // agent count
-    int16_t size_x;          // grid width
-    int16_t size_y;          // grid height
-    uint16_t max_gen_len;    // maximum genome length (genes per agent)
-    uint8_t max_neurons;     // maximum hidden-neuron count per agent
-    uint8_t long_probe_dist; // default long-probe sensor range (cells)
+    uint32_t population;     /* agent count */
+    int16_t size_x;          /* grid width */
+    int16_t size_y;          /* grid height */
+    uint16_t max_gen_len;    /* maximum genome length (genes per agent) */
+    uint8_t max_neurons;     /* maximum hidden-neuron count per agent */
+    uint8_t long_probe_dist; /* default long-probe sensor range (cells) */
 
     /* ── runtime configuration ───────────────────────────────────────────────
      * Set these before or after create(); they are read every step/gen.     */
@@ -42,10 +42,10 @@ typedef struct {
 
     /* ── generation state ────────────────────────────────────────────────────
      * Managed by biosim_challenge_step() and biosim_context_advance_gen(). */
-    uint32_t step;       // step index within the current generation
-    uint32_t gen;        // generation index (0-based)
-    float mutation_rate; // per-gene point-mutation probability
-    uint64_t gen_rng;    // RNG state for generation-boundary operations
+    uint32_t step;       /* step index within the current generation */
+    uint32_t gen;        /* generation index (0-based) */
+    float mutation_rate; /* per-gene point-mutation probability */
+    uint64_t gen_rng;    /* RNG state for generation-boundary operations */
 
     /* ── simulation resources ────────────────────────────────────────────────
      * Allocated by biosim_context_create(); released by biosim_context_free().*/
@@ -53,8 +53,8 @@ typedef struct {
     biosim_grid_t grid;
     biosim_genome_t genome;
     biosim_nnet_t nnet;
-    uint32_t *signal;  // flat [size_y * size_x], row-major
-    size_t signal_len; // cached size_x * size_y
+    uint32_t *signal;  /* flat [size_y * size_x], row-major */
+    size_t signal_len; /* cached size_x * size_y */
 
     /* barrier centres resolved at creation time; used by near_barrier and
      * location_sequence challenge kinds; NULL when n_barrier_ctrs == 0 */

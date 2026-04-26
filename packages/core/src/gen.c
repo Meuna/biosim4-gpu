@@ -27,7 +27,7 @@ static int cmp_u64(const void *a, const void *b) {
  */
 static uint32_t collect_survivors(biosim_context_t *ctx, uint32_t *survivors,
                                   biosim_gen_stats_t *stats) {
-    const uint32_t pop = ctx->agents.capacity;
+    const uint32_t pop = ctx->agents.population;
 
     uint32_t n = 0;
     double score_sum = 0.0;
@@ -109,7 +109,7 @@ static uint32_t collect_survivors(biosim_context_t *ctx, uint32_t *survivors,
 static void snapshot_survivor_genomes(const biosim_genome_t *genome, const uint32_t *survivors,
                                       uint32_t n_survivors, uint16_t *temp_conn, int16_t *temp_wgt,
                                       uint16_t *temp_len) {
-    const uint32_t cap = genome->capacity;
+    const uint32_t pop = genome->population;
     const uint16_t max_len = genome->max_length;
 
     for (uint32_t s = 0; s < n_survivors; s++) {
@@ -117,8 +117,8 @@ static void snapshot_survivor_genomes(const biosim_genome_t *genome, const uint3
         const uint16_t len = genome->length[src];
         temp_len[s] = len;
         for (uint16_t j = 0; j < len; j++) {
-            temp_conn[(size_t)s * max_len + j] = genome->conn[(size_t)j * cap + src];
-            temp_wgt[(size_t)s * max_len + j] = genome->wgt[(size_t)j * cap + src];
+            temp_conn[(size_t)s * max_len + j] = genome->conn[(size_t)j * pop + src];
+            temp_wgt[(size_t)s * max_len + j] = genome->wgt[(size_t)j * pop + src];
         }
     }
 }
@@ -126,14 +126,14 @@ static void snapshot_survivor_genomes(const biosim_genome_t *genome, const uint3
 static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uint16_t *temp_conn,
                                 const int16_t *temp_wgt, const uint16_t *temp_len,
                                 uint32_t parent_s) {
-    const uint32_t cap = genome->capacity;
+    const uint32_t pop = genome->population;
     const uint16_t max_len = genome->max_length;
     const uint16_t len = temp_len[parent_s];
 
     genome->length[dst] = len;
     for (uint16_t j = 0; j < len; j++) {
-        genome->conn[(size_t)j * cap + dst] = temp_conn[(size_t)parent_s * max_len + j];
-        genome->wgt[(size_t)j * cap + dst] = temp_wgt[(size_t)parent_s * max_len + j];
+        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)parent_s * max_len + j];
+        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)parent_s * max_len + j];
     }
 }
 
@@ -143,7 +143,7 @@ static void reproduce(biosim_context_t *ctx, const uint32_t *survivors, uint32_t
     biosim_agents_t *agents = &ctx->agents;
     biosim_grid_t *grid = &ctx->grid;
 
-    const uint32_t pop = agents->capacity;
+    const uint32_t pop = agents->population;
     const uint16_t max_len = genome->max_length;
     const uint8_t long_probe_dist = ctx->long_probe_dist;
 
@@ -213,7 +213,7 @@ static void reproduce(biosim_context_t *ctx, const uint32_t *survivors, uint32_t
 /* ── public API ─────────────────────────────────────────────────────────── */
 
 void biosim_context_advance_gen(biosim_context_t *ctx, biosim_gen_stats_t *stats) {
-    const uint32_t pop = ctx->agents.capacity;
+    const uint32_t pop = ctx->agents.population;
 
     memset(stats, 0, sizeof(*stats));
     stats->gen = ctx->gen;

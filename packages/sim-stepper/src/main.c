@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
     print_stats_header();
     for (int g = 0; g < max_gens; g++) {
         for (int s = 0; s < ctx.steps_per_gen; s++) {
-            for (uint32_t i = 0; i < ctx.agents.capacity; i++) {
+            for (uint32_t i = 0; i < ctx.agents.population; i++) {
                 if (!ctx.agents.alive[i]) {
                     continue;
                 }

@@ -27,7 +27,7 @@ void test_create_pointers_non_null(void) {
 }
 
 void test_create_metadata_stored(void) {
-    TEST_ASSERT_EQUAL_UINT32(8, g.capacity);
+    TEST_ASSERT_EQUAL_UINT32(8, g.population);
     TEST_ASSERT_EQUAL_UINT16(16, g.max_length);
 }
 
@@ -36,7 +36,7 @@ void test_free_zeroes_struct(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_create(4, 8, &local));
     biosim_genome_free(&local);
     TEST_ASSERT_NULL(local.conn);
-    TEST_ASSERT_EQUAL_UINT32(0, local.capacity);
+    TEST_ASSERT_EQUAL_UINT32(0, local.population);
 }
 
 /* ── Slot Operations ────────────────────────────────────────────────────── */
@@ -52,7 +52,7 @@ void test_init_slot_different_rngs_differ(void) {
     uint64_t rng_b = 2ULL;
     biosim_genome_init_slot(&g, 0, 4, &rng_a);
     biosim_genome_init_slot(&g, 1, 4, &rng_b);
-    TEST_ASSERT_NOT_EQUAL_UINT16(g.conn[0 * g.capacity + 0], g.conn[0 * g.capacity + 1]);
+    TEST_ASSERT_NOT_EQUAL_UINT16(g.conn[0 * g.population + 0], g.conn[0 * g.population + 1]);
 }
 
 void test_copy_slot_matches_source(void) {
@@ -61,17 +61,17 @@ void test_copy_slot_matches_source(void) {
     biosim_genome_copy_slot(&g, 1, 0);
     TEST_ASSERT_EQUAL_UINT16(g.length[0], g.length[1]);
     /* Spot-check first and last active gene */
-    TEST_ASSERT_EQUAL_UINT16(g.conn[0 * g.capacity + 0], g.conn[0 * g.capacity + 1]);
-    TEST_ASSERT_EQUAL_INT16(g.wgt[5 * g.capacity + 0], g.wgt[5 * g.capacity + 1]);
+    TEST_ASSERT_EQUAL_UINT16(g.conn[0 * g.population + 0], g.conn[0 * g.population + 1]);
+    TEST_ASSERT_EQUAL_INT16(g.wgt[5 * g.population + 0], g.wgt[5 * g.population + 1]);
 }
 
 void test_copy_slot_independence(void) {
     uint64_t rng = 99ULL;
     biosim_genome_init_slot(&g, 0, 4, &rng);
     biosim_genome_copy_slot(&g, 1, 0);
-    uint16_t original = g.conn[0 * g.capacity + 0];
-    g.conn[0 * g.capacity + 1] = 0;
-    TEST_ASSERT_EQUAL_UINT16(original, g.conn[0 * g.capacity + 0]);
+    uint16_t original = g.conn[0 * g.population + 0];
+    g.conn[0 * g.population + 1] = 0;
+    TEST_ASSERT_EQUAL_UINT16(original, g.conn[0 * g.population + 0]);
 }
 
 /* ── Mutation ───────────────────────────────────────────────────────────── */
@@ -79,12 +79,12 @@ void test_copy_slot_independence(void) {
 void test_mutate_rate_zero_unchanged(void) {
     uint64_t rng = 11ULL;
     biosim_genome_init_slot(&g, 0, 8, &rng);
-    uint16_t saved_conn = g.conn[0 * g.capacity + 0];
-    int16_t saved_wgt = g.wgt[0 * g.capacity + 0];
+    uint16_t saved_conn = g.conn[0 * g.population + 0];
+    int16_t saved_wgt = g.wgt[0 * g.population + 0];
     uint16_t saved_len = g.length[0];
     biosim_genome_mutate(&g, 0, 0.0F, &rng);
-    TEST_ASSERT_EQUAL_UINT16(saved_conn, g.conn[0 * g.capacity + 0]);
-    TEST_ASSERT_EQUAL_INT16(saved_wgt, g.wgt[0 * g.capacity + 0]);
+    TEST_ASSERT_EQUAL_UINT16(saved_conn, g.conn[0 * g.population + 0]);
+    TEST_ASSERT_EQUAL_INT16(saved_wgt, g.wgt[0 * g.population + 0]);
     TEST_ASSERT_EQUAL_UINT16(saved_len, g.length[0]);
 }
 
@@ -149,10 +149,12 @@ void test_crossover_child_has_parents_genome(void) {
     biosim_genome_crossover(&g, 2, 0, 1, &rng_cross);
     uint16_t child_len = g.length[2];
     for (uint32_t j = 0; j < child_len; j++) {
-        uint16_t c_conn = g.conn[j * g.capacity + 2];
-        int16_t c_wgt = g.wgt[j * g.capacity + 2];
-        int from_a = (c_conn == g.conn[j * g.capacity + 0]) && (c_wgt == g.wgt[j * g.capacity + 0]);
-        int from_b = (c_conn == g.conn[j * g.capacity + 1]) && (c_wgt == g.wgt[j * g.capacity + 1]);
+        uint16_t c_conn = g.conn[j * g.population + 2];
+        int16_t c_wgt = g.wgt[j * g.population + 2];
+        int from_a =
+            (c_conn == g.conn[j * g.population + 0]) && (c_wgt == g.wgt[j * g.population + 0]);
+        int from_b =
+            (c_conn == g.conn[j * g.population + 1]) && (c_wgt == g.wgt[j * g.population + 1]);
         TEST_ASSERT_TRUE(from_a || from_b);
     }
 }
@@ -199,8 +201,8 @@ void test_sort_preserves_genes(void) {
     biosim_genome_init_slot(&g, 1, 5, &rng_b);
     biosim_genome_init_slot(&g, 2, 1, &rng_c);
     biosim_genome_init_slot(&g, 3, 7, &rng_d);
-    uint16_t saved_conn = g.conn[0 * g.capacity + 2];
-    int16_t saved_wgt = g.wgt[0 * g.capacity + 2];
+    uint16_t saved_conn = g.conn[0 * g.population + 2];
+    int16_t saved_wgt = g.wgt[0 * g.population + 2];
     uint32_t perm[8];
     biosim_genome_sort_by_length(&g, perm);
     uint32_t new_pos = 0;
@@ -210,8 +212,8 @@ void test_sort_preserves_genes(void) {
             break;
         }
     }
-    TEST_ASSERT_EQUAL_UINT16(saved_conn, g.conn[0 * g.capacity + new_pos]);
-    TEST_ASSERT_EQUAL_INT16(saved_wgt, g.wgt[0 * g.capacity + new_pos]);
+    TEST_ASSERT_EQUAL_UINT16(saved_conn, g.conn[0 * g.population + new_pos]);
+    TEST_ASSERT_EQUAL_INT16(saved_wgt, g.wgt[0 * g.population + new_pos]);
 }
 
 /* ── Runner ─────────────────────────────────────────────────────────────── */

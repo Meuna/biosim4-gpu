@@ -32,7 +32,7 @@ void setUp(void) {
     ctx.long_probe_dist = 8;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_context_create(&ctx, NULL, 0));
     biosim_grid_zero_fill(&ctx.grid);
-    for (uint32_t i = 0; i < ctx.agents.capacity; i++) {
+    for (uint32_t i = 0; i < ctx.agents.population; i++) {
         ctx.agents.alive[i] = 0;
     }
 }

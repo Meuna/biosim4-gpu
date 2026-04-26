@@ -7,16 +7,16 @@
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_agents_create(uint32_t capacity, biosim_agents_t *out) {
+biosim_status_t biosim_agents_create(uint32_t population, biosim_agents_t *out) {
     assert(out != NULL);
-    assert(capacity > 0);
+    assert(population > 0);
 
     memset(out, 0, sizeof(*out));
-    out->capacity = capacity;
+    out->population = population;
 
 /* calloc one buffer; on failure release everything allocated so far and bail */
 #define ALLOC(field, type)                                                                         \
-    out->field = calloc(capacity, sizeof(type));                                                   \
+    out->field = calloc(population, sizeof(type));                                                 \
     if (!out->field) {                                                                             \
         biosim_agents_free(out);                                                                   \
         return BIOSIM_ERR_NOMEM;                                                                   \
@@ -72,7 +72,7 @@ void biosim_agents_free(biosim_agents_t *agents) {
 void biosim_agents_init_slot(biosim_agents_t *agents, uint32_t idx, biosim_coord_t loc,
                              uint8_t long_probe_dist, uint64_t rng_seed) {
     assert(agents != NULL);
-    assert(idx < agents->capacity);
+    assert(idx < agents->population);
 
     agents->alive[idx] = 1;
     agents->loc_x[idx] = loc.x;
