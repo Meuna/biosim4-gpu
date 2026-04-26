@@ -1,11 +1,11 @@
 /*
  * HOST-ONLY: uses <stdbool.h>. Do NOT include from OpenCL kernel sources.
  *
- * Isolated from challenges.h so that context.h can embed biosim_challenge_spec_t
+ * Isolated from challenges.h so that sim.h can embed biosim_challenge_spec_t
  * without a circular include. challenges.h provides the evaluation API and must
- * include context.h (for grid, agents, and barrier centres), which means it
- * cannot itself be included by context.h. Keeping the spec types here breaks
- * that cycle cleanly — context.h includes this header only.
+ * include sim.h (for grid, agents, and barrier centres), which means it
+ * cannot itself be included by sim.h. Keeping the spec types here breaks
+ * that cycle cleanly — sim.h includes this header only.
  */
 #ifndef BIOSIM_CORE_CHALLENGE_SPEC_H
 #define BIOSIM_CORE_CHALLENGE_SPEC_H

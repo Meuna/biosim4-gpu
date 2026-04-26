@@ -45,9 +45,9 @@ static void fill_box(biosim_grid_t *grid, int16_t x0, int16_t y0, int16_t x1, in
     }
 }
 
-static void barrier_visitor(biosim_coord_t coord, uint16_t cell, void *ctx) {
+static void barrier_visitor(biosim_coord_t coord, uint16_t cell, void *sim) {
     (void)cell;
-    biosim_grid_set((biosim_grid_t *)ctx, coord, BIOSIM_GRID_BARRIER);
+    biosim_grid_set((biosim_grid_t *)sim, coord, BIOSIM_GRID_BARRIER);
 }
 
 /* Each place_* function returns the resolved centre. */

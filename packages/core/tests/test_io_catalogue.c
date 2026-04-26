@@ -1,6 +1,6 @@
-#include "biosim/core/context.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/io_catalogue.h"
+#include "biosim/core/sim.h"
 #include "unity.h"
 
 #include <stdint.h>
@@ -11,7 +11,7 @@
 #define GRID_W 16
 #define GRID_H 16
 
-static biosim_context_t sim;
+static biosim_sim_t sim;
 
 void setUp(void) {
     memset(&sim, 0, sizeof(sim));
@@ -28,7 +28,7 @@ void setUp(void) {
 }
 
 void tearDown(void) {
-    biosim_context_free(&sim);
+    biosim_sim_free(&sim);
 }
 
 /* ── LOC_X ──────────────────────────────────────────────────────────────── */

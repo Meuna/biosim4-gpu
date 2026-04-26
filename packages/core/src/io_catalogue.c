@@ -30,9 +30,9 @@ typedef struct {
     uint32_t visited;
 } pop_count_t;
 
-static void pop_visitor(biosim_coord_t coord, uint16_t cell, void *ctx) {
+static void pop_visitor(biosim_coord_t coord, uint16_t cell, void *sim) {
     (void)coord;
-    pop_count_t *pc = (pop_count_t *)ctx;
+    pop_count_t *pc = (pop_count_t *)sim;
     pc->visited++;
     if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
         pc->occupied++;
@@ -54,12 +54,12 @@ uint8_t biosim_get_dir(int dx, int dy) {
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_context_t *ctx,
+float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_t *sim,
                          uint32_t sim_step) {
-    assert(ctx != NULL);
+    assert(sim != NULL);
 
-    const biosim_agents_t *agents = &ctx->agents;
-    const biosim_grid_t *grid = &ctx->grid;
+    const biosim_agents_t *agents = &sim->agents;
+    const biosim_grid_t *grid = &sim->grid;
     const int16_t sx = grid->size_x;
     const int16_t sy = grid->size_y;
     const int16_t x = agents->loc_x[idx];
@@ -114,7 +114,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_cont
     }
 
     case BIOSIM_SENSOR_AGE: {
-        int steps = ctx->steps_per_gen;
+        int steps = sim->steps_per_gen;
         if (steps <= 0) {
             steps = 1;
         }
@@ -125,7 +125,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_cont
         return rng_float(&agents->rng_state[idx]);
 
     case BIOSIM_SENSOR_POPULATION: {
-        int r = ctx->population_sensor_radius;
+        int r = sim->population_sensor_radius;
         if (r <= 0) {
             r = 1;
         }
@@ -149,8 +149,8 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_cont
         return 0.5F;
 
     case BIOSIM_SENSOR_SIGNAL0: {
-        assert(ctx->signal != NULL);
-        uint32_t val = ctx->signal[(size_t)y * (size_t)sx + (size_t)x];
+        assert(sim->signal != NULL);
+        uint32_t val = sim->signal[(size_t)y * (size_t)sx + (size_t)x];
         if (val > 255U) {
             val = 255U;
         }
@@ -181,10 +181,10 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_cont
 /* ── action application ─────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim_context_t *ctx) {
-    assert(ctx != NULL);
+void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim_sim_t *sim) {
+    assert(sim != NULL);
 
-    biosim_agents_t *agents = &ctx->agents;
+    biosim_agents_t *agents = &sim->agents;
     const float resp = agents->responsiveness[idx];
 
     switch (action) {
@@ -302,18 +302,18 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         /* ── Group C: signal emission ─────────────────────────────────────── */
 
     case BIOSIM_ACTION_EMIT_SIGNAL0: {
-        assert(ctx->signal != NULL);
+        assert(sim->signal != NULL);
         if (val < 0.5F) {
             break;
         }
         const int16_t ex = agents->loc_x[idx];
         const int16_t ey = agents->loc_y[idx];
-        const int16_t gsz_x = ctx->grid.size_x;
-        const int16_t gsz_y = ctx->grid.size_y;
+        const int16_t gsz_x = sim->grid.size_x;
+        const int16_t gsz_y = sim->grid.size_y;
         /* center cell: +2 */
         size_t ci = (size_t)ey * (size_t)gsz_x + (size_t)ex;
-        uint32_t cv = ctx->signal[ci] + 2U;
-        ctx->signal[ci] = cv > 255U ? 255U : cv;
+        uint32_t cv = sim->signal[ci] + 2U;
+        sim->signal[ci] = cv > 255U ? 255U : cv;
         /* neighbours within radius 1.5: dx²+dy² ≤ 2 (all 8 immediate neighbours) */
         for (int16_t dy = -1; dy <= 1; dy++) {
             for (int16_t dx = -1; dx <= 1; dx++) {
@@ -326,8 +326,8 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
                     continue;
                 }
                 size_t ni = (size_t)ny * (size_t)gsz_x + (size_t)nx;
-                uint32_t nv = ctx->signal[ni] + 1U;
-                ctx->signal[ni] = nv > 255U ? 255U : nv;
+                uint32_t nv = sim->signal[ni] + 1U;
+                sim->signal[ni] = nv > 255U ? 255U : nv;
             }
         }
         break;
@@ -336,22 +336,22 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         /* ── Group D: kill ────────────────────────────────────────────────── */
 
     case BIOSIM_ACTION_KILL_FORWARD: {
-        if (!ctx->enable_kill || val < 0.5F) {
+        if (!sim->enable_kill || val < 0.5F) {
             break;
         }
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         biosim_coord_t fwd = {(int16_t)(agents->loc_x[idx] + DIR_DX[dir]),
                               (int16_t)(agents->loc_y[idx] + DIR_DY[dir])};
-        if (!biosim_grid_in_bounds(&ctx->grid, fwd)) {
+        if (!biosim_grid_in_bounds(&sim->grid, fwd)) {
             break;
         }
-        uint16_t cell = biosim_grid_at(&ctx->grid, fwd);
+        uint16_t cell = biosim_grid_at(&sim->grid, fwd);
         if (cell == BIOSIM_GRID_EMPTY || cell == BIOSIM_GRID_BARRIER) {
             break;
         }
         agents->alive[(uint32_t)(cell - 1U)] = 0U;
-        biosim_grid_set(&ctx->grid, fwd, BIOSIM_GRID_EMPTY);
-        ctx->kills++;
+        biosim_grid_set(&sim->grid, fwd, BIOSIM_GRID_EMPTY);
+        sim->kills++;
         break;
     }
 
@@ -363,12 +363,12 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
 
 /* ── movement finalisation ──────────────────────────────────────────────── */
 
-void biosim_action_finalize_movement(uint32_t idx, biosim_context_t *ctx) {
-    assert(ctx != NULL);
+void biosim_action_finalize_movement(uint32_t idx, biosim_sim_t *sim) {
+    assert(sim != NULL);
 
-    biosim_agents_t *agents = &ctx->agents;
-    const int16_t size_x = ctx->grid.size_x;
-    const int16_t size_y = ctx->grid.size_y;
+    biosim_agents_t *agents = &sim->agents;
+    const int16_t size_x = sim->grid.size_x;
+    const int16_t size_y = sim->grid.size_y;
 
     /* Squash accumulated sums to a probability magnitude in (-1, 1). */
     float lx = tanhf(agents->dx_sum[idx] * 0.5F);

@@ -1,13 +1,13 @@
 #include "biosim/core/challenges.h"
-#include "biosim/core/context.h"
 #include "biosim/core/grid.h"
+#include "biosim/core/sim.h"
 #include "biosim/core/status.h"
 #include "unity.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-static biosim_context_t ctx;
+static biosim_sim_t sim;
 
 static biosim_coord_t coord(int16_t x, int16_t y) {
     biosim_coord_t c = {x, y};
@@ -16,29 +16,29 @@ static biosim_coord_t coord(int16_t x, int16_t y) {
 
 /* Place agent i at (x,y), mark alive, and stamp the grid. */
 static void place_agent(uint32_t i, int16_t x, int16_t y) {
-    ctx.agents.loc_x[i] = x;
-    ctx.agents.loc_y[i] = y;
-    ctx.agents.alive[i] = 1;
-    biosim_grid_set(&ctx.grid, coord(x, y), (uint16_t)(i + 1U));
+    sim.agents.loc_x[i] = x;
+    sim.agents.loc_y[i] = y;
+    sim.agents.alive[i] = 1;
+    biosim_grid_set(&sim.grid, coord(x, y), (uint16_t)(i + 1U));
 }
 
 void setUp(void) {
-    memset(&ctx, 0, sizeof(ctx));
-    ctx.population = 10;
-    ctx.size_x = 64;
-    ctx.size_y = 64;
-    ctx.max_gen_len = 8;
-    ctx.max_neurons = 3;
-    ctx.long_probe_dist = 8;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_context_create(&ctx, NULL, 0));
-    biosim_grid_zero_fill(&ctx.grid);
-    for (uint32_t i = 0; i < ctx.agents.population; i++) {
-        ctx.agents.alive[i] = 0;
+    memset(&sim, 0, sizeof(sim));
+    sim.population = 10;
+    sim.size_x = 64;
+    sim.size_y = 64;
+    sim.max_gen_len = 8;
+    sim.max_neurons = 3;
+    sim.long_probe_dist = 8;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_grid_zero_fill(&sim.grid);
+    for (uint32_t i = 0; i < sim.agents.population; i++) {
+        sim.agents.alive[i] = 0;
     }
 }
 
 void tearDown(void) {
-    biosim_context_free(&ctx);
+    biosim_sim_free(&sim);
 }
 
 /* ── neighbor_count ──────────────────────────────────────────────────────── */
@@ -57,7 +57,7 @@ void test_neighbor_count_in_range_passes(void) {
     s.neighbor_count.min_n = 2;
     s.neighbor_count.max_n = 5;
     s.neighbor_count.exclude_border = false;
-    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_neighbor_count_too_few_fails(void) {
@@ -70,7 +70,7 @@ void test_neighbor_count_too_few_fails(void) {
     s.neighbor_count.min_n = 5;
     s.neighbor_count.max_n = 10;
     s.neighbor_count.exclude_border = false;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_neighbor_count_too_many_fails(void) {
@@ -87,7 +87,7 @@ void test_neighbor_count_too_many_fails(void) {
     s.neighbor_count.min_n = 1;
     s.neighbor_count.max_n = 3;
     s.neighbor_count.exclude_border = false;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_neighbor_count_exclude_border_fails(void) {
@@ -99,7 +99,7 @@ void test_neighbor_count_exclude_border_fails(void) {
     s.neighbor_count.min_n = 0;
     s.neighbor_count.max_n = 10;
     s.neighbor_count.exclude_border = true;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 /* ── center_sparse ───────────────────────────────────────────────────────── */
@@ -120,7 +120,7 @@ void test_center_sparse_sparse_center_passes(void) {
     s.center_sparse.min_n = 0;
     s.center_sparse.max_n = 3;
     s.center_sparse.weighted = false;
-    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_center_sparse_crowded_fails(void) {
@@ -140,7 +140,7 @@ void test_center_sparse_crowded_fails(void) {
     s.center_sparse.min_n = 0;
     s.center_sparse.max_n = 3;
     s.center_sparse.weighted = false;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_center_sparse_outside_outer_fails(void) {
@@ -157,7 +157,7 @@ void test_center_sparse_outside_outer_fails(void) {
     s.center_sparse.min_n = 0;
     s.center_sparse.max_n = 10;
     s.center_sparse.weighted = false;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 /* ── pairs ───────────────────────────────────────────────────────────────── */
@@ -170,7 +170,7 @@ void test_pairs_valid_pair_passes(void) {
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_PAIRS;
-    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_pairs_no_neighbour_fails(void) {
@@ -178,7 +178,7 @@ void test_pairs_no_neighbour_fails(void) {
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_PAIRS;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_pairs_two_neighbours_fails(void) {
@@ -188,7 +188,7 @@ void test_pairs_two_neighbours_fails(void) {
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_PAIRS;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_pairs_neighbour_has_extra_neighbour_fails(void) {
@@ -199,7 +199,7 @@ void test_pairs_neighbour_has_extra_neighbour_fails(void) {
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_PAIRS;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_pairs_on_border_fails(void) {
@@ -208,7 +208,7 @@ void test_pairs_on_border_fails(void) {
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_PAIRS;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 /* ── near_barrier ────────────────────────────────────────────────────────── */
@@ -218,17 +218,17 @@ void test_near_barrier_within_radius_passes(void) {
     TEST_ASSERT_NOT_NULL(bctrs);
     bctrs[0].x = 20;
     bctrs[0].y = 20;
-    ctx.barrier_ctrs = bctrs; /* context_free releases this */
-    ctx.n_barrier_ctrs = 1;
+    sim.barrier_ctrs = bctrs; /* context_free releases this */
+    sim.n_barrier_ctrs = 1;
 
-    ctx.agents.loc_x[0] = 20;
-    ctx.agents.loc_y[0] = 20;
-    ctx.agents.alive[0] = 1;
+    sim.agents.loc_x[0] = 20;
+    sim.agents.loc_y[0] = 20;
+    sim.agents.alive[0] = 1;
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_NEAR_BARRIER;
     s.near_barrier.radius = 0.1F; /* 6.4 px */
-    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_near_barrier_outside_radius_fails(void) {
@@ -236,28 +236,28 @@ void test_near_barrier_outside_radius_fails(void) {
     TEST_ASSERT_NOT_NULL(bctrs);
     bctrs[0].x = 20;
     bctrs[0].y = 20;
-    ctx.barrier_ctrs = bctrs;
-    ctx.n_barrier_ctrs = 1;
+    sim.barrier_ctrs = bctrs;
+    sim.n_barrier_ctrs = 1;
 
-    ctx.agents.loc_x[0] = 0;
-    ctx.agents.loc_y[0] = 0; /* distance ≈ 28 px; radius = 6.4 px */
-    ctx.agents.alive[0] = 1;
+    sim.agents.loc_x[0] = 0;
+    sim.agents.loc_y[0] = 0; /* distance ≈ 28 px; radius = 6.4 px */
+    sim.agents.alive[0] = 1;
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_NEAR_BARRIER;
     s.near_barrier.radius = 0.1F;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_near_barrier_no_barriers_fails(void) {
-    ctx.agents.loc_x[0] = 32;
-    ctx.agents.loc_y[0] = 32;
-    ctx.agents.alive[0] = 1;
+    sim.agents.loc_x[0] = 32;
+    sim.agents.loc_y[0] = 32;
+    sim.agents.alive[0] = 1;
 
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_NEAR_BARRIER;
     s.near_barrier.radius = 0.5F;
-    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &ctx).passed);
+    TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 /* ── Runner ──────────────────────────────────────────────────────────────── */

@@ -1,11 +1,11 @@
 /*
- * HOST-ONLY: this header references biosim_context_t which contains heap
+ * HOST-ONLY: this header references biosim_sim_t which contains heap
  * pointers. Do NOT include from OpenCL kernel sources (.cl files).
  */
 #ifndef BIOSIM_CORE_IO_CATALOGUE_H
 #define BIOSIM_CORE_IO_CATALOGUE_H
 
-#include "biosim/core/context.h"
+#include "biosim/core/sim.h"
 #include <stdint.h>
 
 /* ── sensor catalogue ───────────────────────────────────────────────────── */
@@ -77,17 +77,17 @@ uint8_t biosim_get_dir(int dx, int dy);
 /* Evaluate one sensor for agent idx at step sim_step; returns float in [0,1].
  * agents.rng_state[idx] may be mutated by BIOSIM_SENSOR_RANDOM.
  * Asserts on an invalid sensor value (out-of-range enum). */
-float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_context_t *ctx,
+float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_t *sim,
                          uint32_t sim_step);
 
-/* Apply one action to agent idx, writing into ctx->agents.dx_sum[idx] / dy_sum[idx]
+/* Apply one action to agent idx, writing into sim->agents.dx_sum[idx] / dy_sum[idx]
  * and agent self-fields.
  * Caller must zero dx_sum[idx]/dy_sum[idx] before the first call per agent.
  * Asserts on an invalid action value (out-of-range enum). */
-void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim_context_t *ctx);
+void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim_sim_t *sim);
 
-/* Convert ctx->agents.dx_sum[idx]/dy_sum[idx] to desired_x/desired_y using a
+/* Convert sim->agents.dx_sum[idx]/dy_sum[idx] to desired_x/desired_y using a
  * probabilistic step. Call once per agent after all actions have fired. */
-void biosim_action_finalize_movement(uint32_t idx, biosim_context_t *ctx);
+void biosim_action_finalize_movement(uint32_t idx, biosim_sim_t *sim);
 
 #endif /* BIOSIM_CORE_IO_CATALOGUE_H */

@@ -25,9 +25,9 @@ static int cmp_u64(const void *a, const void *b) {
  * survivors must point to a caller-allocated array with at least pop elements.
  * Returns the number of survivors found.
  */
-static uint32_t collect_survivors(biosim_context_t *ctx, uint32_t *survivors,
+static uint32_t collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
                                   biosim_gen_stats_t *stats) {
-    const uint32_t pop = ctx->agents.population;
+    const uint32_t pop = sim->agents.population;
 
     uint32_t n = 0;
     double score_sum = 0.0;
@@ -35,24 +35,24 @@ static uint32_t collect_survivors(biosim_context_t *ctx, uint32_t *survivors,
     double len_sq = 0.0;
 
     for (uint32_t i = 0; i < pop; i++) {
-        if (!ctx->agents.alive[i]) {
+        if (!sim->agents.alive[i]) {
             continue;
         }
-        biosim_challenge_result_t r = biosim_challenge_eval(&ctx->challenge, i, ctx);
+        biosim_challenge_result_t r = biosim_challenge_eval(&sim->challenge, i, sim);
         if (!r.passed) {
             continue;
         }
         survivors[n++] = i;
         score_sum += (double)r.score;
-        double glen = (double)ctx->genome.length[i];
+        double glen = (double)sim->genome.length[i];
         len_sum += glen;
         len_sq += glen * glen;
     }
 
-    stats->gen = ctx->gen;
+    stats->gen = sim->gen;
     stats->population = pop;
     stats->survivors = n;
-    stats->kills = ctx->kills;
+    stats->kills = sim->kills;
     stats->survival_rate = (float)n / (float)pop;
 
     if (n == 0) {
@@ -76,7 +76,7 @@ static uint32_t collect_survivors(biosim_context_t *ctx, uint32_t *survivors,
     uint64_t *fps = malloc(n * sizeof(uint64_t));
     if (fps != NULL) {
         for (uint32_t j = 0; j < n; j++) {
-            fps[j] = ctx->agents.genome_fingerprint[survivors[j]];
+            fps[j] = sim->agents.genome_fingerprint[survivors[j]];
         }
         qsort(fps, (size_t)n, sizeof(uint64_t), cmp_u64);
         uint32_t unique = 1;
@@ -137,15 +137,15 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
     }
 }
 
-static void reproduce(biosim_context_t *ctx, const uint32_t *survivors, uint32_t n_survivors) {
-    biosim_genome_t *genome = &ctx->genome;
-    biosim_nnet_t *nnet = &ctx->nnet;
-    biosim_agents_t *agents = &ctx->agents;
-    biosim_grid_t *grid = &ctx->grid;
+static void reproduce(biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_survivors) {
+    biosim_genome_t *genome = &sim->genome;
+    biosim_nnet_t *nnet = &sim->nnet;
+    biosim_agents_t *agents = &sim->agents;
+    biosim_grid_t *grid = &sim->grid;
 
     const uint32_t pop = agents->population;
     const uint16_t max_len = genome->max_length;
-    const uint8_t long_probe_dist = ctx->long_probe_dist;
+    const uint8_t long_probe_dist = sim->long_probe_dist;
 
     /* clear non-barrier grid cells */
     for (int y = 0; y < (int)grid->size_y; y++) {
@@ -157,7 +157,7 @@ static void reproduce(biosim_context_t *ctx, const uint32_t *survivors, uint32_t
         }
     }
 
-    memset(ctx->signal, 0, ctx->signal_len * sizeof(uint32_t));
+    memset(sim->signal, 0, sim->signal_len * sizeof(uint32_t));
 
     /* snapshot survivor genomes before any slot is overwritten */
     uint16_t *temp_conn = NULL;
@@ -182,24 +182,24 @@ static void reproduce(biosim_context_t *ctx, const uint32_t *survivors, uint32_t
         }
     }
 
-    const uint64_t gen_seed = biosim_rng_next(&ctx->gen_rng);
+    const uint64_t gen_seed = biosim_rng_next(&sim->gen_rng);
 
     for (uint32_t i = 0; i < pop; i++) {
         if (n_survivors == 0 || temp_conn == NULL) {
             uint16_t rand_len =
-                (uint16_t)(1U + (uint16_t)(biosim_rng_next(&ctx->gen_rng) % (uint64_t)max_len));
-            biosim_genome_init_slot(genome, i, rand_len, &ctx->gen_rng);
+                (uint16_t)(1U + (uint16_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)max_len));
+            biosim_genome_init_slot(genome, i, rand_len, &sim->gen_rng);
         } else {
-            uint32_t parent_s = (uint32_t)(biosim_rng_next(&ctx->gen_rng) % (uint64_t)n_survivors);
+            uint32_t parent_s = (uint32_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)n_survivors);
             restore_genome_slot(genome, i, temp_conn, temp_wgt, temp_len, parent_s);
-            biosim_genome_mutate(genome, i, ctx->mutation_rate, &ctx->gen_rng);
+            biosim_genome_mutate(genome, i, sim->mutation_rate, &sim->gen_rng);
         }
 
         biosim_nnet_compile_slot(nnet, genome, i, BIOSIM_NUM_SENSORS, BIOSIM_NUM_ACTIONS);
         const uint64_t fp = biosim_nnet_fingerprint(nnet, i);
 
         biosim_coord_t loc;
-        (void)biosim_grid_find_empty(grid, &ctx->gen_rng, &loc);
+        (void)biosim_grid_find_empty(grid, &sim->gen_rng, &loc);
         biosim_agents_init_slot(agents, i, loc, long_probe_dist, biosim_rng_seed(i, gen_seed));
         agents->genome_fingerprint[i] = fp;
         biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
@@ -212,23 +212,23 @@ static void reproduce(biosim_context_t *ctx, const uint32_t *survivors, uint32_t
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
-void biosim_context_advance_gen(biosim_context_t *ctx, biosim_gen_stats_t *stats) {
-    const uint32_t pop = ctx->agents.population;
+void biosim_sim_advance_gen(biosim_sim_t *sim, biosim_gen_stats_t *stats) {
+    const uint32_t pop = sim->agents.population;
 
     memset(stats, 0, sizeof(*stats));
-    stats->gen = ctx->gen;
+    stats->gen = sim->gen;
     stats->population = pop;
 
     uint32_t *survivors = malloc(pop * sizeof(uint32_t));
     uint32_t n_survivors = 0;
     if (survivors != NULL) {
-        n_survivors = collect_survivors(ctx, survivors, stats);
+        n_survivors = collect_survivors(sim, survivors, stats);
     }
 
-    reproduce(ctx, survivors, n_survivors);
+    reproduce(sim, survivors, n_survivors);
     free(survivors);
 
-    ctx->kills = 0;
-    ctx->step = 0;
-    ctx->gen++;
+    sim->kills = 0;
+    sim->step = 0;
+    sim->gen++;
 }

@@ -1,7 +1,7 @@
 add_library(core STATIC
   src/barriers.c
   src/challenges.c
-  src/context.c
+  src/sim.c
   src/core.c
   src/gen.c
   src/grid.c

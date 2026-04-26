@@ -107,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`core/context.h`): six allocation-time configuration fields (`population`,
   `size_x`, `size_y`, `max_gen_len`, `max_neurons`, `long_probe_dist`) and
   four generation-state fields (`step`, `gen`, `mutation_rate`, `gen_rng`)
-  added. `biosim_context_create` now takes only `(ctx, barriers, n_barriers)`
+  added. `biosim_context_create` now takes only `(sim, barriers, n_barriers)`
   — the caller pre-populates the configuration fields, then `create` allocates
   all heap resources and spawns the initial population.
 - **`biosim_stepper_t` removed** (`sim-stepper/step.h`): superseded by the
@@ -115,9 +115,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `mutation_rate`, `gen_rng`) now live directly on the context.
 - **`biosim_sense_ctx_t` and `biosim_act_ctx_t` removed** (`core/io_catalogue.h`):
   replaced by flat function parameters. `biosim_sensor_eval` now takes
-  `(sensor, idx, ctx, sim_step)`; `biosim_action_apply` takes
-  `(action, val, idx, ctx)`; `biosim_action_finalize_movement` takes
-  `(idx, ctx)`. Removes two intermediate structs that bundled references already
+  `(sensor, idx, sim, sim_step)`; `biosim_action_apply` takes
+  `(action, val, idx, sim)`; `biosim_action_finalize_movement` takes
+  `(idx, sim)`. Removes two intermediate structs that bundled references already
   available in the context.
 - **`dx_sum` / `dy_sum` added to `biosim_agents_t`** (`core/agents.h`): transient
   per-step movement accumulators now live in the agent SoA alongside

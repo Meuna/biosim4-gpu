@@ -491,12 +491,12 @@ per-simulator compiled-in defaults when absent.
    table with table = `"challenge"`.
 2. After `biosim_params_parse`, call `biosim_challenge_spec_from_params` to
    build the spec.
-3. Assign the spec to `ctx.challenge` (where `ctx` is the `biosim_context_t`).
-4. Each simulation step, call `biosim_challenge_step(&ctx.challenge, &ctx, step, steps_per_gen)`
+3. Assign the spec to `sim.challenge` (where `sim` is the `biosim_context_t`).
+4. Each simulation step, call `biosim_challenge_step(&sim.challenge, &sim, step, steps_per_gen)`
    after agent movement and signal fade. Step-hook kinds update `challenge_bits` or kill
    agents in-place.
 5. At the end of each generation, iterate over agents and call
-   `biosim_challenge_eval(&ctx.challenge, agent_idx, &ctx)` per agent to determine
+   `biosim_challenge_eval(&sim.challenge, agent_idx, &sim)` per agent to determine
    survivors.
 
 ## 5. Snapshot Binary Format

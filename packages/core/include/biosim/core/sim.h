@@ -2,8 +2,8 @@
  * HOST-ONLY: embeds agents/grid/genome/nnet which carry heap pointers.
  * Do NOT include from OpenCL kernel sources (.cl files).
  */
-#ifndef BIOSIM_CORE_CONTEXT_H
-#define BIOSIM_CORE_CONTEXT_H
+#ifndef BIOSIM_CORE_SIM_H
+#define BIOSIM_CORE_SIM_H
 
 #include "biosim/core/agents.h"
 #include "biosim/core/barriers.h"
@@ -19,12 +19,12 @@
 /*
  * Full simulation state for the single-threaded reference implementation.
  *
- * Populate the configuration fields, then call biosim_context_create() to
- * allocate all heap resources.  biosim_context_free() releases them.
+ * Populate the configuration fields, then call biosim_sim_create() to
+ * allocate all heap resources.  biosim_sim_free() releases them.
  */
 typedef struct {
     /* ── allocation-time configuration ───────────────────────────────────────
-     * Set these before calling biosim_context_create(); they are read once
+     * Set these before calling biosim_sim_create(); they are read once
      * during allocation and remain valid for the lifetime of the context.*/
     uint32_t population;     /* agent count */
     int16_t size_x;          /* grid width */
@@ -41,14 +41,14 @@ typedef struct {
     biosim_challenge_spec_t challenge;
 
     /* ── generation state ────────────────────────────────────────────────────
-     * Managed by biosim_challenge_step() and biosim_context_advance_gen(). */
+     * Managed by biosim_challenge_step() and biosim_sim_advance_gen(). */
     uint32_t step;       /* step index within the current generation */
     uint32_t gen;        /* generation index (0-based) */
     float mutation_rate; /* per-gene point-mutation probability */
     uint64_t gen_rng;    /* RNG state for generation-boundary operations */
 
     /* ── simulation resources ────────────────────────────────────────────────
-     * Allocated by biosim_context_create(); released by biosim_context_free().*/
+     * Allocated by biosim_sim_create(); released by biosim_sim_free().*/
     biosim_agents_t agents;
     biosim_grid_t grid;
     biosim_genome_t genome;
@@ -63,18 +63,18 @@ typedef struct {
 
     /* kill tracking — reset to 0 at each generation boundary */
     uint32_t kills;
-} biosim_context_t;
+} biosim_sim_t;
 
 /*
  * Lifecycle
  *
- * biosim_context_create — allocate all heap resources described by the
- * configuration fields already set in *ctx, place barriers on the grid,
+ * biosim_sim_create — allocate all heap resources described by the
+ * configuration fields already set in *sim, place barriers on the grid,
  * and spawn the initial population.  barriers/n_barriers may be NULL/0.
  */
-biosim_status_t biosim_context_create(biosim_context_t *ctx, const biosim_barrier_spec_t *barriers,
-                                      int n_barriers);
+biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
+                                  int n_barriers);
 
-void biosim_context_free(biosim_context_t *ctx);
+void biosim_sim_free(biosim_sim_t *sim);
 
-#endif /* BIOSIM_CORE_CONTEXT_H */
+#endif /* BIOSIM_CORE_SIM_H */

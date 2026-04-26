@@ -40,11 +40,11 @@ bool biosim_grid_is_occupied(const biosim_grid_t *grid, biosim_coord_t coord);
 /*
  * Visit every cell within a disc of the given radius centred on `center`.
  * Out-of-bounds cells are silently skipped. The callback receives the
- * coordinate and current cell value; pass arbitrary context via `ctx`.
+ * coordinate and current cell value; pass arbitrary context via `sim`.
  */
-typedef void (*biosim_grid_visitor_t)(biosim_coord_t coord, uint16_t cell, void *ctx);
+typedef void (*biosim_grid_visitor_t)(biosim_coord_t coord, uint16_t cell, void *sim);
 void biosim_grid_visit_neighborhood(const biosim_grid_t *grid, biosim_coord_t center,
-                                    int16_t radius, biosim_grid_visitor_t visitor, void *ctx);
+                                    int16_t radius, biosim_grid_visitor_t visitor, void *sim);
 
 /*
  * Find a random empty cell by random probing then linear scan fallback.

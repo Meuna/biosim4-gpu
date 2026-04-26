@@ -21,10 +21,10 @@ static biosim_coord_t coord(int16_t x, int16_t y) {
     return c;
 }
 
-static void count_visitor(biosim_coord_t c, uint16_t cell, void *ctx) {
+static void count_visitor(biosim_coord_t c, uint16_t cell, void *sim) {
     (void)c;
     (void)cell;
-    (*(int *)ctx)++;
+    (*(int *)sim)++;
 }
 
 /* ── Tests ──────────────────────────────────────────────────────────────── */

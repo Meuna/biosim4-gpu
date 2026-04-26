@@ -99,7 +99,7 @@ biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_
 /* ── neighborhood ───────────────────────────────────────────────────────── */
 
 void biosim_grid_visit_neighborhood(const biosim_grid_t *grid, biosim_coord_t center,
-                                    int16_t radius, biosim_grid_visitor_t visitor, void *ctx) {
+                                    int16_t radius, biosim_grid_visitor_t visitor, void *sim) {
     assert(grid && visitor);
 
     for (int32_t dy = -radius; dy <= radius; dy++) {
@@ -111,7 +111,7 @@ void biosim_grid_visit_neighborhood(const biosim_grid_t *grid, biosim_coord_t ce
             if (!biosim_grid_in_bounds(grid, c)) {
                 continue;
             }
-            visitor(c, biosim_grid_at(grid, c), ctx);
+            visitor(c, biosim_grid_at(grid, c), sim);
         }
     }
 }
