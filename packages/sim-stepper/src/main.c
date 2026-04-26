@@ -2,11 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "biosim/core/challenges.h"
-#include "biosim/core/generation.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
-#include "biosim/core/step.h"
 #include "biosim/params/barriers.h"
 #include "biosim/params/challenges.h"
 #include "biosim/params/params.h"
@@ -124,20 +121,12 @@ int main(int argc, char **argv) {
                 if (!sim.agents.alive[i]) {
                     continue;
                 }
-                step_agent(&sim, i);
+                biosim_sim_step_agent(&sim, i);
             }
-
-            // Fade the signals
-            for (size_t j = 0; j < sim.signal_len; j++) {
-                sim.signal[j]--;
-            }
-
-            biosim_challenge_step(&sim.challenge, &sim, (int)sim.step, sim.steps_per_gen);
-
-            sim.step++;
+            biosim_sim_next_step(&sim);
         }
         biosim_gen_stats_t stats;
-        biosim_sim_advance_gen(&sim, &stats);
+        biosim_sim_next_generation(&sim, &stats);
         print_stats(&stats);
     }
 

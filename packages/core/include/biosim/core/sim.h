@@ -17,6 +17,29 @@
 #include <stdint.h>
 
 /*
+ * Per-generation statistics collected from the population at generation end,
+ * before reproduction.
+ *
+ * survivors    — agents that passed the challenge (will reproduce)
+ * kills        — agents killed by KILL_FORWARD during the generation
+ *                (0 when enable_kill is false)
+ *
+ * survival_rate = survivors / population
+ */
+typedef struct {
+    uint32_t gen;
+    uint32_t population;
+    uint32_t survivors;         /* agents that passed the challenge */
+    uint32_t kills;             /* agents killed by KILL_FORWARD */
+    float survival_rate;        /* survivors / population */
+    float genome_len_mean;      /* mean genome length of survivors */
+    float genome_len_std;       /* std dev of genome lengths — variability */
+    uint32_t unique_phenotypes; /* distinct compiled-nnet fingerprints among survivors */
+    float phenotype_div;        /* unique_phenotypes / survivors */
+    float score_mean;           /* mean challenge score of survivors */
+} biosim_gen_stats_t;
+
+/*
  * Full simulation state for the single-threaded reference implementation.
  *
  * Populate the configuration fields, then call biosim_sim_create() to
@@ -76,5 +99,23 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
                                   int n_barriers);
 
 void biosim_sim_free(biosim_sim_t *sim);
+
+/* Advance one agent by one step: evaluate sensors, run feedforward, apply
+ * actions, finalize movement. */
+void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i);
+
+/* Finalize the current step: fade the signal layer, run the per-step
+ * challenge hook, and increment sim->step. */
+void biosim_sim_next_step(biosim_sim_t *sim);
+
+/*
+ * Advance one generation: evaluate the challenge for all alive agents, collect
+ * statistics, reproduce survivors (asexual: copy + mutate), recompile neural
+ * networks, and respawn the full population on the grid.
+ *
+ * After the call: sim->step is reset to 0 and sim->gen is incremented.
+ * stats receives the metrics computed from the just-completed generation.
+ */
+void biosim_sim_next_generation(biosim_sim_t *sim, biosim_gen_stats_t *stats);
 
 #endif /* BIOSIM_CORE_SIM_H */

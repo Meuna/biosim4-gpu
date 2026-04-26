@@ -19,14 +19,8 @@ static int cmp_u64(const void *a, const void *b) {
     return (x > y) - (x < y);
 }
 
-/*
- * Evaluate the challenge for every alive agent and collect passing indices into
- * survivors[].  Computes and fills all biosim_gen_stats_t fields.
- * survivors must point to a caller-allocated array with at least pop elements.
- * Returns the number of survivors found.
- */
-static uint32_t collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
-                                  biosim_gen_stats_t *stats) {
+uint32_t biosim_gen_collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
+                                      biosim_gen_stats_t *stats) {
     const uint32_t pop = sim->agents.population;
 
     uint32_t n = 0;
@@ -137,7 +131,7 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
     }
 }
 
-static void reproduce(biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_survivors) {
+void biosim_gen_reproduce(biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_survivors) {
     biosim_genome_t *genome = &sim->genome;
     biosim_nnet_t *nnet = &sim->nnet;
     biosim_agents_t *agents = &sim->agents;
@@ -208,27 +202,4 @@ static void reproduce(biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_s
     free(temp_conn);
     free(temp_wgt);
     free(temp_len);
-}
-
-/* ── public API ─────────────────────────────────────────────────────────── */
-
-void biosim_sim_advance_gen(biosim_sim_t *sim, biosim_gen_stats_t *stats) {
-    const uint32_t pop = sim->agents.population;
-
-    memset(stats, 0, sizeof(*stats));
-    stats->gen = sim->gen;
-    stats->population = pop;
-
-    uint32_t *survivors = malloc(pop * sizeof(uint32_t));
-    uint32_t n_survivors = 0;
-    if (survivors != NULL) {
-        n_survivors = collect_survivors(sim, survivors, stats);
-    }
-
-    reproduce(sim, survivors, n_survivors);
-    free(survivors);
-
-    sim->kills = 0;
-    sim->step = 0;
-    sim->gen++;
 }

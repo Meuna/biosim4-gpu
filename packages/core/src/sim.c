@@ -1,7 +1,11 @@
 #include "biosim/core/sim.h"
+
+#include "biosim/core/challenges.h"
+#include "biosim/core/generation.h"
 #include "biosim/core/io_catalogue.h"
 #include "biosim/core/rng.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -110,4 +114,90 @@ void biosim_sim_free(biosim_sim_t *sim) {
     free(sim->barrier_ctrs);
     sim->barrier_ctrs = NULL;
     sim->n_barrier_ctrs = 0;
+}
+
+/* ── per-step ───────────────────────────────────────────────────────────── */
+
+void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i) {
+    float sensor_vals[BIOSIM_NUM_SENSORS];
+    float action_vals[BIOSIM_NUM_ACTIONS];
+
+    for (uint32_t s = 0; s < BIOSIM_NUM_SENSORS; s++) {
+        sensor_vals[s] = biosim_sensor_eval((biosim_sensor_t)s, i, sim, sim->step);
+    }
+
+    memset(action_vals, 0, sizeof(action_vals));
+    biosim_nnet_feedforward(&sim->nnet, i, sensor_vals, BIOSIM_NUM_SENSORS, action_vals,
+                            BIOSIM_NUM_ACTIONS);
+
+    sim->agents.dx_sum[i] = 0.0F;
+    sim->agents.dy_sum[i] = 0.0F;
+
+    for (uint32_t a = 0; a < BIOSIM_NUM_ACTIONS; a++) {
+        biosim_action_apply((biosim_action_t)a, action_vals[a], i, sim);
+    }
+
+    /* KILL_FORWARD targets others, not self; still guard in case a prior agent
+     * killed this one during action application. */
+    if (!sim->agents.alive[i]) {
+        return;
+    }
+
+    biosim_action_finalize_movement(i, sim);
+
+    const int dx = (int)sim->agents.desired_x[i] - (int)sim->agents.loc_x[i];
+    const int dy = (int)sim->agents.desired_y[i] - (int)sim->agents.loc_y[i];
+
+    if (dx == 0 && dy == 0) {
+        return;
+    }
+
+    biosim_coord_t target;
+    target.x = sim->agents.desired_x[i];
+    target.y = sim->agents.desired_y[i];
+
+    if (biosim_grid_at(&sim->grid, target) != BIOSIM_GRID_EMPTY) {
+        return;
+    }
+
+    biosim_coord_t old_loc;
+    old_loc.x = sim->agents.loc_x[i];
+    old_loc.y = sim->agents.loc_y[i];
+
+    biosim_grid_set(&sim->grid, old_loc, BIOSIM_GRID_EMPTY);
+    biosim_grid_set(&sim->grid, target, (uint16_t)(i + 1U));
+    sim->agents.loc_x[i] = target.x;
+    sim->agents.loc_y[i] = target.y;
+    sim->agents.last_move_dir[i] = biosim_get_dir(dx, dy);
+}
+
+void biosim_sim_next_step(biosim_sim_t *sim) {
+    for (size_t j = 0; j < sim->signal_len; j++) {
+        sim->signal[j]--;
+    }
+    biosim_challenge_step(&sim->challenge, sim, (int)sim->step, sim->steps_per_gen);
+    sim->step++;
+}
+
+/* ── per-generation ─────────────────────────────────────────────────────── */
+
+void biosim_sim_next_generation(biosim_sim_t *sim, biosim_gen_stats_t *stats) {
+    const uint32_t pop = sim->agents.population;
+
+    memset(stats, 0, sizeof(*stats));
+    stats->gen = sim->gen;
+    stats->population = pop;
+
+    uint32_t *survivors = malloc(pop * sizeof(uint32_t));
+    uint32_t n_survivors = 0;
+    if (survivors != NULL) {
+        n_survivors = biosim_gen_collect_survivors(sim, survivors, stats);
+    }
+
+    biosim_gen_reproduce(sim, survivors, n_survivors);
+    free(survivors);
+
+    sim->kills = 0;
+    sim->step = 0;
+    sim->gen++;
 }

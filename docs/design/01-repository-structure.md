@@ -229,7 +229,7 @@ network compilation, challenge evaluation, RNG) belongs here by definition.
 ### What does *not* belong in `core`
 
 - OpenCL setup, kernel compilation, buffer management → `sim-gpu`.
-- The per-simStep orchestration loop (kernel pipeline vs. single-threaded
+- The per-sim.step orchestration loop (kernel pipeline vs. single-threaded
   stepping) → each simulator's own code.
 - Visualization formats, image encoders → `viz`.
 - CLI argument parsing, TOML loading, parameter table management → `params`
@@ -325,7 +325,7 @@ packages/sim-gpu/
 | OpenCL context | Device selection, platform queries, `cl_context` and `cl_command_queue` lifetime |
 | SoA buffers | Allocation, resizing, host/device transfer of the per-agent SoA buffers described in the GPU data-model document |
 | Kernel registry | Loading of `.cl` sources (file mode or embedded mode), build-time compilation, kernel argument binding |
-| Per-step pipeline | The orchestration of kernels K1, K2 ... Kn for one simStep |
+| Per-step pipeline | The orchestration of kernels K1, K2 ... Kn for one sim.step |
 | CLI entry point | Argument parsing, generation loop, snapshot read/write |
 
 ### Kernel file naming — a deliberate exception

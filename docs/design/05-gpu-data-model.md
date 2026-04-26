@@ -40,7 +40,7 @@ sorting implementation, fingerprint hash choice.
 
 ### Goals
 
-- Move the per-simStep workload (sensors → feedForward → actions) onto the GPU
+- Move the per-sim.step workload (sensors → feedForward → actions) onto the GPU
   as one or a small number of OpenCL kernels.
 - Replace the current pointer-heavy AoS layout with flat, coalesceable SoA
   buffers.
@@ -335,7 +335,7 @@ and OpenCL kernel sources.
 **Why separate from genome:** the compiled network is shorter in general than
 the genome (useless neurons are pruned) and is produced by a culling function at
 generation spawn. Genome and nnet are written once per generation, read every
-simStep.
+sim.step.
 
 ### 6.2 Connection ordering invariant
 
@@ -348,7 +348,7 @@ feedForward:
   accumulate into a per-neuron local accumulator. Action-sink connections
   accumulate directly into an action sum.
 - The read of a neuron's output (when it is a source) always returns the value
-  from the *previous* simStep, because Phase 3 (applying tanh and writing the
+  from the *previous* sim.step, because Phase 3 (applying tanh and writing the
   new outputs) has not yet happened.
 
 **Critical point for the GPU:** the accumulator must live in **private memory**
@@ -359,7 +359,7 @@ memory, at `MAX_NEURONS = 32` and 4 bytes each this is 128 bytes per work-item =
 
 ### 6.3 Neuron outputs — ping-pong? not needed
 
-The current algorithm reads all neuron outputs from the "previous simStep"
+The current algorithm reads all neuron outputs from the "previous sim.step"
 values, accumulates into a local (non-neuron-array) accumulator, then writes the
 new outputs into the neuron array. Because the accumulator is separate, **there
 is no intra-step read-after-write hazard** on the neuron array itself. This is
@@ -380,7 +380,7 @@ __global uint8_t neuron_driven[MAX_NEURONS * N];   // 1 if driven, 0 otherwise
 __global uint8_t neuron_count [N];                 // actual number of neurons for this agent
 ```
 
-Written once per generation by the wiring kernel (or host). Read every simStep
+Written once per generation by the wiring kernel (or host). Read every sim.step
 to decide whether to apply tanh or set the undriven-default of 0.5.
 
 ### 6.5 Opportunities unlocked
@@ -441,7 +441,7 @@ __constant Coord barrier_locations[MAX_BARRIERS];
 __constant uint32_t barrier_count;
 ```
 
-Barriers are written once at generation start, never modified during simStep.
+Barriers are written once at generation start, never modified during sim.step.
 `__constant` memory is a small (typically 64 KB) cached region ideal for small
 tables that every work-item reads.
 
@@ -492,7 +492,7 @@ atomics on the same neighborhood would serialize heavily.
 Stage 1 only helps when agents in the same work-group are spatially close. If
 work-groups are assigned by agent index (not position), proximity is not
 guaranteed. **Design lever:** periodically (e.g., at generation start, or every
-few simSteps) sort agents by spatial position so adjacent agent indices have
+few sim.steps) sort agents by spatial position so adjacent agent indices have
 adjacent positions. Then the local-memory staging is effective.
 
 If this optimization proves too complex for the first cut, fall back to direct
@@ -506,7 +506,7 @@ kernel signal_fade:
 ```
 
 Fully embarrassingly parallel. One work-item per cell, or one work-item per 4
-cells (vectorized). Launched once per simStep after the emit phase has completed
+cells (vectorized). Launched once per sim.step after the emit phase has completed
 (the kernel boundary is the barrier).
 
 ### 8.4 Signal read — coalesced or image-cached
@@ -730,7 +730,7 @@ desired_y[i] = clamp(loc_y[i] + sign(dy_sum) * prob_step(dy_sum), 0, SIZE_Y - 1)
 
 where `prob_step` is the probabilistic move decision (threshold tanh like the
 original). These two buffers (`desired_x`, `desired_y`) are **new** SoA buffers,
-temporary and recomputed every simStep.
+temporary and recomputed every sim.step.
 
 A subsequent movement resolution kernel then applies the atomic-CAS pattern of
 Section 9.1.
@@ -757,10 +757,10 @@ kernel. No cross-agent ordering is defined, nor needed.
 
 ## 12. Simulation Loop — Kernel Breakdown
 
-### 12.1 Kernel pipeline per simStep
+### 12.1 Kernel pipeline per sim.step
 
 ```
-for simStep in 0..stepsPerGeneration:
+for sim.step in 0..stepsPerGeneration:
 
     // ALL KERNELS launched on the full population (or full grid for per-cell ones)
 
@@ -813,12 +813,12 @@ for simStep in 0..stepsPerGeneration:
         [complex relational challenges may still run on host — see Section 13.2]
 ```
 
-**Total: 5 kernel launches per simStep.** Each launch has a fixed per-launch
+**Total: 5 kernel launches per sim.step.** Each launch has a fixed per-launch
 overhead (roughly 5–20 µs depending on driver). With `stepsPerGeneration = 500`,
 that's 2,500–10,000 launches per generation — manageable but not free. Step 2
 can consider fusing K2+K3 or K1+K2 if launch overhead becomes a measurable cost.
 
-### 12.2 What the host still does per simStep
+### 12.2 What the host still does per sim.step
 
 Ideally: **nothing.** All five kernels are submitted back-to-back into the same
 command queue with implicit ordering. The host does not block between them. The
@@ -831,7 +831,7 @@ rule.
 
 ### 12.3 Opportunities unlocked
 
-- No per-simStep host work means no PCIe traffic for 500 simSteps.
+- No per-sim.step host work means no PCIe traffic for 500 sim.steps.
 - Kernel boundaries are the only synchronization needed, and they are free (the
   driver handles them).
 - Each kernel has a coherent, focused job — easier to profile and optimize
@@ -859,7 +859,7 @@ At the end of generation `g`:
 - The operations are irregular: variable-length copying of genes, mutation that
   may change genome length, culling that builds a graph and topologically sorts
   it.
-- The work is comparable in cost to a handful of simSteps. Migrating it later is
+- The work is comparable in cost to a handful of sim.steps. Migrating it later is
   an optimization, not a correctness issue.
 - Host-side code can reuse the existing, tested logic from `genome.cpp` and
   `spawnNewGeneration.cpp` almost unchanged.
@@ -879,7 +879,7 @@ without changing the first-cut behavior.
 
 For `N = 4096`, `GENOME_MAX_LENGTH = 256`, 4 bytes per gene: 4 MiB per direction
 per generation. Over PCIe Gen4 (~16 GB/s effective), that's ~0.5 ms per
-direction. Negligible compared to a generation's worth of simSteps.
+direction. Negligible compared to a generation's worth of sim.steps.
 
 ### 13.5 Opportunities unlocked
 
@@ -904,7 +904,7 @@ direction. Negligible compared to a generation's worth of simSteps.
 | RNG | Per-agent xorshift64 in SoA | Different RNG sequence per agent | None (possibly positive vs global RNG) |
 | Reproduction | Unchanged, stays on host | None | None |
 | Per-agent sorting by genome length | New step at generation boundary | None (agent index reshuffling invisible to the simulation) | Positive (warp coherence) |
-| Per-agent sorting by spatial position (optional) | New step each N simSteps | None | Positive (signal emit locality, fingerprint locality) |
+| Per-agent sorting by spatial position (optional) | New step each N sim.steps | None | Positive (signal emit locality, fingerprint locality) |
 
 ## 15. Memory Budget Estimate
 
@@ -971,7 +971,7 @@ re-framed against the new architecture.
     async transfers overlapping with reproduction compute, persistent
     device-side storage layouts.
 
-11. **Per-simStep host flow.** Command queue construction, profiling events,
+11. **Per-sim.step host flow.** Command queue construction, profiling events,
     debugging without per-step readbacks.
 
 **End of Step 1 design document.** Next, pick any constraint from Section 16 (or

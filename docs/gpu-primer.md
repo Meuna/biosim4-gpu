@@ -180,7 +180,7 @@ so this is fine.
 
 Anything stored in host RAM must cross PCIe (or NVLink, or integrated memory)
 to reach the GPU. This is the highest-latency, lowest-bandwidth link in the
-system. **Every simStep that transfers data is a performance death sentence.**
-The design keeps all per-simStep state resident on the GPU for the whole
+system. **Every sim.step that transfers data is a performance death sentence.**
+The design keeps all per-sim.step state resident on the GPU for the whole
 generation. Only at the generation boundary does the host read back survivor
 data and write the new population.
