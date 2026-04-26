@@ -68,7 +68,8 @@ typedef struct {
     uint32_t step;       /* step index within the current generation */
     uint32_t gen;        /* generation index (0-based) */
     float mutation_rate; /* per-gene point-mutation probability */
-    uint64_t gen_rng;    /* RNG state for generation-boundary operations */
+    uint64_t gen_rng;    /* RNG state for generation-boundary operations;
+                          * must be initialised before biosim_sim_create() */
 
     /* ── simulation resources ────────────────────────────────────────────────
      * Allocated by biosim_sim_create(); released by biosim_sim_free().*/

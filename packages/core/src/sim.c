@@ -20,7 +20,6 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
     const int16_t size_y = sim->size_y;
     const uint16_t max_gen_len = sim->max_gen_len;
     const uint8_t max_neurons = sim->max_neurons;
-    const uint8_t long_probe_dist = sim->long_probe_dist;
 
     sim->kills = 0;
 
@@ -74,27 +73,10 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
         return BIOSIM_ERR_NOMEM;
     }
 
-    for (uint32_t i = 0; i < pop; i++) {
-        uint64_t rng = biosim_rng_seed(i, 0);
-
-        biosim_genome_init_slot(&sim->genome, i, max_gen_len, &rng);
-        biosim_nnet_compile_slot(&sim->nnet, &sim->genome, i, BIOSIM_NUM_SENSORS,
-                                 BIOSIM_NUM_ACTIONS);
-
-        biosim_coord_t loc;
-        st = biosim_grid_find_empty(&sim->grid, &rng, &loc);
-        if (st != BIOSIM_OK) {
-            biosim_sim_free(sim);
-            return st;
-        }
-
-        biosim_agents_init_slot(&sim->agents, i, loc, long_probe_dist, 0);
-        /* Overwrite the seed stored by init_slot with the already-advanced rng,
-         * preserving continuity across genome init and grid placement. */
-        sim->agents.rng_state[i] = rng;
-
-        biosim_grid_set(&sim->grid, loc, (uint16_t)(i + 1U));
-        sim->agents.genome_fingerprint[i] = biosim_nnet_fingerprint(&sim->nnet, i);
+    st = biosim_gen_init_random(sim);
+    if (st != BIOSIM_OK) {
+        biosim_sim_free(sim);
+        return st;
     }
 
     return BIOSIM_OK;
@@ -194,7 +176,11 @@ void biosim_sim_next_generation(biosim_sim_t *sim, biosim_gen_stats_t *stats) {
         n_survivors = biosim_gen_collect_survivors(sim, survivors, stats);
     }
 
-    biosim_gen_reproduce(sim, survivors, n_survivors);
+    if (n_survivors > 0) {
+        (void)biosim_gen_reproduce(sim, survivors, n_survivors);
+    } else {
+        (void)biosim_gen_init_random(sim);
+    }
     free(survivors);
 
     sim->kills = 0;
