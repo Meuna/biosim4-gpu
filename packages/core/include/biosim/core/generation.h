@@ -9,13 +9,11 @@
 #include <stdint.h>
 
 /*
- * Evaluate the challenge for every alive agent, collect passing indices into
- * survivors[], and fill all biosim_gen_stats_t fields.
- * survivors must point to a caller-allocated array with at least pop elements.
- * Returns the number of survivors found.
+ * Evaluate the challenge for every alive agent and collect passing indices into
+ * survivors[]. survivors must point to a caller-allocated array with at least
+ * pop elements. Returns the number of survivors found.
  */
-uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
-                                             biosim_gen_stats_t *stats);
+uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors);
 
 /*
  * Initialise the full population from scratch: clear non-barrier grid cells

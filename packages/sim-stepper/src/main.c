@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "biosim/core/census.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
 #include "biosim/params/barriers.h"
@@ -37,20 +38,6 @@ static const biosim_param_entry_t sim_params[] = {
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))
-
-/* ── statistics printing ────────────────────────────────────────────────── */
-
-static void print_stats_header(void) {
-    (void)printf("%5s %7s %7s %6s %8s %8s %7s %9s\n", "gen", "surv", "kills", "surv%", "glen.m",
-                 "glen.s", "pdiv%", "score.m");
-}
-
-static void print_stats(const biosim_gen_stats_t *s) {
-    (void)printf("%5u %7u %7u %5.1f%% %8.2f %8.2f %6.1f%% %9.4f\n", s->gen, s->survivors, s->kills,
-                 (double)(s->survival_rate * 100.0F), (double)s->genome_len_mean,
-                 (double)s->genome_len_std, (double)(s->phenotype_div * 100.0F),
-                 (double)s->score_mean);
-}
 
 /* ── entry point ────────────────────────────────────────────────────────── */
 
@@ -114,7 +101,7 @@ int main(int argc, char **argv) {
 
     const int max_gens = biosim_params_get_int(&p, "max-generations");
 
-    print_stats_header();
+    biosim_census_print_header(stdout);
     for (int g = 0; g < max_gens; g++) {
         for (int s = 0; s < sim.steps_per_gen; s++) {
             for (uint32_t i = 0; i < sim.agents.population; i++) {
@@ -125,9 +112,9 @@ int main(int argc, char **argv) {
             }
             biosim_sim_next_step(&sim);
         }
-        biosim_gen_stats_t stats;
-        biosim_sim_next_generation(&sim, &stats);
-        print_stats(&stats);
+        biosim_census_t census;
+        biosim_sim_next_generation(&sim, &census);
+        biosim_census_print(stdout, &census);
     }
 
     biosim_sim_free(&sim);

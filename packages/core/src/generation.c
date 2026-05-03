@@ -8,26 +8,14 @@
 #include "biosim/core/types.h"
 
 #include <assert.h>
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* ── survivor collection ────────────────────────────────────────────────── */
 
-static int cmp_u64(const void *a, const void *b) {
-    uint64_t x = *(const uint64_t *)a;
-    uint64_t y = *(const uint64_t *)b;
-    return (x > y) - (x < y);
-}
-
-uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
-                                             biosim_gen_stats_t *stats) {
+uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors) {
     const uint32_t pop = sim->agents.population;
-
     uint32_t n = 0;
-    double score_sum = 0.0;
-    double len_sum = 0.0;
-    double len_sq = 0.0;
 
     for (uint32_t i = 0; i < pop; i++) {
         if (!sim->agents.alive[i]) {
@@ -38,54 +26,6 @@ uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *surviv
             continue;
         }
         survivors[n++] = i;
-        score_sum += (double)r.score;
-        double glen = (double)sim->genome.length[i];
-        len_sum += glen;
-        len_sq += glen * glen;
-    }
-
-    stats->gen = sim->gen;
-    stats->population = pop;
-    stats->survivors = n;
-    stats->kills = sim->kills;
-    stats->survival_rate = (float)n / (float)pop;
-
-    if (n == 0) {
-        stats->genome_len_mean = 0.0F;
-        stats->genome_len_std = 0.0F;
-        stats->unique_phenotypes = 0;
-        stats->phenotype_div = 0.0F;
-        stats->score_mean = 0.0F;
-        return 0;
-    }
-
-    double dn = (double)n;
-    stats->genome_len_mean = (float)(len_sum / dn);
-    stats->score_mean = (float)(score_sum / dn);
-
-    double mean = len_sum / dn;
-    double var = (len_sq / dn) - (mean * mean);
-    stats->genome_len_std = (var > 0.0) ? (float)sqrt(var) : 0.0F;
-
-    /* phenotype diversity: sort fingerprints of survivors, count distinct */
-    uint64_t *fps = malloc(n * sizeof(uint64_t));
-    if (fps != NULL) {
-        for (uint32_t j = 0; j < n; j++) {
-            fps[j] = sim->agents.genome_fingerprint[survivors[j]];
-        }
-        qsort(fps, (size_t)n, sizeof(uint64_t), cmp_u64);
-        uint32_t unique = 1;
-        for (uint32_t j = 1; j < n; j++) {
-            if (fps[j] != fps[j - 1]) {
-                unique++;
-            }
-        }
-        free(fps);
-        stats->unique_phenotypes = unique;
-        stats->phenotype_div = (float)unique / (float)n;
-    } else {
-        stats->unique_phenotypes = 0;
-        stats->phenotype_div = 0.0F;
     }
 
     return n;

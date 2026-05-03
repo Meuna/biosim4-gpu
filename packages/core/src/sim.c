@@ -1,5 +1,6 @@
 #include "biosim/core/sim.h"
 
+#include "biosim/core/census.h"
 #include "biosim/core/challenges.h"
 #include "biosim/core/generation.h"
 #include "biosim/core/io_catalogue.h"
@@ -163,18 +164,16 @@ void biosim_sim_next_step(biosim_sim_t *sim) {
 
 /* ── per-generation ─────────────────────────────────────────────────────── */
 
-void biosim_sim_next_generation(biosim_sim_t *sim, biosim_gen_stats_t *stats) {
+void biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out) {
     const uint32_t pop = sim->agents.population;
-
-    memset(stats, 0, sizeof(*stats));
-    stats->gen = sim->gen;
-    stats->population = pop;
 
     uint32_t *survivors = malloc(pop * sizeof(uint32_t));
     uint32_t n_survivors = 0;
     if (survivors != NULL) {
-        n_survivors = biosim_generation_collect_survivors(sim, survivors, stats);
+        n_survivors = biosim_generation_collect_survivors(sim, survivors);
     }
+
+    biosim_census_take(sim, survivors, n_survivors, out);
 
     if (n_survivors > 0) {
         (void)biosim_generation_reproduce(sim, survivors, n_survivors);

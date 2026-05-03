@@ -1,8 +1,9 @@
 add_library(core STATIC
   src/barriers.c
+  src/census.c
   src/challenges.c
-  src/sim.c
   src/generation.c
+  src/sim.c
   src/grid.c
   src/rng.c
   src/agents.c
