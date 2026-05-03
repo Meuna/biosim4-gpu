@@ -44,11 +44,13 @@ typedef struct {
 
     /* ── generation state ────────────────────────────────────────────────────
      * Managed by biosim_challenge_step() and biosim_sim_advance_gen(). */
-    uint32_t step;       /* step index within the current generation */
-    uint32_t gen;        /* generation index (0-based) */
-    float mutation_rate; /* per-gene point-mutation probability */
-    uint64_t gen_rng;    /* RNG state for generation-boundary operations;
-                          * must be initialised before biosim_sim_create() */
+    uint32_t step;                  /* step index within the current generation */
+    uint32_t gen;                   /* generation index (0-based) */
+    float mutation_rate;            /* per-gene point-mutation probability */
+    bool sexual_reproduction;       /* use two-parent crossover; default false */
+    bool choose_parents_by_fitness; /* bias toward high-score survivors; default false */
+    uint64_t gen_rng;               /* RNG state for generation-boundary operations;
+                                     * must be initialised before biosim_sim_create() */
 
     /* ── simulation resources ────────────────────────────────────────────────
      * Allocated by biosim_sim_create(); released by biosim_sim_free().*/
@@ -90,8 +92,12 @@ void biosim_sim_next_step(biosim_sim_t *sim);
 
 /*
  * Advance one generation: evaluate the challenge for all alive agents, collect
- * statistics, reproduce survivors (asexual: copy + mutate), recompile neural
- * networks, and respawn the full population on the grid.
+ * statistics, reproduce survivors, recompile neural networks, and respawn the
+ * full population on the grid.
+ *
+ * Reproduction mode is controlled by sim->sexual_reproduction (two-parent
+ * crossover vs. single-parent copy) and sim->choose_parents_by_fitness
+ * (score-biased vs. uniform random parent selection).
  *
  * After the call: sim->step is reset to 0 and sim->gen is incremented.
  * out receives the census taken from the just-completed generation.

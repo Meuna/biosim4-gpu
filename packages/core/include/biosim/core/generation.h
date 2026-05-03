@@ -10,10 +10,11 @@
 
 /*
  * Evaluate the challenge for every alive agent and collect passing indices into
- * survivors[]. survivors must point to a caller-allocated array with at least
- * pop elements. Returns the number of survivors found.
+ * survivors[], with the corresponding fitness score (0..1) into scores[].
+ * Both arrays must each point to a caller-allocated buffer with at least
+ * sim->agents.population elements. Returns the number of survivors found.
  */
-uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors);
+uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors, float *scores);
 
 /*
  * Initialise the full population from scratch: clear non-barrier grid cells
@@ -25,14 +26,18 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim);
 
 /*
  * Reproduce: clear the grid, snapshot survivor genomes, repopulate every slot
- * by copying a random survivor genome (with mutation), recompile neural
+ * with genomes derived from survivor parents (with mutation), recompile neural
  * networks, and place agents on the grid.
+ *
+ * scores[] is the parallel fitness array from biosim_generation_collect_survivors.
+ * It is used when sim->choose_parents_by_fitness is true (score-biased selection).
+ * sim->sexual_reproduction controls whether crossover is applied.
  *
  * Precondition: n_survivors > 0.
  * If the internal genome snapshot allocation fails, falls back to
  * biosim_generation_init_random automatically.
  */
-biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, const uint32_t *survivors,
+biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivors, float *scores,
                                             uint32_t n_survivors);
 
 #endif /* BIOSIM_CORE_GENERATION_H */

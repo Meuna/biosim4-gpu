@@ -168,19 +168,21 @@ void biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out) {
     const uint32_t pop = sim->agents.population;
 
     uint32_t *survivors = malloc(pop * sizeof(uint32_t));
+    float *scores = malloc(pop * sizeof(float));
     uint32_t n_survivors = 0;
-    if (survivors != NULL) {
-        n_survivors = biosim_generation_collect_survivors(sim, survivors);
+    if (survivors != NULL && scores != NULL) {
+        n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
     }
 
     biosim_census_take(sim, survivors, n_survivors, out);
 
     if (n_survivors > 0) {
-        (void)biosim_generation_reproduce(sim, survivors, n_survivors);
+        (void)biosim_generation_reproduce(sim, survivors, scores, n_survivors);
     } else {
         (void)biosim_generation_init_random(sim);
     }
     free(survivors);
+    free(scores);
 
     sim->kills = 0;
     sim->step = 0;

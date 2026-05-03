@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Sexual reproduction** (`core/generation.c`, `sim-stepper`): two new boolean
+  parameters gate reproduction behaviour:
+  - `[genome] sexual-reproduction` (default `false`): when true, each offspring
+    genome is produced by single-point crossover of two parent genomes instead of
+    copying a single parent.  The crossover logic mirrors `biosim_genome_crossover`
+    but operates directly on the pre-generation snapshot buffers.
+  - `[genome] choose-parents-by-fitness` (default `false`): when true, survivors
+    are sorted by challenge score (descending) before selection, and parents are
+    drawn with a harmonic bias toward higher-scoring candidates.  The selection
+    distribution follows the reference (`biosim4`) algorithm: one parent index
+    drawn uniformly from `[1, n-1]`, the other from `[0, first-1]`.
+  - Both parameters default to `false`; all existing simulation behaviour is
+    unchanged unless explicitly enabled.
+  - `biosim_generation_collect_survivors` now also fills a parallel `float *scores`
+    array; `biosim_generation_reproduce` accepts it to support fitness-biased
+    selection.
+
 ### Fixed
 - **`KILL_FORWARD` corpse bug** (`core/io_catalogue.c`): when `KILL_FORWARD` killed
   an agent it set `alive[B] = 0` but left the dead agent's grid cell occupied.

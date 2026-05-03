@@ -19,6 +19,8 @@ static const biosim_param_entry_t sim_params[] = {
     {"max-genome-length",        "genome",     {.i = 24},        PARAM_INT,    false, true, "max-genome-len", NULL},
     {"max-neurons",              "genome",     {.i = 5},         PARAM_INT,    false, true, "max-neurons",    NULL},
     {"point-mutation-rate",      "genome",     {.f = 0.001},     PARAM_FLOAT,  false, true, "point-mut-rate", NULL},
+    {"sexual-reproduction",      "genome",     {.b = false},     PARAM_BOOL,   false, true, NULL,             NULL},
+    {"choose-parents-by-fitness","genome",     {.b = false},     PARAM_BOOL,   false, true, NULL,             NULL},
     {"long-probe-dist",          "sensors",    {.i = 16},        PARAM_INT,    false, true, NULL,             NULL},
     {"population-sensor-radius", "sensors",    {.i = 2},         PARAM_INT,    false, true, NULL,             NULL},
     {"kind",                     "challenge",  {.s = "x_band"},  PARAM_STRING, false, true, NULL,             NULL},
@@ -89,6 +91,8 @@ int main(int argc, char **argv) {
     sim.challenge = challenge;
     sim.enable_kill = biosim_params_get_bool(&p, "enable-kill");
     sim.mutation_rate = (float)biosim_params_get_float(&p, "point-mutation-rate");
+    sim.sexual_reproduction = biosim_params_get_bool(&p, "sexual-reproduction");
+    sim.choose_parents_by_fitness = biosim_params_get_bool(&p, "choose-parents-by-fitness");
     sim.gen_rng = biosim_rng_seed(0, 1);
 
     st = biosim_sim_create(&sim, barriers, n_barriers);

@@ -13,7 +13,8 @@
 
 /* ── survivor collection ────────────────────────────────────────────────── */
 
-uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors) {
+uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
+                                             float *scores) {
     const uint32_t pop = sim->agents.population;
     uint32_t n = 0;
 
@@ -25,7 +26,9 @@ uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *surviv
         if (!r.passed) {
             continue;
         }
-        survivors[n++] = i;
+        survivors[n] = i;
+        scores[n] = r.score;
+        n++;
     }
 
     return n;
@@ -126,7 +129,116 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
     }
 }
 
-biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, const uint32_t *survivors,
+/*
+ * Single-point crossover directly from snapshot temp buffers into a live
+ * genome slot.  Mirrors biosim_genome_crossover semantics: crossover point k
+ * in [0, min(len_a, len_b)]; child gets genes [0..k) from pa_s and [k..len_b)
+ * from pb_s; child length = pb_s length (capped at max_length).
+ */
+static void crossover_from_snapshot(biosim_genome_t *genome, uint32_t dst,
+                                    const uint16_t *temp_conn, const int16_t *temp_wgt,
+                                    const uint16_t *temp_len, uint32_t pa_s, uint32_t pb_s,
+                                    uint64_t *rng) {
+    const uint32_t pop = genome->population;
+    const uint16_t max_len = genome->max_length;
+    const uint32_t len_a = temp_len[pa_s];
+    const uint32_t len_b = temp_len[pb_s];
+    const uint32_t min_len = len_a < len_b ? len_a : len_b;
+    const uint32_t k = (uint32_t)(biosim_rng_next(rng) % ((uint64_t)min_len + 1ULL));
+    const uint32_t child_len = len_b < (uint32_t)max_len ? len_b : (uint32_t)max_len;
+
+    for (uint32_t j = 0; j < k; j++) {
+        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pa_s * max_len + j];
+        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pa_s * max_len + j];
+    }
+    for (uint32_t j = k; j < child_len; j++) {
+        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pb_s * max_len + j];
+        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pb_s * max_len + j];
+    }
+    genome->length[dst] = (uint16_t)child_len;
+}
+
+/*
+ * Select one or two parent snapshot indices.
+ *
+ * When by_fitness && n_survivors > 1:
+ *   pa drawn uniformly from [1, n-1]; pb drawn from [0, pa-1] — harmonically
+ *   biased toward 0 (best score after sort).  Mirrors the reference algorithm.
+ * When !by_fitness: pa and pb drawn uniformly from [0, n-1].
+ * When !sexual: only pb is used by the caller; pa is still computed to keep
+ *   the RNG sequence consistent when by_fitness is true.
+ */
+static void select_parents(uint32_t n_survivors, bool by_fitness, bool sexual, uint64_t *rng,
+                           uint32_t *pa_out, uint32_t *pb_out) {
+    if (by_fitness && n_survivors > 1) {
+        uint32_t pa = 1U + (uint32_t)(biosim_rng_next(rng) % (uint64_t)(n_survivors - 1U));
+        uint32_t pb = (uint32_t)(biosim_rng_next(rng) % (uint64_t)pa);
+        *pa_out = pa;
+        *pb_out = pb;
+    } else {
+        *pa_out = (uint32_t)(biosim_rng_next(rng) % (uint64_t)n_survivors);
+        if (sexual) {
+            *pb_out = (uint32_t)(biosim_rng_next(rng) % (uint64_t)n_survivors);
+        } else {
+            *pb_out = *pa_out;
+        }
+    }
+}
+
+/* Materialise a child genome from the snapshot: crossover (sexual) or copy (asexual). */
+static void materialize_child(biosim_genome_t *genome, uint32_t dst, const uint16_t *tc,
+                              const int16_t *tw, const uint16_t *tl, uint32_t pa, uint32_t pb,
+                              bool sexual, uint64_t *rng) {
+    if (sexual) {
+        crossover_from_snapshot(genome, dst, tc, tw, tl, pa, pb, rng);
+    } else {
+        restore_genome_slot(genome, dst, tc, tw, tl, pb);
+    }
+}
+
+/* ── survivor sorting ───────────────────────────────────────────────────── */
+
+typedef struct {
+    uint32_t idx;
+    float score;
+} survivor_entry_t;
+
+static int cmp_survivor_desc(const void *a, const void *b) {
+    const survivor_entry_t *ea = (const survivor_entry_t *)a;
+    const survivor_entry_t *eb = (const survivor_entry_t *)b;
+    if (eb->score > ea->score) {
+        return 1;
+    }
+    if (eb->score < ea->score) {
+        return -1;
+    }
+    return 0;
+}
+
+/*
+ * Sort survivors[] and scores[] together by score descending so that index 0
+ * holds the highest-scoring parent.  Falls back silently if malloc fails.
+ */
+static void sort_survivors_by_score(uint32_t *survivors, float *scores, uint32_t n) {
+    survivor_entry_t *tmp = malloc((size_t)n * sizeof(survivor_entry_t));
+    if (!tmp) {
+        return;
+    }
+    for (uint32_t i = 0; i < n; i++) {
+        tmp[i].idx = survivors[i];
+        tmp[i].score = scores[i];
+    }
+    qsort(tmp, (size_t)n, sizeof(survivor_entry_t), cmp_survivor_desc);
+    for (uint32_t i = 0; i < n; i++) {
+        survivors[i] = tmp[i].idx;
+        scores[i] = tmp[i].score;
+    }
+    free(tmp);
+}
+
+/* ── main reproduce entry point ─────────────────────────────────────────── */
+
+biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivors, float *scores,
                                             uint32_t n_survivors) {
     assert(n_survivors > 0);
 
@@ -138,6 +250,13 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, const uint32_t *s
     const uint32_t pop = agents->population;
     const uint16_t max_len = genome->max_length;
     const uint8_t long_probe_dist = sim->long_probe_dist;
+    const bool sexual = sim->sexual_reproduction;
+    const bool by_fitness = sim->choose_parents_by_fitness;
+
+    /* Sort before snapshot so the temp buffers are already in score order. */
+    if (by_fitness && n_survivors > 1) {
+        sort_survivors_by_score(survivors, scores, n_survivors);
+    }
 
     clear_agents_from_grid(sim);
 
@@ -158,8 +277,10 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, const uint32_t *s
     const uint64_t gen_seed = biosim_rng_next(&sim->gen_rng);
 
     for (uint32_t i = 0; i < pop; i++) {
-        uint32_t parent_s = (uint32_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)n_survivors);
-        restore_genome_slot(genome, i, temp_conn, temp_wgt, temp_len, parent_s);
+        uint32_t pa;
+        uint32_t pb;
+        select_parents(n_survivors, by_fitness, sexual, &sim->gen_rng, &pa, &pb);
+        materialize_child(genome, i, temp_conn, temp_wgt, temp_len, pa, pb, sexual, &sim->gen_rng);
         biosim_genome_mutate(genome, i, sim->mutation_rate, &sim->gen_rng);
 
         biosim_nnet_compile_slot(nnet, genome, i, BIOSIM_NUM_SENSORS, BIOSIM_NUM_ACTIONS);
