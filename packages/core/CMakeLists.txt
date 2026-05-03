@@ -2,7 +2,6 @@ add_library(core STATIC
   src/barriers.c
   src/challenges.c
   src/sim.c
-  src/core.c
   src/generation.c
   src/grid.c
   src/rng.c
