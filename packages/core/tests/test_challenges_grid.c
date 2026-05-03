@@ -260,7 +260,7 @@ void test_near_barrier_no_barriers_fails(void) {
     TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
-/* ── Runner ──────────────────────────────────────────────────────────────── */
+/* ── runner ──────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

@@ -420,21 +420,21 @@ exactly one agent.
 for generation in 0..maxGenerations:
     for simStep in 0..stepsPerGeneration:
 
-        // ── PARALLEL PHASE ──────────────────────────────────────
+        /* ── PARALLEL PHASE ───────────────────────────────────── */
         #pragma omp for
         for each alive Indiv in peeps.individuals[1..population]:
             indiv.age++
             actionVec = indiv.feedForward(simStep)  // reads: genome, nnet, grid, signals
             executeActions(indiv, actionVec)         // writes: self fields, queues, signals
 
-        // ── SEQUENTIAL PHASE ────────────────────────────────────
+        /* ── SEQUENTIAL PHASE ─────────────────────────────────── */
         #pragma omp single
         peeps.drainMoveQueue()    // writes: grid, Indiv.loc, Indiv.lastMoveDir
         peeps.drainDeathQueue()   // writes: grid, Indiv.alive
         evaluateChallenges()      // may write: Indiv.challengeBits, deathQueue
         signals.fade(0)           // writes: all signal cells
 
-    // ── GENERATION END (SEQUENTIAL) ─────────────────────────────
+    /* ── GENERATION END (SEQUENTIAL) ──────────────────────────── */
     endOfGeneration()             // video / logging only
     spawnNewGeneration()          // rebuild all Indiv from survivor genomes
 ```

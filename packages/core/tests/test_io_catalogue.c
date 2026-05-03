@@ -580,7 +580,7 @@ void test_finalize_strong_north_steps_one_cell(void) {
     TEST_ASSERT_EQUAL_INT16(start_y - 1, sim.agents.desired_y[0]);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

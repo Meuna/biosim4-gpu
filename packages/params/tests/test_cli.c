@@ -22,7 +22,7 @@ void tearDown(void) {
     biosim_params_free(&p);
 }
 
-/* ── Pass 1: defaults ──────────────────────────────────────────────────── */
+/* ── pass 1: defaults ──────────────────────────────────────────────────── */
 
 void test_defaults(void) {
     TEST_ASSERT_EQUAL_STRING("default", biosim_params_get_string(&p, "toplevel-param"));
@@ -30,7 +30,7 @@ void test_defaults(void) {
     TEST_ASSERT_EQUAL_INT(2222, biosim_params_get_int(&p, "flag-param"));
 }
 
-/* ── Pass 2: TOML file only ────────────────────────────────────────────── */
+/* ── pass 2: toml file only ────────────────────────────────────────────── */
 
 void test_toml_file_sets_values(void) {
     char *argv[] = {"test-prog", "--config", TEST_FIXTURES_DIR "/basic.toml", NULL};
@@ -39,7 +39,7 @@ void test_toml_file_sets_values(void) {
     TEST_ASSERT_EQUAL_INT(3333, biosim_params_get_int(&p, "table-param"));
 }
 
-/* ── Pass 3: CLI flags only ────────────────────────────────────────────── */
+/* ── pass 3: cli flags only ────────────────────────────────────────────── */
 
 void test_cli_sets_values(void) {
     char *argv[] = {"test-prog", "--toplevel-param", "from-cli", "--test-table-table-param", "4444",
@@ -49,7 +49,7 @@ void test_cli_sets_values(void) {
     TEST_ASSERT_EQUAL_INT(4444, biosim_params_get_int(&p, "table-param"));
 }
 
-/* ── Precedence: CLI overrides TOML ────────────────────────────────────── */
+/* ── precedence: cli overrides TOML ────────────────────────────────────── */
 
 void test_cli_overrides_toml(void) {
     char *argv[] = {"test-prog",
@@ -65,7 +65,7 @@ void test_cli_overrides_toml(void) {
     TEST_ASSERT_EQUAL_INT(5555, biosim_params_get_int(&p, "table-param"));
 }
 
-/* ── Short flag ────────────────────────────────────────────────────────── */
+/* ── short flag ────────────────────────────────────────────────────────── */
 
 void test_cli_short_flag(void) {
     char *argv[] = {"test-prog", "-s", "6666", NULL};
@@ -87,7 +87,7 @@ void test_bad_path_returns_notfound(void) {
     TEST_ASSERT_EQUAL(BIOSIM_ERR_NOTFOUND, st);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

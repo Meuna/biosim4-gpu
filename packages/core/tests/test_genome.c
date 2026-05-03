@@ -12,7 +12,7 @@ void tearDown(void) {
     biosim_genome_free(&g);
 }
 
-/* ── Lifecycle ──────────────────────────────────────────────────────────── */
+/* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 void test_create_returns_ok(void) {
     biosim_genome_t local;
@@ -39,7 +39,7 @@ void test_free_zeroes_struct(void) {
     TEST_ASSERT_EQUAL_UINT32(0, local.population);
 }
 
-/* ── Slot Operations ────────────────────────────────────────────────────── */
+/* ── slot operations ────────────────────────────────────────────────────── */
 
 void test_init_slot_sets_length(void) {
     uint64_t rng = 42ULL;
@@ -74,7 +74,7 @@ void test_copy_slot_independence(void) {
     TEST_ASSERT_EQUAL_UINT16(original, g.conn[0 * g.population + 0]);
 }
 
-/* ── Mutation ───────────────────────────────────────────────────────────── */
+/* ── mutation ───────────────────────────────────────────────────────────── */
 
 void test_mutate_rate_zero_unchanged(void) {
     uint64_t rng = 11ULL;
@@ -116,7 +116,7 @@ void test_mutate_length_never_exceeds_max(void) {
     }
 }
 
-/* ── Crossover ──────────────────────────────────────────────────────────── */
+/* crossover ──────────────────────────────────────────────────────────── */
 
 void test_crossover_child_length_equals_parent_b(void) {
     uint64_t rng_a = 5ULL;
@@ -159,7 +159,7 @@ void test_crossover_child_has_parents_genome(void) {
     }
 }
 
-/* ── Sort ───────────────────────────────────────────────────────────────── */
+/* ── sort ───────────────────────────────────────────────────────────────── */
 
 void test_sort_descending_order(void) {
     uint64_t rng = 37ULL;
@@ -216,7 +216,7 @@ void test_sort_preserves_genes(void) {
     TEST_ASSERT_EQUAL_INT16(saved_wgt, g.wgt[0 * g.population + new_pos]);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

@@ -22,7 +22,7 @@ void tearDown(void) {
     biosim_params_free(&p);
 }
 
-/* ── Tests ──────────────────────────────────────────────────────────────── */
+/* ── tests ──────────────────────────────────────────────────────────────── */
 
 void test_init_default(void) {
     TEST_ASSERT_EQUAL_INT(3000, biosim_params_get_int(&p, "population"));
@@ -86,7 +86,7 @@ void test_unknown_key_returns_warn(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_WARN_UNKNOWN_KEY, st);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

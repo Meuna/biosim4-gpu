@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* ── RNG helpers ────────────────────────────────────────────────────────── */
+/* ── rng helpers ────────────────────────────────────────────────────────── */
 
 /* Return a random int in [lo, hi] inclusive. */
 static int rand_range_i(uint64_t *rng, int lo, int hi) {
@@ -29,7 +29,7 @@ static int16_t clamp_i(int16_t v, int16_t lo, int16_t hi) {
     return v;
 }
 
-/* ── Shape helpers ──────────────────────────────────────────────────────── */
+/* ── shape helpers ──────────────────────────────────────────────────────── */
 
 static void fill_box(biosim_grid_t *grid, int16_t x0, int16_t y0, int16_t x1, int16_t y1) {
     x0 = clamp_i(x0, 0, (int16_t)(grid->size_x - 1));

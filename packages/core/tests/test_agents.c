@@ -18,7 +18,7 @@ static biosim_coord_t coord(int16_t x, int16_t y) {
     return c;
 }
 
-/* ── Lifecycle ──────────────────────────────────────────────────────────── */
+/* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 void test_create_returns_ok(void) {
     biosim_agents_t a;
@@ -107,7 +107,7 @@ void test_uninitialised_slots_unaffected(void) {
     TEST_ASSERT_EQUAL_UINT8(0, agents.alive[3]);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

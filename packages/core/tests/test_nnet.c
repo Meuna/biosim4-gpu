@@ -30,7 +30,7 @@ void tearDown(void) {
     biosim_genome_free(&genome);
 }
 
-/* ── Lifecycle ──────────────────────────────────────────────────────────── */
+/* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 void test_create_returns_ok(void) {
     biosim_nnet_t local;
@@ -61,7 +61,7 @@ void test_free_zeroes_struct(void) {
     TEST_ASSERT_EQUAL_UINT32(0, local.population);
 }
 
-/* ── Empty and Trivial Genomes ──────────────────────────────────────────── */
+/* ── empty and trivial genomes ──────────────────────────────────────────── */
 
 void test_empty_genome_zero_connections(void) {
     genome.length[AGENT_IDX] = 0;
@@ -81,7 +81,7 @@ void test_all_self_loops_culled(void) {
     TEST_ASSERT_EQUAL_UINT8(0, nnet.neuron_count[AGENT_IDX]);
 }
 
-/* ── Sensor-to-Action ───────────────────────────────────────────────────── */
+/* ── sensor-to-action ───────────────────────────────────────────────────── */
 
 void test_sensor_to_action_direct(void) {
     /* SENSOR 0 → ACTION 0: one connection, no internal neurons */
@@ -105,7 +105,7 @@ void test_sensor_to_action_correct_packed_bits(void) {
     TEST_ASSERT_EQUAL_INT16(200, nnet.genome_wgt[0 * CAP + AGENT_IDX]);
 }
 
-/* ── Alive Neuron ───────────────────────────────────────────────────────── */
+/* ── alive neuron ───────────────────────────────────────────────────────── */
 
 void test_one_neuron_alive(void) {
     /* SENSOR 0 → NEURON 0, NEURON 0 → ACTION 0 */
@@ -146,7 +146,7 @@ void test_neuron_output_zeroed(void) {
     TEST_ASSERT_EQUAL_FLOAT(0.0F, nnet.neuron_output[0 * CAP + AGENT_IDX]);
 }
 
-/* ── Dead Neuron Culling ────────────────────────────────────────────────── */
+/* ── dead neuron culling ────────────────────────────────────────────────── */
 
 void test_no_input_neuron_culled(void) {
     /* NEURON 0 → ACTION 0 only: N0 has output but no input → dead */
@@ -191,7 +191,7 @@ void test_indirect_output_path_alive(void) {
     TEST_ASSERT_EQUAL_UINT16(3, nnet.conn_length[AGENT_IDX]);
 }
 
-/* ── Neuron Renumbering ──────────────────────────────────────────────────── */
+/* ── neuron renumbering ──────────────────────────────────────────────────── */
 
 void test_renumber_gap_filled(void) {
     /* N0 alive (S0→N0, N0→A0), N1 unreferenced (dead), N2 alive (S0→N2, N2→A0).
@@ -229,7 +229,7 @@ void test_remapped_sink_num(void) {
     TEST_ASSERT_EQUAL_UINT8(0, BIOSIM_GENE_SINK_NUM(neuron_conn));
 }
 
-/* ── Modulo Remapping ───────────────────────────────────────────────────── */
+/* ── modulo remapping ───────────────────────────────────────────────────── */
 
 void test_src_sensor_modulo(void) {
     /* Raw srcNum=5, num_sensors=4: 5%4=1.
@@ -281,7 +281,7 @@ void test_sink_neuron_modulo(void) {
     TEST_ASSERT_EQUAL_UINT16(2, nnet.conn_length[AGENT_IDX]);
 }
 
-/* ── SoA Indexing ───────────────────────────────────────────────────────── */
+/* ── soa indexing ───────────────────────────────────────────────────────── */
 
 void test_transposed_conn_indexing(void) {
     /* Slot 0 of agent 0 is at buffer[0*CAP+0]=buffer[0].
@@ -332,7 +332,7 @@ void test_adjacent_agents_independent(void) {
     TEST_ASSERT_EQUAL_UINT8(1, nnet.neuron_count[0]);
 }
 
-/* ── Overflow Guard ─────────────────────────────────────────────────────── */
+/* ── overflow guard ─────────────────────────────────────────────────────── */
 
 void test_max_conn_not_exceeded(void) {
     /* Create nnet with max_conn=2; genome has 4 SENSOR→ACTION genes that
@@ -352,7 +352,7 @@ void test_max_conn_not_exceeded(void) {
     biosim_nnet_free(&small);
 }
 
-/* ── Fingerprint ─────────────────────────────────────────────────────────── */
+/* ── fingerprint ─────────────────────────────────────────────────────────── */
 
 void test_fingerprint_compiled_nnet_deterministic(void) {
     /* Compile the same genome slot to two different nnet slots; fingerprints
@@ -392,7 +392,7 @@ void test_fingerprint_phenotypic_equivalence(void) {
     TEST_ASSERT_EQUAL_UINT64(biosim_nnet_fingerprint(&nnet, 0), biosim_nnet_fingerprint(&nnet, 1));
 }
 
-/* ── Feedforward ─────────────────────────────────────────────────────────── */
+/* feedforward ─────────────────────────────────────────────────────────── */
 
 void test_feedforward_sensor_to_action_direct(void) {
     /* S0→A0, weight=8192 (one scale unit): sensor=1.0 → action_vals[0]=1.0 */
@@ -496,7 +496,7 @@ void test_feedforward_no_connections_noop(void) {
     TEST_ASSERT_EQUAL_FLOAT(99.0F, nnet.neuron_output[0 * CAP + AGENT_IDX]);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

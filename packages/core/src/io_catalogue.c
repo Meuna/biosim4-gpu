@@ -189,7 +189,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
 
     switch (action) {
 
-        /* ── Group A: self-field writers ──────────────────────────────────── */
+        /* ── group A: self-field writers ──────────────────────────────────── */
 
     case BIOSIM_ACTION_SET_RESPONSIVENESS:
         agents->responsiveness[idx] = tanhf(val) * 0.5F + 0.5F;
@@ -221,7 +221,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         break;
     }
 
-        /* ── Group B: movement accumulators ──────────────────────────────── */
+        /* ── group B: movement accumulators ──────────────────────────────── */
 
     case BIOSIM_ACTION_MOVE_X:
         agents->dx_sum[idx] += resp * val;
@@ -299,7 +299,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         agents->dy_sum[idx] += resp * (float)DIR_DY[6];
         break;
 
-        /* ── Group C: signal emission ─────────────────────────────────────── */
+        /* ── group C: signal emission ─────────────────────────────────────── */
 
     case BIOSIM_ACTION_EMIT_SIGNAL0: {
         assert(sim->signal != NULL);
@@ -333,7 +333,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         break;
     }
 
-        /* ── Group D: kill ────────────────────────────────────────────────── */
+        /* ── group D: kill ────────────────────────────────────────────────── */
 
     case BIOSIM_ACTION_KILL_FORWARD: {
         if (!sim->enable_kill || val < 0.5F) {

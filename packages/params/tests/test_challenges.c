@@ -185,7 +185,7 @@ void test_unknown_kind_returns_invalid(void) {
     TEST_ASSERT_EQUAL(BIOSIM_ERR_INVALID, biosim_challenge_spec_from_params(&p, &spec));
 }
 
-/* ── Runner ──────────────────────────────────────────────────────────────── */
+/* ── runner ──────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

@@ -15,7 +15,7 @@ void tearDown(void) {
     biosim_grid_free(&g);
 }
 
-/* ── Helpers ────────────────────────────────────────────────────────────── */
+/* ── helpers ────────────────────────────────────────────────────────────── */
 
 static biosim_coord_t coord(int16_t x, int16_t y) {
     biosim_coord_t c = {x, y};
@@ -143,7 +143,7 @@ void test_empty_spec_list(void) {
     TEST_ASSERT_EQUAL_INT(0, count_barriers(&g));
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

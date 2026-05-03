@@ -349,7 +349,7 @@ void test_altruism_stub_fails(void) {
     TEST_ASSERT_EQUAL_FLOAT(0.0F, r.score);
 }
 
-/* ── Runner ──────────────────────────────────────────────────────────────── */
+/* ── runner ──────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

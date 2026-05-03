@@ -14,7 +14,7 @@ void tearDown(void) {
     biosim_grid_free(&g);
 }
 
-/* ── Helpers ────────────────────────────────────────────────────────────── */
+/* ── helpers ────────────────────────────────────────────────────────────── */
 
 static biosim_coord_t coord(int16_t x, int16_t y) {
     biosim_coord_t c = {x, y};
@@ -27,7 +27,7 @@ static void count_visitor(biosim_coord_t c, uint16_t cell, void *sim) {
     (*(int *)sim)++;
 }
 
-/* ── Tests ──────────────────────────────────────────────────────────────── */
+/* ── tests ──────────────────────────────────────────────────────────────── */
 
 void test_fresh_grid_all_empty(void) {
     for (int16_t y = 0; y < g.size_y; y++) {
@@ -150,7 +150,7 @@ void test_find_last_empty_cell_returns_valid_coord(void) {
     TEST_ASSERT_EQUAL_INT16(5, c.y);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();

@@ -92,7 +92,7 @@ void test_no_barriers_section_returns_zero(void) {
     TEST_ASSERT_NULL(specs);
 }
 
-/* ── Runner ─────────────────────────────────────────────────────────────── */
+/* runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
     UNITY_BEGIN();
