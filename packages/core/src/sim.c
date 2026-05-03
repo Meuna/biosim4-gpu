@@ -73,7 +73,7 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
         return BIOSIM_ERR_NOMEM;
     }
 
-    st = biosim_gen_init_random(sim);
+    st = biosim_generation_init_random(sim);
     if (st != BIOSIM_OK) {
         biosim_sim_free(sim);
         return st;
@@ -173,13 +173,13 @@ void biosim_sim_next_generation(biosim_sim_t *sim, biosim_gen_stats_t *stats) {
     uint32_t *survivors = malloc(pop * sizeof(uint32_t));
     uint32_t n_survivors = 0;
     if (survivors != NULL) {
-        n_survivors = biosim_gen_collect_survivors(sim, survivors, stats);
+        n_survivors = biosim_generation_collect_survivors(sim, survivors, stats);
     }
 
     if (n_survivors > 0) {
-        (void)biosim_gen_reproduce(sim, survivors, n_survivors);
+        (void)biosim_generation_reproduce(sim, survivors, n_survivors);
     } else {
-        (void)biosim_gen_init_random(sim);
+        (void)biosim_generation_init_random(sim);
     }
     free(survivors);
 

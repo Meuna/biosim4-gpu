@@ -20,8 +20,8 @@ static int cmp_u64(const void *a, const void *b) {
     return (x > y) - (x < y);
 }
 
-uint32_t biosim_gen_collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
-                                      biosim_gen_stats_t *stats) {
+uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors,
+                                             biosim_gen_stats_t *stats) {
     const uint32_t pop = sim->agents.population;
 
     uint32_t n = 0;
@@ -110,7 +110,7 @@ static void clear_agents_from_grid(biosim_sim_t *sim) {
     memset(sim->signal, 0, sim->signal_len * sizeof(uint32_t));
 }
 
-biosim_status_t biosim_gen_init_random(biosim_sim_t *sim) {
+biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
     biosim_genome_t *genome = &sim->genome;
     biosim_nnet_t *nnet = &sim->nnet;
     biosim_agents_t *agents = &sim->agents;
@@ -186,8 +186,8 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
     }
 }
 
-biosim_status_t biosim_gen_reproduce(biosim_sim_t *sim, const uint32_t *survivors,
-                                     uint32_t n_survivors) {
+biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, const uint32_t *survivors,
+                                            uint32_t n_survivors) {
     assert(n_survivors > 0);
 
     biosim_genome_t *genome = &sim->genome;
@@ -210,7 +210,7 @@ biosim_status_t biosim_gen_reproduce(biosim_sim_t *sim, const uint32_t *survivor
         free(temp_conn);
         free(temp_wgt);
         free(temp_len);
-        return biosim_gen_init_random(sim);
+        return biosim_generation_init_random(sim);
     }
 
     snapshot_survivor_genomes(genome, survivors, n_survivors, temp_conn, temp_wgt, temp_len);
