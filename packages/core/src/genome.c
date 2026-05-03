@@ -175,7 +175,7 @@ void biosim_genome_crossover(biosim_genome_t *g, uint32_t child, uint32_t parent
 
 /* ── warp-divergence mitigation ─────────────────────────────────────────── */
 
-void biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out) {
+biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out) {
     assert(g != NULL && perm_out != NULL);
 
     uint32_t pop = g->population;
@@ -183,7 +183,6 @@ void biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out) {
     size_t gene_slots = (size_t)max_len * (size_t)pop;
     size_t buckets = (size_t)max_len + 1U;
 
-    /* Allocate all scratch buffers first; abort silently on OOM */
     uint16_t *new_conn = malloc(gene_slots * sizeof(uint16_t));
     int16_t *new_wgt = malloc(gene_slots * sizeof(int16_t));
     uint16_t *new_len = malloc((size_t)pop * sizeof(uint16_t));
@@ -197,7 +196,7 @@ void biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out) {
         free(count);
         free(start);
         free(cur);
-        return;
+        return BIOSIM_ERR_NOMEM;
     }
 
     /* Counting sort (descending) on length[0..pop-1] in range [0..max_len] */
@@ -236,4 +235,5 @@ void biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out) {
     free(count);
     free(start);
     free(cur);
+    return BIOSIM_OK;
 }

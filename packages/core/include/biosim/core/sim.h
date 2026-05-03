@@ -101,7 +101,9 @@ void biosim_sim_next_step(biosim_sim_t *sim);
  *
  * After the call: sim->step is reset to 0 and sim->gen is incremented.
  * out receives the census taken from the just-completed generation.
+ * Returns BIOSIM_ERR_NOMEM if any required allocation fails; on error the
+ * generation counters are not advanced and out is not written.
  */
-void biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out);
+biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out);
 
 #endif /* BIOSIM_CORE_SIM_H */

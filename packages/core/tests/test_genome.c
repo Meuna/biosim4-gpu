@@ -168,7 +168,7 @@ void test_sort_descending_order(void) {
     biosim_genome_init_slot(&g, 2, 6, &rng);
     biosim_genome_init_slot(&g, 3, 1, &rng);
     uint32_t perm[8];
-    biosim_genome_sort_by_length(&g, perm);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_sort_by_length(&g, perm));
     TEST_ASSERT_EQUAL_UINT16(6, g.length[0]);
     TEST_ASSERT_EQUAL_UINT16(4, g.length[1]);
     TEST_ASSERT_EQUAL_UINT16(2, g.length[2]);
@@ -181,7 +181,7 @@ void test_sort_permutation_valid(void) {
         biosim_genome_init_slot(&g, i, (i % 4U) + 1U, &rng);
     }
     uint32_t perm[8];
-    biosim_genome_sort_by_length(&g, perm);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_sort_by_length(&g, perm));
     uint8_t seen[8] = {0};
     for (uint32_t i = 0; i < 8; i++) {
         TEST_ASSERT_TRUE(perm[i] < 8U);
@@ -204,7 +204,7 @@ void test_sort_preserves_genes(void) {
     uint16_t saved_conn = g.conn[0 * g.population + 2];
     int16_t saved_wgt = g.wgt[0 * g.population + 2];
     uint32_t perm[8];
-    biosim_genome_sort_by_length(&g, perm);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_sort_by_length(&g, perm));
     uint32_t new_pos = 0;
     for (uint32_t i = 0; i < 8; i++) {
         if (perm[i] == 2U) {

@@ -34,8 +34,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim);
  * sim->sexual_reproduction controls whether crossover is applied.
  *
  * Precondition: n_survivors > 0.
- * If the internal genome snapshot allocation fails, falls back to
- * biosim_generation_init_random automatically.
+ * Returns BIOSIM_ERR_NOMEM if any required allocation fails.
  */
 biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivors, float *scores,
                                             uint32_t n_survivors);

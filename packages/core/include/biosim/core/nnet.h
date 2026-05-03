@@ -48,9 +48,10 @@ void biosim_nnet_free(biosim_nnet_t *n);
  * neuron-sink first, action-sink second (required for single-pass feedforward).
  *
  * num_sensors / num_actions are used to remap the raw 7-bit gene fields.
- * max_neurons must be ≤ 128 (upper bound of the 7-bit gene field). */
-void biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome, uint32_t idx,
-                              uint8_t num_sensors, uint8_t num_actions);
+ * max_neurons must be ≤ 128 (upper bound of the 7-bit gene field).
+ * Returns BIOSIM_ERR_NOMEM if a temporary parse buffer cannot be allocated. */
+biosim_status_t biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome,
+                                         uint32_t idx, uint8_t num_sensors, uint8_t num_actions);
 
 /* ── fingerprint ────────────────────────────────────────────────────────── */
 

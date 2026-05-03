@@ -117,7 +117,13 @@ int main(int argc, char **argv) {
             biosim_sim_next_step(&sim);
         }
         biosim_census_t census;
-        biosim_sim_next_generation(&sim, &census);
+        biosim_status_t st = biosim_sim_next_generation(&sim, &census);
+        if (st != BIOSIM_OK) {
+            (void)fprintf(stderr, "biosim: out of memory during generation advance\n");
+            biosim_sim_free(&sim);
+            biosim_params_free(&p);
+            return 1;
+        }
         biosim_census_print(stdout, &census);
     }
 

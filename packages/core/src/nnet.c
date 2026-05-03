@@ -179,8 +179,8 @@ static uint16_t emit_action_sink(biosim_nnet_t *n, const remapped_gene_t *genes,
     return out_slot;
 }
 
-void biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome, uint32_t idx,
-                              uint8_t num_sensors, uint8_t num_actions) {
+biosim_status_t biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome,
+                                         uint32_t idx, uint8_t num_sensors, uint8_t num_actions) {
     assert(n != NULL && genome != NULL);
     assert(idx < n->population);
     assert(idx < genome->population);
@@ -197,9 +197,7 @@ void biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome, u
     if (gene_count > 0) {
         genes = malloc((size_t)gene_count * sizeof(remapped_gene_t));
         if (!genes) {
-            n->conn_length[idx] = 0;
-            n->neuron_count[idx] = 0;
-            return;
+            return BIOSIM_ERR_NOMEM;
         }
         parse_genes(genome, idx, num_sensors, num_actions, max_neurons, genes, gene_count);
     }
@@ -240,6 +238,7 @@ void biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome, u
     }
 
     free(genes);
+    return BIOSIM_OK;
 }
 
 /* ── fingerprint ────────────────────────────────────────────────────────── */

@@ -35,7 +35,9 @@ void biosim_genome_crossover(biosim_genome_t *g, uint32_t child, uint32_t parent
                              uint32_t parent_b, uint64_t *rng);
 /* Warp-divergence mitigation: sort agents by descending genome length.
  * Reorders conn/wgt/length buffers in-place; writes perm_out[new_idx] = old_idx.
- * perm_out must point to a caller-allocated array of population uint32_t values. */
-void biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out);
+ * perm_out must point to a caller-allocated array of population uint32_t values.
+ * Returns BIOSIM_ERR_NOMEM if scratch buffers cannot be allocated; in that case
+ * the genome buffers and perm_out are left unmodified. */
+biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_out);
 
 #endif /* BIOSIM_CORE_GENOME_H */

@@ -164,27 +164,34 @@ void biosim_sim_next_step(biosim_sim_t *sim) {
 
 /* ── per-generation ─────────────────────────────────────────────────────── */
 
-void biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out) {
+biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out) {
     const uint32_t pop = sim->agents.population;
 
     uint32_t *survivors = malloc(pop * sizeof(uint32_t));
     float *scores = malloc(pop * sizeof(float));
-    uint32_t n_survivors = 0;
-    if (survivors != NULL && scores != NULL) {
-        n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
+    if (survivors == NULL || scores == NULL) {
+        free(survivors);
+        free(scores);
+        return BIOSIM_ERR_NOMEM;
     }
 
+    uint32_t n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
     biosim_census_take(sim, survivors, n_survivors, out);
 
+    biosim_status_t st;
     if (n_survivors > 0) {
-        (void)biosim_generation_reproduce(sim, survivors, scores, n_survivors);
+        st = biosim_generation_reproduce(sim, survivors, scores, n_survivors);
     } else {
-        (void)biosim_generation_init_random(sim);
+        st = biosim_generation_init_random(sim);
     }
     free(survivors);
     free(scores);
+    if (st != BIOSIM_OK) {
+        return st;
+    }
 
     sim->kills = 0;
     sim->step = 0;
     sim->gen++;
+    return BIOSIM_OK;
 }
