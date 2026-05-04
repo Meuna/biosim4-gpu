@@ -33,6 +33,10 @@ expected at this stage.
   the system as it exists after your change, not how it evolved. Remove
   any outdated statements (e.g. mentions of unimplemented features).
 
+- **Increment the snapshot schema version** when modifying the io catalogue
+  `biosim_sensor_t` or  `biosim_action_t`.
+
+- **Increment the snapshot format version** when modifying the snapshot interface.
 
 - **Conventions are normative.** The rules in `02-implementation-conventions.md`
   (naming, error handling, host/device portability, no global state in

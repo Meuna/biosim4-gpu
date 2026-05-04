@@ -68,6 +68,12 @@ typedef enum {
     BIOSIM_NUM_ACTIONS
 } biosim_action_t;
 
+/* ── schema version ─────────────────────────────────────────────────────── */
+
+/* Bump when sensor/action indices or gene-encoding semantics change.
+ * Snapshot files store this value; a mismatch means genomes are incompatible. */
+#define BIOSIM_IO_SCHEMA_VERSION 1U
+
 /* ── public API ─────────────────────────────────────────────────────────── */
 
 /* Compute the direction of the movement, according to the convention used by

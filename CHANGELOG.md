@@ -8,6 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Generation snapshot format** (`core/snapshot`): BSM4 binary file format
+  (little-endian, 32-byte header + sequential generation records) for
+  checkpointing survivor genomes at generation boundaries.
+  - Write side: `biosim_snapshot_write_header`, `biosim_snapshot_write_gen`,
+    `biosim_snapshot_finalize`.
+  - Session API: `biosim_snapshot_session_open`, `biosim_snapshot_session_write`,
+    `biosim_snapshot_session_close` — all take `biosim_sim_t *`; session state is
+    carried in four `snap_*` fields on `biosim_sim_t` (`snap_f`, `snap_written_count`,
+    `snap_interval`). `biosim_sim_free` closes the session automatically.
+  - Read side: `biosim_snapshot_read_header`, `biosim_snapshot_load_gen`,
+    `biosim_snapshot_load_last`; `generation_count = 0` triggers a scan-to-EOF
+    fallback for streaming / unfinished files.
+  - High-level restore: `biosim_snapshot_restore(path, sim)` opens the file,
+    checks coherency (schema/catalogue mismatch = fatal; topology mismatch =
+    warning with flag hint), loads the last record, calls
+    `biosim_generation_reproduce`, and resets generation counters.
+  - `BIOSIM_IO_SCHEMA_VERSION` added to `io_catalogue.h`; bumped when sensor/
+    action indices change. `BIOSIM_SNAP_FORMAT_VERSION` in `snapshot.h`; bumped
+    when the on-disk record layout changes.
+- `biosim_sim_next_generation` now writes the snapshot session (when active),
+  resets `step`/`kills`, and increments `gen` — callers no longer need to manage
+  these counters or the snapshot write.
+- **Snapshot CLI flags** (`sim-stepper`): `--snapshot-in PATH` restores from
+  the last generation record in a file; `--snapshot-out PATH` writes survivor
+  snapshots (errors if the file already exists); `--snapshot-interval N` writes
+  every N generations (default 0 = final generation only).
+
+### Fixed
+- `biosim_generation_reproduce`: no longer crashes when `scores == NULL` and
+  `choose_parents_by_fitness` is true; fitness-biased sort is skipped when
+  scores are unavailable (uniform parent selection applied instead).
+
+### Added
 - **Sexual reproduction** (`core/generation.c`, `sim-stepper`): two new boolean
   parameters gate reproduction behaviour:
   - `[genome] sexual-reproduction` (default `false`): when true, each offspring
@@ -123,7 +156,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   drives a triple-nested `for` loop with no simulation logic of its own.
 - **`biosim_context_t` is now the complete simulation state**
   (`core/context.h`): six allocation-time configuration fields (`population`,
-  `size_x`, `size_y`, `max_gen_len`, `max_neurons`, `long_probe_dist`) and
+  `size_x`, `size_y`, `genome_max_len`, `max_neurons`, `long_probe_dist`) and
   four generation-state fields (`step`, `gen`, `mutation_rate`, `gen_rng`)
   added. `biosim_context_create` now takes only `(sim, barriers, n_barriers)`
   — the caller pre-populates the configuration fields, then `create` allocates

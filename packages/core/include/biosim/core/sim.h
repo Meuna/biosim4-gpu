@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 struct biosim_census;
 
@@ -25,13 +26,15 @@ struct biosim_census;
  * allocate all heap resources.  biosim_sim_free() releases them.
  */
 typedef struct {
+    uint32_t max_generations; /* number of generation loops */
+
     /* ── allocation-time configuration ───────────────────────────────────────
      * Set these before calling biosim_sim_create(); they are read once
      * during allocation and remain valid for the lifetime of the context.*/
     uint32_t population;     /* agent count */
     int16_t size_x;          /* grid width */
     int16_t size_y;          /* grid height */
-    uint16_t max_gen_len;    /* maximum genome length (genes per agent) */
+    uint16_t genome_max_len; /* maximum genome length (genes per agent) */
     uint8_t max_neurons;     /* maximum hidden-neuron count per agent */
     uint8_t long_probe_dist; /* default long-probe sensor range (cells) */
 
@@ -68,6 +71,13 @@ typedef struct {
 
     /* kill tracking — reset to 0 at each generation boundary */
     uint32_t kills;
+
+    /* ── snapshot output session ─────────────────────────────────────────────
+     * Configured via biosim_snapshot_session_open(); closed automatically by
+     * biosim_sim_free(). snap_f == NULL means no active output session.     */
+    FILE *snap_f;
+    uint32_t snap_written_count;
+    uint32_t snap_interval;
 } biosim_sim_t;
 
 /*
@@ -91,16 +101,17 @@ void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i);
 void biosim_sim_next_step(biosim_sim_t *sim);
 
 /*
- * Advance one generation: evaluate the challenge for all alive agents, collect
- * statistics, reproduce survivors, recompile neural networks, and respawn the
- * full population on the grid.
+ * Advance one generation: evaluate the challenge for all alive agents, write
+ * the snapshot output session (if active), collect statistics, reproduce
+ * survivors, recompile neural networks, and respawn the full population on the
+ * grid.
  *
  * Reproduction mode is controlled by sim->sexual_reproduction (two-parent
  * crossover vs. single-parent copy) and sim->choose_parents_by_fitness
  * (score-biased vs. uniform random parent selection).
  *
- * After the call: sim->step is reset to 0 and sim->gen is incremented.
- * out receives the census taken from the just-completed generation.
+ * After the call: sim->step and sim->kills are reset to 0 and sim->gen is
+ * incremented. out receives the census taken from the just-completed generation.
  * Returns BIOSIM_ERR_NOMEM if any required allocation fails; on error the
  * generation counters are not advanced and out is not written.
  */

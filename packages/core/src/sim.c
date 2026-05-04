@@ -5,6 +5,7 @@
 #include "biosim/core/generation.h"
 #include "biosim/core/io_catalogue.h"
 #include "biosim/core/rng.h"
+#include "biosim/core/snapshot.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -19,7 +20,7 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
     const uint32_t pop = sim->population;
     const int16_t size_x = sim->size_x;
     const int16_t size_y = sim->size_y;
-    const uint16_t max_gen_len = sim->max_gen_len;
+    const uint16_t genome_max_len = sim->genome_max_len;
     const uint8_t max_neurons = sim->max_neurons;
 
     sim->kills = 0;
@@ -54,14 +55,14 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
         return st;
     }
 
-    st = biosim_genome_create(pop, max_gen_len, &sim->genome);
+    st = biosim_genome_create(pop, genome_max_len, &sim->genome);
     if (st != BIOSIM_OK) {
         biosim_sim_free(sim);
         return st;
     }
 
-    /* max_conn = max_gen_len: worst case every gene survives culling */
-    st = biosim_nnet_create(pop, max_gen_len, max_neurons, &sim->nnet);
+    /* max_conn = genome_max_len: worst case every gene survives culling */
+    st = biosim_nnet_create(pop, genome_max_len, max_neurons, &sim->nnet);
     if (st != BIOSIM_OK) {
         biosim_sim_free(sim);
         return st;
@@ -87,6 +88,7 @@ void biosim_sim_free(biosim_sim_t *sim) {
     if (sim == NULL) {
         return;
     }
+    biosim_snapshot_session_close(sim);
     biosim_nnet_free(&sim->nnet);
     biosim_genome_free(&sim->genome);
     biosim_agents_free(&sim->agents);
@@ -177,6 +179,7 @@ biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_cens
 
     uint32_t n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
     biosim_census_take(sim, survivors, n_survivors, out);
+    biosim_snapshot_session_write(sim, survivors, n_survivors);
 
     biosim_status_t st;
     if (n_survivors > 0) {
@@ -190,8 +193,8 @@ biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_cens
         return st;
     }
 
-    sim->kills = 0;
-    sim->step = 0;
+    sim->kills = 0U;
+    sim->step = 0U;
     sim->gen++;
     return BIOSIM_OK;
 }

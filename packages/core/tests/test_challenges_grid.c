@@ -27,7 +27,7 @@ void setUp(void) {
     sim.population = 10;
     sim.size_x = 64;
     sim.size_y = 64;
-    sim.max_gen_len = 8;
+    sim.genome_max_len = 8;
     sim.max_neurons = 3;
     sim.long_probe_dist = 8;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));

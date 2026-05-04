@@ -5,6 +5,7 @@
 #include "biosim/core/census.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
+#include "biosim/core/snapshot.h"
 #include "biosim/params/barriers.h"
 #include "biosim/params/challenges.h"
 #include "biosim/params/params.h"
@@ -23,6 +24,7 @@ static const biosim_param_entry_t sim_params[] = {
     {"choose-parents-by-fitness","genome",     {.b = false},     PARAM_BOOL,   false, true, NULL,             NULL},
     {"long-probe-dist",          "sensors",    {.i = 16},        PARAM_INT,    false, true, NULL,             NULL},
     {"population-sensor-radius", "sensors",    {.i = 2},         PARAM_INT,    false, true, NULL,             NULL},
+    {"enable-kill",              "actions",    {.b = false},     PARAM_BOOL,   false, true, "enable-kill",    NULL},
     {"kind",                     "challenge",  {.s = "x_band"},  PARAM_STRING, false, true, NULL,             NULL},
     {"x-min",                    "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true, NULL,             NULL},
     {"x-max",                    "challenge",  {.f = 1.0},       PARAM_FLOAT,  false, true, NULL,             NULL},
@@ -36,7 +38,9 @@ static const biosim_param_entry_t sim_params[] = {
     {"exclude-border",           "challenge",  {.b = false},     PARAM_BOOL,   false, true, NULL,             NULL},
     {"outer-r",                  "challenge",  {.f = 0.25},      PARAM_FLOAT,  false, true, NULL,             NULL},
     {"inner-r",                  "challenge",  {.f = 0.012},     PARAM_FLOAT,  false, true, NULL,             NULL},
-    {"enable-kill",              "actions",    {.b = false},     PARAM_BOOL,   false, true, "enable-kill",    NULL},
+    {"in",                       "snapshot",   {.s = NULL},      PARAM_STRING, false, true, NULL,             NULL},
+    {"out",                      "snapshot",   {.s = NULL},      PARAM_STRING, false, true, NULL,             NULL},
+    {"interval",                 "snapshot",   {.i = 0},         PARAM_INT,    false, true, NULL,             NULL},
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))
@@ -78,12 +82,15 @@ int main(int argc, char **argv) {
         return st;
     }
 
+    /* ── create simulation ───────────────────────────────────────────────── */
+
     biosim_sim_t sim;
     memset(&sim, 0, sizeof(sim));
+    sim.max_generations = (uint32_t)biosim_params_get_int(&p, "max-generations");
     sim.population = (uint32_t)biosim_params_get_int(&p, "population");
     sim.size_x = (int16_t)biosim_params_get_int(&p, "grid-size-x");
     sim.size_y = (int16_t)biosim_params_get_int(&p, "grid-size-y");
-    sim.max_gen_len = (uint16_t)biosim_params_get_int(&p, "max-genome-length");
+    sim.genome_max_len = (uint16_t)biosim_params_get_int(&p, "max-genome-length");
     sim.max_neurons = (uint8_t)biosim_params_get_int(&p, "max-neurons");
     sim.long_probe_dist = (uint8_t)biosim_params_get_int(&p, "long-probe-dist");
     sim.steps_per_gen = biosim_params_get_int(&p, "steps-per-gen");
@@ -93,7 +100,7 @@ int main(int argc, char **argv) {
     sim.mutation_rate = (float)biosim_params_get_float(&p, "point-mutation-rate");
     sim.sexual_reproduction = biosim_params_get_bool(&p, "sexual-reproduction");
     sim.choose_parents_by_fitness = biosim_params_get_bool(&p, "choose-parents-by-fitness");
-    sim.gen_rng = biosim_rng_seed(0, 1);
+    sim.gen_rng = biosim_rng_seed(0U, 1U);
 
     st = biosim_sim_create(&sim, barriers, n_barriers);
     free(barriers);
@@ -103,26 +110,53 @@ int main(int argc, char **argv) {
         return st;
     }
 
-    const int max_gens = biosim_params_get_int(&p, "max-generations");
+    /* ── apply snapshot-in if configured ────────────────────────────────── */
+
+    const char *snap_in_path = biosim_params_get_string(&p, "in");
+    const char *snap_out_path = biosim_params_get_string(&p, "out");
+    const int snap_interval = biosim_params_get_int(&p, "interval");
+
+    if (snap_in_path != NULL) {
+        st = biosim_snapshot_restore(snap_in_path, &sim);
+        if (st != BIOSIM_OK) {
+            biosim_sim_free(&sim);
+            biosim_params_free(&p);
+            return st;
+        }
+    }
+
+    /* ── open snapshot-out session if configured ─────────────────────────── */
+
+    if (snap_out_path != NULL) {
+        st = biosim_snapshot_session_open(&sim, snap_out_path, snap_interval);
+        if (st != BIOSIM_OK) {
+            biosim_sim_free(&sim);
+            biosim_params_free(&p);
+            return st;
+        }
+    }
+
+    /* ── main generation loop ────────────────────────────────────────────── */
 
     biosim_census_print_header(stdout);
-    for (int g = 0; g < max_gens; g++) {
+
+    for (int g = 0; g < sim.max_generations; g++) {
         for (int s = 0; s < sim.steps_per_gen; s++) {
-            for (uint32_t i = 0; i < sim.agents.population; i++) {
-                if (!sim.agents.alive[i]) {
-                    continue;
+            for (uint32_t i = 0U; i < sim.agents.population; i++) {
+                if (sim.agents.alive[i]) {
+                    biosim_sim_step_agent(&sim, i);
                 }
-                biosim_sim_step_agent(&sim, i);
             }
             biosim_sim_next_step(&sim);
         }
+
         biosim_census_t census;
-        biosim_status_t st = biosim_sim_next_generation(&sim, &census);
+        st = biosim_sim_next_generation(&sim, &census);
         if (st != BIOSIM_OK) {
-            (void)fprintf(stderr, "biosim: out of memory during generation advance\n");
+            (void)fprintf(stderr, "biosim-stepper: out of memory during generation advance\n");
             biosim_sim_free(&sim);
             biosim_params_free(&p);
-            return 1;
+            return st;
         }
         biosim_census_print(stdout, &census);
     }

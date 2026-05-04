@@ -18,5 +18,6 @@ CMakeLists.txt text
 *.json text
 
 # Binary simulation snapshots: no EOL conversion, no diff
+*.bsm4 binary
 *.snap binary
 *.bin binary

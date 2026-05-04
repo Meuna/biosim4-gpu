@@ -42,3 +42,8 @@ add_executable(core-challenge-grid-tests test_challenges_grid.c)
 target_link_libraries(core-challenge-grid-tests PRIVATE core unity)
 target_compile_features(core-challenge-grid-tests PRIVATE c_std_11)
 add_test(NAME core-challenge-grid-tests COMMAND core-challenge-grid-tests)
+
+add_executable(core-snapshot-tests test_snapshot.c)
+target_link_libraries(core-snapshot-tests PRIVATE core unity)
+target_compile_features(core-snapshot-tests PRIVATE c_std_11)
+add_test(NAME core-snapshot-tests COMMAND core-snapshot-tests)
