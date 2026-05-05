@@ -87,12 +87,3 @@ final binaries land under `build/debug/`.
 ```sh
 ctest --preset debug
 ```
-
-CTest is CMake's test runner. It discovers every test registered with
-`add_test()` in the build and runs them, reporting pass/fail. You can also
-trigger it through the `check` custom target, which is convenient when you
-want to build and test in a single command:
-
-```sh
-cmake --build --preset debug --target check
-```

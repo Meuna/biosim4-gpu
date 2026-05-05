@@ -46,14 +46,14 @@ expected at this stage.
   - **Code Quality.** Every time you edit or create files, you MUST
   complete this sequence before considering the task done:
     1. `cmake --build --preset debug` — must compile with zero errors
-    2. `cmake --build --preset debug --target check` — all tests must pass
+    2. `ctest --preset debug` — all tests must pass
     3. `cmake --build --preset debug --target lint` — fix every error or
        warning reported; repeat until the output is clean
     4. `cmake --build --preset debug --target format` — apply formatting
     5. `cmake --build --preset debug` — re-compile to confirm formatting
        did not break anything
-    6. `cmake --build --preset debug --target check` — re-run tests to
-       confirm formatting did not break anything
+    6. `ctest --preset debug` — re-run tests to confirm formatting did not
+       break anything
   A task is NOT complete while lint reports any error or warning.
 
 ## Build System
@@ -67,8 +67,10 @@ cmake --preset debug    # or: release, asan, ci
 # Build
 cmake --build --preset debug
 
-# Common targets
-cmake --build --preset debug --target check      # run all tests
+# Test
+ctest --preset debug
+
+# Additional targets
 cmake --build --preset debug --target format     # run clang-format
 cmake --build --preset debug --target lint       # run clang-tidy
 cmake --build --preset debug --target benchmark  # run benchmarks

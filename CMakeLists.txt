@@ -105,14 +105,6 @@ if(CLANG_TIDY_EXECUTABLE)
   )
 endif()
 
-# check: run the full CTest suite; run after building all targets
-add_custom_target(check
-  COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-  COMMENT "Running all tests"
-  VERBATIM
-)
-
 # benchmark: build and run all benchmarks; results go to stdout (no pass/fail)
 if(BIOSIM_BUILD_BENCHMARKS)
   add_custom_target(benchmark
