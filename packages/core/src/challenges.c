@@ -253,14 +253,14 @@ static biosim_challenge_result_t eval_location_sequence(uint32_t challenge_bits)
 
 static biosim_challenge_result_t eval_near_barrier(const biosim_challenge_spec_t *spec,
                                                    int16_t loc_x, int16_t loc_y, int16_t size_x,
-                                                   const biosim_coord_t *ctrs, int n_ctrs) {
+                                                   const biosim_coord_t *ctrs, uint32_t n_ctrs) {
     biosim_challenge_result_t r = {false, 0.0F};
-    if (n_ctrs == 0) {
+    if (n_ctrs == 0U) {
         return r;
     }
     float radius = spec->near_barrier.radius * (float)size_x;
     float min_dist = euclid((float)(loc_x - ctrs[0].x), (float)(loc_y - ctrs[0].y));
-    for (int i = 1; i < n_ctrs; i++) {
+    for (uint32_t i = 1U; i < n_ctrs; i++) {
         float d = euclid((float)(loc_x - ctrs[i].x), (float)(loc_y - ctrs[i].y));
         if (d < min_dist) {
             min_dist = d;
@@ -388,8 +388,8 @@ void biosim_challenge_step(const biosim_challenge_spec_t *spec, biosim_sim_t *si
             if (!sim->agents.alive[i]) {
                 continue;
             }
-            for (int b = 0; b < sim->n_barrier_ctrs; b++) {
-                uint32_t bit = 1U << (uint32_t)b;
+            for (uint32_t b = 0U; b < sim->n_barrier_ctrs; b++) {
+                uint32_t bit = 1U << b;
                 if (sim->agents.challenge_bits[i] & bit) {
                     continue;
                 }

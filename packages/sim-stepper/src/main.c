@@ -69,17 +69,19 @@ int main(int argc, char **argv) {
         goto exit;
     }
 
-    int n_barriers = 0;
+    uint32_t n_barriers = 0U;
     returncode = biosim_barrier_params_load(p.config_path, &barriers, &n_barriers);
     if (returncode != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-stepper: barrier config error (status %d)\n", (int)returncode);
+        (void)fprintf(stderr, "biosim-stepper: barrier config error (status %d)\n",
+                      (int)returncode);
         goto exit;
     }
 
     biosim_challenge_spec_t challenge;
     returncode = biosim_challenge_spec_from_params(&p, &challenge);
     if (returncode != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-stepper: challenge config error (status %d)\n", (int)returncode);
+        (void)fprintf(stderr, "biosim-stepper: challenge config error (status %d)\n",
+                      (int)returncode);
         goto exit;
     }
 

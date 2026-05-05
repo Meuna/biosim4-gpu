@@ -20,6 +20,6 @@
  * Returns BIOSIM_ERR_NOMEM on allocation failure.
  */
 biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier_spec_t **specs_out,
-                                           int *n_out);
+                                           uint32_t *n_out);
 
 #endif /* BIOSIM_PARAMS_BARRIERS_H */

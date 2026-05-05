@@ -67,7 +67,7 @@ typedef struct {
     /* barrier centres resolved at creation time; used by near_barrier and
      * location_sequence challenge kinds; NULL when n_barrier_ctrs == 0 */
     biosim_coord_t *barrier_ctrs;
-    int n_barrier_ctrs;
+    uint32_t n_barrier_ctrs;
 
     /* kill tracking — reset to 0 at each generation boundary */
     uint32_t kills;
@@ -88,7 +88,7 @@ typedef struct {
  * and spawn the initial population.  barriers/n_barriers may be NULL/0.
  */
 biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
-                                  int n_barriers);
+                                  uint32_t n_barriers);
 
 void biosim_sim_free(biosim_sim_t *sim);
 

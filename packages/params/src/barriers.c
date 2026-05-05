@@ -84,7 +84,7 @@ static biosim_status_t parse_barrier_table(toml_datum_t tab, biosim_barrier_spec
 /* ── public API ─────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier_spec_t **specs_out,
-                                           int *n_out) {
+                                           uint32_t *n_out) {
     *specs_out = NULL;
     *n_out = 0;
 
@@ -100,7 +100,7 @@ biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier
     /* alloc start here, freed on exit label */
     biosim_barrier_spec_t *specs = NULL;
     biosim_status_t returncode = BIOSIM_OK;
-    int n = 0;
+    uint32_t n = 0U;
 
     toml_datum_t toptab = result.toptab;
     toml_datum_t barriers_tab = toml_get(toptab, "barriers");
@@ -113,14 +113,14 @@ biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier
         goto exit;
     }
 
-    n = (int)num_val.u.int64;
+    n = (uint32_t)num_val.u.int64;
     specs = (biosim_barrier_spec_t *)malloc((size_t)n * sizeof(*specs));
     if (specs == NULL) {
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
 
-    for (int i = 0; i < n; i++) {
+    for (uint32_t i = 0U; i < n; i++) {
         char key[32];
         (void)snprintf(key, sizeof(key), "barrier-%d", i + 1);
         toml_datum_t tab = toml_get(toptab, key);

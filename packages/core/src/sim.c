@@ -14,7 +14,7 @@
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
-                                  int n_barriers) {
+                                  uint32_t n_barriers) {
     /* alloc start here, freed on exit label */
     const uint32_t pop = sim->population;
     const int16_t size_x = sim->size_x;

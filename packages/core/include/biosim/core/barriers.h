@@ -47,6 +47,6 @@ typedef struct {
  * Returns BIOSIM_OK; placement is tolerant of out-of-bounds — cells are clipped silently.
  */
 biosim_status_t biosim_barriers_place(biosim_grid_t *grid, const biosim_barrier_spec_t *specs,
-                                      int n, uint64_t *rng_state, biosim_coord_t *centers_out);
+                                      uint32_t n, uint64_t *rng_state, biosim_coord_t *centers_out);
 
 #endif /* BIOSIM_CORE_BARRIERS_H */

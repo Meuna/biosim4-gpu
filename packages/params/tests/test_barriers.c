@@ -3,6 +3,7 @@
 #include "biosim/params/barriers.h"
 #include "unity.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 
 void setUp(void) {
@@ -14,11 +15,11 @@ void tearDown(void) {
 
 void test_full_config_loads_four_specs(void) {
     biosim_barrier_spec_t *specs = NULL;
-    int n = 0;
+    uint32_t n = 0U;
     biosim_status_t st =
         biosim_barrier_params_load(TEST_FIXTURES_DIR "/barriers_full.toml", &specs, &n);
     TEST_ASSERT_EQUAL(BIOSIM_OK, st);
-    TEST_ASSERT_EQUAL_INT(4, n);
+    TEST_ASSERT_EQUAL_UINT32(4U, n);
     TEST_ASSERT_NOT_NULL(specs);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_HBAR, specs[0].kind);
@@ -50,11 +51,11 @@ void test_full_config_loads_four_specs(void) {
 
 void test_partial_config_sentinels(void) {
     biosim_barrier_spec_t *specs = NULL;
-    int n = 0;
+    uint32_t n = 0U;
     biosim_status_t st =
         biosim_barrier_params_load(TEST_FIXTURES_DIR "/barriers_partial.toml", &specs, &n);
     TEST_ASSERT_EQUAL(BIOSIM_OK, st);
-    TEST_ASSERT_EQUAL_INT(2, n);
+    TEST_ASSERT_EQUAL_UINT32(2U, n);
     TEST_ASSERT_NOT_NULL(specs);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_HBAR, specs[0].kind);
@@ -75,20 +76,20 @@ void test_partial_config_sentinels(void) {
 
 void test_null_path_returns_zero(void) {
     biosim_barrier_spec_t *specs = NULL;
-    int n = -1;
+    uint32_t n = UINT32_MAX;
     biosim_status_t st = biosim_barrier_params_load(NULL, &specs, &n);
     TEST_ASSERT_EQUAL(BIOSIM_OK, st);
-    TEST_ASSERT_EQUAL_INT(0, n);
+    TEST_ASSERT_EQUAL_UINT32(0U, n);
     TEST_ASSERT_NULL(specs);
 }
 
 void test_no_barriers_section_returns_zero(void) {
     biosim_barrier_spec_t *specs = NULL;
-    int n = -1;
+    uint32_t n = UINT32_MAX;
     /* basic.toml has no [barriers] section */
     biosim_status_t st = biosim_barrier_params_load(TEST_FIXTURES_DIR "/basic.toml", &specs, &n);
     TEST_ASSERT_EQUAL(BIOSIM_OK, st);
-    TEST_ASSERT_EQUAL_INT(0, n);
+    TEST_ASSERT_EQUAL_UINT32(0U, n);
     TEST_ASSERT_NULL(specs);
 }
 

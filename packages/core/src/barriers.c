@@ -158,8 +158,9 @@ static biosim_coord_t place_circle(biosim_grid_t *grid, const biosim_barrier_spe
 /* ── public API ─────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_barriers_place(biosim_grid_t *grid, const biosim_barrier_spec_t *specs,
-                                      int n, uint64_t *rng_state, biosim_coord_t *centers_out) {
-    for (int i = 0; i < n; i++) {
+                                      uint32_t n, uint64_t *rng_state,
+                                      biosim_coord_t *centers_out) {
+    for (uint32_t i = 0; i < n; i++) {
         const biosim_barrier_spec_t *s = &specs[i];
         biosim_coord_t centre;
         switch (s->kind) {
