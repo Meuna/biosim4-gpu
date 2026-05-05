@@ -341,13 +341,12 @@ biosim_challenge_result_t biosim_challenge_eval(const biosim_challenge_spec_t *s
 /* ── public API: step hook ───────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void biosim_challenge_step(const biosim_challenge_spec_t *spec, biosim_sim_t *sim, int sim_step,
-                           int steps_per_gen) {
+void biosim_challenge_step(biosim_sim_t *sim) {
     uint32_t n = sim->agents.population;
     int16_t w = sim->grid.size_x;
     int16_t h = sim->grid.size_y;
 
-    switch (spec->kind) {
+    switch (sim->challenge.kind) {
 
     case BIOSIM_CHALLENGE_TOUCH_ANY_WALL:
         for (uint32_t i = 0; i < n; i++) {
@@ -361,7 +360,7 @@ void biosim_challenge_step(const biosim_challenge_spec_t *spec, biosim_sim_t *si
         break;
 
     case BIOSIM_CHALLENGE_RADIOACTIVE_WALLS: {
-        int16_t radioactive_x = (int16_t)(sim_step < steps_per_gen / 2 ? 0 : w - 1);
+        int16_t radioactive_x = (int16_t)((int)sim->step < sim->steps_per_gen / 2 ? 0 : w - 1);
         for (uint32_t i = 0; i < n; i++) {
             if (!sim->agents.alive[i]) {
                 continue;
@@ -382,7 +381,7 @@ void biosim_challenge_step(const biosim_challenge_spec_t *spec, biosim_sim_t *si
     }
 
     case BIOSIM_CHALLENGE_LOCATION_SEQUENCE: {
-        int rpx = (int)(spec->location_sequence.radius * (float)w);
+        int rpx = (int)(sim->challenge.location_sequence.radius * (float)w);
         int rpx_sq = rpx * rpx;
         for (uint32_t i = 0; i < n; i++) {
             if (!sim->agents.alive[i]) {

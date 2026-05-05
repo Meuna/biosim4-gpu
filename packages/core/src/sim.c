@@ -103,7 +103,7 @@ void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i) {
     float action_vals[BIOSIM_NUM_ACTIONS];
 
     for (uint32_t s = 0; s < BIOSIM_NUM_SENSORS; s++) {
-        sensor_vals[s] = biosim_sensor_eval((biosim_sensor_t)s, i, sim, sim->step);
+        sensor_vals[s] = biosim_sensor_eval((biosim_sensor_t)s, i, sim);
     }
 
     memset(action_vals, 0, sizeof(action_vals));
@@ -155,7 +155,7 @@ void biosim_sim_next_step(biosim_sim_t *sim) {
     for (size_t j = 0; j < sim->signal_len; j++) {
         sim->signal[j]--;
     }
-    biosim_challenge_step(&sim->challenge, sim, (int)sim->step, sim->steps_per_gen);
+    biosim_challenge_step(sim);
     sim->step++;
 }
 

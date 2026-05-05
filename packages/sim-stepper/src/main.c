@@ -136,8 +136,8 @@ int main(int argc, char **argv) {
 
     biosim_census_print_header(stdout);
 
-    for (int g = 0; g < sim.max_generations; g++) {
-        for (int s = 0; s < sim.steps_per_gen; s++) {
+    while (sim.gen < sim.max_generations) {
+        while (sim.step < (uint32_t)sim.steps_per_gen) {
             for (uint32_t i = 0U; i < sim.agents.population; i++) {
                 if (sim.agents.alive[i]) {
                     biosim_sim_step_agent(&sim, i);

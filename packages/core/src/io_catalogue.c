@@ -54,8 +54,7 @@ uint8_t biosim_get_dir(int dx, int dy) {
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_t *sim,
-                         uint32_t sim_step) {
+float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_t *sim) {
     assert(sim != NULL);
 
     const biosim_agents_t *agents = &sim->agents;
@@ -109,7 +108,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         if (period == 0U) {
             period = 1U;
         }
-        float phase = (float)(sim_step % (uint32_t)period) / (float)period;
+        float phase = (float)(sim->step % (uint32_t)period) / (float)period;
         return (1.0F - cosf(phase * 6.28318530F)) * 0.5F;
     }
 
@@ -118,7 +117,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         if (steps <= 0) {
             steps = 1;
         }
-        return (float)sim_step / (float)steps;
+        return (float)sim->step / (float)steps;
     }
 
     case BIOSIM_SENSOR_RANDOM:

@@ -80,11 +80,10 @@ typedef enum {
  * the agent IO */
 uint8_t biosim_get_dir(int dx, int dy);
 
-/* Evaluate one sensor for agent idx at step sim_step; returns float in [0,1].
+/* Evaluate one sensor for agent idx; returns float in [0,1].
  * agents.rng_state[idx] may be mutated by BIOSIM_SENSOR_RANDOM.
  * Asserts on an invalid sensor value (out-of-range enum). */
-float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_t *sim,
-                         uint32_t sim_step);
+float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_t *sim);
 
 /* Apply one action to agent idx, writing into sim->agents.dx_sum[idx] / dy_sum[idx]
  * and agent self-fields.

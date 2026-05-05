@@ -35,17 +35,17 @@ void tearDown(void) {
 
 void test_loc_x_left_edge(void) {
     sim.agents.loc_x[0] = 0;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_X, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_X, 0, &sim));
 }
 
 void test_loc_x_right_edge(void) {
     sim.agents.loc_x[0] = GRID_W - 1;
-    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_X, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_X, 0, &sim));
 }
 
 void test_loc_x_midpoint(void) {
     sim.agents.loc_x[0] = (GRID_W - 1) / 2;
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_LOC_X, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_LOC_X, 0, &sim);
     TEST_ASSERT_FLOAT_WITHIN(0.1F, 0.5F, v);
 }
 
@@ -53,17 +53,17 @@ void test_loc_x_midpoint(void) {
 
 void test_loc_y_top_edge(void) {
     sim.agents.loc_y[0] = 0;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_Y, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_Y, 0, &sim));
 }
 
 void test_loc_y_bottom_edge(void) {
     sim.agents.loc_y[0] = GRID_H - 1;
-    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_Y, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LOC_Y, 0, &sim));
 }
 
 void test_loc_y_midpoint(void) {
     sim.agents.loc_y[0] = (GRID_H - 1) / 2;
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_LOC_Y, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_LOC_Y, 0, &sim);
     TEST_ASSERT_FLOAT_WITHIN(0.1F, 0.5F, v);
 }
 
@@ -71,17 +71,17 @@ void test_loc_y_midpoint(void) {
 
 void test_boundary_dist_x_left_edge(void) {
     sim.agents.loc_x[0] = 0;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_X, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_X, 0, &sim));
 }
 
 void test_boundary_dist_x_right_edge(void) {
     sim.agents.loc_x[0] = GRID_W - 1;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_X, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_X, 0, &sim));
 }
 
 void test_boundary_dist_x_center_positive(void) {
     sim.agents.loc_x[0] = GRID_W / 2;
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_X, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_X, 0, &sim);
     TEST_ASSERT_TRUE(v > 0.4F);
 }
 
@@ -89,17 +89,17 @@ void test_boundary_dist_x_center_positive(void) {
 
 void test_boundary_dist_y_top_edge(void) {
     sim.agents.loc_y[0] = 0;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_Y, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_Y, 0, &sim));
 }
 
 void test_boundary_dist_y_bottom_edge(void) {
     sim.agents.loc_y[0] = GRID_H - 1;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_Y, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_Y, 0, &sim));
 }
 
 void test_boundary_dist_y_center_positive(void) {
     sim.agents.loc_y[0] = GRID_H / 2;
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_Y, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST_Y, 0, &sim);
     TEST_ASSERT_TRUE(v > 0.4F);
 }
 
@@ -108,13 +108,13 @@ void test_boundary_dist_y_center_positive(void) {
 void test_boundary_dist_corner_is_zero(void) {
     sim.agents.loc_x[0] = 0;
     sim.agents.loc_y[0] = 0;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST, 0, &sim));
 }
 
 void test_boundary_dist_center_positive(void) {
     sim.agents.loc_x[0] = GRID_W / 2;
     sim.agents.loc_y[0] = GRID_H / 2;
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_BOUNDARY_DIST, 0, &sim);
     TEST_ASSERT_TRUE(v > 0.4F);
 }
 
@@ -122,32 +122,32 @@ void test_boundary_dist_center_positive(void) {
 
 void test_last_move_dir_x_east(void) {
     sim.agents.last_move_dir[0] = 0; /* E: dx=+1 → (1+1)*0.5 = 1.0 */
-    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_X, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_X, 0, &sim));
 }
 
 void test_last_move_dir_x_west(void) {
     sim.agents.last_move_dir[0] = 4; /* W: dx=-1 → (-1+1)*0.5 = 0.0 */
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_X, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_X, 0, &sim));
 }
 
 void test_last_move_dir_x_north(void) {
     sim.agents.last_move_dir[0] = 2; /* N: dx=0 → (0+1)*0.5 = 0.5 */
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_X, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_X, 0, &sim));
 }
 
 void test_last_move_dir_y_south(void) {
     sim.agents.last_move_dir[0] = 6; /* S: dy=+1 → (1+1)*0.5 = 1.0 */
-    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_Y, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_Y, 0, &sim));
 }
 
 void test_last_move_dir_y_north(void) {
     sim.agents.last_move_dir[0] = 2; /* N: dy=-1 → (-1+1)*0.5 = 0.0 */
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_Y, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_Y, 0, &sim));
 }
 
 void test_last_move_dir_y_east(void) {
     sim.agents.last_move_dir[0] = 0; /* E: dy=0 → (0+1)*0.5 = 0.5 */
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_Y, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LAST_MOVE_DIR_Y, 0, &sim));
 }
 
 /* ── OSC1 ───────────────────────────────────────────────────────────────── */
@@ -155,37 +155,38 @@ void test_last_move_dir_y_east(void) {
 void test_osc1_start_of_cycle(void) {
     /* phase = 0/4 = 0 → (1 - cos(0)) / 2 = 0 */
     sim.agents.osc_period[0] = 4;
-    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 0.0F, biosim_sensor_eval(BIOSIM_SENSOR_OSC1, 0, &sim, 0));
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 0.0F, biosim_sensor_eval(BIOSIM_SENSOR_OSC1, 0, &sim));
 }
 
 void test_osc1_half_cycle(void) {
     /* phase = 2/4 = 0.5 → (1 - cos(π)) / 2 = 1 */
     sim.agents.osc_period[0] = 4;
-    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F, biosim_sensor_eval(BIOSIM_SENSOR_OSC1, 0, &sim, 2));
+    sim.step = 2;
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F, biosim_sensor_eval(BIOSIM_SENSOR_OSC1, 0, &sim));
 }
 
 /* ── AGE ────────────────────────────────────────────────────────────────── */
 
 void test_age_zero(void) {
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_AGE, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_AGE, 0, &sim));
 }
 
 void test_age_max(void) {
     int steps = sim.steps_per_gen;
-    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F,
-                             biosim_sensor_eval(BIOSIM_SENSOR_AGE, 0, &sim, (uint32_t)steps));
+    sim.step = (uint32_t)steps;
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F, biosim_sensor_eval(BIOSIM_SENSOR_AGE, 0, &sim));
 }
 
 /* ── RANDOM ─────────────────────────────────────────────────────────────── */
 
 void test_random_in_range(void) {
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_RANDOM, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_RANDOM, 0, &sim);
     TEST_ASSERT_TRUE(v >= 0.0F && v <= 1.0F);
 }
 
 void test_random_advances_rng(void) {
     uint64_t before = sim.agents.rng_state[0];
-    biosim_sensor_eval(BIOSIM_SENSOR_RANDOM, 0, &sim, 0);
+    biosim_sensor_eval(BIOSIM_SENSOR_RANDOM, 0, &sim);
     TEST_ASSERT_NOT_EQUAL_UINT64(before, sim.agents.rng_state[0]);
 }
 
@@ -193,7 +194,7 @@ void test_random_advances_rng(void) {
 
 void test_population_empty_neighborhood(void) {
     biosim_grid_zero_fill(&sim.grid);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION, 0, &sim));
 }
 
 void test_population_all_neighbors_occupied(void) {
@@ -208,7 +209,7 @@ void test_population_all_neighbors_occupied(void) {
             biosim_grid_set(&sim.grid, c, 1U); /* mark as occupied */
         }
     }
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_POPULATION, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_POPULATION, 0, &sim);
     TEST_ASSERT_TRUE(v > 0.0F);
 }
 
@@ -216,19 +217,19 @@ void test_population_all_neighbors_occupied(void) {
 
 void test_signal0_zero(void) {
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0, 0, &sim));
 }
 
 void test_signal0_max(void) {
     size_t ci = (size_t)sim.agents.loc_y[0] * GRID_W + (size_t)sim.agents.loc_x[0];
     sim.signal[ci] = 255U;
-    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0, 0, &sim));
 }
 
 void test_signal0_midrange(void) {
     size_t ci = (size_t)sim.agents.loc_y[0] * GRID_W + (size_t)sim.agents.loc_x[0];
     sim.signal[ci] = 127U;
-    float v = biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0, 0, &sim, 0);
+    float v = biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0, 0, &sim);
     TEST_ASSERT_FLOAT_WITHIN(0.01F, 127.0F / 255.0F, v);
 }
 
@@ -239,14 +240,14 @@ void test_genetic_sim_fwd_empty_forward(void) {
     sim.agents.last_move_dir[0] = 0;
     biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim));
 }
 
 void test_genetic_sim_fwd_barrier_forward(void) {
     sim.agents.last_move_dir[0] = 0;
     biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_BARRIER);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim));
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
 }
 
@@ -257,7 +258,7 @@ void test_genetic_sim_fwd_identical_fingerprint(void) {
     biosim_grid_set(&sim.grid, fwd, 2U); /* agent index 1 (1-based) */
     sim.agents.genome_fingerprint[0] = 0xDEADBEEFCAFEBABEULL;
     sim.agents.genome_fingerprint[1] = 0xDEADBEEFCAFEBABEULL;
-    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim));
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
 }
 
@@ -267,21 +268,21 @@ void test_genetic_sim_fwd_all_bits_differ(void) {
     biosim_grid_set(&sim.grid, fwd, 2U);
     sim.agents.genome_fingerprint[0] = 0x0000000000000000ULL;
     sim.agents.genome_fingerprint[1] = 0xFFFFFFFFFFFFFFFFULL;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim));
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
 }
 
 /* ── placeholder sensors ────────────────────────────────────────────────── */
 
 void test_placeholder_sensors_return_half(void) {
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_FWD, 0, &sim, 0));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim, 0));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim, 0));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim, 0));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim, 0));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_BAR_FWD, 0, &sim, 0));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_FWD, 0, &sim, 0));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim, 0));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_FWD, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_BAR_FWD, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_FWD, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
 }
 
 /* ── SET_RESPONSIVENESS ─────────────────────────────────────────────────── */

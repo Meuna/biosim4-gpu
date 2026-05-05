@@ -22,7 +22,6 @@ biosim_challenge_result_t biosim_challenge_eval(const biosim_challenge_spec_t *s
  * kinds that track state across steps (touch_any_wall, radioactive_walls,
  * location_sequence). No-op for all other kinds.
  */
-void biosim_challenge_step(const biosim_challenge_spec_t *spec, biosim_sim_t *sim, int sim_step,
-                           int steps_per_gen);
+void biosim_challenge_step(biosim_sim_t *sim);
 
 #endif /* BIOSIM_CORE_CHALLENGES_H */

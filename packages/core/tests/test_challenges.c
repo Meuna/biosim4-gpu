@@ -16,6 +16,7 @@ void setUp(void) {
     sim.genome_max_len = 8;
     sim.max_neurons = 3;
     sim.long_probe_dist = 8;
+    sim.steps_per_gen = 300;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
     sim.agents.loc_x[0] = 64;
     sim.agents.loc_y[0] = 64;
@@ -260,22 +261,20 @@ void test_touch_any_wall_bits_set_passes(void) {
 /* ── touch_any_wall step hook ────────────────────────────────────────────── */
 
 void test_step_touch_any_wall_on_border_sets_bit(void) {
-    biosim_challenge_spec_t s;
-    s.kind = BIOSIM_CHALLENGE_TOUCH_ANY_WALL;
+    sim.challenge.kind = BIOSIM_CHALLENGE_TOUCH_ANY_WALL;
     sim.agents.loc_x[0] = 0;
     sim.agents.loc_y[0] = 32;
     sim.agents.challenge_bits[0] = 0;
-    biosim_challenge_step(&s, &sim, 0, 300);
+    biosim_challenge_step(&sim);
     TEST_ASSERT_NOT_EQUAL(0U, sim.agents.challenge_bits[0]);
 }
 
 void test_step_touch_any_wall_interior_no_bit(void) {
-    biosim_challenge_spec_t s;
-    s.kind = BIOSIM_CHALLENGE_TOUCH_ANY_WALL;
+    sim.challenge.kind = BIOSIM_CHALLENGE_TOUCH_ANY_WALL;
     sim.agents.loc_x[0] = 32;
     sim.agents.loc_y[0] = 32;
     sim.agents.challenge_bits[0] = 0;
-    biosim_challenge_step(&s, &sim, 0, 300);
+    biosim_challenge_step(&sim);
     TEST_ASSERT_EQUAL(0U, sim.agents.challenge_bits[0]);
 }
 
@@ -292,12 +291,11 @@ void test_radioactive_walls_always_passes_eval(void) {
 /* ── radioactive_walls step hook ─────────────────────────────────────────── */
 
 void test_step_radioactive_walls_kills_at_wall(void) {
-    biosim_challenge_spec_t s;
-    s.kind = BIOSIM_CHALLENGE_RADIOACTIVE_WALLS;
-    /* sim_step=0 < steps_per_gen/2 → radioactive_x = 0 */
+    sim.challenge.kind = BIOSIM_CHALLENGE_RADIOACTIVE_WALLS;
+    /* step=0 < steps_per_gen/2 → radioactive_x = 0 */
     sim.agents.loc_x[0] = 0;
     sim.agents.alive[0] = 1;
-    biosim_challenge_step(&s, &sim, 0, 300);
+    biosim_challenge_step(&sim);
     TEST_ASSERT_EQUAL(0, sim.agents.alive[0]);
 }
 
@@ -322,8 +320,7 @@ void test_location_sequence_bits_set_passes(void) {
 /* ── location_sequence step hook ─────────────────────────────────────────── */
 
 void test_step_location_sequence_visits_waypoint(void) {
-    biosim_challenge_spec_t s;
-    s.kind = BIOSIM_CHALLENGE_LOCATION_SEQUENCE;
+    sim.challenge.kind = BIOSIM_CHALLENGE_LOCATION_SEQUENCE;
     /* Install one waypoint at (10, 10); context_free will release it */
     biosim_coord_t *wpt = (biosim_coord_t *)malloc(sizeof(biosim_coord_t));
     TEST_ASSERT_NOT_NULL(wpt);
@@ -335,7 +332,7 @@ void test_step_location_sequence_visits_waypoint(void) {
     sim.agents.loc_x[0] = 10;
     sim.agents.loc_y[0] = 10;
     sim.agents.challenge_bits[0] = 0;
-    biosim_challenge_step(&s, &sim, 0, 300);
+    biosim_challenge_step(&sim);
     TEST_ASSERT_NOT_EQUAL(0U, sim.agents.challenge_bits[0]);
 }
 
