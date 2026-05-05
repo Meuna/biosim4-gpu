@@ -47,44 +47,44 @@ static const biosim_param_entry_t sim_params[] = {
 
 /* ── entry point ────────────────────────────────────────────────────────── */
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int main(int argc, char **argv) {
+    /* alloc start here, freed on exit label */
     biosim_params_t p;
-    biosim_status_t st = biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
-    if (st != BIOSIM_OK) {
-        return st;
+    biosim_sim_t sim;
+    biosim_barrier_spec_t *barriers = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    returncode = biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
     char version_buf[256];
     (void)snprintf(version_buf, sizeof(version_buf), "%s (%s, %s)", BIOSIM_GIT_VERSION,
                    BIOSIM_BUILD_TYPE, BIOSIM_BUILD_TIMESTAMP);
 
-    st = biosim_params_parse(&p, BIOSIM_PROGNAME, version_buf, argc, argv);
-    if (st != BIOSIM_OK) {
-        biosim_params_free(&p);
-        return st;
+    returncode = biosim_params_parse(&p, BIOSIM_PROGNAME, version_buf, argc, argv);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
-    biosim_barrier_spec_t *barriers = NULL;
     int n_barriers = 0;
-    st = biosim_barrier_params_load(p.config_path, &barriers, &n_barriers);
-    if (st != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-stepper: barrier config error (status %d)\n", (int)st);
-        biosim_params_free(&p);
-        return st;
+    returncode = biosim_barrier_params_load(p.config_path, &barriers, &n_barriers);
+    if (returncode != BIOSIM_OK) {
+        (void)fprintf(stderr, "biosim-stepper: barrier config error (status %d)\n", (int)returncode);
+        goto exit;
     }
 
     biosim_challenge_spec_t challenge;
-    st = biosim_challenge_spec_from_params(&p, &challenge);
-    if (st != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-stepper: challenge config error (status %d)\n", (int)st);
-        free(barriers);
-        biosim_params_free(&p);
-        return st;
+    returncode = biosim_challenge_spec_from_params(&p, &challenge);
+    if (returncode != BIOSIM_OK) {
+        (void)fprintf(stderr, "biosim-stepper: challenge config error (status %d)\n", (int)returncode);
+        goto exit;
     }
 
     /* ── create simulation ───────────────────────────────────────────────── */
 
-    biosim_sim_t sim;
     memset(&sim, 0, sizeof(sim));
     sim.max_generations = (uint32_t)biosim_params_get_int(&p, "max-generations");
     sim.population = (uint32_t)biosim_params_get_int(&p, "population");
@@ -102,12 +102,10 @@ int main(int argc, char **argv) {
     sim.choose_parents_by_fitness = biosim_params_get_bool(&p, "choose-parents-by-fitness");
     sim.gen_rng = biosim_rng_seed(0U, 1U);
 
-    st = biosim_sim_create(&sim, barriers, n_barriers);
-    free(barriers);
-    if (st != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-stepper: init failed (status %d)\n", (int)st);
-        biosim_params_free(&p);
-        return st;
+    returncode = biosim_sim_create(&sim, barriers, n_barriers);
+    if (returncode != BIOSIM_OK) {
+        (void)fprintf(stderr, "biosim-stepper: init failed (status %d)\n", (int)returncode);
+        goto exit;
     }
 
     /* ── apply snapshot-in if configured ────────────────────────────────── */
@@ -117,22 +115,18 @@ int main(int argc, char **argv) {
     const int snap_interval = biosim_params_get_int(&p, "interval");
 
     if (snap_in_path != NULL) {
-        st = biosim_snapshot_restore(snap_in_path, &sim);
-        if (st != BIOSIM_OK) {
-            biosim_sim_free(&sim);
-            biosim_params_free(&p);
-            return st;
+        returncode = biosim_snapshot_restore(snap_in_path, &sim);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
         }
     }
 
     /* ── open snapshot-out session if configured ─────────────────────────── */
 
     if (snap_out_path != NULL) {
-        st = biosim_snapshot_session_open(&sim, snap_out_path, snap_interval);
-        if (st != BIOSIM_OK) {
-            biosim_sim_free(&sim);
-            biosim_params_free(&p);
-            return st;
+        returncode = biosim_snapshot_session_open(&sim, snap_out_path, snap_interval);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
         }
     }
 
@@ -151,17 +145,17 @@ int main(int argc, char **argv) {
         }
 
         biosim_census_t census;
-        st = biosim_sim_next_generation(&sim, &census);
-        if (st != BIOSIM_OK) {
+        returncode = biosim_sim_next_generation(&sim, &census);
+        if (returncode != BIOSIM_OK) {
             (void)fprintf(stderr, "biosim-stepper: out of memory during generation advance\n");
-            biosim_sim_free(&sim);
-            biosim_params_free(&p);
-            return st;
+            goto exit;
         }
         biosim_census_print(stdout, &census);
     }
 
+exit:
     biosim_sim_free(&sim);
     biosim_params_free(&p);
-    return 0;
+    free(barriers);
+    return returncode;
 }

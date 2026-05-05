@@ -15,20 +15,19 @@
 
 biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
                                   int n_barriers) {
-    biosim_status_t st;
-
+    /* alloc start here, freed on exit label */
     const uint32_t pop = sim->population;
     const int16_t size_x = sim->size_x;
     const int16_t size_y = sim->size_y;
     const uint16_t genome_max_len = sim->genome_max_len;
     const uint8_t max_neurons = sim->max_neurons;
+    biosim_status_t returncode = BIOSIM_OK;
 
     sim->kills = 0;
 
-    st = biosim_grid_create(size_x, size_y, &sim->grid);
-    if (st != BIOSIM_OK) {
-        biosim_sim_free(sim);
-        return st;
+    returncode = biosim_grid_create(size_x, size_y, &sim->grid);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
     sim->barrier_ctrs = NULL;
@@ -36,52 +35,48 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
     if (n_barriers > 0) {
         sim->barrier_ctrs = (biosim_coord_t *)malloc((size_t)n_barriers * sizeof(biosim_coord_t));
         if (sim->barrier_ctrs == NULL) {
-            biosim_sim_free(sim);
-            return BIOSIM_ERR_NOMEM;
+            returncode = BIOSIM_ERR_NOMEM;
+            goto exit;
         }
         uint64_t barrier_rng = biosim_rng_seed(0, 0);
-        st = biosim_barriers_place(&sim->grid, barriers, n_barriers, &barrier_rng,
-                                   sim->barrier_ctrs);
-        if (st != BIOSIM_OK) {
-            biosim_sim_free(sim);
-            return st;
+        returncode = biosim_barriers_place(&sim->grid, barriers, n_barriers, &barrier_rng,
+                                           sim->barrier_ctrs);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
         }
         sim->n_barrier_ctrs = n_barriers;
     }
 
-    st = biosim_agents_create(pop, &sim->agents);
-    if (st != BIOSIM_OK) {
-        biosim_sim_free(sim);
-        return st;
+    returncode = biosim_agents_create(pop, &sim->agents);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
-    st = biosim_genome_create(pop, genome_max_len, &sim->genome);
-    if (st != BIOSIM_OK) {
-        biosim_sim_free(sim);
-        return st;
+    returncode = biosim_genome_create(pop, genome_max_len, &sim->genome);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
     /* max_conn = genome_max_len: worst case every gene survives culling */
-    st = biosim_nnet_create(pop, genome_max_len, max_neurons, &sim->nnet);
-    if (st != BIOSIM_OK) {
-        biosim_sim_free(sim);
-        return st;
+    returncode = biosim_nnet_create(pop, genome_max_len, max_neurons, &sim->nnet);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
     sim->signal_len = (size_t)size_x * (size_t)size_y;
     sim->signal = (uint32_t *)calloc(sim->signal_len, sizeof(uint32_t));
     if (sim->signal == NULL) {
-        biosim_sim_free(sim);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
-    st = biosim_generation_init_random(sim);
-    if (st != BIOSIM_OK) {
-        biosim_sim_free(sim);
-        return st;
-    }
+    returncode = biosim_generation_init_random(sim);
 
-    return BIOSIM_OK;
+exit:
+    if (returncode != BIOSIM_OK) {
+        biosim_sim_free(sim);
+    }
+    return returncode;
 }
 
 void biosim_sim_free(biosim_sim_t *sim) {
@@ -169,32 +164,37 @@ void biosim_sim_next_step(biosim_sim_t *sim) {
 biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out) {
     const uint32_t pop = sim->agents.population;
 
-    uint32_t *survivors = malloc(pop * sizeof(uint32_t));
-    float *scores = malloc(pop * sizeof(float));
+    /* alloc start here, freed on exit label */
+    uint32_t *survivors = NULL;
+    float *scores = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    survivors = malloc(pop * sizeof(uint32_t));
+    scores = malloc(pop * sizeof(float));
     if (survivors == NULL || scores == NULL) {
-        free(survivors);
-        free(scores);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
     uint32_t n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
     biosim_census_take(sim, survivors, n_survivors, out);
     biosim_snapshot_session_write(sim, survivors, n_survivors);
 
-    biosim_status_t st;
     if (n_survivors > 0) {
-        st = biosim_generation_reproduce(sim, survivors, scores, n_survivors);
+        returncode = biosim_generation_reproduce(sim, survivors, scores, n_survivors);
     } else {
-        st = biosim_generation_init_random(sim);
+        returncode = biosim_generation_init_random(sim);
     }
-    free(survivors);
-    free(scores);
-    if (st != BIOSIM_OK) {
-        return st;
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
     sim->kills = 0U;
     sim->step = 0U;
     sim->gen++;
-    return BIOSIM_OK;
+
+exit:
+    free(survivors);
+    free(scores);
+    return returncode;
 }

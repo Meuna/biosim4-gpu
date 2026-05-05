@@ -20,37 +20,44 @@ biosim_status_t biosim_nnet_create(uint32_t population, uint16_t max_conn, uint8
     size_t conn_slots = (size_t)max_conn * (size_t)population;
     size_t neuron_slots = (size_t)max_neurons * (size_t)population;
 
+    /* alloc start here, freed on exit label */
+    biosim_status_t returncode = BIOSIM_OK;
+
     out->genome_conn = calloc(conn_slots, sizeof(uint16_t));
     if (!out->genome_conn) {
-        biosim_nnet_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     out->genome_wgt = calloc(conn_slots, sizeof(int16_t));
     if (!out->genome_wgt) {
-        biosim_nnet_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     out->conn_length = calloc(population, sizeof(uint16_t));
     if (!out->conn_length) {
-        biosim_nnet_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     out->neuron_output = calloc(neuron_slots, sizeof(float));
     if (!out->neuron_output) {
-        biosim_nnet_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     out->neuron_driven = calloc(neuron_slots, sizeof(uint8_t));
     if (!out->neuron_driven) {
-        biosim_nnet_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     out->neuron_count = calloc(population, sizeof(uint8_t));
     if (!out->neuron_count) {
-        biosim_nnet_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
-    return BIOSIM_OK;
+exit:
+    if (returncode != BIOSIM_OK) {
+        biosim_nnet_free(out);
+    }
+    return returncode;
 }
 
 void biosim_nnet_free(biosim_nnet_t *n) {
@@ -192,12 +199,16 @@ biosim_status_t biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t
     uint8_t max_neurons = n->max_neurons;
     uint32_t pop = n->population;
 
-    /* Phase 1: parse genome genes and remap raw 7-bit fields modulo valid range */
+    /* alloc start here, freed on exit label */
     remapped_gene_t *genes = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    /* Phase 1: parse genome genes and remap raw 7-bit fields modulo valid range */
     if (gene_count > 0) {
         genes = malloc((size_t)gene_count * sizeof(remapped_gene_t));
         if (!genes) {
-            return BIOSIM_ERR_NOMEM;
+            returncode = BIOSIM_ERR_NOMEM;
+            goto exit;
         }
         parse_genes(genome, idx, num_sensors, num_actions, max_neurons, genes, gene_count);
     }
@@ -237,8 +248,9 @@ biosim_status_t biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t
         n->neuron_driven[(size_t)k * pop + idx] = 1;
     }
 
+exit:
     free(genes);
-    return BIOSIM_OK;
+    return returncode;
 }
 
 /* ── fingerprint ────────────────────────────────────────────────────────── */

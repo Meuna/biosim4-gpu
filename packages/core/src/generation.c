@@ -224,9 +224,14 @@ static int cmp_survivor_desc(const void *a, const void *b) {
  * holds the highest-scoring parent.
  */
 static biosim_status_t sort_survivors_by_score(uint32_t *survivors, float *scores, uint32_t n) {
-    survivor_entry_t *tmp = malloc((size_t)n * sizeof(survivor_entry_t));
+    /* alloc start here, freed on exit label */
+    survivor_entry_t *tmp = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    tmp = malloc((size_t)n * sizeof(survivor_entry_t));
     if (!tmp) {
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     for (uint32_t i = 0; i < n; i++) {
         tmp[i].idx = survivors[i];
@@ -237,8 +242,9 @@ static biosim_status_t sort_survivors_by_score(uint32_t *survivors, float *score
         survivors[i] = tmp[i].idx;
         scores[i] = tmp[i].score;
     }
+exit:
     free(tmp);
-    return BIOSIM_OK;
+    return returncode;
 }
 
 /* ── main reproduce entry point ─────────────────────────────────────────── */
@@ -258,26 +264,30 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivo
     const bool sexual = sim->sexual_reproduction;
     const bool by_fitness = sim->choose_parents_by_fitness;
 
-    /* Sort before snapshot so the temp buffers are already in score order. */
-    if (by_fitness && n_survivors > 1) {
-        biosim_status_t st = sort_survivors_by_score(survivors, scores, n_survivors);
-        if (st != BIOSIM_OK) {
-            return st;
+    /* alloc start here, freed on exit label */
+    uint16_t *temp_conn = NULL;
+    int16_t *temp_wgt = NULL;
+    uint16_t *temp_len = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    /* Sort before snapshot so the temp buffers are already in score order */
+    if (by_fitness && n_survivors > 1 && scores != NULL) {
+        returncode = sort_survivors_by_score(survivors, scores, n_survivors);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
         }
     }
 
     clear_agents_from_grid(sim);
 
     /* snapshot survivor genomes before any slot is overwritten */
-    uint16_t *temp_conn = malloc((size_t)n_survivors * max_len * sizeof(uint16_t));
-    int16_t *temp_wgt = malloc((size_t)n_survivors * max_len * sizeof(int16_t));
-    uint16_t *temp_len = malloc((size_t)n_survivors * sizeof(uint16_t));
+    temp_conn = malloc((size_t)n_survivors * max_len * sizeof(uint16_t));
+    temp_wgt = malloc((size_t)n_survivors * max_len * sizeof(int16_t));
+    temp_len = malloc((size_t)n_survivors * sizeof(uint16_t));
 
     if (temp_conn == NULL || temp_wgt == NULL || temp_len == NULL) {
-        free(temp_conn);
-        free(temp_wgt);
-        free(temp_len);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
     snapshot_survivor_genomes(genome, survivors, n_survivors, temp_conn, temp_wgt, temp_len);
@@ -294,28 +304,25 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivo
         biosim_status_t st =
             biosim_nnet_compile_slot(nnet, genome, i, BIOSIM_NUM_SENSORS, BIOSIM_NUM_ACTIONS);
         if (st != BIOSIM_OK) {
-            free(temp_conn);
-            free(temp_wgt);
-            free(temp_len);
-            return st;
+            returncode = st;
+            goto exit;
         }
         const uint64_t fp = biosim_nnet_fingerprint(nnet, i);
 
         biosim_coord_t loc;
         st = biosim_grid_find_empty(grid, &sim->gen_rng, &loc);
         if (st != BIOSIM_OK) {
-            free(temp_conn);
-            free(temp_wgt);
-            free(temp_len);
-            return st;
+            returncode = st;
+            goto exit;
         }
         biosim_agents_init_slot(agents, i, loc, long_probe_dist, biosim_rng_seed(i, gen_seed));
         agents->genome_fingerprint[i] = fp;
         biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
     }
 
+exit:
     free(temp_conn);
     free(temp_wgt);
     free(temp_len);
-    return BIOSIM_OK;
+    return returncode;
 }

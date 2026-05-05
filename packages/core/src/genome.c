@@ -18,22 +18,28 @@ biosim_status_t biosim_genome_create(uint32_t population, uint16_t max_length,
 
     size_t gene_slots = (size_t)max_length * (size_t)population;
 
+    /* alloc start here, freed on exit label */
+    biosim_status_t returncode = BIOSIM_OK;
     out->conn = calloc(gene_slots, sizeof(uint16_t));
     if (!out->conn) {
-        biosim_genome_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     out->wgt = calloc(gene_slots, sizeof(int16_t));
     if (!out->wgt) {
-        biosim_genome_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
     out->length = calloc(population, sizeof(uint16_t));
     if (!out->length) {
-        biosim_genome_free(out);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
-    return BIOSIM_OK;
+exit:
+    if (returncode != BIOSIM_OK) {
+        biosim_genome_free(out);
+    }
+    return returncode;
 }
 
 void biosim_genome_free(biosim_genome_t *g) {
@@ -183,20 +189,24 @@ biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_
     size_t gene_slots = (size_t)max_len * (size_t)pop;
     size_t buckets = (size_t)max_len + 1U;
 
-    uint16_t *new_conn = malloc(gene_slots * sizeof(uint16_t));
-    int16_t *new_wgt = malloc(gene_slots * sizeof(int16_t));
-    uint16_t *new_len = malloc((size_t)pop * sizeof(uint16_t));
-    uint32_t *count = calloc(buckets, sizeof(uint32_t));
-    uint32_t *start = calloc(buckets, sizeof(uint32_t));
-    uint32_t *cur = malloc(buckets * sizeof(uint32_t));
+    /* alloc start here, freed on exit label */
+    uint16_t *new_conn = NULL;
+    int16_t *new_wgt = NULL;
+    uint16_t *new_len = NULL;
+    uint32_t *count = NULL;
+    uint32_t *start = NULL;
+    uint32_t *cur = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    new_conn = malloc(gene_slots * sizeof(uint16_t));
+    new_wgt = malloc(gene_slots * sizeof(int16_t));
+    new_len = malloc((size_t)pop * sizeof(uint16_t));
+    count = calloc(buckets, sizeof(uint32_t));
+    start = calloc(buckets, sizeof(uint32_t));
+    cur = malloc(buckets * sizeof(uint32_t));
     if (!new_conn || !new_wgt || !new_len || !count || !start || !cur) {
-        free(new_conn);
-        free(new_wgt);
-        free(new_len);
-        free(count);
-        free(start);
-        free(cur);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
     /* Counting sort (descending) on length[0..pop-1] in range [0..max_len] */
@@ -229,11 +239,12 @@ biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_
     memcpy(g->conn, new_conn, gene_slots * sizeof(uint16_t));
     memcpy(g->wgt, new_wgt, gene_slots * sizeof(int16_t));
     memcpy(g->length, new_len, (size_t)pop * sizeof(uint16_t));
+exit:
     free(new_conn);
     free(new_wgt);
     free(new_len);
     free(count);
     free(start);
     free(cur);
-    return BIOSIM_OK;
+    return returncode;
 }

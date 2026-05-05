@@ -97,45 +97,50 @@ biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier
         return BIOSIM_ERR_NOTFOUND;
     }
 
+    /* alloc start here, freed on exit label */
+    biosim_barrier_spec_t *specs = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+    int n = 0;
+
     toml_datum_t toptab = result.toptab;
     toml_datum_t barriers_tab = toml_get(toptab, "barriers");
     if (barriers_tab.type != TOML_TABLE) {
-        toml_free(result);
-        return BIOSIM_OK;
+        goto exit;
     }
 
     toml_datum_t num_val = toml_get(barriers_tab, "num-barriers");
     if (num_val.type != TOML_INT64 || num_val.u.int64 <= 0) {
-        toml_free(result);
-        return BIOSIM_OK;
+        goto exit;
     }
 
-    int n = (int)num_val.u.int64;
-    biosim_barrier_spec_t *specs = (biosim_barrier_spec_t *)malloc((size_t)n * sizeof(*specs));
+    n = (int)num_val.u.int64;
+    specs = (biosim_barrier_spec_t *)malloc((size_t)n * sizeof(*specs));
     if (specs == NULL) {
-        toml_free(result);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
-    char key[32];
     for (int i = 0; i < n; i++) {
+        char key[32];
         (void)snprintf(key, sizeof(key), "barrier-%d", i + 1);
         toml_datum_t tab = toml_get(toptab, key);
         if (tab.type != TOML_TABLE) {
-            free(specs);
-            toml_free(result);
-            return BIOSIM_ERR_INVALID;
+            returncode = BIOSIM_ERR_INVALID;
+            goto exit;
         }
         biosim_status_t st = parse_barrier_table(tab, &specs[i]);
         if (st != BIOSIM_OK) {
-            free(specs);
-            toml_free(result);
-            return st;
+            returncode = st;
+            goto exit;
         }
     }
 
-    toml_free(result);
     *specs_out = specs;
     *n_out = n;
-    return BIOSIM_OK;
+    specs = NULL;
+
+exit:
+    free(specs);
+    toml_free(result);
+    return returncode;
 }
