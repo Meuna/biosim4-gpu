@@ -54,34 +54,34 @@ biosim_status_t biosim_snapshot_write_header(FILE *f, const biosim_sim_t *sim) {
     static const uint8_t reserved12[12] = {0};
 
     if (fwrite(snap_magic, 1U, 4U, f) != 4U) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u16(f, BIOSIM_SNAP_FORMAT_VERSION)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u16(f, BIOSIM_IO_SCHEMA_VERSION)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u16(f, (uint16_t)BIOSIM_NUM_SENSORS)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u16(f, (uint16_t)BIOSIM_NUM_ACTIONS)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u16(f, sim->genome.max_len)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u8(f, sim->nnet.max_neurons)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u8(f, 0U)) { /* reserved pad */
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u32(f, 0U)) { /* generation_count: patched on finalize */
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (fwrite(reserved12, 1U, 12U, f) != 12U) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     return BIOSIM_OK;
 }
@@ -93,22 +93,22 @@ biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
     const uint16_t genome_max_len = sim->genome.max_len;
 
     if (!write_u64(f, gen_entry_bytes(n_survivors, genome_max_len))) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u32(f, sim->gen)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u32(f, n_survivors)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u64(f, sim->gen_rng)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     /* genome_length array */
     for (uint32_t s = 0U; s < n_survivors; s++) {
         if (!write_u16(f, genome->length[survivors[s]])) {
-            return BIOSIM_ERR_INVALID;
+            return BIOSIM_ERR_IO;
         }
     }
 
@@ -129,7 +129,7 @@ biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
             row[s] = genome->conn[(size_t)j * pop + survivors[s]];
         }
         if (fwrite(row, sizeof(uint16_t), n_survivors, f) != n_survivors) {
-            returncode = BIOSIM_ERR_INVALID;
+            returncode = BIOSIM_ERR_IO;
             goto exit;
         }
     }
@@ -142,7 +142,7 @@ biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
             row[s] = bits;
         }
         if (fwrite(row, sizeof(uint16_t), n_survivors, f) != n_survivors) {
-            returncode = BIOSIM_ERR_INVALID;
+            returncode = BIOSIM_ERR_IO;
             goto exit;
         }
     }
@@ -154,10 +154,10 @@ exit:
 
 biosim_status_t biosim_snapshot_finalize(FILE *f, uint32_t generation_count) {
     if (fseek(f, (long)snap_gen_count_offset, SEEK_SET) != 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!write_u32(f, generation_count)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     return BIOSIM_OK;
 }
@@ -166,48 +166,48 @@ biosim_status_t biosim_snapshot_finalize(FILE *f, uint32_t generation_count) {
 
 biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *header_out) {
     if (fseek(f, 0, SEEK_SET) != 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     uint8_t magic[4];
     if (fread(magic, 1U, 4U, f) != 4U) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (memcmp(magic, snap_magic, 4U) != 0) {
         return BIOSIM_ERR_INVALID;
     }
 
     if (!read_u16(f, &header_out->format_version)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (header_out->format_version != BIOSIM_SNAP_FORMAT_VERSION) {
         return BIOSIM_ERR_INVALID;
     }
     if (!read_u16(f, &header_out->schema_version)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!read_u16(f, &header_out->num_sensors)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!read_u16(f, &header_out->num_actions)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!read_u16(f, &header_out->genome_max_len)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (fread(&header_out->max_neurons, 1U, 1U, f) != 1U) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     uint8_t pad;
     if (fread(&pad, 1U, 1U, f) != 1U) { /* reserved */
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!read_u32(f, &header_out->generation_count)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     /* skip 12 reserved bytes at offsets 20-31 → leaves f at offset 32 */
     if (fseek(f, 12, SEEK_CUR) != 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     return BIOSIM_OK;
@@ -229,17 +229,17 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     uint64_t gen_rng;
 
     if (!read_u64(f, &entry_size)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     (void)entry_size; /* advances file position; value not needed here */
     if (!read_u32(f, &gen_idx)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!read_u32(f, &pop_file)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     if (!read_u64(f, &gen_rng)) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     const uint32_t pop_sim = sim->genome.population;
@@ -264,7 +264,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
 
     /* genome_length */
     if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
-        returncode = BIOSIM_ERR_INVALID;
+        returncode = BIOSIM_ERR_IO;
         goto exit;
     }
     for (uint32_t s = 0U; s < pop_load; s++) {
@@ -278,7 +278,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     /* genome_conn: copy gml_load rows, seek past excess */
     for (uint16_t j = 0U; j < gml_load; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
-            returncode = BIOSIM_ERR_INVALID;
+            returncode = BIOSIM_ERR_IO;
             goto exit;
         }
         for (uint32_t s = 0U; s < pop_load; s++) {
@@ -286,14 +286,14 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
         }
     }
     if (fseek(f, skip, SEEK_CUR) != 0) {
-        returncode = BIOSIM_ERR_INVALID;
+        returncode = BIOSIM_ERR_IO;
         goto exit;
     }
 
     /* genome_wgt: int16_t stored as uint16_t bits; copy gml_load rows, seek past excess */
     for (uint16_t j = 0U; j < gml_load; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
-            returncode = BIOSIM_ERR_INVALID;
+            returncode = BIOSIM_ERR_IO;
             goto exit;
         }
         for (uint32_t s = 0U; s < pop_load; s++) {
@@ -303,7 +303,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
         }
     }
     if (fseek(f, skip, SEEK_CUR) != 0) {
-        returncode = BIOSIM_ERR_INVALID;
+        returncode = BIOSIM_ERR_IO;
         goto exit;
     }
 
@@ -320,7 +320,7 @@ biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_sna
                                      biosim_sim_t *sim, uint32_t *n_survivors_out,
                                      uint32_t *gen_idx_out, uint64_t *gen_rng_out) {
     if (fseek(f, (long)snap_header_size, SEEK_SET) != 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     for (uint32_t i = 0U; i < gen_idx; i++) {
@@ -333,7 +333,7 @@ biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_sna
         }
         /* skip remainder of this entry (we already read the 8-byte size field) */
         if (fseek(f, (long)(entry_size - 8U), SEEK_CUR) != 0) {
-            return BIOSIM_ERR_INVALID;
+            return BIOSIM_ERR_IO;
         }
     }
 
@@ -350,17 +350,17 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
 
     /* generation_count unknown — scan forward to find the last valid entry */
     if (fseek(f, 0, SEEK_END) != 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     long file_size = ftell(f);
     if (file_size < 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     long pos = (long)snap_header_size;
     long last_pos = -1L;
     if (fseek(f, pos, SEEK_SET) != 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     while (pos < file_size) {
@@ -385,7 +385,7 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
         return BIOSIM_ERR_NOTFOUND;
     }
     if (fseek(f, last_pos, SEEK_SET) != 0) {
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
     return load_genome(f, header, sim, n_survivors_out, gen_idx_out, gen_rng_out);
 }
@@ -435,7 +435,7 @@ biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
     FILE *f = fopen(path, "rb");
     if (f == NULL) {
         (void)fprintf(stderr, "biosim-snapshot: cannot open '%s'\n", path);
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     biosim_snap_header_t hdr;
@@ -518,7 +518,7 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
     FILE *f = fopen(path, "w+b");
     if (f == NULL) {
         (void)fprintf(stderr, "biosim-snapshot: cannot create '%s'\n", path);
-        return BIOSIM_ERR_INVALID;
+        return BIOSIM_ERR_IO;
     }
 
     biosim_status_t st = biosim_snapshot_write_header(f, sim);

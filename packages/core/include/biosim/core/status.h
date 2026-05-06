@@ -7,6 +7,7 @@ typedef enum {
     BIOSIM_ERR_TYPE,
     BIOSIM_ERR_NOTFOUND,
     BIOSIM_ERR_INVALID,
+    BIOSIM_ERR_IO,
     BIOSIM_WARN_UNKNOWN_KEY,
 } biosim_status_t;
 
