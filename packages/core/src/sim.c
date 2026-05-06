@@ -153,7 +153,9 @@ void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i) {
 
 void biosim_sim_next_step(biosim_sim_t *sim) {
     for (size_t j = 0; j < sim->signal_len; j++) {
-        sim->signal[j]--;
+        if (sim->signal[j] > 0) {
+            sim->signal[j]--;
+        }
     }
     biosim_challenge_step(sim);
     sim->step++;
