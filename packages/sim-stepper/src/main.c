@@ -95,8 +95,8 @@ int main(int argc, char **argv) {
     sim.genome_max_len = (uint16_t)biosim_params_get_int(&p, "max-genome-length");
     sim.max_neurons = (uint8_t)biosim_params_get_int(&p, "max-neurons");
     sim.long_probe_dist = (uint8_t)biosim_params_get_int(&p, "long-probe-dist");
-    sim.steps_per_gen = biosim_params_get_int(&p, "steps-per-gen");
-    sim.population_sensor_radius = biosim_params_get_int(&p, "population-sensor-radius");
+    sim.steps_per_gen = (uint32_t)biosim_params_get_int(&p, "steps-per-gen");
+    sim.population_sensor_radius = (int16_t)biosim_params_get_int(&p, "population-sensor-radius");
     sim.challenge = challenge;
     sim.enable_kill = biosim_params_get_bool(&p, "enable-kill");
     sim.mutation_rate = (float)biosim_params_get_float(&p, "point-mutation-rate");
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
     biosim_census_print_header(stdout);
 
     while (sim.gen < sim.max_generations) {
-        while (sim.step < (uint32_t)sim.steps_per_gen) {
+        while (sim.step < sim.steps_per_gen) {
             for (uint32_t i = 0U; i < sim.agents.population; i++) {
                 if (sim.agents.alive[i]) {
                     biosim_sim_step_agent(&sim, i);

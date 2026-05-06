@@ -40,8 +40,8 @@ typedef struct {
 
     /* ── runtime configuration ───────────────────────────────────────────────
      * Set these before or after create(); they are read every step/gen.     */
-    int steps_per_gen;
-    int population_sensor_radius;
+    uint32_t steps_per_gen;
+    int16_t population_sensor_radius;
     bool enable_kill;
     biosim_challenge_spec_t challenge;
 

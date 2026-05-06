@@ -360,7 +360,7 @@ void biosim_challenge_step(biosim_sim_t *sim) {
         break;
 
     case BIOSIM_CHALLENGE_RADIOACTIVE_WALLS: {
-        int16_t radioactive_x = (int16_t)((int)sim->step < sim->steps_per_gen / 2 ? 0 : w - 1);
+        int16_t radioactive_x = (int16_t)(sim->step < sim->steps_per_gen / 2 ? 0 : w - 1);
         for (uint32_t i = 0; i < n; i++) {
             if (!sim->agents.alive[i]) {
                 continue;

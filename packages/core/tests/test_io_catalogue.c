@@ -172,8 +172,7 @@ void test_age_zero(void) {
 }
 
 void test_age_max(void) {
-    int steps = sim.steps_per_gen;
-    sim.step = (uint32_t)steps;
+    sim.step = sim.steps_per_gen;
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F, biosim_sensor_eval(BIOSIM_SENSOR_AGE, 0, &sim));
 }
 

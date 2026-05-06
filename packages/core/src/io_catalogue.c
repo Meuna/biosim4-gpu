@@ -113,24 +113,17 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_AGE: {
-        int steps = sim->steps_per_gen;
-        if (steps <= 0) {
-            steps = 1;
-        }
-        return (float)sim->step / (float)steps;
+        return (float)sim->step / (float)sim->steps_per_gen;
     }
 
     case BIOSIM_SENSOR_RANDOM:
         return rng_float(&agents->rng_state[idx]);
 
     case BIOSIM_SENSOR_POPULATION: {
-        int r = sim->population_sensor_radius;
-        if (r <= 0) {
-            r = 1;
-        }
         biosim_coord_t center = {x, y};
+        int16_t r = sim->population_sensor_radius;
         pop_count_t pc = {0U, 0U};
-        biosim_grid_visit_neighborhood(grid, center, (int16_t)r, pop_visitor, &pc);
+        biosim_grid_visit_neighborhood(grid, center, r, pop_visitor, &pc);
         if (pc.visited == 0U) {
             return 0.0F;
         }
