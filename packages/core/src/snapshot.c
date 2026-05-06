@@ -188,9 +188,6 @@ biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *heade
     if (!read_u16(f, &header_out->format_version)) {
         return BIOSIM_ERR_IO;
     }
-    if (header_out->format_version != BIOSIM_SNAP_FORMAT_VERSION) {
-        return BIOSIM_ERR_INVALID;
-    }
     if (!read_u16(f, &header_out->schema_version)) {
         return BIOSIM_ERR_IO;
     }
@@ -252,13 +249,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
 
     const uint32_t pop_sim = sim->genome.population;
     const uint32_t pop_load = pop_file < pop_sim ? pop_file : pop_sim;
-
-    const uint16_t gml_sim = sim->genome.max_len;
-    const uint16_t gml_file = header->genome_max_len;
-    const uint16_t gml_load = gml_file < gml_sim ? gml_file : gml_sim;
-
-    /* bytes to skip past the excess gene slots the current sim does not need */
-    const long skip = (long)((uint64_t)(gml_file - gml_load) * (uint64_t)pop_file * 2ULL);
+    const uint16_t g_max_len = header->genome_max_len;
 
     /* alloc start here, freed on exit label */
     uint16_t *row = NULL;
@@ -276,15 +267,19 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
         goto exit;
     }
     for (uint32_t s = 0U; s < pop_load; s++) {
-        uint16_t len = row[s];
-        if (len > gml_sim) {
-            len = gml_sim;
+        uint16_t g_len = row[s];
+        if (g_len > g_max_len) {
+            (void)fprintf(stderr,
+                          "biosim-snapshot: corrupted file (genome length %u > max length %u)\n",
+                          g_len, g_max_len);
+            returncode = BIOSIM_ERR_INVALID;
+            goto exit;
         }
-        sim->genome.length[s] = len;
+        sim->genome.length[s] = g_len;
     }
 
-    /* genome_conn: copy gml_load rows, seek past excess */
-    for (uint16_t j = 0U; j < gml_load; j++) {
+    /* genome_conn */
+    for (uint16_t j = 0U; j < g_max_len; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
             returncode = BIOSIM_ERR_IO;
             goto exit;
@@ -293,13 +288,9 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
             sim->genome.conn[(size_t)j * pop_sim + s] = row[s];
         }
     }
-    if (fseek(f, skip, SEEK_CUR) != 0) {
-        returncode = BIOSIM_ERR_IO;
-        goto exit;
-    }
 
-    /* genome_wgt: int16_t stored as uint16_t bits; copy gml_load rows, seek past excess */
-    for (uint16_t j = 0U; j < gml_load; j++) {
+    /* genome_wgt: int16_t stored as uint16_t bits */
+    for (uint16_t j = 0U; j < g_max_len; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
             returncode = BIOSIM_ERR_IO;
             goto exit;
@@ -309,10 +300,6 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
             (void)memcpy(&w, &row[s], sizeof(w));
             sim->genome.wgt[(size_t)j * pop_sim + s] = w;
         }
-    }
-    if (fseek(f, skip, SEEK_CUR) != 0) {
-        returncode = BIOSIM_ERR_IO;
-        goto exit;
     }
 
     /* scores: read pop_load entries; seek past excess */
@@ -413,6 +400,13 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
 /* ── coherency check ────────────────────────────────────────────────────── */
 
 static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosim_sim_t *sim) {
+    if (hdr->format_version != BIOSIM_SNAP_FORMAT_VERSION) {
+        (void)fprintf(stderr,
+                      "biosim-snapshot: format version %u in file, built with %u"
+                      " — incompatible\n",
+                      (unsigned)hdr->format_version, (unsigned)BIOSIM_SNAP_FORMAT_VERSION);
+        return BIOSIM_ERR_INVALID;
+    }
     if (hdr->schema_version != BIOSIM_IO_SCHEMA_VERSION) {
         (void)fprintf(stderr,
                       "biosim-snapshot: schema version %u in file, built with %u"
@@ -424,26 +418,29 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
         hdr->num_actions != (uint16_t)BIOSIM_NUM_ACTIONS) {
         (void)fprintf(stderr,
                       "biosim-snapshot: I/O catalogue (%u sensors, %u actions)"
-                      " does not match built-in (%u sensors, %u actions) — incompatible\n",
+                      " does not match built-in (%u sensors, %u actions) — this should not happen. "
+                      "Either a corrupted file or an implementation issue\n",
                       (unsigned)hdr->num_sensors, (unsigned)hdr->num_actions,
                       (unsigned)BIOSIM_NUM_SENSORS, (unsigned)BIOSIM_NUM_ACTIONS);
         return BIOSIM_ERR_INVALID;
     }
 
-    if (hdr->genome_max_len != sim->genome.max_len) {
+    if (sim->genome.max_len < hdr->genome_max_len) {
         (void)fprintf(stderr,
-                      "biosim-snapshot: file max-genome-length=%u but current is %u;"
-                      " use --max-genome-len %u to match.\n",
+                      "biosim-snapshot: file genome-max-len=%u exceeds current %u;"
+                      " use --max-genome-len %u or larger.\n",
                       (unsigned)hdr->genome_max_len, (unsigned)sim->genome.max_len,
                       (unsigned)hdr->genome_max_len);
+        return BIOSIM_ERR_INVALID;
     }
 
     if (hdr->max_neurons != sim->nnet.max_neurons) {
         (void)fprintf(stderr,
                       "biosim-snapshot: file max-neurons=%u but current is %u;"
-                      " use --max-neurons %u to match.\n",
+                      " use --max-neurons %u.\n",
                       (unsigned)hdr->max_neurons, (unsigned)sim->nnet.max_neurons,
                       (unsigned)hdr->max_neurons);
+        return BIOSIM_ERR_INVALID;
     }
 
     return BIOSIM_OK;
