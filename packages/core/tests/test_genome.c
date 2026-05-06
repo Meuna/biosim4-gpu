@@ -28,7 +28,7 @@ void test_create_pointers_non_null(void) {
 
 void test_create_metadata_stored(void) {
     TEST_ASSERT_EQUAL_UINT32(8, g.population);
-    TEST_ASSERT_EQUAL_UINT16(16, g.max_length);
+    TEST_ASSERT_EQUAL_UINT16(16, g.max_len);
 }
 
 void test_free_zeroes_struct(void) {
@@ -89,7 +89,7 @@ void test_mutate_rate_zero_unchanged(void) {
 }
 
 void test_mutate_rate_one_changed(void) {
-    /* With 1 < length < max_length, structural mutation always fires at rate=1.0
+    /* With 1 < length < g->max_len, structural mutation always fires at rate=1.0
      * and always produces a length change (neither insert nor delete returns early). */
     uint64_t rng = 13ULL;
     biosim_genome_init_slot(&g, 0, 8, &rng);
@@ -112,7 +112,7 @@ void test_mutate_length_never_exceeds_max(void) {
     biosim_genome_init_slot(&g, 0, 8, &rng);
     for (int i = 0; i < 200; i++) {
         biosim_genome_mutate(&g, 0, 1.0F, &rng);
-        TEST_ASSERT_TRUE(g.length[0] <= g.max_length);
+        TEST_ASSERT_TRUE(g.length[0] <= g.max_len);
     }
 }
 
@@ -135,7 +135,7 @@ void test_crossover_length_within_max(void) {
     biosim_genome_init_slot(&g, 0, 16, &rng_a);
     biosim_genome_init_slot(&g, 1, 16, &rng_b);
     biosim_genome_crossover(&g, 2, 0, 1, &rng_cross);
-    TEST_ASSERT_TRUE(g.length[2] <= g.max_length);
+    TEST_ASSERT_TRUE(g.length[2] <= g.max_len);
 }
 
 void test_crossover_child_has_parents_genome(void) {

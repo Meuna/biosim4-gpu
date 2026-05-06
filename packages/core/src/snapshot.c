@@ -68,7 +68,7 @@ biosim_status_t biosim_snapshot_write_header(FILE *f, const biosim_sim_t *sim) {
     if (!write_u16(f, (uint16_t)BIOSIM_NUM_ACTIONS)) {
         return BIOSIM_ERR_INVALID;
     }
-    if (!write_u16(f, sim->genome.max_length)) {
+    if (!write_u16(f, sim->genome.max_len)) {
         return BIOSIM_ERR_INVALID;
     }
     if (!write_u8(f, sim->nnet.max_neurons)) {
@@ -90,7 +90,7 @@ biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
                                              const uint32_t *survivors, uint32_t n_survivors) {
     const biosim_genome_t *genome = &sim->genome;
     const uint32_t pop = genome->population;
-    const uint16_t genome_max_len = sim->genome.max_length;
+    const uint16_t genome_max_len = sim->genome.max_len;
 
     if (!write_u64(f, gen_entry_bytes(n_survivors, genome_max_len))) {
         return BIOSIM_ERR_INVALID;
@@ -245,7 +245,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     const uint32_t pop_sim = sim->genome.population;
     const uint32_t pop_load = pop_file < pop_sim ? pop_file : pop_sim;
 
-    const uint16_t gml_sim = sim->genome.max_length;
+    const uint16_t gml_sim = sim->genome.max_len;
     const uint16_t gml_file = header->genome_max_len;
     const uint16_t gml_load = gml_file < gml_sim ? gml_file : gml_sim;
 
@@ -410,11 +410,11 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
         return BIOSIM_ERR_INVALID;
     }
 
-    if (hdr->genome_max_len != sim->genome.max_length) {
+    if (hdr->genome_max_len != sim->genome.max_len) {
         (void)fprintf(stderr,
                       "biosim-snapshot: file max-genome-length=%u but current is %u;"
                       " use --max-genome-len %u to match.\n",
-                      (unsigned)hdr->genome_max_len, (unsigned)sim->genome.max_length,
+                      (unsigned)hdr->genome_max_len, (unsigned)sim->genome.max_len,
                       (unsigned)hdr->genome_max_len);
     }
 

@@ -540,7 +540,7 @@ impractically large at high population counts.
 | 6 | 2 | schema_version | `BIOSIM_IO_SCHEMA_VERSION` |
 | 8 | 2 | num_sensors | `BIOSIM_NUM_SENSORS` at write time |
 | 10 | 2 | num_actions | `BIOSIM_NUM_ACTIONS` at write time |
-| 12 | 2 | genome_max_len | `sim->genome.max_length` at write time |
+| 12 | 2 | genome_max_len | `sim->genome.max_len` at write time |
 | 14 | 1 | max_neurons | `sim->nnet.max_neurons` at write time |
 | 15 | 1 | reserved | zero |
 | 16 | 4 | generation_count | number of records; 0 = unknown / streaming |

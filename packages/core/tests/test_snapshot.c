@@ -72,7 +72,7 @@ void test_read_header_roundtrip(void) {
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_IO_SCHEMA_VERSION, hdr.schema_version);
     TEST_ASSERT_EQUAL_UINT16((uint16_t)BIOSIM_NUM_SENSORS, hdr.num_sensors);
     TEST_ASSERT_EQUAL_UINT16((uint16_t)BIOSIM_NUM_ACTIONS, hdr.num_actions);
-    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_length, hdr.genome_max_len);
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_len, hdr.genome_max_len);
     TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, hdr.max_neurons);
     TEST_ASSERT_EQUAL_UINT32(0U, hdr.generation_count); /* finalize not called */
 
@@ -113,13 +113,13 @@ void test_genome_roundtrip_single_record(void) {
 
     /* Save expected genome data before reading */
     const uint32_t pop = sim.genome.population;
-    const uint16_t max_len = sim.genome.max_length;
+    const uint16_t g_max_len = sim.genome.max_len;
     uint16_t expected_len[4];
     uint16_t expected_conn[4][4];
     int16_t expected_wgt[4][4];
     for (uint32_t s = 0U; s < n_surv; s++) {
         expected_len[s] = sim.genome.length[survivors[s]];
-        for (uint16_t j = 0U; j < max_len; j++) {
+        for (uint16_t j = 0U; j < g_max_len; j++) {
             expected_conn[s][j] = sim.genome.conn[(size_t)j * pop + survivors[s]];
             expected_wgt[s][j] = sim.genome.wgt[(size_t)j * pop + survivors[s]];
         }
@@ -147,7 +147,7 @@ void test_genome_roundtrip_single_record(void) {
     const uint32_t pop2 = sim2.genome.population;
     for (uint32_t s = 0U; s < loaded_n; s++) {
         TEST_ASSERT_EQUAL_UINT16(expected_len[s], sim2.genome.length[s]);
-        for (uint16_t j = 0U; j < max_len; j++) {
+        for (uint16_t j = 0U; j < g_max_len; j++) {
             TEST_ASSERT_EQUAL_UINT16(expected_conn[s][j], sim2.genome.conn[(size_t)j * pop2 + s]);
             TEST_ASSERT_EQUAL_INT16(expected_wgt[s][j], sim2.genome.wgt[(size_t)j * pop2 + s]);
         }

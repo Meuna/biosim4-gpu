@@ -157,8 +157,8 @@ in this design.
 
 ```cpp
 // Per-gene-slot, per-agent:
-uint16_t genome_connectivity[GENOME_MAX_LENGTH][N];   // the src/sink bits
-int16_t  genome_weight[GENOME_MAX_LENGTH][N];         // the raw weight
+uint16_t genome_connectivity[GENOME_MAX_LEN][N];   // the src/sink bits
+int16_t  genome_weight[GENOME_MAX_LEN][N];         // the raw weight
 ```
 
 This is the core "transposed, padded SoA" layout — see Section 5.
@@ -241,14 +241,14 @@ single 8-byte load plus a popcount. Detailed in Section 10.
 ### 5.1 Layout: padded, transposed SoA
 
 ```cpp
-#define GENOME_MAX_LENGTH  P_genomeMaxLength   // compile-time or kernel constant
+#define GENOME_MAX_LEN  P_genomeMaxLength   // compile-time or kernel constant
 
 // Two parallel buffers (split of Gene):
-__global uint16_t genome_conn[GENOME_MAX_LENGTH * N];  // [gene_slot][agent]
-__global int16_t  genome_wgt [GENOME_MAX_LENGTH * N];  // [gene_slot][agent]
+__global uint16_t genome_conn[GENOME_MAX_LEN * N];  // [gene_slot][agent]
+__global int16_t  genome_wgt [GENOME_MAX_LEN * N];  // [gene_slot][agent]
 
 // Per-agent length:
-__global uint8_t  genome_length[N];  // actual number of valid genes in [0 .. GENOME_MAX_LENGTH]
+__global uint8_t  genome_length[N];  // actual number of valid genes in [0 .. GENOME_MAX_LEN]
 ```
 
 Index of gene slot `j` of agent `i`: `j * N + i`.
@@ -286,7 +286,7 @@ Two mechanisms combined:
   is tight.
 
 **Alternative considered:** fully uniform loop `for (j = 0; j <
-GENOME_MAX_LENGTH; ++j)` with a predicate that no-ops past `genome_length[i]`.
+GENOME_MAX_LEN; ++j)` with a predicate that no-ops past `genome_length[i]`.
 This kills divergence entirely but forces every agent to pay the full cost of
 the maximum genome. The sort-based approach is cheaper when genome length
 distribution has high variance, the uniform loop is cheaper when the
@@ -294,7 +294,7 @@ distribution is tight. We adopt the sort approach and revisit in Step 2.
 
 ### 5.4 Why padding is acceptable
 
-Worst case: `GENOME_MAX_LENGTH = 256`, `N = 4096`, 4 bytes per gene (2 for
+Worst case: `GENOME_MAX_LEN = 256`, `N = 4096`, 4 bytes per gene (2 for
 connectivity + 2 for weight). Total: 256 × 4096 × 4 = 4 MiB. Trivial. Padding
 waste depends on genome length distribution; even 50 % waste is 2 MiB excess —
 negligible.
@@ -319,7 +319,7 @@ Identical layout to the genome. The compiled connections after culling are
 stored as gene-equivalent entries, up to `MAX_CONN` per agent.
 
 ```cpp
-#define MAX_CONN  (2 * GENOME_MAX_LENGTH)   // culling may preserve or add
+#define MAX_CONN  (2 * GENOME_MAX_LEN)   // culling may preserve or add
 
 __global uint16_t conn_packed[MAX_CONN * N];
 __global int16_t  conn_weight[MAX_CONN * N];
@@ -877,7 +877,7 @@ without changing the first-cut behavior.
 
 ### 13.4 Data transfer sizing
 
-For `N = 4096`, `GENOME_MAX_LENGTH = 256`, 4 bytes per gene: 4 MiB per direction
+For `N = 4096`, `GENOME_MAX_LEN = 256`, 4 bytes per gene: 4 MiB per direction
 per generation. Over PCIe Gen4 (~16 GB/s effective), that's ~0.5 ms per
 direction. Negligible compared to a generation's worth of sim.steps.
 
@@ -909,7 +909,7 @@ direction. Negligible compared to a generation's worth of sim.steps.
 ## 15. Memory Budget Estimate
 
 For a typical configuration `N = 4096`, `SIZE_X = SIZE_Y = 128`, `LAYERS = 1`,
-`GENOME_MAX_LENGTH = 256`, `MAX_NEURONS = 32`, `MAX_CONN = 512`:
+`GENOME_MAX_LEN = 256`, `MAX_NEURONS = 32`, `MAX_CONN = 512`:
 
 | Buffer | Size |
 |---|---|

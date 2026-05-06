@@ -60,7 +60,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
     biosim_grid_t *grid = &sim->grid;
 
     const uint32_t pop = agents->population;
-    const uint16_t max_len = genome->max_length;
+    const uint16_t g_max_len = genome->max_len;
     const uint8_t long_probe_dist = sim->long_probe_dist;
 
     clear_agents_from_grid(sim);
@@ -69,7 +69,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
 
     for (uint32_t i = 0; i < pop; i++) {
         uint16_t rand_len =
-            (uint16_t)(1U + (uint16_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)max_len));
+            (uint16_t)(1U + (uint16_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)g_max_len));
         biosim_genome_init_slot(genome, i, rand_len, &sim->gen_rng);
 
         biosim_status_t st =
@@ -99,22 +99,22 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
  * genome slot.  This prevents parent data from being clobbered during in-place
  * reproduction.
  *
- * temp_conn / temp_wgt are strided by genome->max_length: entry s starts at
- * s * max_length.  temp_len[s] holds the active gene count for survivor s.
+ * temp_conn / temp_wgt are strided by genome->max_len: entry s starts at
+ * s * max_len.  temp_len[s] holds the active gene count for survivor s.
  */
 static void snapshot_survivor_genomes(const biosim_genome_t *genome, const uint32_t *survivors,
                                       uint32_t n_survivors, uint16_t *temp_conn, int16_t *temp_wgt,
                                       uint16_t *temp_len) {
     const uint32_t pop = genome->population;
-    const uint16_t max_len = genome->max_length;
+    const uint16_t g_max_len = genome->max_len;
 
     for (uint32_t s = 0; s < n_survivors; s++) {
         const uint32_t src = survivors[s];
         const uint16_t len = genome->length[src];
         temp_len[s] = len;
         for (uint16_t j = 0; j < len; j++) {
-            temp_conn[(size_t)s * max_len + j] = genome->conn[(size_t)j * pop + src];
-            temp_wgt[(size_t)s * max_len + j] = genome->wgt[(size_t)j * pop + src];
+            temp_conn[(size_t)s * g_max_len + j] = genome->conn[(size_t)j * pop + src];
+            temp_wgt[(size_t)s * g_max_len + j] = genome->wgt[(size_t)j * pop + src];
         }
     }
 }
@@ -123,13 +123,13 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
                                 const int16_t *temp_wgt, const uint16_t *temp_len,
                                 uint32_t parent_s) {
     const uint32_t pop = genome->population;
-    const uint16_t max_len = genome->max_length;
+    const uint16_t g_max_len = genome->max_len;
     const uint16_t len = temp_len[parent_s];
 
     genome->length[dst] = len;
     for (uint16_t j = 0; j < len; j++) {
-        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)parent_s * max_len + j];
-        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)parent_s * max_len + j];
+        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)parent_s * g_max_len + j];
+        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)parent_s * g_max_len + j];
     }
 }
 
@@ -137,27 +137,27 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
  * Single-point crossover directly from snapshot temp buffers into a live
  * genome slot.  Mirrors biosim_genome_crossover semantics: crossover point k
  * in [0, min(len_a, len_b)]; child gets genes [0..k) from pa_s and [k..len_b)
- * from pb_s; child length = pb_s length (capped at max_length).
+ * from pb_s; child length = pb_s length (capped at max_len).
  */
 static void crossover_from_snapshot(biosim_genome_t *genome, uint32_t dst,
                                     const uint16_t *temp_conn, const int16_t *temp_wgt,
                                     const uint16_t *temp_len, uint32_t pa_s, uint32_t pb_s,
                                     uint64_t *rng) {
     const uint32_t pop = genome->population;
-    const uint16_t max_len = genome->max_length;
+    const uint16_t g_max_len = genome->max_len;
     const uint32_t len_a = temp_len[pa_s];
     const uint32_t len_b = temp_len[pb_s];
     const uint32_t min_len = len_a < len_b ? len_a : len_b;
     const uint32_t k = (uint32_t)(biosim_rng_next(rng) % ((uint64_t)min_len + 1ULL));
-    const uint32_t child_len = len_b < (uint32_t)max_len ? len_b : (uint32_t)max_len;
+    const uint32_t child_len = len_b < (uint32_t)g_max_len ? len_b : (uint32_t)g_max_len;
 
     for (uint32_t j = 0; j < k; j++) {
-        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pa_s * max_len + j];
-        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pa_s * max_len + j];
+        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pa_s * g_max_len + j];
+        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pa_s * g_max_len + j];
     }
     for (uint32_t j = k; j < child_len; j++) {
-        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pb_s * max_len + j];
-        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pb_s * max_len + j];
+        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pb_s * g_max_len + j];
+        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pb_s * g_max_len + j];
     }
     genome->length[dst] = (uint16_t)child_len;
 }
@@ -259,7 +259,7 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivo
     biosim_grid_t *grid = &sim->grid;
 
     const uint32_t pop = agents->population;
-    const uint16_t max_len = genome->max_length;
+    const uint16_t g_max_len = genome->max_len;
     const uint8_t long_probe_dist = sim->long_probe_dist;
     const bool sexual = sim->sexual_reproduction;
     const bool by_fitness = sim->choose_parents_by_fitness;
@@ -281,8 +281,8 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivo
     clear_agents_from_grid(sim);
 
     /* snapshot survivor genomes before any slot is overwritten */
-    temp_conn = malloc((size_t)n_survivors * max_len * sizeof(uint16_t));
-    temp_wgt = malloc((size_t)n_survivors * max_len * sizeof(int16_t));
+    temp_conn = malloc((size_t)n_survivors * g_max_len * sizeof(uint16_t));
+    temp_wgt = malloc((size_t)n_survivors * g_max_len * sizeof(int16_t));
     temp_len = malloc((size_t)n_survivors * sizeof(uint16_t));
 
     if (temp_conn == NULL || temp_wgt == NULL || temp_len == NULL) {
