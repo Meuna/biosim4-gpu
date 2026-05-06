@@ -536,7 +536,7 @@ impractically large at high population counts.
 | Offset | Size | Field | Notes |
 |---|---|---|---|
 | 0 | 4 | magic | `0x42 0x53 0x4D 0x34` ("BSM4") |
-| 4 | 2 | format_version | `BIOSIM_SNAP_FORMAT_VERSION` (starts at 1) |
+| 4 | 2 | format_version | `BIOSIM_SNAP_FORMAT_VERSION` (current: 2) |
 | 6 | 2 | schema_version | `BIOSIM_IO_SCHEMA_VERSION` |
 | 8 | 2 | num_sensors | `BIOSIM_NUM_SENSORS` at write time |
 | 10 | 2 | num_actions | `BIOSIM_NUM_ACTIONS` at write time |
@@ -564,6 +564,7 @@ Let `n` = `n_survivors` and `L` = `genome_max_len` (from file header).
 | 24 | n × 2 | genome_length | uint16_t[] | active gene count per survivor |
 | 24 + n×2 | L × n × 2 | genome_conn | uint16_t[] | SoA: gene-slot-major |
 | 24 + n×2 + L×n×2 | L × n × 2 | genome_wgt | int16_t[] | SoA: gene-slot-major |
+| 24 + n×2 + 2×L×n×2 | n × 4 | score | float[] | challenge score per survivor, in [0, 1] |
 
 The genome arrays use the same transposed SoA layout as `biosim_genome_t`:
 gene slot `j` of survivor `s` is at index `j * n_survivors + s`.
@@ -575,8 +576,8 @@ value before calling reproduce yields a deterministic replay.
 #### Approximate sizes
 
 At defaults (pop = 3000, 750 survivors at 25%, genome_max_len = 24):
-- ≈ 72 KB per generation record
-- 1000 generations at interval 1 → ≈ 70 MB; at interval 10 → ≈ 7 MB
+- ≈ 75 KB per generation record (72 KB genome + 3 KB scores)
+- 1000 generations at interval 1 → ≈ 72 MB; at interval 10 → ≈ 7.2 MB
 
 ### 5.3 "Starting with survivors" restore pattern
 
@@ -586,7 +587,7 @@ normal generation boundary. The main loop then proceeds identically to a
 fresh run:
 
 ```
-biosim_snapshot_load_last(f, &hdr, &sim, &n_surv, &gen_idx, &gen_rng)
+biosim_snapshot_load_last(f, &hdr, &sim, &n_surv, &gen_idx, &gen_rng, NULL)
 sim.gen     = gen_idx
 sim.gen_rng = gen_rng
 survivors   = [0, 1, ..., n_surv-1]

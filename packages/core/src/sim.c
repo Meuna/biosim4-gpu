@@ -180,7 +180,7 @@ biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_cens
 
     uint32_t n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
     biosim_census_take(sim, survivors, n_survivors, out);
-    biosim_snapshot_session_write(sim, survivors, n_survivors);
+    biosim_snapshot_session_write(sim, survivors, scores, n_survivors);
 
     if (n_survivors > 0) {
         returncode = biosim_generation_reproduce(sim, survivors, scores, n_survivors);

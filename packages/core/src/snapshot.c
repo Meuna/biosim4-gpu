@@ -21,7 +21,8 @@ static const uint32_t snap_gen_fixed_bytes = 24U;
 static uint64_t gen_entry_bytes(uint32_t n, uint16_t genome_max_len) {
     return (uint64_t)snap_gen_fixed_bytes + (uint64_t)n * 2U /* genome_length */
            + (uint64_t)n * (uint64_t)genome_max_len * 2U     /* genome_conn   */
-           + (uint64_t)n * (uint64_t)genome_max_len * 2U;    /* genome_wgt    */
+           + (uint64_t)n * (uint64_t)genome_max_len * 2U     /* genome_wgt    */
+           + (uint64_t)n * 4U;                               /* score         */
 }
 
 /* ── low-level I/O helpers ───────────────────────────────────────────────── */
@@ -87,7 +88,8 @@ biosim_status_t biosim_snapshot_write_header(FILE *f, const biosim_sim_t *sim) {
 }
 
 biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
-                                             const uint32_t *survivors, uint32_t n_survivors) {
+                                             const uint32_t *survivors, const float *scores,
+                                             uint32_t n_survivors) {
     const biosim_genome_t *genome = &sim->genome;
     const uint32_t pop = genome->population;
     const uint16_t genome_max_len = sim->genome.max_len;
@@ -145,6 +147,12 @@ biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
             returncode = BIOSIM_ERR_IO;
             goto exit;
         }
+    }
+
+    /* scores */
+    if (fwrite(scores, sizeof(float), n_survivors, f) != n_survivors) {
+        returncode = BIOSIM_ERR_IO;
+        goto exit;
     }
 
 exit:
@@ -221,8 +229,8 @@ biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *heade
  */
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, biosim_sim_t *sim,
-                                   uint32_t *n_survivors_out, uint32_t *gen_idx_out,
-                                   uint64_t *gen_rng_out) {
+                                   float *scores_out, uint32_t *n_survivors_out,
+                                   uint32_t *gen_idx_out, uint64_t *gen_rng_out) {
     uint64_t entry_size;
     uint32_t pop_file;
     uint32_t gen_idx;
@@ -307,6 +315,16 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
         goto exit;
     }
 
+    /* scores: read pop_load entries; seek past excess */
+    if (fread(scores_out, sizeof(float), pop_load, f) != pop_load) {
+        returncode = BIOSIM_ERR_IO;
+        goto exit;
+    }
+    if (fseek(f, (long)(pop_file - pop_load) * 4L, SEEK_CUR) != 0) {
+        returncode = BIOSIM_ERR_IO;
+        goto exit;
+    }
+
     *n_survivors_out = pop_load;
     *gen_idx_out = gen_idx;
     *gen_rng_out = gen_rng;
@@ -317,8 +335,9 @@ exit:
 }
 
 biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_snap_header_t *header,
-                                     biosim_sim_t *sim, uint32_t *n_survivors_out,
-                                     uint32_t *gen_idx_out, uint64_t *gen_rng_out) {
+                                     biosim_sim_t *sim, float *scores_out,
+                                     uint32_t *n_survivors_out, uint32_t *gen_idx_out,
+                                     uint64_t *gen_rng_out) {
     if (fseek(f, (long)snap_header_size, SEEK_SET) != 0) {
         return BIOSIM_ERR_IO;
     }
@@ -337,15 +356,16 @@ biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_sna
         }
     }
 
-    return load_genome(f, header, sim, n_survivors_out, gen_idx_out, gen_rng_out);
+    return load_genome(f, header, sim, scores_out, n_survivors_out, gen_idx_out, gen_rng_out);
 }
 
 biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *header,
-                                          biosim_sim_t *sim, uint32_t *n_survivors_out,
-                                          uint32_t *gen_idx_out, uint64_t *gen_rng_out) {
+                                          biosim_sim_t *sim, float *scores_out,
+                                          uint32_t *n_survivors_out, uint32_t *gen_idx_out,
+                                          uint64_t *gen_rng_out) {
     if (header->generation_count > 0U) {
-        return biosim_snapshot_load(f, header->generation_count - 1U, header, sim, n_survivors_out,
-                                    gen_idx_out, gen_rng_out);
+        return biosim_snapshot_load(f, header->generation_count - 1U, header, sim, scores_out,
+                                    n_survivors_out, gen_idx_out, gen_rng_out);
     }
 
     /* generation_count unknown — scan forward to find the last valid entry */
@@ -387,7 +407,7 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
     if (fseek(f, last_pos, SEEK_SET) != 0) {
         return BIOSIM_ERR_IO;
     }
-    return load_genome(f, header, sim, n_survivors_out, gen_idx_out, gen_rng_out);
+    return load_genome(f, header, sim, scores_out, n_survivors_out, gen_idx_out, gen_rng_out);
 }
 
 /* ── coherency check ────────────────────────────────────────────────────── */
@@ -452,28 +472,36 @@ biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
         return st;
     }
 
+    /* alloc start here, freed on exit label */
+    float *scores = NULL;
+    uint32_t *survivors = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    scores = (float *)malloc((size_t)sim->genome.population * sizeof(float));
+    if (scores == NULL) {
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
+    }
+
     uint32_t n_surv = 0U;
     uint32_t gen_idx = 0U;
     uint64_t gen_rng = 0U;
-    st = biosim_snapshot_load_last(f, &hdr, sim, &n_surv, &gen_idx, &gen_rng);
+    returncode = biosim_snapshot_load_last(f, &hdr, sim, scores, &n_surv, &gen_idx, &gen_rng);
     (void)fclose(f);
 
-    if (st != BIOSIM_OK) {
+    if (returncode != BIOSIM_OK) {
         (void)fprintf(stderr, "biosim-snapshot: failed to read from '%s'\n", path);
-        return st;
+        goto exit;
     }
 
     if (n_surv == 0U) {
         (void)fprintf(stderr, "biosim-snapshot: '%s' contains no survivors\n", path);
-        return BIOSIM_ERR_INVALID;
+        returncode = BIOSIM_ERR_INVALID;
+        goto exit;
     }
 
     sim->gen = gen_idx;
     sim->gen_rng = gen_rng;
-
-    /* alloc start here, freed on exit label */
-    uint32_t *survivors = NULL;
-    biosim_status_t returncode = BIOSIM_OK;
 
     survivors = (uint32_t *)malloc((size_t)n_surv * sizeof(uint32_t));
     if (survivors == NULL) {
@@ -484,7 +512,7 @@ biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
         survivors[s] = s;
     }
 
-    returncode = biosim_generation_reproduce(sim, survivors, NULL, n_surv);
+    returncode = biosim_generation_reproduce(sim, survivors, scores, n_surv);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -494,6 +522,7 @@ biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
     sim->gen++;
 
 exit:
+    free(scores);
     free(survivors);
     return returncode;
 }
@@ -534,7 +563,7 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
 }
 
 biosim_status_t biosim_snapshot_session_write(biosim_sim_t *sim, const uint32_t *survivors,
-                                              uint32_t n_survivors) {
+                                              const float *scores, uint32_t n_survivors) {
     if (sim->snap_f == NULL || n_survivors == 0U) {
         return BIOSIM_OK;
     }
@@ -542,7 +571,8 @@ biosim_status_t biosim_snapshot_session_write(biosim_sim_t *sim, const uint32_t 
         return BIOSIM_OK;
     }
 
-    biosim_status_t st = biosim_snapshot_write_genome(sim->snap_f, sim, survivors, n_survivors);
+    biosim_status_t st =
+        biosim_snapshot_write_genome(sim->snap_f, sim, survivors, scores, n_survivors);
     if (st != BIOSIM_OK) {
         (void)fprintf(stderr, "biosim-snapshot: write failed (status %d)\n", (int)st);
         return st;

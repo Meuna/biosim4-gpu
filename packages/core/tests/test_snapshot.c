@@ -12,6 +12,7 @@
 
 /* Minimal sim used by all tests: pop=4, 4x4 grid, genome_max_len=4, max_neurons=2 */
 static biosim_sim_t make_sim(void) {
+    static uint32_t call_count = 0U;
     biosim_sim_t s;
     memset(&s, 0, sizeof(s));
     s.population = 4U;
@@ -27,7 +28,7 @@ static biosim_sim_t make_sim(void) {
     s.challenge.x_band.x_max = 1.0F;
     s.challenge.x_band.mirror = false;
     s.mutation_rate = 0.0F;
-    s.gen_rng = biosim_rng_seed(0U, 1U);
+    s.gen_rng = biosim_rng_seed(0U, ++call_count);
     return s;
 }
 
@@ -108,24 +109,11 @@ void test_genome_roundtrip_single_record(void) {
     /* Use all 4 agents as "survivors" */
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
     uint32_t n_surv = 4U;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, n_surv));
+    float scores[4] = {0.25F, 0.50F, 0.75F, 1.00F};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
+                          biosim_snapshot_write_genome(f, &sim, survivors, scores, n_surv));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
-    /* Save expected genome data before reading */
-    const uint32_t pop = sim.genome.population;
-    const uint16_t g_max_len = sim.genome.max_len;
-    uint16_t expected_len[4];
-    uint16_t expected_conn[4][4];
-    int16_t expected_wgt[4][4];
-    for (uint32_t s = 0U; s < n_surv; s++) {
-        expected_len[s] = sim.genome.length[survivors[s]];
-        for (uint16_t j = 0U; j < g_max_len; j++) {
-            expected_conn[s][j] = sim.genome.conn[(size_t)j * pop + survivors[s]];
-            expected_wgt[s][j] = sim.genome.wgt[(size_t)j * pop + survivors[s]];
-        }
-    }
-
-    /* Create a fresh sim with the same config for the restore */
     biosim_sim_t sim2 = make_sim();
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
 
@@ -137,19 +125,28 @@ void test_genome_roundtrip_single_record(void) {
     uint32_t loaded_n;
     uint32_t loaded_gen;
     uint64_t loaded_rng;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_last(f, &hdr, &sim2, &loaded_n,
-                                                               &loaded_gen, &loaded_rng));
+    float loaded_scores[4];
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
+                          biosim_snapshot_load_last(f, &hdr, &sim2, loaded_scores, &loaded_n,
+                                                    &loaded_gen, &loaded_rng));
 
     TEST_ASSERT_EQUAL_UINT32(n_surv, loaded_n);
     TEST_ASSERT_EQUAL_UINT32(sim.gen, loaded_gen);
     TEST_ASSERT_EQUAL_UINT64(sim.gen_rng, loaded_rng);
-
-    const uint32_t pop2 = sim2.genome.population;
     for (uint32_t s = 0U; s < loaded_n; s++) {
-        TEST_ASSERT_EQUAL_UINT16(expected_len[s], sim2.genome.length[s]);
+        TEST_ASSERT_EQUAL_FLOAT(scores[s], loaded_scores[s]);
+    }
+
+    const uint32_t pop = sim.genome.population;
+    const uint32_t pop2 = sim2.genome.population;
+    const uint16_t g_max_len = sim.genome.max_len;
+    for (uint32_t s = 0U; s < loaded_n; s++) {
+        TEST_ASSERT_EQUAL_UINT16(sim.genome.length[survivors[s]], sim2.genome.length[s]);
         for (uint16_t j = 0U; j < g_max_len; j++) {
-            TEST_ASSERT_EQUAL_UINT16(expected_conn[s][j], sim2.genome.conn[(size_t)j * pop2 + s]);
-            TEST_ASSERT_EQUAL_INT16(expected_wgt[s][j], sim2.genome.wgt[(size_t)j * pop2 + s]);
+            TEST_ASSERT_EQUAL_UINT16(sim.genome.conn[(size_t)j * pop + survivors[s]],
+                                     sim2.genome.conn[(size_t)j * pop2 + s]);
+            TEST_ASSERT_EQUAL_INT16(sim.genome.wgt[(size_t)j * pop + survivors[s]],
+                                    sim2.genome.wgt[(size_t)j * pop2 + s]);
         }
     }
 
@@ -167,11 +164,13 @@ void test_multi_gen_load_last(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
+    float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
 
     /* Write 3 records, each with sim.gen different */
     for (uint32_t g = 0U; g < 3U; g++) {
         sim.gen = g;
-        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, 4U));
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
+                              biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U));
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
 
@@ -185,11 +184,16 @@ void test_multi_gen_load_last(void) {
     uint32_t loaded_n;
     uint32_t loaded_gen;
     uint64_t loaded_rng;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_last(f, &hdr, &sim2, &loaded_n,
-                                                               &loaded_gen, &loaded_rng));
+    float loaded_scores[4];
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
+                          biosim_snapshot_load_last(f, &hdr, &sim2, loaded_scores, &loaded_n,
+                                                    &loaded_gen, &loaded_rng));
 
     /* load_last should give us the entry written with gen=2 */
     TEST_ASSERT_EQUAL_UINT32(2U, loaded_gen);
+    for (uint32_t s = 0U; s < loaded_n; s++) {
+        TEST_ASSERT_EQUAL_FLOAT(scores[s], loaded_scores[s]);
+    }
 
     (void)fclose(f);
     biosim_sim_free(&sim);
@@ -205,9 +209,11 @@ void test_multi_gen_scan_without_gen_count(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
+    float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
     for (uint32_t g = 0U; g < 3U; g++) {
         sim.gen = g;
-        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, 4U));
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
+                              biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U));
     }
     /* Deliberately do NOT call finalize, so generation_count stays 0 */
 
@@ -222,10 +228,15 @@ void test_multi_gen_scan_without_gen_count(void) {
     uint32_t loaded_n;
     uint32_t loaded_gen;
     uint64_t loaded_rng;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_last(f, &hdr, &sim2, &loaded_n,
-                                                               &loaded_gen, &loaded_rng));
+    float loaded_scores[4];
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
+                          biosim_snapshot_load_last(f, &hdr, &sim2, loaded_scores, &loaded_n,
+                                                    &loaded_gen, &loaded_rng));
 
     TEST_ASSERT_EQUAL_UINT32(2U, loaded_gen);
+    for (uint32_t s = 0U; s < loaded_n; s++) {
+        TEST_ASSERT_EQUAL_FLOAT(scores[s], loaded_scores[s]);
+    }
 
     (void)fclose(f);
     biosim_sim_free(&sim);
@@ -241,9 +252,16 @@ void test_load_gen_index(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
+    /* Each generation gets a distinct score so loading by index is verifiable. */
     for (uint32_t g = 0U; g < 3U; g++) {
+        float scores[4];
+        float base = (float)(g + 1U) * 0.25F;
+        for (uint32_t s = 0U; s < 4U; s++) {
+            scores[s] = base;
+        }
         sim.gen = g;
-        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, 4U));
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
+                              biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U));
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
 
@@ -257,10 +275,14 @@ void test_load_gen_index(void) {
     uint32_t loaded_n;
     uint32_t loaded_gen;
     uint64_t loaded_rng;
-    /* Load entry at index 1 (gen=1) */
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load(f, 1U, &hdr, &sim2, &loaded_n,
-                                                          &loaded_gen, &loaded_rng));
+    float loaded_scores[4];
+    /* Load entry at index 1 (gen=1): scores should be all 0.5F */
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load(f, 1U, &hdr, &sim2, loaded_scores,
+                                                          &loaded_n, &loaded_gen, &loaded_rng));
     TEST_ASSERT_EQUAL_UINT32(1U, loaded_gen);
+    for (uint32_t s = 0U; s < loaded_n; s++) {
+        TEST_ASSERT_EQUAL_FLOAT(0.50F, loaded_scores[s]);
+    }
 
     (void)fclose(f);
     biosim_sim_free(&sim);
@@ -276,7 +298,8 @@ void test_load_gen_out_of_range(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, 4U));
+    float scores[4] = {0.25F, 0.50F, 0.75F, 1.00F};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
     biosim_sim_t sim2 = make_sim();
@@ -289,14 +312,15 @@ void test_load_gen_out_of_range(void) {
     uint32_t loaded_n;
     uint32_t loaded_gen;
     uint64_t loaded_rng;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_NOTFOUND, biosim_snapshot_load(f, 5U, &hdr, &sim2, &loaded_n,
-                                                                    &loaded_gen, &loaded_rng));
+    float loaded_scores[4];
+    TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_NOTFOUND,
+                          biosim_snapshot_load(f, 5U, &hdr, &sim2, loaded_scores, &loaded_n,
+                                               &loaded_gen, &loaded_rng));
 
     (void)fclose(f);
     biosim_sim_free(&sim);
     biosim_sim_free(&sim2);
 }
-
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {

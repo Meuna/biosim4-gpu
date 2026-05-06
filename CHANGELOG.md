@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Snapshot format version bumped to 2** (`BIOSIM_SNAP_FORMAT_VERSION`):
+  generation records now append a `float[]` array of per-survivor challenge
+  scores (one `float` per survivor, in `[0, 1]`) after the genome data.
+  `biosim_snapshot_write_genome` and `biosim_snapshot_session_write` require a
+  non-NULL `scores` parameter; `biosim_snapshot_load` and
+  `biosim_snapshot_load_last` accept an optional `float *scores_out` (pass
+  `NULL` to discard). `biosim_snapshot_restore` discards scores (uniform
+  parent selection on restore is unchanged).
+
 ### Added
 - **Generation snapshot format** (`core/snapshot`): BSM4 binary file format
   (little-endian, 32-byte header + sequential generation records) for
