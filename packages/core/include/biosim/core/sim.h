@@ -10,6 +10,7 @@
 #include "biosim/core/challenge_spec.h"
 #include "biosim/core/genome.h"
 #include "biosim/core/grid.h"
+#include "biosim/core/log.h"
 #include "biosim/core/nnet.h"
 #include "biosim/core/status.h"
 #include <stdbool.h>
@@ -22,10 +23,16 @@ struct biosim_census;
 /*
  * Full simulation state for the single-threaded reference implementation.
  *
- * Populate the configuration fields, then call biosim_sim_create() to
- * allocate all heap resources.  biosim_sim_free() releases them.
+ * Call biosim_log_init(&sim.log) and set configuration fields, then call
+ * biosim_sim_create() to allocate all heap resources. biosim_sim_free()
+ * releases them.
  */
 typedef struct {
+    /* ── logging ──────────────────────────────────────────────────────────────
+     * Initialise with biosim_log_init() before biosim_sim_create().
+     * Pass &sim->log (or &sim.log) to every BIOSIM_*F / BIOSIM_DIE call. */
+    biosim_log_ctx_t log;
+
     uint32_t max_generations; /* number of generation loops */
 
     /* ── allocation-time configuration ───────────────────────────────────────

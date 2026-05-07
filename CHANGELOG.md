@@ -18,6 +18,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parent selection on restore is unchanged).
 
 ### Added
+- **Logging infrastructure** (`core/log`, `core/status`): multi-level logger
+  requiring no external dependencies.
+  - `biosim_log_level_t` — `BIOSIM_LOG_OFF/ERROR/WARN/INFO/DEBUG/TRACE` (0–5).
+  - `biosim_log_ctx_t` — threshold, sink (`FILE *`, NULL → stderr), color flag
+    (auto-detected via `isatty` at init). Embedded as `log` field in
+    `biosim_sim_t`; callers use `&sim->log`.
+  - `biosim_log_init(ctx)` — sets WARN threshold and detects terminal color.
+  - `biosim_log_emit(ctx, level, file, line, func, fmt, ...)` — formats and
+    emits one log line with `[LEVEL] file:line func: message` layout.
+  - `BIOSIM_ERRORF/WARNF/INFOF/DEBUGF/TRACEF(ctx, ...)` — short-circuit at
+    compile time (`BIOSIM_LOG_MAX_LEVEL`, default 5; set to 3 in release/ci
+    presets to strip TRACE and DEBUG) and at runtime (`ctx->threshold`).
+  - `biosim_die(ctx, code, saved_errno, file, line, func, fmt, ...)` / macro
+    `BIOSIM_DIE(ctx, code, ...)` — captures `errno` at the call site, prints a
+    fatal message, and calls `exit(EXIT_FAILURE)`.
+  - `biosim_strerror(code)` (`core/status`) — maps `biosim_status_t` to a
+    human-readable string.
+  - `PARAM_COUNT` param type added to the params library: a counted CLI flag
+    (`arg_litn`) whose repetition count is stored as `int`; readable via
+    `biosim_params_get_int`. Used for `-v/-vv` verbosity.
+  - `--verbose/-v` flag in `biosim-stepper`: `-v` → INFO threshold,
+    `-vv` → DEBUG threshold. Default is WARN.
+  - All `fprintf(stderr, ...)` calls in `snapshot.c` and `sim-stepper/main.c`
+    migrated to `BIOSIM_ERRORF`/`BIOSIM_WARNF`.
 - **Generation snapshot format** (`core/snapshot`): BSM4 binary file format
   (little-endian, 32-byte header + sequential generation records) for
   checkpointing survivor genomes at generation boundaries.

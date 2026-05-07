@@ -11,4 +11,6 @@ typedef enum {
     BIOSIM_WARN_UNKNOWN_KEY,
 } biosim_status_t;
 
+const char *biosim_strerror(biosim_status_t code);
+
 #endif /* BIOSIM_CORE_STATUS_H */

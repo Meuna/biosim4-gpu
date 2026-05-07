@@ -34,7 +34,8 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BIOSIM_BUILD_TESTS": "OFF"
+        "BIOSIM_BUILD_TESTS": "OFF",
+        "BIOSIM_LOG_MAX_LEVEL": "3"
       }
     },
 
@@ -57,7 +58,8 @@
       "inherits": "base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "BIOSIM_BUILD_TESTS": "ON"
+        "BIOSIM_BUILD_TESTS": "ON",
+        "BIOSIM_LOG_MAX_LEVEL": "3"
       }
     }
   ],

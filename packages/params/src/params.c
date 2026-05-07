@@ -84,7 +84,7 @@ biosim_status_t biosim_params_set_int(biosim_params_t *p, const char *key, int v
     if (!e) {
         return BIOSIM_WARN_UNKNOWN_KEY;
     }
-    if (e->type != PARAM_INT) {
+    if (e->type != PARAM_INT && e->type != PARAM_COUNT) {
         return BIOSIM_ERR_TYPE;
     }
     e->value.i = val;
@@ -142,7 +142,7 @@ biosim_status_t biosim_params_set_string(biosim_params_t *p, const char *key, co
 
 int biosim_params_get_int(const biosim_params_t *p, const char *key) {
     const biosim_param_entry_t *e = biosim_params_find(p, key);
-    assert(e && e->type == PARAM_INT);
+    assert(e && (e->type == PARAM_INT || e->type == PARAM_COUNT));
     return e->value.i;
 }
 

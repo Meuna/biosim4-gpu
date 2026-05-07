@@ -149,6 +149,7 @@ static char *format_default(const biosim_param_entry_t *e) {
     char buf[256];
     switch (e->type) {
     case PARAM_INT:
+    case PARAM_COUNT:
         (void)snprintf(buf, sizeof(buf), "default: %d", e->value.i);
         break;
     case PARAM_FLOAT:
@@ -213,6 +214,9 @@ static void build_argtable(void **argtable, size_t nstatic, const biosim_params_
         case PARAM_STRING:
             argtable[nstatic + i] = arg_str0(e->cli_short, longflag, "<s>", glossary);
             break;
+        case PARAM_COUNT:
+            argtable[nstatic + i] = arg_litn(e->cli_short, longflag, 0, 10, glossary);
+            break;
         }
     }
 }
@@ -247,6 +251,13 @@ static void apply_cli_args(void **argtable, size_t nstatic, biosim_params_t *p, 
             struct arg_str *a = argtable[nstatic + i];
             if (a->count > 0) {
                 (void)biosim_params_set_string(p, e->name, a->sval[0]);
+            }
+            break;
+        }
+        case PARAM_COUNT: {
+            struct arg_lit *a = argtable[nstatic + i];
+            if (a->count > 0) {
+                (void)biosim_params_set_int(p, e->name, a->count);
             }
             break;
         }

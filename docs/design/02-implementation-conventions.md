@@ -122,8 +122,38 @@ statement of this rule.
 - Asserts are permitted for invariants that would indicate a bug
   (`assert(alive[i] == 0 || alive[i] == 1)`), not for recoverable runtime
   conditions.
+- `biosim_strerror(code)` maps any `biosim_status_t` to a human-readable
+  string. Use it in error messages instead of printing the raw integer.
 
-## 9. Scope — What This Document Does Not Prescribe
+## 9. Logging
+
+`core/log.h` provides a self-contained logger. The context is embedded in
+`biosim_sim_t` as `log`; callers pass `&sim->log` (or `&sim.log`).
+
+```c
+/* Initialise before biosim_sim_create() */
+biosim_log_init(&sim.log);
+sim.log.threshold = BIOSIM_LOG_INFO; /* or set from -v/-vv */
+
+/* Emit a log line (compile-time and runtime gated) */
+BIOSIM_INFOF(&sim.log, "gen=%u survivors=%u", sim.gen, n_surv);
+
+/* Fatal exit with errno context captured at call site */
+BIOSIM_DIE(&sim.log, BIOSIM_ERR_IO, "cannot open '%s'", path);
+```
+
+**Levels** (value / macro suffix):
+`BIOSIM_LOG_ERROR=1`, `BIOSIM_LOG_WARN=2`, `BIOSIM_LOG_INFO=3`,
+`BIOSIM_LOG_DEBUG=4`, `BIOSIM_LOG_TRACE=5`. Default runtime threshold
+is `BIOSIM_LOG_WARN`.
+
+**Compile-time gate**: `BIOSIM_LOG_MAX_LEVEL` (default 5; 3 in `release`/`ci`
+presets) strips TRACE and DEBUG from those builds entirely.
+
+**CLI verbosity**: simulators expose `-v` (→ INFO) and `-vv` (→ DEBUG) via a
+`PARAM_COUNT` entry in their param table.
+
+## 10. Scope — What This Document Does Not Prescribe
 
 - Specific `.c` / `.h` file names inside each package. That is an
   implementation decision made at coding time, guided by the module roles

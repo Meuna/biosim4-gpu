@@ -269,8 +269,8 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     for (uint32_t s = 0U; s < pop_load; s++) {
         uint16_t g_len = row[s];
         if (g_len > g_max_len) {
-            (void)fprintf(stderr,
-                          "biosim-snapshot: corrupted file (genome length %u > max length %u)\n",
+            BIOSIM_ERRORF(&sim->log,
+                          "biosim-snapshot: corrupted file (genome length %u > max length %u)",
                           g_len, g_max_len);
             returncode = BIOSIM_ERR_INVALID;
             goto exit;
@@ -399,73 +399,82 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
 
 /* ── coherency check ────────────────────────────────────────────────────── */
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosim_sim_t *sim) {
     if (hdr->format_version != BIOSIM_SNAP_FORMAT_VERSION) {
-        (void)fprintf(stderr,
-                      "biosim-snapshot: format version %u in file, built with %u"
-                      " — incompatible\n",
+        BIOSIM_ERRORF(&sim->log,
+                      "biosim-snapshot: format version %u in file, built with %u — incompatible",
                       (unsigned)hdr->format_version, (unsigned)BIOSIM_SNAP_FORMAT_VERSION);
         return BIOSIM_ERR_INVALID;
     }
     if (hdr->schema_version != BIOSIM_IO_SCHEMA_VERSION) {
-        (void)fprintf(stderr,
-                      "biosim-snapshot: schema version %u in file, built with %u"
-                      " — incompatible\n",
+        BIOSIM_ERRORF(&sim->log,
+                      "biosim-snapshot: schema version %u in file, built with %u — incompatible",
                       (unsigned)hdr->schema_version, (unsigned)BIOSIM_IO_SCHEMA_VERSION);
         return BIOSIM_ERR_INVALID;
     }
     if (hdr->num_sensors != (uint16_t)BIOSIM_NUM_SENSORS ||
         hdr->num_actions != (uint16_t)BIOSIM_NUM_ACTIONS) {
-        (void)fprintf(stderr,
-                      "biosim-snapshot: I/O catalogue (%u sensors, %u actions)"
-                      " does not match built-in (%u sensors, %u actions) — this should not happen. "
-                      "Either a corrupted file or an implementation issue\n",
-                      (unsigned)hdr->num_sensors, (unsigned)hdr->num_actions,
-                      (unsigned)BIOSIM_NUM_SENSORS, (unsigned)BIOSIM_NUM_ACTIONS);
+        BIOSIM_ERRORF(
+            &sim->log,
+            "biosim-snapshot: I/O catalogue (%u sensors, %u actions) does not match built-in"
+            " (%u sensors, %u actions) — corrupted file or implementation issue",
+            (unsigned)hdr->num_sensors, (unsigned)hdr->num_actions, (unsigned)BIOSIM_NUM_SENSORS,
+            (unsigned)BIOSIM_NUM_ACTIONS);
         return BIOSIM_ERR_INVALID;
     }
 
     if (sim->genome.max_len < hdr->genome_max_len) {
-        (void)fprintf(stderr,
-                      "biosim-snapshot: file genome-max-len=%u exceeds current %u;"
-                      " use --max-genome-len %u or larger.\n",
-                      (unsigned)hdr->genome_max_len, (unsigned)sim->genome.max_len,
-                      (unsigned)hdr->genome_max_len);
+        BIOSIM_WARNF(&sim->log,
+                     "biosim-snapshot: file genome-max-len=%u exceeds current %u;"
+                     " use --max-genome-len %u or larger",
+                     (unsigned)hdr->genome_max_len, (unsigned)sim->genome.max_len,
+                     (unsigned)hdr->genome_max_len);
         return BIOSIM_ERR_INVALID;
     }
-
     if (hdr->max_neurons != sim->nnet.max_neurons) {
-        (void)fprintf(stderr,
-                      "biosim-snapshot: file max-neurons=%u but current is %u;"
-                      " use --max-neurons %u.\n",
-                      (unsigned)hdr->max_neurons, (unsigned)sim->nnet.max_neurons,
-                      (unsigned)hdr->max_neurons);
+        BIOSIM_WARNF(&sim->log,
+                     "biosim-snapshot: file max-neurons=%u but current is %u;"
+                     " use --max-neurons %u",
+                     (unsigned)hdr->max_neurons, (unsigned)sim->nnet.max_neurons,
+                     (unsigned)hdr->max_neurons);
         return BIOSIM_ERR_INVALID;
     }
-
     return BIOSIM_OK;
 }
 
 /* ── high-level read: restore ───────────────────────────────────────────── */
 
-biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
+/* Opens path, reads and validates the header, and runs all compat checks.
+ * On success, sets *f_out to the open file positioned past the header and
+ * *hdr_out to the parsed header. Caller must fclose *f_out. */
+static biosim_status_t restore_open(const char *path, biosim_sim_t *sim, FILE **f_out,
+                                    biosim_snap_header_t *hdr_out) {
     FILE *f = fopen(path, "rb");
     if (f == NULL) {
-        (void)fprintf(stderr, "biosim-snapshot: cannot open '%s'\n", path);
+        BIOSIM_ERRORF(&sim->log, "biosim-snapshot: cannot open '%s'", path);
         return BIOSIM_ERR_IO;
     }
-
-    biosim_snap_header_t hdr;
-    biosim_status_t st = biosim_snapshot_read_header(f, &hdr);
+    biosim_status_t st = biosim_snapshot_read_header(f, hdr_out);
     if (st != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-snapshot: invalid file '%s'\n", path);
+        BIOSIM_ERRORF(&sim->log, "biosim-snapshot: invalid file '%s'", path);
         (void)fclose(f);
         return st;
     }
-
-    st = check_compat(&hdr, sim);
+    st = check_compat(hdr_out, sim);
     if (st != BIOSIM_OK) {
         (void)fclose(f);
+        return st;
+    }
+    *f_out = f;
+    return BIOSIM_OK;
+}
+
+biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
+    FILE *f = NULL;
+    biosim_snap_header_t hdr;
+    biosim_status_t st = restore_open(path, sim, &f, &hdr);
+    if (st != BIOSIM_OK) {
         return st;
     }
 
@@ -487,12 +496,12 @@ biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
     (void)fclose(f);
 
     if (returncode != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-snapshot: failed to read from '%s'\n", path);
+        BIOSIM_ERRORF(&sim->log, "biosim-snapshot: failed to read from '%s'", path);
         goto exit;
     }
 
     if (n_surv == 0U) {
-        (void)fprintf(stderr, "biosim-snapshot: '%s' contains no survivors\n", path);
+        BIOSIM_ERRORF(&sim->log, "biosim-snapshot: '%s' contains no survivors", path);
         returncode = BIOSIM_ERR_INVALID;
         goto exit;
     }
@@ -537,13 +546,13 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
     FILE *probe = fopen(path, "rb");
     if (probe != NULL) {
         (void)fclose(probe);
-        (void)fprintf(stderr, "biosim-snapshot: output file '%s' already exists\n", path);
+        BIOSIM_ERRORF(&sim->log, "biosim-snapshot: output file '%s' already exists", path);
         return BIOSIM_ERR_INVALID;
     }
 
     FILE *f = fopen(path, "w+b");
     if (f == NULL) {
-        (void)fprintf(stderr, "biosim-snapshot: cannot create '%s'\n", path);
+        BIOSIM_ERRORF(&sim->log, "biosim-snapshot: cannot create '%s'", path);
         return BIOSIM_ERR_IO;
     }
 
@@ -571,7 +580,7 @@ biosim_status_t biosim_snapshot_session_write(biosim_sim_t *sim, const uint32_t 
     biosim_status_t st =
         biosim_snapshot_write_genome(sim->snap_f, sim, survivors, scores, n_survivors);
     if (st != BIOSIM_OK) {
-        (void)fprintf(stderr, "biosim-snapshot: write failed (status %d)\n", (int)st);
+        BIOSIM_ERRORF(&sim->log, "biosim-snapshot: write failed (%s)", biosim_strerror(st));
         return st;
     }
 

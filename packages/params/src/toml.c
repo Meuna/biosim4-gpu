@@ -39,6 +39,11 @@ static void apply_table(biosim_params_t *p, toml_datum_t toptab) {
                 biosim_params_set_string(p, e->name, src.u.s);
             }
             break;
+        case PARAM_COUNT:
+            if (src.type == TOML_INT64) {
+                biosim_params_set_int(p, e->name, (int)src.u.int64);
+            }
+            break;
         }
     }
 }

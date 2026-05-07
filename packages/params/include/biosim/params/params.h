@@ -10,6 +10,7 @@ typedef enum {
     PARAM_FLOAT,
     PARAM_BOOL,
     PARAM_STRING,
+    PARAM_COUNT,
 } biosim_param_type_t;
 
 typedef union {
