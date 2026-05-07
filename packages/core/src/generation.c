@@ -110,7 +110,7 @@ static void snapshot_survivor_genomes(const biosim_genome_t *genome, const uint3
 
     for (uint32_t s = 0; s < n_survivors; s++) {
         const uint32_t src = survivors[s];
-        const uint16_t len = genome->length[src];
+        const uint16_t len = genome->len[src];
         temp_len[s] = len;
         for (uint16_t j = 0; j < len; j++) {
             temp_conn[(size_t)s * g_max_len + j] = genome->conn[(size_t)j * pop + src];
@@ -126,7 +126,7 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
     const uint16_t g_max_len = genome->max_len;
     const uint16_t len = temp_len[parent_s];
 
-    genome->length[dst] = len;
+    genome->len[dst] = len;
     for (uint16_t j = 0; j < len; j++) {
         genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)parent_s * g_max_len + j];
         genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)parent_s * g_max_len + j];
@@ -137,7 +137,7 @@ static void restore_genome_slot(biosim_genome_t *genome, uint32_t dst, const uin
  * Single-point crossover directly from snapshot temp buffers into a live
  * genome slot.  Mirrors biosim_genome_crossover semantics: crossover point k
  * in [0, min(len_a, len_b)]; child gets genes [0..k) from pa_s and [k..len_b)
- * from pb_s; child length = pb_s length (capped at max_len).
+ * from pb_s; child len = pb_s len (capped at max_len).
  */
 static void crossover_from_snapshot(biosim_genome_t *genome, uint32_t dst,
                                     const uint16_t *temp_conn, const int16_t *temp_wgt,
@@ -159,7 +159,7 @@ static void crossover_from_snapshot(biosim_genome_t *genome, uint32_t dst,
         genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pb_s * g_max_len + j];
         genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pb_s * g_max_len + j];
     }
-    genome->length[dst] = (uint16_t)child_len;
+    genome->len[dst] = (uint16_t)child_len;
 }
 
 /*
@@ -190,13 +190,13 @@ static void select_parents(uint32_t n_survivors, bool by_fitness, bool sexual, u
 }
 
 /* Materialise a child genome from the snapshot: crossover (sexual) or copy (asexual). */
-static void materialize_child(biosim_genome_t *genome, uint32_t dst, const uint16_t *tc,
-                              const int16_t *tw, const uint16_t *tl, uint32_t pa, uint32_t pb,
-                              bool sexual, uint64_t *rng) {
+static void materialize_child(biosim_genome_t *genome, uint32_t dst, const uint16_t *temp_conn,
+                              const int16_t *temp_wgt, const uint16_t *temp_len, uint32_t pa,
+                              uint32_t pb, bool sexual, uint64_t *rng) {
     if (sexual) {
-        crossover_from_snapshot(genome, dst, tc, tw, tl, pa, pb, rng);
+        crossover_from_snapshot(genome, dst, temp_conn, temp_wgt, temp_len, pa, pb, rng);
     } else {
-        restore_genome_slot(genome, dst, tc, tw, tl, pb);
+        restore_genome_slot(genome, dst, temp_conn, temp_wgt, temp_len, pb);
     }
 }
 
@@ -224,7 +224,7 @@ static int cmp_survivor_desc(const void *a, const void *b) {
  * holds the highest-scoring parent.
  */
 static biosim_status_t sort_survivors_by_score(uint32_t *survivors, float *scores, uint32_t n) {
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     survivor_entry_t *tmp = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
@@ -264,7 +264,7 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivo
     const bool sexual = sim->sexual_reproduction;
     const bool by_fitness = sim->choose_parents_by_fitness;
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     uint16_t *temp_conn = NULL;
     int16_t *temp_wgt = NULL;
     uint16_t *temp_len = NULL;

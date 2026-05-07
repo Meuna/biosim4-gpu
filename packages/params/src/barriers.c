@@ -97,7 +97,7 @@ biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier
         return BIOSIM_ERR_NOTFOUND;
     }
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     biosim_barrier_spec_t *specs = NULL;
     biosim_status_t returncode = BIOSIM_OK;
     uint32_t n = 0U;

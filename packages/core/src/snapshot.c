@@ -109,13 +109,13 @@ biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
 
     /* genome_length array */
     for (uint32_t s = 0U; s < n_survivors; s++) {
-        if (!write_u16(f, genome->length[survivors[s]])) {
+        if (!write_u16(f, genome->len[survivors[s]])) {
             return BIOSIM_ERR_IO;
         }
     }
 
     /* Reusable row buffer for genome_conn and genome_wgt (same element size). */
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     uint16_t *row = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
@@ -251,7 +251,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     const uint32_t pop_load = pop_file < pop_sim ? pop_file : pop_sim;
     const uint16_t g_max_len = header->genome_max_len;
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     uint16_t *row = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
@@ -275,7 +275,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
             returncode = BIOSIM_ERR_INVALID;
             goto exit;
         }
-        sim->genome.length[s] = g_len;
+        sim->genome.len[s] = g_len;
     }
 
     /* genome_conn */
@@ -469,7 +469,7 @@ biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
         return st;
     }
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     float *scores = NULL;
     uint32_t *survivors = NULL;
     biosim_status_t returncode = BIOSIM_OK;

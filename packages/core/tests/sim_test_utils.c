@@ -105,8 +105,8 @@ void assert_genome_slice_equal(const biosim_genome_t *a, const biosim_genome_t *
     const uint32_t pop_a = a->population;
     const uint32_t pop_b = b->population;
     for (uint32_t s = 0U; s < n_agents; s++) {
-        TEST_ASSERT_EQUAL_UINT16(a->length[s], b->length[s]);
-        const uint16_t len = a->length[s];
+        TEST_ASSERT_EQUAL_UINT16(a->len[s], b->len[s]);
+        const uint16_t len = a->len[s];
         for (uint16_t j = 0U; j < len; j++) {
             TEST_ASSERT_EQUAL_UINT16(a->conn[(size_t)j * pop_a + s],
                                      b->conn[(size_t)j * pop_b + s]);

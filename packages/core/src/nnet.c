@@ -20,7 +20,7 @@ biosim_status_t biosim_nnet_create(uint32_t population, uint16_t max_conn, uint8
     size_t conn_slots = (size_t)max_conn * (size_t)population;
     size_t neuron_slots = (size_t)max_neurons * (size_t)population;
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     biosim_status_t returncode = BIOSIM_OK;
 
     out->genome_conn = calloc(conn_slots, sizeof(uint16_t));
@@ -195,11 +195,11 @@ biosim_status_t biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t
     assert(num_sensors > 0 && num_actions > 0);
     assert(n->max_neurons > 0 && n->max_neurons <= 128);
 
-    uint16_t gene_count = genome->length[idx];
+    uint16_t gene_count = genome->len[idx];
     uint8_t max_neurons = n->max_neurons;
     uint32_t pop = n->population;
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     remapped_gene_t *genes = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 

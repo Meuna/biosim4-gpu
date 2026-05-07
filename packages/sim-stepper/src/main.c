@@ -17,7 +17,7 @@ static const biosim_param_entry_t sim_params[] = {
     {"grid-size-y",              "simulation", {.i = 128},       PARAM_INT,    false, true, "grid-size-y",    "y"},
     {"steps-per-gen",            "simulation", {.i = 300},       PARAM_INT,    false, true, "steps-per-gen",  NULL},
     {"max-generations",          "simulation", {.i = 1000},      PARAM_INT,    false, true, "max-gen",        NULL},
-    {"max-genome-length",        "genome",     {.i = 24},        PARAM_INT,    false, true, "max-genome-len", NULL},
+    {"max-genome-len",           "genome",     {.i = 24},        PARAM_INT,    false, true, "max-genome-len", NULL},
     {"max-neurons",              "genome",     {.i = 5},         PARAM_INT,    false, true, "max-neurons",    NULL},
     {"point-mutation-rate",      "genome",     {.f = 0.001},     PARAM_FLOAT,  false, true, "point-mut-rate", NULL},
     {"sexual-reproduction",      "genome",     {.b = false},     PARAM_BOOL,   false, true, NULL,             NULL},
@@ -49,7 +49,7 @@ static const biosim_param_entry_t sim_params[] = {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int main(int argc, char **argv) {
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     biosim_params_t p;
     biosim_sim_t sim;
     biosim_barrier_spec_t *barriers = NULL;
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     sim.population = (uint32_t)biosim_params_get_int(&p, "population");
     sim.size_x = (int16_t)biosim_params_get_int(&p, "grid-size-x");
     sim.size_y = (int16_t)biosim_params_get_int(&p, "grid-size-y");
-    sim.genome_max_len = (uint16_t)biosim_params_get_int(&p, "max-genome-length");
+    sim.genome_max_len = (uint16_t)biosim_params_get_int(&p, "max-genome-len");
     sim.max_neurons = (uint8_t)biosim_params_get_int(&p, "max-neurons");
     sim.long_probe_dist = (uint8_t)biosim_params_get_int(&p, "long-probe-dist");
     sim.steps_per_gen = (uint32_t)biosim_params_get_int(&p, "steps-per-gen");

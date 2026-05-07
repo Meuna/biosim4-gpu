@@ -64,7 +64,7 @@ void test_free_zeroes_struct(void) {
 /* ── empty and trivial genomes ──────────────────────────────────────────── */
 
 void test_empty_genome_zero_connections(void) {
-    genome.length[AGENT_IDX] = 0;
+    genome.len[AGENT_IDX] = 0;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT16(0, nnet.conn_length[AGENT_IDX]);
@@ -76,7 +76,7 @@ void test_all_self_loops_culled(void) {
      * input, so both neurons are dead and all connections are removed */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 1, BIOSIM_GENE_NEURON, 1, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT16(0, nnet.conn_length[AGENT_IDX]);
@@ -88,7 +88,7 @@ void test_all_self_loops_culled(void) {
 void test_sensor_to_action_direct(void) {
     /* SENSOR 0 → ACTION 0: one connection, no internal neurons */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 1;
+    genome.len[AGENT_IDX] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT16(1, nnet.conn_length[AGENT_IDX]);
@@ -98,7 +98,7 @@ void test_sensor_to_action_direct(void) {
 void test_sensor_to_action_correct_packed_bits(void) {
     /* SENSOR 2 → ACTION 3, weight 200: verify packed field values are preserved */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 2, BIOSIM_GENE_IO, 3, 200);
-    genome.length[AGENT_IDX] = 1;
+    genome.len[AGENT_IDX] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     uint16_t packed = nnet.genome_conn[0 * CAP + AGENT_IDX];
@@ -115,7 +115,7 @@ void test_one_neuron_alive(void) {
     /* SENSOR 0 → NEURON 0, NEURON 0 → ACTION 0 */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT16(2, nnet.conn_length[AGENT_IDX]);
@@ -127,7 +127,7 @@ void test_neuron_sink_before_action_sink(void) {
      * action-sink connection (NEURON→ACTION) must occupy slot 1 */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     uint16_t p0 = nnet.genome_conn[0 * CAP + AGENT_IDX];
@@ -139,7 +139,7 @@ void test_neuron_sink_before_action_sink(void) {
 void test_neuron_driven_set(void) {
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT8(1, nnet.neuron_driven[0 * CAP + AGENT_IDX]);
@@ -148,7 +148,7 @@ void test_neuron_driven_set(void) {
 void test_neuron_output_zeroed(void) {
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_FLOAT(0.0F, nnet.neuron_output[0 * CAP + AGENT_IDX]);
@@ -159,7 +159,7 @@ void test_neuron_output_zeroed(void) {
 void test_no_input_neuron_culled(void) {
     /* NEURON 0 → ACTION 0 only: N0 has output but no input → dead */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 1;
+    genome.len[AGENT_IDX] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT16(0, nnet.conn_length[AGENT_IDX]);
@@ -169,7 +169,7 @@ void test_no_input_neuron_culled(void) {
 void test_no_output_path_neuron_culled(void) {
     /* SENSOR 0 → NEURON 0 only: N0 has input but no path to any action → dead */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
-    genome.length[AGENT_IDX] = 1;
+    genome.len[AGENT_IDX] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT16(0, nnet.conn_length[AGENT_IDX]);
@@ -182,7 +182,7 @@ void test_self_loop_only_neuron_culled(void) {
      * so N0 is dead despite having an action output. */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT16(0, nnet.conn_length[AGENT_IDX]);
@@ -196,7 +196,7 @@ void test_indirect_output_path_alive(void) {
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_NEURON, 1, 100);
     set_gene(AGENT_IDX, 2, BIOSIM_GENE_NEURON, 1, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 3;
+    genome.len[AGENT_IDX] = 3;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT8(2, nnet.neuron_count[AGENT_IDX]);
@@ -212,7 +212,7 @@ void test_renumber_gap_filled(void) {
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
     set_gene(AGENT_IDX, 2, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 2, 100);
     set_gene(AGENT_IDX, 3, BIOSIM_GENE_NEURON, 2, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 4;
+    genome.len[AGENT_IDX] = 4;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT8(2, nnet.neuron_count[AGENT_IDX]);
@@ -223,7 +223,7 @@ void test_remapped_src_num(void) {
      * N2 gets compact ID 0.  The action-sink connection's src_num must be 0. */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 2, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 2, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     /* slot 1 is the action-sink connection (N→A) */
@@ -236,7 +236,7 @@ void test_remapped_sink_num(void) {
      * The neuron-sink connection's sink_num must be 0 after remapping. */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 2, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 2, BIOSIM_GENE_IO, 0, 100);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     /* slot 0 is the neuron-sink connection (S→N) */
@@ -251,7 +251,7 @@ void test_src_sensor_modulo(void) {
      * Compiled connection must encode sensor 1 as the source. */
     genome.conn[0 * CAP + AGENT_IDX] = BIOSIM_GENE_PACK(BIOSIM_GENE_IO, 5, BIOSIM_GENE_IO, 0);
     genome.wgt[0 * CAP + AGENT_IDX] = 0;
-    genome.length[AGENT_IDX] = 1;
+    genome.len[AGENT_IDX] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     uint16_t packed = nnet.genome_conn[0 * CAP + AGENT_IDX];
@@ -267,7 +267,7 @@ void test_src_neuron_modulo(void) {
     genome.wgt[0 * CAP + AGENT_IDX] = 100;
     genome.conn[1 * CAP + AGENT_IDX] = BIOSIM_GENE_PACK(BIOSIM_GENE_NEURON, 10, BIOSIM_GENE_IO, 0);
     genome.wgt[1 * CAP + AGENT_IDX] = 100;
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT8(1, nnet.neuron_count[AGENT_IDX]);
@@ -279,7 +279,7 @@ void test_sink_action_modulo(void) {
      * Compiled connection must encode action 2 as the sink. */
     genome.conn[0 * CAP + AGENT_IDX] = BIOSIM_GENE_PACK(BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 6);
     genome.wgt[0 * CAP + AGENT_IDX] = 0;
-    genome.length[AGENT_IDX] = 1;
+    genome.len[AGENT_IDX] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     uint16_t packed = nnet.genome_conn[0 * CAP + AGENT_IDX];
@@ -293,7 +293,7 @@ void test_sink_neuron_modulo(void) {
     genome.wgt[0 * CAP + AGENT_IDX] = 100;
     genome.conn[1 * CAP + AGENT_IDX] = BIOSIM_GENE_PACK(BIOSIM_GENE_NEURON, 9, BIOSIM_GENE_IO, 0);
     genome.wgt[1 * CAP + AGENT_IDX] = 100;
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_UINT8(1, nnet.neuron_count[AGENT_IDX]);
@@ -308,10 +308,10 @@ void test_transposed_conn_indexing(void) {
      * Adjacent agents' same-slot data is adjacent in memory. */
     genome.conn[0 * CAP + 0] = BIOSIM_GENE_PACK(BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0);
     genome.wgt[0 * CAP + 0] = 10;
-    genome.length[0] = 1;
+    genome.len[0] = 1;
     genome.conn[0 * CAP + 1] = BIOSIM_GENE_PACK(BIOSIM_GENE_IO, 1, BIOSIM_GENE_IO, 0);
     genome.wgt[0 * CAP + 1] = 20;
-    genome.length[1] = 1;
+    genome.len[1] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
                           biosim_nnet_compile_slot(&nnet, &genome, 0, NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
@@ -325,10 +325,10 @@ void test_transposed_neuron_indexing(void) {
      * For k=0: agent 0 is at [0], agent 1 is at [1]. */
     set_gene(0, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(0, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[0] = 2;
+    genome.len[0] = 2;
     set_gene(1, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(1, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[1] = 2;
+    genome.len[1] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
                           biosim_nnet_compile_slot(&nnet, &genome, 0, NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
@@ -341,14 +341,14 @@ void test_adjacent_agents_independent(void) {
     /* Compiling agent 1 must not corrupt agent 0's buffers */
     set_gene(0, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 42);
     set_gene(0, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 42);
-    genome.length[0] = 2;
+    genome.len[0] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
                           biosim_nnet_compile_slot(&nnet, &genome, 0, NUM_SENSORS, NUM_ACTIONS));
 
     int16_t saved_weight = nnet.genome_wgt[0 * CAP + 0];
 
     set_gene(1, 0, BIOSIM_GENE_IO, 1, BIOSIM_GENE_IO, 1, 999);
-    genome.length[1] = 1;
+    genome.len[1] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
                           biosim_nnet_compile_slot(&nnet, &genome, 1, NUM_SENSORS, NUM_ACTIONS));
 
@@ -369,7 +369,7 @@ void test_max_conn_not_exceeded(void) {
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_IO, 1, BIOSIM_GENE_IO, 1, 100);
     set_gene(AGENT_IDX, 2, BIOSIM_GENE_IO, 2, BIOSIM_GENE_IO, 2, 100);
     set_gene(AGENT_IDX, 3, BIOSIM_GENE_IO, 3, BIOSIM_GENE_IO, 3, 100);
-    genome.length[AGENT_IDX] = 4;
+    genome.len[AGENT_IDX] = 4;
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&small, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
@@ -385,7 +385,7 @@ void test_fingerprint_compiled_nnet_deterministic(void) {
      * must be equal regardless of which slot index holds the compiled network. */
     set_gene(0, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(0, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[0] = 2;
+    genome.len[0] = 2;
     biosim_genome_copy_slot(&genome, 1, 0);
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
                           biosim_nnet_compile_slot(&nnet, &genome, 0, NUM_SENSORS, NUM_ACTIONS));
@@ -397,9 +397,9 @@ void test_fingerprint_compiled_nnet_deterministic(void) {
 void test_fingerprint_differs_for_different_nnets(void) {
     /* Two genomes that compile to different networks produce different fingerprints. */
     set_gene(0, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[0] = 1;
+    genome.len[0] = 1;
     set_gene(1, 0, BIOSIM_GENE_IO, 1, BIOSIM_GENE_IO, 1, 200);
-    genome.length[1] = 1;
+    genome.len[1] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
                           biosim_nnet_compile_slot(&nnet, &genome, 0, NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
@@ -413,10 +413,10 @@ void test_fingerprint_phenotypic_equivalence(void) {
      * Genome 1: S0→A0 + N0→A0 (N0 has no non-self input so it is dead and
      * culled; only S0→A0 remains).  Both compile to the same network. */
     set_gene(0, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[0] = 1;
+    genome.len[0] = 1;
     set_gene(1, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 100);
     set_gene(1, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
-    genome.length[1] = 2;
+    genome.len[1] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
                           biosim_nnet_compile_slot(&nnet, &genome, 0, NUM_SENSORS, NUM_ACTIONS));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK,
@@ -429,7 +429,7 @@ void test_fingerprint_phenotypic_equivalence(void) {
 void test_feedforward_sensor_to_action_direct(void) {
     /* S0→A0, weight=8192 (one scale unit): sensor=1.0 → action_vals[0]=1.0 */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 8192);
-    genome.length[AGENT_IDX] = 1;
+    genome.len[AGENT_IDX] = 1;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
 
@@ -447,7 +447,7 @@ void test_feedforward_sensor_neuron_action_chain(void) {
      * After the call neuron_output[N0] = tanhf(1.0). */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
 
@@ -465,7 +465,7 @@ void test_feedforward_neuron_state_carry(void) {
      * the N0→A0 connection, so action_vals[0] ≈ tanhf(1.0). */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
 
@@ -485,7 +485,7 @@ void test_feedforward_undriven_neuron_defaults_to_half(void) {
      * compilation exercises the undriven branch (output fixed to 0.5F). */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
 
@@ -503,7 +503,7 @@ void test_feedforward_multiple_sensors_sum_to_action(void) {
      * action_vals[0] = 1.0*(8192/8192) + 1.0*(4096/8192) = 1.5 */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_IO, 0, 8192);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_IO, 1, BIOSIM_GENE_IO, 0, 4096);
-    genome.length[AGENT_IDX] = 2;
+    genome.len[AGENT_IDX] = 2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
 
@@ -518,7 +518,7 @@ void test_feedforward_multiple_sensors_sum_to_action(void) {
 void test_feedforward_no_connections_noop(void) {
     /* Empty genome: no connections, no neurons.  action_vals must stay zero
      * and any pre-existing neuron_output value must remain untouched. */
-    genome.length[AGENT_IDX] = 0;
+    genome.len[AGENT_IDX] = 0;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX,
                                                               NUM_SENSORS, NUM_ACTIONS));
 

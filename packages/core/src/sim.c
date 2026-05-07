@@ -15,7 +15,7 @@
 
 biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
                                   uint32_t n_barriers) {
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     const uint32_t pop = sim->population;
     const int16_t size_x = sim->size_x;
     const int16_t size_y = sim->size_y;
@@ -166,7 +166,7 @@ void biosim_sim_next_step(biosim_sim_t *sim) {
 biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out) {
     const uint32_t pop = sim->agents.population;
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     uint32_t *survivors = NULL;
     float *scores = NULL;
     biosim_status_t returncode = BIOSIM_OK;

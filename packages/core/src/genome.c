@@ -17,7 +17,7 @@ biosim_status_t biosim_genome_create(uint32_t population, uint16_t max_len, bios
 
     size_t gene_slots = (size_t)max_len * (size_t)population;
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     biosim_status_t returncode = BIOSIM_OK;
     out->conn = calloc(gene_slots, sizeof(uint16_t));
     if (!out->conn) {
@@ -29,8 +29,8 @@ biosim_status_t biosim_genome_create(uint32_t population, uint16_t max_len, bios
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
-    out->length = calloc(population, sizeof(uint16_t));
-    if (!out->length) {
+    out->len = calloc(population, sizeof(uint16_t));
+    if (!out->len) {
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
@@ -47,19 +47,19 @@ void biosim_genome_free(biosim_genome_t *g) {
     }
     free(g->conn);
     free(g->wgt);
-    free(g->length);
+    free(g->len);
     memset(g, 0, sizeof(*g));
 }
 
 /* ── slot operations ────────────────────────────────────────────────────── */
 
-void biosim_genome_init_slot(biosim_genome_t *g, uint32_t idx, uint16_t length, uint64_t *rng) {
+void biosim_genome_init_slot(biosim_genome_t *g, uint32_t idx, uint16_t len, uint64_t *rng) {
     assert(g != NULL && rng != NULL);
     assert(idx < g->population);
-    assert(length > 0 && length <= g->max_len);
+    assert(len > 0 && len <= g->max_len);
 
-    g->length[idx] = length;
-    for (uint32_t j = 0; j < length; j++) {
+    g->len[idx] = len;
+    for (uint32_t j = 0; j < len; j++) {
         size_t slot = (size_t)j * g->population + idx;
         g->conn[slot] = (uint16_t)biosim_rng_next(rng);
         g->wgt[slot] = (int16_t)biosim_rng_next(rng);
@@ -70,7 +70,7 @@ void biosim_genome_copy_slot(biosim_genome_t *g, uint32_t dst, uint32_t src) {
     assert(g != NULL);
     assert(dst < g->population && src < g->population);
 
-    g->length[dst] = g->length[src];
+    g->len[dst] = g->len[src];
     for (uint32_t j = 0; j < g->max_len; j++) {
         size_t s = (size_t)j * g->population + src;
         size_t d = (size_t)j * g->population + dst;
@@ -97,7 +97,7 @@ static void mutate_gene(biosim_genome_t *g, uint32_t idx, uint32_t j, uint64_t *
 }
 
 static void mutate_insert(biosim_genome_t *g, uint32_t idx, uint64_t *rng) {
-    uint32_t len = g->length[idx];
+    uint32_t len = g->len[idx];
     if (len >= g->max_len) {
         return;
     }
@@ -111,11 +111,11 @@ static void mutate_insert(biosim_genome_t *g, uint32_t idx, uint64_t *rng) {
     size_t new_slot = (size_t)pos * g->population + idx;
     g->conn[new_slot] = (uint16_t)biosim_rng_next(rng);
     g->wgt[new_slot] = (int16_t)biosim_rng_next(rng);
-    g->length[idx] = (uint16_t)(len + 1U);
+    g->len[idx] = (uint16_t)(len + 1U);
 }
 
 static void mutate_delete(biosim_genome_t *g, uint32_t idx, uint64_t *rng) {
-    uint32_t len = g->length[idx];
+    uint32_t len = g->len[idx];
     if (len <= 1U) {
         return;
     }
@@ -126,14 +126,14 @@ static void mutate_delete(biosim_genome_t *g, uint32_t idx, uint64_t *rng) {
         g->conn[dst_slot] = g->conn[src_slot];
         g->wgt[dst_slot] = g->wgt[src_slot];
     }
-    g->length[idx] = (uint16_t)(len - 1U);
+    g->len[idx] = (uint16_t)(len - 1U);
 }
 
 void biosim_genome_mutate(biosim_genome_t *g, uint32_t idx, float rate, uint64_t *rng) {
     assert(g != NULL && rng != NULL);
     assert(idx < g->population);
 
-    uint32_t len = g->length[idx];
+    uint32_t len = g->len[idx];
     for (uint32_t j = 0; j < len; j++) {
         if (rng_float(rng) < rate) {
             mutate_gene(g, idx, j, rng);
@@ -153,8 +153,8 @@ void biosim_genome_crossover(biosim_genome_t *g, uint32_t child, uint32_t parent
     assert(g != NULL && rng != NULL);
     assert(child < g->population && parent_a < g->population && parent_b < g->population);
 
-    uint32_t len_a = g->length[parent_a];
-    uint32_t len_b = g->length[parent_b];
+    uint32_t len_a = g->len[parent_a];
+    uint32_t len_b = g->len[parent_b];
     uint32_t min_len = len_a < len_b ? len_a : len_b;
     uint32_t k = (uint32_t)(biosim_rng_next(rng) % ((uint64_t)min_len + 1ULL));
 
@@ -175,7 +175,7 @@ void biosim_genome_crossover(biosim_genome_t *g, uint32_t child, uint32_t parent
         g->conn[dst_slot] = g->conn[src_slot];
         g->wgt[dst_slot] = g->wgt[src_slot];
     }
-    g->length[child] = (uint16_t)child_len;
+    g->len[child] = (uint16_t)child_len;
 }
 
 /* ── warp-divergence mitigation ─────────────────────────────────────────── */
@@ -187,7 +187,7 @@ biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_
     size_t gene_slots = (size_t)g->max_len * (size_t)pop;
     size_t buckets = (size_t)g->max_len + 1U;
 
-    /* alloc start here, freed on exit label */
+    /* alloc start here, free on exit label */
     uint16_t *new_conn = NULL;
     int16_t *new_wgt = NULL;
     uint16_t *new_len = NULL;
@@ -207,9 +207,9 @@ biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_
         goto exit;
     }
 
-    /* Counting sort (descending) on length[0..pop-1] in range [0..max_len] */
+    /* Counting sort (descending) on len[0..pop-1] in range [0..max_len] */
     for (uint32_t i = 0; i < pop; i++) {
-        count[g->length[i]]++;
+        count[g->len[i]]++;
     }
     {
         uint32_t pos = 0;
@@ -220,13 +220,13 @@ biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_
     }
     memcpy(cur, start, buckets * sizeof(uint32_t));
     for (uint32_t i = 0; i < pop; i++) {
-        perm_out[cur[g->length[i]]++] = i;
+        perm_out[cur[g->len[i]]++] = i;
     }
 
     /* Reorder all three genome buffers according to the permutation */
     for (uint32_t new_i = 0; new_i < pop; new_i++) {
         uint32_t old_i = perm_out[new_i];
-        new_len[new_i] = g->length[old_i];
+        new_len[new_i] = g->len[old_i];
         for (uint32_t j = 0; j < g->max_len; j++) {
             size_t src_slot = (size_t)j * pop + old_i;
             size_t dst_slot = (size_t)j * pop + new_i;
@@ -236,7 +236,7 @@ biosim_status_t biosim_genome_sort_by_length(biosim_genome_t *g, uint32_t *perm_
     }
     memcpy(g->conn, new_conn, gene_slots * sizeof(uint16_t));
     memcpy(g->wgt, new_wgt, gene_slots * sizeof(int16_t));
-    memcpy(g->length, new_len, (size_t)pop * sizeof(uint16_t));
+    memcpy(g->len, new_len, (size_t)pop * sizeof(uint16_t));
 exit:
     free(new_conn);
     free(new_wgt);

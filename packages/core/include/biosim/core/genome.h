@@ -17,7 +17,7 @@ typedef struct {
     uint16_t max_len;    /* genes allocated per agent slot (GENOME_MAX_LEN) */
     uint16_t *conn;      /* packed connectivity [gene_slot * population + agent_idx] */
     int16_t *wgt;        /* raw signed weight  [gene_slot * population + agent_idx] */
-    uint16_t *length;    /* active gene count per agent [agent_idx] */
+    uint16_t *len;       /* active gene count per agent [agent_idx] */
 } biosim_genome_t;
 
 /* Lifecycle */
@@ -25,7 +25,7 @@ biosim_status_t biosim_genome_create(uint32_t population, uint16_t max_len, bios
 void biosim_genome_free(biosim_genome_t *g);
 
 /* Slot operations */
-void biosim_genome_init_slot(biosim_genome_t *g, uint32_t idx, uint16_t length, uint64_t *rng);
+void biosim_genome_init_slot(biosim_genome_t *g, uint32_t idx, uint16_t len, uint64_t *rng);
 void biosim_genome_copy_slot(biosim_genome_t *g, uint32_t dst, uint32_t src);
 
 /* Operators — called at the generation boundary on the host */
