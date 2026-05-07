@@ -1,3 +1,7 @@
+add_library(core-sim-test-utils STATIC sim_test_utils.c)
+target_link_libraries(core-sim-test-utils PUBLIC core unity)
+target_compile_features(core-sim-test-utils PUBLIC c_std_11)
+
 add_executable(core-grid-tests test_grid.c)
 target_link_libraries(core-grid-tests PRIVATE core unity)
 target_compile_features(core-grid-tests PRIVATE c_std_11)
@@ -44,6 +48,8 @@ target_compile_features(core-challenge-grid-tests PRIVATE c_std_11)
 add_test(NAME core-challenge-grid-tests COMMAND core-challenge-grid-tests)
 
 add_executable(core-snapshot-tests test_snapshot.c)
-target_link_libraries(core-snapshot-tests PRIVATE core unity)
+target_link_libraries(core-snapshot-tests PRIVATE core-sim-test-utils)
 target_compile_features(core-snapshot-tests PRIVATE c_std_11)
+target_compile_definitions(core-snapshot-tests PRIVATE
+    BIOSIM_TEST_TMPDIR="${CMAKE_CURRENT_BINARY_DIR}")
 add_test(NAME core-snapshot-tests COMMAND core-snapshot-tests)
