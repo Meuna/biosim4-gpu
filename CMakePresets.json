@@ -8,6 +8,7 @@
       "name": "base",
       "hidden": true,
       "description": "Shared defaults inherited by all visible presets — not selectable directly",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
