@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Signal handling in `sim-stepper`**: `SIGINT` and `SIGTERM` (plus `SIGBREAK`
+  on Windows) now trigger a clean shutdown — the generation loop exits after the
+  current generation, `biosim_sim_free` finalizes any open snapshot session, and
+  the process exits 0.
+
 ### Documentation
 - **Full documentation overhaul**: replaced design-phase documents with
   as-built documentation. New flat structure under `docs/`:

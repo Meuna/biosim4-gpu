@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +11,13 @@
 #include "biosim/params/barriers.h"
 #include "biosim/params/challenges.h"
 #include "biosim/params/params.h"
+
+static volatile sig_atomic_t g_halt_requested = 0;
+
+static void handle_signal(int sig) {
+    (void)sig;
+    g_halt_requested = 1;
+}
 
 // clang-format off
 static const biosim_param_entry_t sim_params[] = {
@@ -59,6 +67,12 @@ int main(int argc, char **argv) {
 
     memset(&sim, 0, sizeof(sim));
     biosim_log_init(&biosim_log_default_ctx);
+
+    (void)signal(SIGINT, handle_signal);
+    (void)signal(SIGTERM, handle_signal);
+#ifdef _WIN32
+    (void)signal(SIGBREAK, handle_signal);
+#endif
 
     returncode = biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
     if (returncode != BIOSIM_OK) {
@@ -142,7 +156,7 @@ int main(int argc, char **argv) {
 
     biosim_census_print_header(stdout);
 
-    while (sim.gen < sim.max_generations) {
+    while (sim.gen < sim.max_generations && !g_halt_requested) {
         while (sim.step < sim.steps_per_gen) {
             for (uint32_t i = 0U; i < sim.agents.population; i++) {
                 if (sim.agents.alive[i]) {
@@ -158,6 +172,10 @@ int main(int argc, char **argv) {
             goto exit;
         }
         biosim_census_print(stdout, &census);
+    }
+
+    if (g_halt_requested) {
+        BIOSIM_WARNF("simulation halted by signal after generation %u", sim.gen);
     }
 
 exit:
