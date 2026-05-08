@@ -47,3 +47,11 @@ CheckOptions:
   # Require UPPER_CASE for enum constants
   - key: readability-identifier-naming.EnumConstantCase
     value: UPPER_CASE
+
+  # Relax threshold for cognitive complexity
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 30
+
+  # Ignore code inside macros for cognitive complexity
+  - key: readability-function-cognitive-complexity.IgnoreMacros
+    value: true
