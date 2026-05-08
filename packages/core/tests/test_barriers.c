@@ -39,7 +39,7 @@ static int count_barriers(const biosim_grid_t *grid) {
 void test_hbar_explicit(void) {
     biosim_barrier_spec_t spec = {BIOSIM_BARRIER_HBAR, 32, 32, 20.0F, 2.0F};
     uint64_t rng = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
     /* centre at (32,32), half_len=10, half_w=1 → rows 31..33, cols 22..42 */
     for (int16_t x = 22; x <= 42; x++) {
@@ -57,7 +57,7 @@ void test_hbar_explicit(void) {
 void test_vbar_explicit(void) {
     biosim_barrier_spec_t spec = {BIOSIM_BARRIER_VBAR, 32, 32, 20.0F, 2.0F};
     uint64_t rng = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
     /* centre at (32,32), half_len=10, half_w=1 → cols 31..33, rows 22..42 */
     for (int16_t x = 31; x <= 33; x++) {
@@ -74,7 +74,7 @@ void test_vbar_explicit(void) {
 void test_square_explicit(void) {
     biosim_barrier_spec_t spec = {BIOSIM_BARRIER_SQUARE, 30, 30, 10.0F, BIOSIM_BARRIER_DIM_UNSET};
     uint64_t rng = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
     /* side=10, half=5 → rows/cols 25..35 */
     for (int16_t x = 25; x <= 35; x++) {
@@ -91,7 +91,7 @@ void test_square_explicit(void) {
 void test_circle_explicit(void) {
     biosim_barrier_spec_t spec = {BIOSIM_BARRIER_CIRCLE, 32, 32, 5.0F, BIOSIM_BARRIER_DIM_UNSET};
     uint64_t rng = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
     /* Centre must be a barrier */
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 32)));
@@ -104,7 +104,7 @@ void test_circle_stays_in_bounds(void) {
     /* Spec right at the edge; visit_neighborhood clips silently */
     biosim_barrier_spec_t spec = {BIOSIM_BARRIER_CIRCLE, 0, 0, 5.0F, BIOSIM_BARRIER_DIM_UNSET};
     uint64_t rng = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
     /* At least the origin is a barrier */
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(0, 0)));
 }
@@ -116,7 +116,7 @@ void test_random_hbar_places_barriers(void) {
                                   BIOSIM_BARRIER_POS_UNSET, BIOSIM_BARRIER_DIM_UNSET,
                                   BIOSIM_BARRIER_DIM_UNSET};
     uint64_t rng = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
     TEST_ASSERT_GREATER_THAN(0, count_barriers(&g));
 }
 
@@ -126,12 +126,12 @@ void test_random_deterministic(void) {
                                   BIOSIM_BARRIER_DIM_UNSET};
 
     uint64_t rng1 = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng1, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng1, NULL);
     int count1 = count_barriers(&g);
 
     biosim_grid_zero_fill(&g);
     uint64_t rng2 = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, &spec, 1, &rng2, NULL));
+    biosim_barriers_place(&g, &spec, 1, &rng2, NULL);
     int count2 = count_barriers(&g);
 
     TEST_ASSERT_EQUAL_INT(count1, count2);
@@ -139,7 +139,7 @@ void test_random_deterministic(void) {
 
 void test_empty_spec_list(void) {
     uint64_t rng = biosim_rng_seed(0, 0);
-    TEST_ASSERT_EQUAL(BIOSIM_OK, biosim_barriers_place(&g, NULL, 0, &rng, NULL));
+    biosim_barriers_place(&g, NULL, 0, &rng, NULL);
     TEST_ASSERT_EQUAL_INT(0, count_barriers(&g));
 }
 

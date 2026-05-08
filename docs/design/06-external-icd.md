@@ -399,9 +399,9 @@ typedef struct {
 
 /* Place all n specs onto grid as BIOSIM_GRID_BARRIER cells.
  * rng_state is advanced in-place; same initial state → same layout. */
-biosim_status_t biosim_barriers_place(biosim_grid_t *grid,
-                                      const biosim_barrier_spec_t *specs, int n,
-                                      uint64_t *rng_state);
+void biosim_barriers_place(biosim_grid_t *grid,
+                           const biosim_barrier_spec_t *specs, int n,
+                           uint64_t *rng_state);
 ```
 
 **`params` package** (`params/barriers.h`):
