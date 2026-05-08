@@ -1,9 +1,11 @@
 #include <argtable3.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "biosim/core/log.h"
+#include "biosim/core/status.h"
 #include "biosim/params/params.h"
 
 /* Forward declaration of internal TOML loader defined in toml.c */
@@ -23,9 +25,10 @@ static bool str_eq_nullable(const char *a, const char *b) {
 
 static void collect_table_order(const biosim_params_t *p, size_t ndyn, const char **out_order,
                                 size_t *out_count) {
+    assert(ndyn <= p->count);
     size_t n = 0;
     for (size_t i = 0; i < ndyn; i++) {
-        const char *tname = biosim_params_entry(p, i)->table;
+        const char *tname = p->entries[i].table;
         bool found = false;
         for (size_t j = 0; j < n; j++) {
             if (str_eq_nullable(out_order[j], tname)) {
@@ -41,24 +44,25 @@ static void collect_table_order(const biosim_params_t *p, size_t ndyn, const cha
 }
 
 /* Prints the usage one-liner using arg_print_syntax on a filtered shallow copy of argtable. */
-static void print_synopsis(FILE *fp, const char *progname, void **argtable, size_t nstatic,
-                           const biosim_params_t *p, size_t ndyn) {
+static biosim_status_t print_synopsis(FILE *fp, const char *progname, void **argtable,
+                                      size_t nstatic, const biosim_params_t *p, size_t ndyn) {
+    assert(ndyn <= p->count);
     size_t nsyn = 0;
     for (size_t i = 0; i < ndyn; i++) {
-        if (biosim_params_entry(p, i)->cli_long != NULL) {
+        if (p->entries[i].cli_long != NULL) {
             nsyn++;
         }
     }
 
     void **syn = (void **)malloc((nstatic + nsyn + 1) * sizeof(void *));
     if (!syn) {
-        return;
+        return BIOSIM_ERR_NOMEM;
     }
     memcpy((void *)syn, (const void *)argtable, nstatic * sizeof(void *));
 
     size_t k = nstatic;
     for (size_t i = 0; i < ndyn; i++) {
-        if (biosim_params_entry(p, i)->cli_long != NULL) {
+        if (p->entries[i].cli_long != NULL) {
             syn[k++] = argtable[nstatic + i];
         }
     }
@@ -71,14 +75,16 @@ static void print_synopsis(FILE *fp, const char *progname, void **argtable, size
     /* We only free the shallow copy including the dedicated arg_end(1) */
     arg_freetable(&syn[k], 1);
     free((void *)syn);
+    return BIOSIM_OK;
 }
 
 /* Prints full glossary using arg_print_glossary, shallow grouped by params table. */
-static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const biosim_params_t *p,
-                           size_t ndyn) {
+static biosim_status_t print_glossary(FILE *fp, void **argtable, size_t nstatic,
+                                      const biosim_params_t *p, size_t ndyn) {
+    assert(ndyn <= p->count);
     void **stbl = (void **)malloc((nstatic + 1) * sizeof(void *));
     if (!stbl) {
-        return;
+        return BIOSIM_ERR_NOMEM;
     }
 
     /* The convention is argtable[:nstatic] are static arguments */
@@ -96,7 +102,7 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
     if (ndyn > 0) {
         table_order = (const char **)malloc(ndyn * sizeof(const char *));
         if (!table_order) {
-            return;
+            return BIOSIM_ERR_NOMEM;
         }
         collect_table_order(p, ndyn, table_order, &ntables);
     }
@@ -105,7 +111,7 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
         const char *tname = table_order[t];
         size_t ntable = 0;
         for (size_t i = 0; i < ndyn; i++) {
-            if (str_eq_nullable(biosim_params_entry(p, i)->table, tname)) {
+            if (str_eq_nullable(p->entries[i].table, tname)) {
                 ntable++;
             }
         }
@@ -121,11 +127,11 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
         void **tbl = (void **)malloc((ntable + 1) * sizeof(void *));
         if (!tbl) {
             free((void *)table_order);
-            return;
+            return BIOSIM_ERR_NOMEM;
         }
         size_t k = 0;
         for (size_t i = 0; i < ndyn; i++) {
-            if (str_eq_nullable(biosim_params_entry(p, i)->table, tname)) {
+            if (str_eq_nullable(p->entries[i].table, tname)) {
                 tbl[k++] = argtable[nstatic + i];
             }
         }
@@ -137,43 +143,44 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
         arg_freetable(&tbl[k], 1);
         free((void *)tbl);
     }
-    free((void *)table_order);
+
     (void)fprintf(fp, "\n");
+
+    return BIOSIM_OK;
 }
 
-/* Formats the default value of e into a malloc'd "default: <val>" string, or NULL on failure. */
-static char *format_default(const biosim_param_entry_t *e) {
-    char buf[256];
+/* Writes formatted default "default: <val>" into out buffer of size n.
+ * Returns BIOSIM_OK on success, or BIOSIM_ERR_NOMEM if the output was truncated.
+ */
+static void format_default_to_buf(const biosim_param_entry_t *e, char *out, size_t n) {
+    int needed = 0;
     switch (e->type) {
     case PARAM_INT:
     case PARAM_COUNT:
-        (void)snprintf(buf, sizeof(buf), "default: %d", e->value.i);
+        (void)snprintf(out, n, "default: %d", e->value.i);
         break;
     case PARAM_FLOAT:
-        (void)snprintf(buf, sizeof(buf), "default: %g", e->value.f);
+        (void)snprintf(out, n, "default: %g", e->value.f);
         break;
     case PARAM_BOOL:
-        (void)snprintf(buf, sizeof(buf), "default: %s", e->value.b ? "true" : "false");
+        (void)snprintf(out, n, "default: %s", e->value.b ? "true" : "false");
         break;
     case PARAM_STRING:
-        (void)snprintf(buf, sizeof(buf), "default: %s", e->value.s);
+        (void)snprintf(out, n, "default: %s", e->value.s);
         break;
+    default:
+        if (n > 0) out[0] = '\0';
     }
-    size_t n = strlen(buf) + 1;
-    char *out = (char *)malloc(n);
-    if (out) {
-        memcpy(out, buf, n);
-    }
-    return out;
 }
 
 /* Appends argtable3 entries for every param (1-to-1: param i → argtable[nstatic+i]).
  * Auto-generated long flag names are malloc'd into generated[i]; NULL otherwise.
  * Formatted default strings are malloc'd into glossaries[i]; NULL otherwise. */
-static void build_argtable(void **argtable, size_t nstatic, const biosim_params_t *p, size_t ndyn,
+static biosim_status_t build_argtable(void **argtable, size_t nstatic, const biosim_params_t *p, size_t ndyn,
                            char **generated, char **glossaries) {
+    assert(ndyn <= p->count);
     for (size_t i = 0; i < ndyn; i++) {
-        const biosim_param_entry_t *e = biosim_params_entry(p, i);
+        const biosim_param_entry_t *e = &p->entries[i];
 
         generated[i] = NULL;
         glossaries[i] = NULL;
@@ -184,6 +191,9 @@ static void build_argtable(void **argtable, size_t nstatic, const biosim_params_
         } else if (e->table != NULL) {
             size_t len = strlen(e->table) + 1 + strlen(e->name) + 1;
             generated[i] = (char *)malloc(len);
+            if (!generated[i]) {
+                return BIOSIM_ERR_NOMEM;
+            }
             (void)snprintf(generated[i], len, "%s-%s", e->table, e->name);
             longflag = generated[i];
         } else {
@@ -192,10 +202,12 @@ static void build_argtable(void **argtable, size_t nstatic, const biosim_params_
 
         const char *glossary = "";
         if (e->has_default) {
-            glossaries[i] = format_default(e);
-            if (glossaries[i]) {
-                glossary = glossaries[i];
+            glossaries[i] = (char *)malloc(256);
+            if (!glossaries[i]) {
+                return BIOSIM_ERR_NOMEM;
             }
+            format_default_to_buf(e, glossaries[i], 256);
+            glossary = glossaries[i];
         }
 
         switch (e->type) {
@@ -216,12 +228,14 @@ static void build_argtable(void **argtable, size_t nstatic, const biosim_params_
             break;
         }
     }
+    return BIOSIM_OK;
 }
 
 /* Reads parsed CLI values back into params (1-to-1: param i → argtable[nstatic+i]). */
 static void apply_cli_args(void **argtable, size_t nstatic, biosim_params_t *p, size_t ndyn) {
+    assert(ndyn <= p->count);
     for (size_t i = 0; i < ndyn; i++) {
-        const biosim_param_entry_t *e = biosim_params_entry(p, i);
+        const biosim_param_entry_t *e = &p->entries[i];
         switch (e->type) {
         case PARAM_INT: {
             struct arg_int *a = argtable[nstatic + i];
@@ -279,34 +293,42 @@ biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, co
     void *static_flags[] = {arg_help, arg_ver, arg_config};
     size_t nstatic = sizeof(static_flags) / sizeof(static_flags[0]);
 
-    size_t ndyn = biosim_params_count(p);
+    size_t ndyn = p->count;
     size_t total = nstatic + ndyn + 1;
 
-    void **argtable = (void **)calloc(total, sizeof(void *));
+    /* alloc start here, free on exit label */
+    void **argtable = NULL;
+    char **generated = NULL;
+    char **glossaries = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+    
+    argtable = (void **)calloc(total, sizeof(void *));
     if (!argtable) {
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
-    char **generated = (char **)calloc(ndyn, sizeof(char *));
+    generated = (char **)calloc(ndyn, sizeof(char *));
     if (!generated) {
-        free((void *)argtable);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
-    char **glossaries = (char **)calloc(ndyn, sizeof(char *));
+    glossaries = (char **)calloc(ndyn, sizeof(char *));
     if (!glossaries) {
-        free_generated(generated, ndyn);
-        free((void *)argtable);
-        return BIOSIM_ERR_NOMEM;
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
     }
 
     memcpy((void *)argtable, (const void *)static_flags, nstatic * sizeof(void *));
-    build_argtable(argtable, nstatic, p, ndyn, generated, glossaries);
+    returncode = build_argtable(argtable, nstatic, p, ndyn, generated, glossaries);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
     struct arg_end *arg_end_s = arg_end(20);
     argtable[nstatic + ndyn] = arg_end_s;
 
     int nerrors = arg_parse(argc, argv, argtable);
-    biosim_status_t returncode = BIOSIM_OK;
     bool exit_instead_of_return = false;
 
     if (arg_help->count > 0) {
@@ -328,7 +350,7 @@ biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, co
         goto exit;
     }
 
-    /* Pass 2: TOML file overrides defaults */
+    /* Pass 1: TOML file overrides defaults */
     if (arg_config->count > 0) {
         returncode = params_load_toml_file(p, arg_config->filename[0]);
         if (returncode != BIOSIM_OK) {
@@ -343,7 +365,7 @@ biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, co
         memcpy(p->config_path, arg_config->filename[0], path_len);
     }
 
-    /* Pass 3: CLI flags override TOML */
+    /* Pass 2: CLI flags override TOML */
     apply_cli_args(argtable, nstatic, p, ndyn);
 
 exit:

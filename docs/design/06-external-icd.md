@@ -192,10 +192,6 @@ const char* biosim_params_get_string(const biosim_params_t* p, const char* key);
 
 // Lookup
 const biosim_param_entry_t* biosim_params_find(const biosim_params_t* p, const char* key);
-
-// Iteration (for driving CLI and TOML glue)
-size_t biosim_params_count(const biosim_params_t* p);
-const biosim_param_entry_t* biosim_params_entry(const biosim_params_t* p, size_t index);
 ```
 
 The iteration API is what makes the CLI and TOML integration table-driven:
@@ -261,8 +257,8 @@ list of keys. When a parameter has a non-NULL `table`, the key is looked up
 in the corresponding TOML sub-table; missing sections are silently skipped:
 
 ```c
-for (size_t i = 0; i < biosim_params_count(&params); i++) {
-    const biosim_param_entry_t* e = biosim_params_entry(&params, i);
+for (size_t i = 0; i < params->count; i++) {
+    const biosim_param_entry_t* e = params->entries[i];
 
     toml_datum_t src;
     if (e->table != NULL) {

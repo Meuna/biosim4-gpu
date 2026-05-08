@@ -63,7 +63,5 @@ const char *biosim_params_get_string(const biosim_params_t *p, const char *key);
 
 /* Introspection */
 const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const char *key);
-size_t biosim_params_count(const biosim_params_t *p);
-const biosim_param_entry_t *biosim_params_entry(const biosim_params_t *p, size_t index);
 
 #endif /* BIOSIM_PARAMS_H */

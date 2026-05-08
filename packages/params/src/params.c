@@ -175,12 +175,3 @@ const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const c
     }
     return NULL;
 }
-
-size_t biosim_params_count(const biosim_params_t *p) {
-    return p->count;
-}
-
-const biosim_param_entry_t *biosim_params_entry(const biosim_params_t *p, size_t index) {
-    assert(index < p->count);
-    return &p->entries[index];
-}

@@ -3,8 +3,8 @@
 #include "tomlc17.h"
 
 static void apply_table(biosim_params_t *p, toml_datum_t toptab) {
-    for (size_t i = 0; i < biosim_params_count(p); i++) {
-        const biosim_param_entry_t *e = biosim_params_entry(p, i);
+    for (size_t i = 0; i < p->count; i++) {
+        const biosim_param_entry_t *e = &p->entries[i];
 
         toml_datum_t src;
         if (e->table != NULL) {
