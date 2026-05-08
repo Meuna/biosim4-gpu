@@ -485,7 +485,7 @@ static biosim_status_t restore_open(const char *path, biosim_sim_t *sim, FILE **
 
 biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
     FILE *f = NULL;
-    biosim_snap_header_t hdr;
+    biosim_snap_header_t hdr = {0};
 
     /* alloc start here, free on exit label */
     float *scores = NULL;

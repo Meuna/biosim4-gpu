@@ -169,15 +169,17 @@ static void format_default_to_buf(const biosim_param_entry_t *e, char *out, size
         (void)snprintf(out, n, "default: %s", e->value.s);
         break;
     default:
-        if (n > 0) out[0] = '\0';
+        if (n > 0) {
+            out[0] = '\0';
+        }
     }
 }
 
 /* Appends argtable3 entries for every param (1-to-1: param i → argtable[nstatic+i]).
  * Auto-generated long flag names are malloc'd into generated[i]; NULL otherwise.
  * Formatted default strings are malloc'd into glossaries[i]; NULL otherwise. */
-static biosim_status_t build_argtable(void **argtable, size_t nstatic, const biosim_params_t *p, size_t ndyn,
-                           char **generated, char **glossaries) {
+static biosim_status_t build_argtable(void **argtable, size_t nstatic, const biosim_params_t *p,
+                                      size_t ndyn, char **generated, char **glossaries) {
     assert(ndyn <= p->count);
     for (size_t i = 0; i < ndyn; i++) {
         const biosim_param_entry_t *e = &p->entries[i];
@@ -277,6 +279,9 @@ static void apply_cli_args(void **argtable, size_t nstatic, biosim_params_t *p, 
 }
 
 static void free_generated(char **generated, size_t n) {
+    if (generated == NULL) {
+        return;
+    }
     for (size_t i = 0; i < n; i++) {
         free(generated[i]);
     }
@@ -301,7 +306,8 @@ biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, co
     char **generated = NULL;
     char **glossaries = NULL;
     biosim_status_t returncode = BIOSIM_OK;
-    
+    bool exit_instead_of_return = false;
+
     argtable = (void **)calloc(total, sizeof(void *));
     if (!argtable) {
         returncode = BIOSIM_ERR_NOMEM;
@@ -329,7 +335,6 @@ biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, co
     argtable[nstatic + ndyn] = arg_end_s;
 
     int nerrors = arg_parse(argc, argv, argtable);
-    bool exit_instead_of_return = false;
 
     if (arg_help->count > 0) {
         print_synopsis(stdout, progname, argtable, nstatic, p, ndyn);
