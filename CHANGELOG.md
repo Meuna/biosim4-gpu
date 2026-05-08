@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`wasm-sim-stepper` PoC**: new package that compiles the core simulation to
+  WebAssembly via Emscripten. Hardcoded defaults (population 3000, 128×128 grid,
+  x\_band challenge). Build with `cmake --preset wasm && cmake --build --preset wasm`;
+  open `build/wasm/packages/wasm-sim-stepper/biosim-wasm-stepper.html` in a browser
+  to see census data logged each generation. `BIOSIM_BUILD_PARAMS` CMake option added
+  to gate the params/sim-stepper packages (default ON).
 - **Signal handling in `sim-stepper`**: `SIGINT` and `SIGTERM` (plus `SIGBREAK`
   on Windows) now trigger a clean shutdown — the generation loop exits after the
   current generation, `biosim_sim_free` finalizes any open snapshot session, and

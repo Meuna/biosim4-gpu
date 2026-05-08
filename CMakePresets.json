@@ -61,6 +61,30 @@
         "BIOSIM_BUILD_TESTS": "ON",
         "BIOSIM_LOG_MAX_LEVEL": "3"
       }
+    },
+
+    {
+      "name": "wasm-base",
+      "hidden": true,
+      "description": "Shared WASM defaults — chains Emscripten via vcpkg wasm32-emscripten triplet",
+      "inherits": "base",
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "wasm32-emscripten",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "$env{EMSDK}/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake",
+        "BIOSIM_BUILD_PARAMS": "OFF",
+        "BIOSIM_BUILD_TESTS": "OFF",
+        "BIOSIM_BUILD_WASM_STEPPER": "ON"
+      }
+    },
+
+    {
+      "name": "wasm",
+      "displayName": "WebAssembly",
+      "description": "Emscripten release build — produces biosim-wasm-stepper.html",
+      "inherits": "wasm-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
 
@@ -84,6 +108,11 @@
       "name": "ci",
       "configurePreset": "ci",
       "description": "Build for CI (release + tests)"
+    },
+    {
+      "name": "wasm",
+      "configurePreset": "wasm",
+      "description": "Build biosim-wasm-stepper.html with Emscripten"
     }
   ],
 

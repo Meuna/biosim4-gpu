@@ -69,6 +69,9 @@ add_subdirectory(packages/params)
 # Single-threaded CPU reference simulator executable
 add_subdirectory(packages/sim-stepper) # depends on core + params
 
+# WebAssembly PoC: hardcoded sim, no params, generates standalone HTML
+add_subdirectory(packages/wasm-sim-stepper)
+
 # ── Benchmarks ────────────────────────────────────────────────────────────────
 
 if(BIOSIM_BUILD_BENCHMARKS)
