@@ -15,8 +15,8 @@
  *   - toml_path is NULL
  *   - the file has no [barriers] section
  *   - num-barriers is 0
- * Returns BIOSIM_ERR_NOTFOUND if the file cannot be opened/parsed.
- * Returns BIOSIM_ERR_INVALID if a [barrier-N] table has an unknown kind string.
+ * Returns BIOSIM_ERR_INVALID if the file cannot be opened/parsed or a
+ * [barrier-N] table has an unknown kind string.
  * Returns BIOSIM_ERR_NOMEM on allocation failure.
  */
 biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier_spec_t **specs_out,

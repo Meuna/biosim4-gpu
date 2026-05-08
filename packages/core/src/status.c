@@ -14,8 +14,14 @@ const char *biosim_strerror(biosim_status_t code) {
         return "invalid data or configuration";
     case BIOSIM_ERR_IO:
         return "I/O failure";
+    case BIOSIM_EOF:
+        return "unexpected end of file";
     case BIOSIM_WARN_UNKNOWN_KEY:
         return "unknown configuration key";
     }
     return "unknown error";
+}
+
+biosim_status_t biosim_io_status(FILE *f) {
+    return feof(f) ? BIOSIM_EOF : BIOSIM_ERR_IO;
 }

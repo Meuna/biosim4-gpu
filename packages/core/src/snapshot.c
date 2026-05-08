@@ -188,40 +188,40 @@ biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *heade
 
     uint8_t magic[4];
     if (fread(magic, 1U, 4U, f) != 4U) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     if (memcmp(magic, snap_magic, 4U) != 0) {
         return BIOSIM_ERR_INVALID;
     }
 
     if (!read_u16(f, &header_out->format_version)) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     if (!read_u16(f, &header_out->schema_version)) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     if (!read_u16(f, &header_out->num_sensors)) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     if (!read_u16(f, &header_out->num_actions)) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     if (!read_u16(f, &header_out->genome_max_len)) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     if (fread(&header_out->max_neurons, 1U, 1U, f) != 1U) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     uint8_t pad;
     if (fread(&pad, 1U, 1U, f) != 1U) { /* reserved */
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     if (!read_u32(f, &header_out->generation_count)) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
     /* skip 12 reserved bytes at offsets 20-31 → leaves f at offset 32 */
     if (fseek(f, 12, SEEK_CUR) != 0) {
-        return BIOSIM_ERR_IO;
+        return biosim_io_status(f);
     }
 
     return BIOSIM_OK;
@@ -247,20 +247,20 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     biosim_status_t returncode = BIOSIM_OK;
 
     if (!read_u64(f, &entry_size)) {
-        returncode = BIOSIM_ERR_IO;
+        returncode = biosim_io_status(f);
         goto exit;
     }
     (void)entry_size; /* advances file position; value not needed here */
     if (!read_u32(f, &gen_idx)) {
-        returncode = BIOSIM_ERR_IO;
+        returncode = biosim_io_status(f);
         goto exit;
     }
     if (!read_u32(f, &pop_file)) {
-        returncode = BIOSIM_ERR_IO;
+        returncode = biosim_io_status(f);
         goto exit;
     }
     if (!read_u64(f, &gen_rng)) {
-        returncode = BIOSIM_ERR_IO;
+        returncode = biosim_io_status(f);
         goto exit;
     }
 
@@ -276,7 +276,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
 
     /* genome_length */
     if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
-        returncode = BIOSIM_ERR_IO;
+        returncode = biosim_io_status(f);
         goto exit;
     }
     for (uint32_t s = 0U; s < pop_load; s++) {
@@ -292,7 +292,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     /* genome_conn */
     for (uint16_t j = 0U; j < g_max_len; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
-            returncode = BIOSIM_ERR_IO;
+            returncode = biosim_io_status(f);
             goto exit;
         }
         for (uint32_t s = 0U; s < pop_load; s++) {
@@ -303,7 +303,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
     /* genome_wgt: int16_t stored as uint16_t bits */
     for (uint16_t j = 0U; j < g_max_len; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
-            returncode = BIOSIM_ERR_IO;
+            returncode = biosim_io_status(f);
             goto exit;
         }
         for (uint32_t s = 0U; s < pop_load; s++) {
@@ -315,7 +315,7 @@ static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, 
 
     /* scores: read pop_load entries; seek past excess */
     if (fread(scores_out, sizeof(float), pop_load, f) != pop_load) {
-        returncode = BIOSIM_ERR_IO;
+        returncode = biosim_io_status(f);
         goto exit;
     }
     if (fseek(f, (long)(pop_file - pop_load) * 4L, SEEK_CUR) != 0) {
@@ -346,7 +346,7 @@ biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_sna
     for (uint32_t i = 0U; i < gen_idx; i++) {
         uint64_t entry_size;
         if (!read_u64(f, &entry_size)) {
-            return BIOSIM_ERR_IO;
+            return biosim_io_status(f);
         }
         if (entry_size < snap_gen_fixed_bytes) {
             BIOSIM_ERRORF(
@@ -390,6 +390,9 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
     while (pos < file_size) {
         uint64_t entry_size;
         if (fread(&entry_size, 8U, 1U, f) != 1U) {
+            if (ferror(f)) {
+                return BIOSIM_ERR_IO;
+            }
             break;
         }
         if (entry_size < (uint64_t)snap_gen_fixed_bytes) {
@@ -406,7 +409,7 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
     }
 
     if (last_pos < 0L) {
-        return BIOSIM_ERR_NOTFOUND;
+        return BIOSIM_EOF;
     }
     if (fseek(f, last_pos, SEEK_SET) != 0) {
         return BIOSIM_ERR_IO;
@@ -541,8 +544,15 @@ biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim) {
 exit:
     free(scores);
     free(survivors);
-    if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF("snapshot restore failed (%s)", biosim_strerror(returncode));
+    if (returncode == BIOSIM_EOF) {
+        if (hdr.generation_count > 0U) {
+            BIOSIM_ERRORF("'%s': last generation (%u) is incomplete or corrupted", path,
+                          (unsigned)(hdr.generation_count - 1U));
+        } else {
+            BIOSIM_ERRORF("'%s': snapshot contains no complete generation", path);
+        }
+    } else if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("'%s': snapshot restore failed (%s)", path, biosim_strerror(returncode));
     }
     return returncode;
 }

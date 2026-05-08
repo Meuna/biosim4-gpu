@@ -115,6 +115,7 @@ biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *heade
  *   *gen_rng_out      — gen_rng captured at snapshot-write time
  * Returns BIOSIM_ERR_NOTFOUND if gen_idx is out of range.
  * Returns BIOSIM_ERR_IO on I/O failure.
+ * Returns BIOSIM_EOF on end-of-file.
  * Returns BIOSIM_ERR_NOMEM if a temporary buffer cannot be allocated.
  */
 biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_snap_header_t *header,
