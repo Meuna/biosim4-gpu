@@ -6,45 +6,33 @@ code in this repository.
 ## Project
 
 GPU port of [biosim4](https://github.com/davidrmiller/biosim4) (by David R.
-Miller) using OpenCL. The project is in the **early implementation phase**.
-Design documents in `docs/design/` are the authoritative specification;
-implementation follows them. Do not follow this blindly though, early
-implementation will ground the design to the reality: many re-design are
-expected at this stage.
+Miller) using OpenCL. Three packages are implemented: `core`, `params`, and
+`sim-stepper`. The GPU simulator (`sim-gpu`) is designed but not yet implemented.
 
 ## Working with this repository
 
-- **Design documents are the source of truth.** Before making any structural
-  decision (new package, new directory, new top-level file), consult the
-  relevant design document. When in doubt, ask the user rather than guessing.
-
-- **Open design decisions require confirmation.** When encountering an open
-  design point (config file format, binary format), do not settle them
-  unilaterally, ask the user when they come up.
-
 - **Keep the changelog up-to-date.**
 
-- **Keep the design up-to-date.** in case of re-design, also apply the
-  associated change to the design documentation. Do not trace the design
-  changes 
+- **Keep the documentation up-to-date.** When implementing a feature, update the
+  documentation so it describes the system as it exists after your change. Remove
+  any outdated statements.
 
-- **Documentation must reflect the current implementation only.**
-  When implementing a feature, update the documentation so it describes
-  the system as it exists after your change, not how it evolved. Remove
-  any outdated statements (e.g. mentions of unimplemented features).
+- **Each new source module needs a test module.** When adding
+  `packages/core/src/foo.c`, also add `packages/core/tests/test_foo.c`
+  and register it in `packages/core/tests/CMakeLists.txt`. Use the
+  Unity framework (see `docs/conventions.md`).
 
-- **Increment the snapshot schema version** when modifying the io catalogue
-  `biosim_sensor_t` or  `biosim_action_t`.
+- **Increment the snapshot schema version** when modifying `biosim_sensor_t` or
+  `biosim_action_t` in `io_catalogue.h`.
 
 - **Increment the snapshot format version** when modifying the snapshot interface.
 
-- **Conventions are normative.** The rules in `02-implementation-conventions.md`
-  (naming, error handling, host/device portability, no global state in
-  `core`) apply to every file written in this repository. They are enforced
-  by review, not by linters alone.
+- **Conventions are normative.** The rules in `docs/conventions.md` (naming,
+  error handling, host/device portability, no global state in `core`) apply to
+  every file written in this repository.
 
   - **Code Quality.** Every time you edit or create files, you MUST
-  complete this sequence before considering the task done:
+    complete this sequence before considering the task done:
     1. `cmake --build --preset debug` — must compile with zero errors
     2. `ctest --preset debug` — all tests must pass
     3. `cmake --build --preset debug --target lint` — fix every error
@@ -55,30 +43,23 @@ expected at this stage.
        did not break anything
     6. `ctest --preset debug` — re-run tests to confirm formatting did not
        break anything
-  A task is NOT complete while lint reports any error or warning.
 
-  - **readability-function-cognitive-complexity special case**. When facing
-    a cognitive-complexity error, do not fix blindly. Instead, ask for the
-    user to decide wether to fix or add a NOLINTNEXTLINE flag.
+    A task is NOT complete while lint reports any error or warning.
+
+  - **readability-function-cognitive-complexity special case.** When facing
+    a cognitive-complexity error, do not fix blindly. Instead, ask the user
+    to decide whether to fix or add a NOLINTNEXTLINE flag.
 
 ## Build System
 
-The build uses **CMake + vcpkg** (VCPKG_ROOT must be set, see `docs/build.md`):
+The build uses **CMake + vcpkg** (`VCPKG_ROOT` must be set, see `docs/build.md`):
 
 ```sh
-# Configure
-cmake --preset debug    # or: release, asan, ci
-
-# Build
+cmake --preset debug
 cmake --build --preset debug
-
-# Test
 ctest --preset debug
-
-# Additional targets
-cmake --build --preset debug --target format     # run clang-format
-cmake --build --preset debug --target lint       # run clang-tidy
-cmake --build --preset debug --target benchmark  # run benchmarks
+cmake --build --preset debug --target format
+cmake --build --preset debug --target lint
 ```
 
 ## Portability Pitfalls
@@ -86,12 +67,10 @@ cmake --build --preset debug --target benchmark  # run benchmarks
 Three mistakes are easy to make and hard to spot. They break the build on
 Windows or on OpenCL but compile cleanly on Linux host:
 
-1. **Host-only includes in shared headers.** Headers that are consumed by
-   OpenCL kernels (the POD types, the RNG — see `core/types.h` and
-   `core/rng.h`) must not include `<stdio.h>`, `<stdlib.h>`, `<string.h>`,
-   or any other host-only standard header. OpenCL C does not have them.
-   Every such header carries a prologue comment flagging the constraint —
-   respect it.
+1. **Host-only includes in shared headers.** Headers consumed by OpenCL kernels
+   (`core/types.h`, `core/rng.h`, `core/gene.h`) must not include `<stdio.h>`,
+   `<stdlib.h>`, `<string.h>`, or any other host-only standard header. Every
+   such header carries a prologue comment flagging the constraint — respect it.
 
 2. **Non-portable compiler flags.** `-Wall`, `-Wextra`, `-fsanitize=address`
    are GCC/Clang only. MSVC uses `/W4`, `/permissive-`, `/fsanitize=address`.
@@ -99,100 +78,89 @@ Windows or on OpenCL but compile cleanly on Linux host:
    `cmake/CompilerWarnings.cmake` or `cmake/Sanitizers.cmake` where the
    branching on `CMAKE_C_COMPILER_ID` already happens.
 
+3. **`int` where `uint16_t` is required.** Grid cell indices and gene counts
+   must use the exact fixed-width types; silent sign-extension or narrowing can
+   corrupt GPU kernel results.
+
+4. **Breaking the Windows build.** The repository must build on both
+   Linux (GCC/Clang) and Windows (MSVC). Common failure modes: using
+   POSIX-only headers (`<unistd.h>`, `<sys/types.h>`) in files that are
+   not platform-gated; GCC/Clang pragmas or `__attribute__` without an
+   MSVC guard; compiler flags added directly to `CMakeLists.txt` instead
+   of `cmake/CompilerWarnings.cmake`. See pitfall 2 for flag portability.
+
 ## Architecture
 
-Monorepo under `packages/` with five packages and a strict acyclic dependency
-graph:
+Three packages, strict acyclic dependency graph:
 
 ```
 core (static lib, libc only)
   └── params (static lib — CLI/TOML/parameter management)
-               ├── sim-gpu   (executable — OpenCL batch simulator)
                └── sim-stepper (executable — single-threaded CPU reference)
-                                 └── viz (future — consumes stepper trace)
 ```
 
 **`core`** — all shared simulation logic: genome operators, neural network
 compilation, sensor/action catalogues, challenge evaluation, portable xorshift64
-RNG, snapshot serialization. Nothing about *how* the simulation is scheduled.
-Provides `biosim_context_t` as the canonical configuration interface for core
-algorithms.
+RNG, snapshot serialization. `biosim_sim_t` is the complete simulation state;
+pre-populate configuration fields, then call `biosim_sim_create`.
 
 **`params`** — CLI/TOML/parameter management. Each simulator's `main.c` defines
 its own exhaustive entry table and calls `biosim_params_parse`. No shared
 defaults; no extension mechanism.
 
-**`sim-gpu`** — OpenCL host orchestration + 5-kernel-per-step pipeline:
-`feedforward.cl` → `movement.cl` → `grid_cleanup.cl` → `signal_fade.cl` → `challenges.cl`.
-Kernel sources live in `packages/sim-gpu/kernels/` and are compiled at runtime
-by the OpenCL driver (not the host compiler).
+**`sim-stepper`** — orchestration loop only. All simulation logic lives in
+`core`; the stepper adds the parameter table and the generation/step loop.
 
-**`sim-stepper`** — deterministic single-threaded CPU reference. Processes
-agents in increasing-index order with immediate effect application. Serves as
-ground truth for the cross-simulator equivalence test.
-
-The **cross-simulator equivalence test** in `sim-gpu/tests/` is the most
-critical test: runs one step on both simulators from the same input and verifies
-per-agent neuron outputs match within tolerance.
-
-## Module Granularity
-
-The design documents list **module responsibilities**, not file names.
-`01-repository-structure.md` Sections 5–8 describe what each package
-must cover; the split into `.c` / `.h` files is decided at implementation
-time, guided by cohesion rather than a fixed list.
-
-Example: the `core` package must provide "genome operators (mutation,
-crossover, fingerprint)". Whether this lives in a single `genome.c` or is
-split into `genome_mutation.c` + `genome_crossover.c` + `genome_fingerprint.c`
-is decided when the code is written — based on the size each module actually
-reaches, not preemptively.
-
-## GPU Data Model
-
-Per-agent data uses **Structure of Arrays (SoA)** for memory coalescing. Genome
-storage is transposed: `genome[gene_slot][agent_i]`, not `genome[agent_i][gene_j]`.
-
-Movement conflict resolution: atomic CAS (no move queues). Death writes:
-idempotent (no death queues). Generation boundary (reproduction, mutation,
-spawn) stays on the host.
-
-## Code Conventions (`docs/design/02-implementation-conventions.md`)
+## Code Conventions (see `docs/conventions.md`)
 
 - **Files:** `snake_case.c`, `snake_case.h`
-- **Section separators:** `.c` files with multiples logical groups
-  must seperate them with titled 79 char banner using U+2500
+- **Section separators:** `.c` files with multiple logical groups must separate
+  them with a titled 79-char banner using U+2500 (`─`)
 - **Public API:** `biosim_` prefix — e.g. `biosim_genome_mutate`
 - **Types:** `biosim_*_t` — e.g. `biosim_coord_t`
-- **OpenCL kernels entrypoints:** `k_` prefix — e.g. `k_feedforward`
-- **Scope prefix:** `k_` prefix for OpenCL kernel entrypoints
-  — e.g. `k_feedforward`. No other scope prefix(no `s_`, no `g_` etc.)
+- **OpenCL kernel entry points:** `k_` prefix only — no other scope prefix
 - **No mutable global state** in `core` — all state passed by parameter
 - **Error handling:** functions return `biosim_status_t`; asserts only for
   invariants that indicate bugs
-- **Host/device portability:** headers shared with OpenCL kernels (POD types,
-  RNG) must compile as both C11 and OpenCL C — no `<stdio.h>`, `<stdlib.h>`,
+- **Host/device portability:** `core/types.h`, `core/rng.h`, `core/gene.h`
+  must compile as both C11 and OpenCL C — no `<stdio.h>`, `<stdlib.h>`,
   `<string.h>`. Mark such headers with a prologue comment.
-- **CMake:** target-first (`target_*` commands only); no `include_directories()`
-  or `add_definitions()` at top level
+- **CMake:** target-first only (`target_*` commands); no top-level
+  `include_directories()` or `add_definitions()`
+
+## Alloc/goto/free discipline
+
+Functions that allocate multiple resources follow this pattern:
+
+1. `memset(out, 0, sizeof(*out))` — zero the struct before any allocation so
+   that free can safely call `free(NULL)` on uninitialized pointers.
+2. Sequential allocations, each guarded by `goto exit` on failure.
+3. Single `exit:` label: if `returncode != BIOSIM_OK`, call the free function
+   (NULL-safe) then log the error.
+4. Free functions tolerate NULL on every member and NULL on the struct itself.
+
+## Error logging discipline
+
+- Functions that exclusively return `BIOSIM_ERR_NOMEM` do **not** log. Callers
+  with broader context are responsible.
+- All other functions log once at their `exit:` label on failure:
+  `BIOSIM_ERRORF("... (%s)", biosim_strerror(returncode))`.
+- Callers do not re-log errors they receive from callees.
 
 ## Key Files
 
-- `docs/design/01-repository-structure.md` — monorepo layout, package
-  boundaries, build conventions, naming rules
-- `docs/design/02-implementation-conventions.md` — code layout invariants
-  (naming, headers, error handling, host/device portability)
-- `docs/design/03-portable-build.md` — CMake/vcpkg setup, preset list,
-  CI matrix, platform-specific concerns
-- `docs/design/05-gpu-data-model.md` — SoA layout, kernel decomposition,
-  conflict resolution strategy
-- `docs/design/06-external-icd.md` — config file format and snapshot binary format
+- `docs/architecture.md` — package structure, key types and functions
+- `docs/conventions.md` — code layout invariants
+- `docs/build.md` — CMake/vcpkg setup, build targets
+- `docs/gpu-design.md` — planned GPU data model and kernel pipeline
+- `docs/formats.md` — snapshot binary format, TOML parameter format
+- `docs/usage.md` — CLI reference, challenges, barriers
 
 ## Build Files
 
-Do not read from build/ — it is a derived artifact and may not exist
+Do not read from `build/` — it is a derived artifact and may not exist.
 
 ## Third Party Files
 
-Vendored libraries in third_party/ are read only, except when instructed to
-bump the version
+Vendored libraries in `third_party/` are read-only, except when instructed to
+bump the version.

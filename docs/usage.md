@@ -1,0 +1,261 @@
+# Usage
+
+## Running the simulator
+
+```sh
+biosim-stepper [--config <path>] [OPTIONS]
+```
+
+With no arguments, the simulator runs with compiled-in defaults.
+
+```sh
+biosim-stepper --config my_run.toml
+biosim-stepper --config my_run.toml --pop 5000 --max-gen 500
+```
+
+## Parameters
+
+Parameters are resolved in three passes: compiled-in defaults → TOML
+file (`--config`) → CLI flags. Each layer overrides the previous.
+
+### General
+
+| CLI flag | TOML key | Default | Description |
+|----------|----------|---------|-------------|
+| `-v`, `--verbose` | — | 0 | Verbosity: `-v` → INFO, `-vv` → DEBUG |
+| `--config <path>` | — | — | TOML configuration file |
+
+### Simulation
+
+| CLI flag | TOML `[simulation]` key | Default | Description |
+|----------|------------------------|---------|-------------|
+| `-p`, `--pop <n>` | `population` | 3000 | Agent count |
+| `-x`, `--grid-size-x <n>` | `grid-size-x` | 128 | Grid width (cells) |
+| `-y`, `--grid-size-y <n>` | `grid-size-y` | 128 | Grid height (cells) |
+| `--steps-per-gen <n>` | `steps-per-gen` | 300 | Steps per generation |
+| `--max-gen <n>` | `max-generations` | 1000 | Number of generations to run |
+
+> **Performance note:** `population`, `steps-per-gen`, `grid-size-x`,
+> and `grid-size-y` are the primary throughput knobs. The stepper
+> scales linearly with `population × steps-per-gen`.
+> `grid-size-x × grid-size-y` affects memory and neighborhood sensor
+> cost.
+
+### Genome
+
+| CLI flag | TOML `[genome]` key | Default | Description |
+|----------|---------------------|---------|-------------|
+| `--max-genome-len <n>` | `max-genome-len` | 24 | Maximum genome length (genes per agent) |
+| `--max-neurons <n>` | `max-neurons` | 5 | Maximum hidden neurons per agent |
+| `--point-mut-rate <f>` | `point-mutation-rate` | 0.001 | Per-gene point mutation probability |
+| `--genome-sexual-reproduction` | `sexual-reproduction` | false | Two-parent crossover instead of single-parent copy |
+| `--genome-choose-parents-by-fitness` | `choose-parents-by-fitness` | false | Bias parent selection toward higher-score survivors |
+
+> **Performance note:** `max-genome-len` and `max-neurons` set fixed
+> allocation sizes for all agents. Larger values increase memory and
+> feedforward compute proportionally.
+
+### Sensors
+
+| CLI flag | TOML `[sensors]` key | Default | Description |
+|----------|----------------------|---------|-------------|
+| `--sensors-long-probe-dist <n>` | `long-probe-dist` | 16 | Default long-probe sensor range (cells) |
+| `--sensors-population-sensor-radius <n>` | `population-sensor-radius` | 2 | Radius for population-density sensors |
+
+### Actions
+
+| CLI flag | TOML `[actions]` key | Default | Description |
+|----------|----------------------|---------|-------------|
+| `--enable-kill` | `enable-kill` | false | Enable `KILL_FORWARD` action |
+
+### Snapshot
+
+| CLI flag | TOML `[snapshot]` key | Default | Description |
+|----------|----------------------|---------|-------------|
+| `--snapshot-in <path>` | `in` | — | Restore from last generation in this file |
+| `--snapshot-out <path>` | `out` | — | Write survivor snapshots to this file |
+| `--snapshot-interval <n>` | `interval` | 0 | Write every N generations (0 = final generation only) |
+
+## TOML configuration
+
+```toml
+[simulation]
+population      = 3000
+grid-size-x     = 128
+grid-size-y     = 128
+steps-per-gen   = 300
+max-generations = 1000
+
+[genome]
+max-genome-len           = 24
+max-neurons              = 5
+point-mutation-rate      = 0.001
+sexual-reproduction      = false
+choose-parents-by-fitness = false
+
+[sensors]
+long-probe-dist           = 16
+population-sensor-radius  = 2
+
+[actions]
+enable-kill = false
+
+[challenge]
+kind = "x_band"
+# kind-specific parameters (see Challenge types below)
+
+[snapshot]
+out      = "run.snap"
+interval = 10
+
+# Barriers are declared with separate tables (see Barrier types below)
+```
+
+## Challenge types
+
+Set `[challenge] kind = "<name>"` to select a challenge. All other
+`[challenge]` keys are optional and fall back to compiled-in defaults
+when absent.
+
+### Parameterized challenges
+
+#### `x_band`
+
+Agents survive if their x-coordinate falls within `[x_min·W, x_max·W)`,
+where W is the grid width.
+
+```toml
+[challenge]
+kind   = "x_band"
+x-min  = 0.5     # fraction of grid width — left edge of survival band
+x-max  = 1.0     # fraction of grid width — right edge of survival band
+mirror = false   # if true, the mirrored band [(1−x_max)·W, (1−x_min)·W) also passes
+```
+
+#### `disc`
+
+Agents survive if within `radius` of the centre point (`x·W`, `y·H`).
+
+```toml
+[challenge]
+kind     = "disc"
+x        = 0.5      # centre x, fraction of grid width
+y        = 0.5      # centre y, fraction of grid height
+radius   = 0.333    # fraction of grid width
+weighted = true     # if true, score = (r − dist) / r; else score = 1
+```
+
+#### `corners`
+
+Agents survive if within `radius` of any of the four grid corners.
+
+```toml
+[challenge]
+kind     = "corners"
+radius   = 0.333    # fraction of grid width
+weighted = true
+```
+
+#### `neighbor_count`
+
+Agents survive if their occupied-cell neighbour count within `radius`
+is in `[min_n, max_n]`.
+
+```toml
+[challenge]
+kind           = "neighbor_count"
+radius         = 0.333
+min-n          = 5.0
+max-n          = 8.0
+exclude-border = false   # if true, border agents never survive
+```
+
+#### `center_sparse`
+
+Agents survive if within `outer_r` of the centre and their
+neighbourhood within `inner_r` has agent count in `[min_n, max_n]`.
+
+```toml
+[challenge]
+kind     = "center_sparse"
+x        = 0.5
+y        = 0.5
+outer-r  = 0.25     # fraction of grid width
+inner-r  = 0.012    # fraction of grid width
+min-n    = 5.0
+max-n    = 8.0
+weighted = true
+```
+
+#### `near_barrier`
+
+Agents survive if within `radius·W` of any barrier centre.
+
+```toml
+[challenge]
+kind   = "near_barrier"
+radius = 0.333    # fraction of grid width; score = 1 − dist/radius
+```
+
+#### `location_sequence`
+
+Score is the number of barrier centres visited in sequence divided by
+32. Requires barriers to be configured.
+
+```toml
+[challenge]
+kind = "location_sequence"
+```
+
+### Fixed challenges (no parameters)
+
+| Kind | Behaviour |
+|------|-----------|
+| `against_wall` | Survive if at the grid border at generation end |
+| `migrate_distance` | All agents survive; score = `|loc − birth_loc| / max(W, H)` |
+| `touch_any_wall` | Survive if `challenge_bits ≠ 0` — set each step the agent touches a border |
+| `radioactive_walls` | Wall-proximity kills applied each step; all living agents pass at evaluation |
+| `pairs` | Survive if agent has exactly one 8-connected neighbour that itself has no other neighbours |
+| `altruism` | **Placeholder** — always returns `{false, 0.0f}` |
+
+## Barrier types
+
+Barriers are declared in the TOML file as numbered tables. They are
+placed on the grid before agents spawn, so agents never start inside
+a barrier cell.
+
+```toml
+[barriers]
+num-barriers = 2
+
+[barrier-1]
+kind   = "hbar"    # required: hbar | vbar | square | circle
+x      = 64        # centre x (cells); omit for random
+y      = 32        # centre y (cells); omit for random
+length = 40        # extent along bar axis; omit for random
+width  = 2         # thickness perpendicular to bar axis; omit for random
+
+[barrier-2]
+kind   = "circle"
+x      = 80
+y      = 80
+radius = 7.5       # alias for length on circle shapes; float accepted
+```
+
+No `[barriers]` section (or `num-barriers = 0`) produces zero barriers.
+
+### Shape parameters
+
+| Kind | `length` | `width` | Description |
+|------|----------|---------|-------------|
+| `hbar` | horizontal extent (cells) | vertical thickness | Horizontal bar centred on (`x`, `y`) |
+| `vbar` | vertical extent (cells) | horizontal thickness | Vertical bar centred on (`x`, `y`) |
+| `square` | side length (cells) | ignored | Square centred on (`x`, `y`) |
+| `circle` | radius (cells, float) | ignored | Disc centred on (`x`, `y`) |
+
+`x` and `y` are 0-based grid coordinates with origin at the
+bottom-left. Out-of-bounds cells are clipped silently.
+
+When position or dimension is omitted, a value is drawn from the
+simulation RNG seeded with `biosim_rng_seed(0, 0)` — the same seed
+every run, so random barrier layouts are reproducible.

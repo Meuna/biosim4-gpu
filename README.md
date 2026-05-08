@@ -1,20 +1,19 @@
 # biosim4-gpu
 
-A GPU-accelerated rewrite of [biosim4](https://github.com/davidrmiller/biosim4),
-David Miller's evolutionary simulator of neural-net-driven agents on a 2D grid.
- 
-The project ports the simulation from a multi-threaded CPU implementation in
-C++ (AoS layout, OpenMP) to a GPU/SoA architecture in C99/C11 with OpenCL
-kernels. It also provides a second, single-threaded CPU simulator — the
-*stepper* — that reproduces the same simulation step by step for visualization
-and cross-validation.
+A GPU-accelerated port of [biosim4](https://github.com/davidrmiller/biosim4)
+(David Miller's evolutionary simulator of neural-net-driven agents on a 2D grid)
+to C11/OpenCL, with a single-threaded CPU reference simulator.
+
+The GPU simulator (`sim-gpu`) is designed but not yet implemented. The
+single-threaded reference simulator (`sim-stepper`) is complete and produces
+correct simulation results.
 
 ## Motivation
 
 The port is 100% AI-assisted which is the main educational objective: for better
 or for worse, I think IA is here to stay and  I want a hands-on (or hands-off)
 experience building a complex software using IA. The approach I used is documented
-in the [design section](docs/design/README.md).
+in the [design section](docs/ai-development.md).
 
 The next motivations for this project are also educational:
 
@@ -24,28 +23,45 @@ The next motivations for this project are also educational:
 Hopefully, the project will also accelerate the biosim4 simulator and unlock
 playing with advanced behaviors.
 
-## Repository map
- 
-```
-biosim4-gpu/
-├── README.md                          ← this file
-└── docs/
-    └── design/
-        ├── README.md                  ← describe the design approach
-        ├── 01-repository-structure.md ← how this repo will be laid out
-        ├── 02-implementation-conventions.md ← code layout invariants
-        ├── 03-portable-build.md       ← how the build chain supports portability
-        ├── 04-legacy-data-model       ← analysis of the legacy CPU/AoS model
-        ├── 05-gpu-data-model.md       ← the proposed GPU/SoA model
-        └── 06-external-icd.md         ← external interface formats (config, snapshot)
+## Quick start
+
+**Prerequisites:** C compiler, CMake 3.28+, Ninja, pkg-config. See [`docs/build.md`](docs/build.md).
+
+```sh
+git clone https://github.com/Meuna/biosim4-gpu.git
+cd biosim4-gpu
+
+# Set up vcpkg (once)
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh
+export VCPKG_ROOT=~/vcpkg
+
+# Build
+cmake --preset debug
+cmake --build --preset debug
+
+# Run with defaults (3000 agents, 128×128 grid, 1000 generations)
+./build/debug/packages/sim-stepper/biosim-stepper
+
+# Run with a config file
+./build/debug/packages/sim-stepper/biosim-stepper --config my_run.toml
 ```
 
-## Target platforms
- 
-- Linux x86-64 (primary development, w/o GPU)
-- Windows x86-64 (first-class target, w/ GPU)
-- Linux ARM64 (cloud testing with PoCL as the OpenCL CPU runtime)
+## Repository map
+
+| Path | Contents |
+|------|----------|
+| `packages/core/` | Simulation logic (genome, nnet, agents, grid, challenges, snapshot) |
+| `packages/params/` | CLI/TOML/parameter management |
+| `packages/sim-stepper/` | Single-threaded CPU simulator |
+| `docs/architecture.md` | Package structure, key types and functions |
+| `docs/build.md` | Prerequisites, build steps, lint/format targets |
+| `docs/usage.md` | CLI reference, TOML format, challenges, barriers |
+| `docs/conventions.md` | Naming, error handling, alloc/goto/free, portability |
+| `docs/gpu-design.md` | Planned GPU architecture (not yet implemented) |
+| `docs/formats.md` | Snapshot binary format, TOML format overview |
+| `STATUS.md` | Implementation status, missing parts, open design questions |
 
 ## License
- 
+
 MIT.

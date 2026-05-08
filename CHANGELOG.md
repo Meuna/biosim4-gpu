@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **Full documentation overhaul**: replaced design-phase documents with
+  as-built documentation. New flat structure under `docs/`:
+  `architecture.md`, `conventions.md`, `build.md`, `usage.md`,
+  `gpu-design.md`, `formats.md`. New root-level `STATUS.md` with
+  implementation status and open GPU design questions. Old `docs/design/`
+  documents retired; content superseded or moved to `docs/ai-development.md`
+  and `docs/legacy-data-model.md`.
+- **`CLAUDE.md`** updated: removed design-phase language, added
+  alloc/goto/free discipline and error logging discipline, updated
+  architecture section to reflect implemented packages only.
+- **`README.md`** rewritten to reflect as-built state.
+
 ### Changed
 - **Snapshot format version bumped to 2** (`BIOSIM_SNAP_FORMAT_VERSION`):
   generation records now append a `float[]` array of per-survivor challenge

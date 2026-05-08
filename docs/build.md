@@ -1,4 +1,4 @@
-# Build Guide (Linux)
+# Build Guide
 
 ## How this project is built
 
@@ -72,18 +72,33 @@ Available presets are defined in `CMakePresets.json`:
 cmake --build --preset debug
 ```
 
-This invokes Ninja (or Make) on the generated files from the configure step.
-All compilation and linking happens here. Intermediate object files and the
-final binaries land under `build/debug/`.
-
-## Run the binary
+## Run the simulator
 
 ```sh
 ./build/debug/packages/sim-stepper/biosim-stepper
 ```
+
+See [`docs/usage.md`](usage.md) for the full parameter reference.
 
 ## Run tests
 
 ```sh
 ctest --preset debug
 ```
+
+## Format and lint
+
+```sh
+# Apply clang-format to all source files
+cmake --build --preset debug --target format
+
+# Run clang-tidy static analysis
+cmake --build --preset debug --target lint
+```
+
+Lint is required to be clean before merging. See `CLAUDE.md` for the full
+quality sequence.
+
+## CI
+
+No CI workflows are configured yet.

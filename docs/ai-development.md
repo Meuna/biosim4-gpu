@@ -33,7 +33,7 @@ model powering the behavioral neural network of the original biosim4. I asked
 Claude Code for a design document, with an emphasis on foreseen GPU constraints
 (e.g. some behaviors are non-local: neighbors dependant and multi-level
 heap-pointers indirection). The analysis can be found mostly unchanged in
-[04-legacy-data-model.md](04-legacy-data-model.md)
+[legacy-data-model.md](legacy-data-model.md)
 
 **claude.ai (Opus 4.7)** This data model analysis was dropped into the project
 files. I then asked claude.ai for a design document for the repository
