@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "biosim/core/log.h"
 #include "biosim/params/params.h"
 
 /* Forward declaration of internal TOML loader defined in toml.c */
@@ -51,7 +52,6 @@ static void print_synopsis(FILE *fp, const char *progname, void **argtable, size
 
     void **syn = (void **)malloc((nstatic + nsyn + 1) * sizeof(void *));
     if (!syn) {
-        (void)fprintf(stderr, "fatal: unhandled allocation error\n");
         return;
     }
     memcpy((void *)syn, (const void *)argtable, nstatic * sizeof(void *));
@@ -78,7 +78,6 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
                            size_t ndyn) {
     void **stbl = (void **)malloc((nstatic + 1) * sizeof(void *));
     if (!stbl) {
-        (void)fprintf(stderr, "fatal: unhandled allocation error\n");
         return;
     }
 
@@ -97,7 +96,6 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
     if (ndyn > 0) {
         table_order = (const char **)malloc(ndyn * sizeof(const char *));
         if (!table_order) {
-            (void)fprintf(stderr, "fatal: unhandled allocation error\n");
             return;
         }
         collect_table_order(p, ndyn, table_order, &ntables);
@@ -122,7 +120,6 @@ static void print_glossary(FILE *fp, void **argtable, size_t nstatic, const bios
 
         void **tbl = (void **)malloc((ntable + 1) * sizeof(void *));
         if (!tbl) {
-            (void)fprintf(stderr, "fatal: unhandled allocation error\n");
             free((void *)table_order);
             return;
         }
@@ -333,9 +330,8 @@ biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, co
 
     /* Pass 2: TOML file overrides defaults */
     if (arg_config->count > 0) {
-        biosim_status_t st = params_load_toml_file(p, arg_config->filename[0]);
-        if (st != BIOSIM_OK) {
-            returncode = st;
+        returncode = params_load_toml_file(p, arg_config->filename[0]);
+        if (returncode != BIOSIM_OK) {
             goto exit;
         }
         size_t path_len = strlen(arg_config->filename[0]) + 1;
@@ -357,6 +353,9 @@ exit:
     free((void *)argtable);
     if (exit_instead_of_return) {
         exit(returncode);
+    }
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("parameter parsing failed (%s)", biosim_strerror(returncode));
     }
     return returncode;
 }

@@ -1,4 +1,5 @@
 #include "biosim/core/grid.h"
+#include "biosim/core/log.h"
 #include "biosim/core/rng.h"
 
 #include <assert.h>
@@ -93,6 +94,7 @@ biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_
         }
     }
 
+    BIOSIM_ERRORF("grid is full, increase grid size or decrease population");
     return BIOSIM_ERR_NOTFOUND;
 }
 

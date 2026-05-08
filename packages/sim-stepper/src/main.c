@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "biosim/core/census.h"
+#include "biosim/core/log.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/snapshot.h"
@@ -57,7 +58,7 @@ int main(int argc, char **argv) {
     biosim_status_t returncode = BIOSIM_OK;
 
     memset(&sim, 0, sizeof(sim));
-    biosim_log_init(&sim.log);
+    biosim_log_init(&biosim_log_default_ctx);
 
     returncode = biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
     if (returncode != BIOSIM_OK) {
@@ -75,22 +76,20 @@ int main(int argc, char **argv) {
 
     int verbosity = biosim_params_get_int(&p, "verbose");
     if (verbosity >= 2) {
-        sim.log.threshold = BIOSIM_LOG_DEBUG;
+        biosim_log_default_ctx.threshold = BIOSIM_LOG_DEBUG;
     } else if (verbosity == 1) {
-        sim.log.threshold = BIOSIM_LOG_INFO;
+        biosim_log_default_ctx.threshold = BIOSIM_LOG_INFO;
     }
 
     uint32_t n_barriers = 0U;
     returncode = biosim_barrier_params_load(p.config_path, &barriers, &n_barriers);
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF(&sim.log, "barrier config error: %s", biosim_strerror(returncode));
         goto exit;
     }
 
     biosim_challenge_spec_t challenge;
     returncode = biosim_challenge_spec_from_params(&p, &challenge);
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF(&sim.log, "challenge config error: %s", biosim_strerror(returncode));
         goto exit;
     }
 
@@ -114,7 +113,6 @@ int main(int argc, char **argv) {
 
     returncode = biosim_sim_create(&sim, barriers, n_barriers);
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF(&sim.log, "init failed: %s", biosim_strerror(returncode));
         goto exit;
     }
 
@@ -157,7 +155,6 @@ int main(int argc, char **argv) {
         biosim_census_t census;
         returncode = biosim_sim_next_generation(&sim, &census);
         if (returncode != BIOSIM_OK) {
-            BIOSIM_ERRORF(&sim.log, "out of memory during generation advance");
             goto exit;
         }
         biosim_census_print(stdout, &census);
@@ -167,5 +164,8 @@ exit:
     biosim_sim_free(&sim);
     biosim_params_free(&p);
     free(barriers);
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("simulation failed (%s)", biosim_strerror(returncode));
+    }
     return returncode;
 }

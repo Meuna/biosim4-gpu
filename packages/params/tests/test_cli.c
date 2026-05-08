@@ -84,7 +84,7 @@ void test_cli_long_flag(void) {
 void test_bad_path_returns_notfound(void) {
     char *argv[] = {"test-prog", "--config", TEST_FIXTURES_DIR "/nonexistent/path.toml", NULL};
     biosim_status_t st = biosim_params_parse(&p, "test-prog", "test-version", 3, argv);
-    TEST_ASSERT_EQUAL(BIOSIM_ERR_NOTFOUND, st);
+    TEST_ASSERT_EQUAL(BIOSIM_ERR_INVALID, st);
 }
 
 /* ── runner ─────────────────────────────────────────────────────────────── */

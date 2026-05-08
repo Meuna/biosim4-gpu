@@ -4,6 +4,7 @@
 #include "biosim/core/challenges.h"
 #include "biosim/core/generation.h"
 #include "biosim/core/io_catalogue.h"
+#include "biosim/core/log.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/snapshot.h"
 
@@ -12,6 +13,29 @@
 #include <string.h>
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
+
+/* Allocate the barrier-centre array and call the placer. */
+static biosim_status_t sim_place_barriers(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
+                                          uint32_t n_barriers) {
+    sim->barrier_ctrs = NULL;
+    sim->n_barrier_ctrs = 0U;
+    biosim_status_t returncode = BIOSIM_OK;
+    if (n_barriers == 0U) {
+        goto exit;
+    }
+    sim->barrier_ctrs = (biosim_coord_t *)malloc((size_t)n_barriers * sizeof(biosim_coord_t));
+    if (sim->barrier_ctrs == NULL) {
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
+    }
+    uint64_t barrier_rng = biosim_rng_seed(0, 0);
+    biosim_barriers_place(&sim->grid, barriers, n_barriers, &barrier_rng, sim->barrier_ctrs);
+
+    sim->n_barrier_ctrs = n_barriers;
+
+exit:
+    return returncode;
+}
 
 biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
                                   uint32_t n_barriers) {
@@ -30,23 +54,6 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
         goto exit;
     }
 
-    sim->barrier_ctrs = NULL;
-    sim->n_barrier_ctrs = 0;
-    if (n_barriers > 0) {
-        sim->barrier_ctrs = (biosim_coord_t *)malloc((size_t)n_barriers * sizeof(biosim_coord_t));
-        if (sim->barrier_ctrs == NULL) {
-            returncode = BIOSIM_ERR_NOMEM;
-            goto exit;
-        }
-        uint64_t barrier_rng = biosim_rng_seed(0, 0);
-        returncode = biosim_barriers_place(&sim->grid, barriers, n_barriers, &barrier_rng,
-                                           sim->barrier_ctrs);
-        if (returncode != BIOSIM_OK) {
-            goto exit;
-        }
-        sim->n_barrier_ctrs = n_barriers;
-    }
-
     returncode = biosim_agents_create(pop, &sim->agents);
     if (returncode != BIOSIM_OK) {
         goto exit;
@@ -57,8 +64,12 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
         goto exit;
     }
 
-    /* max_conn = genome_max_len: worst case every gene survives culling */
     returncode = biosim_nnet_create(pop, genome_max_len, max_neurons, &sim->nnet);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    returncode = sim_place_barriers(sim, barriers, n_barriers);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -75,6 +86,7 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
 exit:
     if (returncode != BIOSIM_OK) {
         biosim_sim_free(sim);
+        BIOSIM_ERRORF("sim creation failed (%s)", biosim_strerror(returncode));
     }
     return returncode;
 }
@@ -180,15 +192,15 @@ biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_cens
 
     uint32_t n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
     biosim_census_take(sim, survivors, n_survivors, out);
-    biosim_snapshot_session_write(sim, survivors, scores, n_survivors);
+    returncode = biosim_snapshot_session_write(sim, survivors, scores, n_survivors);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
 
     if (n_survivors > 0) {
         returncode = biosim_generation_reproduce(sim, survivors, scores, n_survivors);
     } else {
         returncode = biosim_generation_init_random(sim);
-    }
-    if (returncode != BIOSIM_OK) {
-        goto exit;
     }
 
     sim->kills = 0U;
@@ -198,5 +210,8 @@ biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_cens
 exit:
     free(survivors);
     free(scores);
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("next generation failed (%s)", biosim_strerror(returncode));
+    }
     return returncode;
 }

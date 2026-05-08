@@ -3,6 +3,7 @@
 #include "biosim/core/challenges.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/io_catalogue.h"
+#include "biosim/core/log.h"
 #include "biosim/core/nnet.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/types.h"
@@ -67,28 +68,35 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
 
     const uint64_t gen_seed = biosim_rng_next(&sim->gen_rng);
 
+    biosim_status_t returncode = BIOSIM_OK;
+
     for (uint32_t i = 0; i < pop; i++) {
         uint16_t rand_len =
             (uint16_t)(1U + (uint16_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)g_max_len));
         biosim_genome_init_slot(genome, i, rand_len, &sim->gen_rng);
 
-        biosim_status_t st =
+        returncode =
             biosim_nnet_compile_slot(nnet, genome, i, BIOSIM_NUM_SENSORS, BIOSIM_NUM_ACTIONS);
-        if (st != BIOSIM_OK) {
-            return st;
+        if (returncode != BIOSIM_OK) {
+            goto exit;
         }
         const uint64_t fp = biosim_nnet_fingerprint(nnet, i);
 
         biosim_coord_t loc;
-        st = biosim_grid_find_empty(grid, &sim->gen_rng, &loc);
-        if (st != BIOSIM_OK) {
-            return st;
+        returncode = biosim_grid_find_empty(grid, &sim->gen_rng, &loc);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
         }
         biosim_agents_init_slot(agents, i, loc, long_probe_dist, biosim_rng_seed(i, gen_seed));
         agents->genome_fingerprint[i] = fp;
         biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
     }
 
+exit:
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("generation random init failed (%s)", biosim_strerror(returncode));
+        goto exit;
+    }
     return BIOSIM_OK;
 }
 
@@ -249,19 +257,54 @@ exit:
 
 /* ── main reproduce entry point ─────────────────────────────────────────── */
 
-biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivors, float *scores,
-                                            uint32_t n_survivors) {
-    assert(n_survivors > 0);
-
+/* Place one agent slot: select parents, build genome, compile nnet, find cell. */
+static biosim_status_t reproduce_one_agent(biosim_sim_t *sim, uint32_t i, const uint16_t *temp_conn,
+                                           const int16_t *temp_wgt, const uint16_t *temp_len,
+                                           uint32_t n_survivors, uint64_t gen_seed) {
     biosim_genome_t *genome = &sim->genome;
     biosim_nnet_t *nnet = &sim->nnet;
     biosim_agents_t *agents = &sim->agents;
     biosim_grid_t *grid = &sim->grid;
 
-    const uint32_t pop = agents->population;
+    uint32_t pa;
+    uint32_t pb;
+    select_parents(n_survivors, sim->choose_parents_by_fitness, sim->sexual_reproduction,
+                   &sim->gen_rng, &pa, &pb);
+    materialize_child(genome, i, temp_conn, temp_wgt, temp_len, pa, pb, sim->sexual_reproduction,
+                      &sim->gen_rng);
+    biosim_genome_mutate(genome, i, sim->mutation_rate, &sim->gen_rng);
+
+    biosim_status_t returncode =
+        biosim_nnet_compile_slot(nnet, genome, i, BIOSIM_NUM_SENSORS, BIOSIM_NUM_ACTIONS);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+    const uint64_t fp = biosim_nnet_fingerprint(nnet, i);
+
+    biosim_coord_t loc;
+    returncode = biosim_grid_find_empty(grid, &sim->gen_rng, &loc);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+    biosim_agents_init_slot(agents, i, loc, sim->long_probe_dist, biosim_rng_seed(i, gen_seed));
+    agents->genome_fingerprint[i] = fp;
+    biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
+
+exit:
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("failed to reproduce agent %u (%s)", i, biosim_strerror(returncode));
+    }
+    return returncode;
+}
+
+biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivors, float *scores,
+                                            uint32_t n_survivors) {
+    assert(n_survivors > 0);
+
+    biosim_genome_t *genome = &sim->genome;
+
+    const uint32_t pop = sim->agents.population;
     const uint16_t g_max_len = genome->max_len;
-    const uint8_t long_probe_dist = sim->long_probe_dist;
-    const bool sexual = sim->sexual_reproduction;
     const bool by_fitness = sim->choose_parents_by_fitness;
 
     /* alloc start here, free on exit label */
@@ -270,7 +313,7 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivo
     uint16_t *temp_len = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
-    /* Sort before snapshot so the temp buffers are already in score order */
+    /* Sort temp buffers snapshot so that they are already in score order */
     if (by_fitness && n_survivors > 1 && scores != NULL) {
         returncode = sort_survivors_by_score(survivors, scores, n_survivors);
         if (returncode != BIOSIM_OK) {
@@ -295,34 +338,20 @@ biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivo
     const uint64_t gen_seed = biosim_rng_next(&sim->gen_rng);
 
     for (uint32_t i = 0; i < pop; i++) {
-        uint32_t pa;
-        uint32_t pb;
-        select_parents(n_survivors, by_fitness, sexual, &sim->gen_rng, &pa, &pb);
-        materialize_child(genome, i, temp_conn, temp_wgt, temp_len, pa, pb, sexual, &sim->gen_rng);
-        biosim_genome_mutate(genome, i, sim->mutation_rate, &sim->gen_rng);
-
         biosim_status_t st =
-            biosim_nnet_compile_slot(nnet, genome, i, BIOSIM_NUM_SENSORS, BIOSIM_NUM_ACTIONS);
+            reproduce_one_agent(sim, i, temp_conn, temp_wgt, temp_len, n_survivors, gen_seed);
         if (st != BIOSIM_OK) {
             returncode = st;
             goto exit;
         }
-        const uint64_t fp = biosim_nnet_fingerprint(nnet, i);
-
-        biosim_coord_t loc;
-        st = biosim_grid_find_empty(grid, &sim->gen_rng, &loc);
-        if (st != BIOSIM_OK) {
-            returncode = st;
-            goto exit;
-        }
-        biosim_agents_init_slot(agents, i, loc, long_probe_dist, biosim_rng_seed(i, gen_seed));
-        agents->genome_fingerprint[i] = fp;
-        biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
     }
 
 exit:
     free(temp_conn);
     free(temp_wgt);
     free(temp_len);
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("generation reproduce failed (%s)", biosim_strerror(returncode));
+    }
     return returncode;
 }

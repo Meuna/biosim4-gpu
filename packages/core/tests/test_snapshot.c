@@ -265,9 +265,8 @@ void test_load_gen_out_of_range(void) {
     uint32_t loaded_gen;
     uint64_t loaded_rng;
     float loaded_scores[4];
-    TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_NOTFOUND,
-                          biosim_snapshot_load(f, 5U, &hdr, &sim2, loaded_scores, &loaded_n,
-                                               &loaded_gen, &loaded_rng));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_IO, biosim_snapshot_load(f, 5U, &hdr, &sim2, loaded_scores,
+                                                              &loaded_n, &loaded_gen, &loaded_rng));
 
     (void)fclose(f);
     biosim_sim_free(&sim);

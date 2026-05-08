@@ -22,8 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   requiring no external dependencies.
   - `biosim_log_level_t` — `BIOSIM_LOG_OFF/ERROR/WARN/INFO/DEBUG/TRACE` (0–5).
   - `biosim_log_ctx_t` — threshold, sink (`FILE *`, NULL → stderr), color flag
-    (auto-detected via `isatty` at init). Embedded as `log` field in
-    `biosim_sim_t`; callers use `&sim->log`.
+    (auto-detected via `isatty` at init). 
   - `biosim_log_init(ctx)` — sets WARN threshold and detects terminal color.
   - `biosim_log_emit(ctx, level, file, line, func, fmt, ...)` — formats and
     emits one log line with `[LEVEL] file:line func: message` layout.

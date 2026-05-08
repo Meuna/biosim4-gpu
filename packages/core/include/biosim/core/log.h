@@ -30,6 +30,8 @@ typedef struct {
     int use_color;                /* set by biosim_log_init via isatty */
 } biosim_log_ctx_t;
 
+extern biosim_log_ctx_t biosim_log_default_ctx;
+
 void biosim_log_init(biosim_log_ctx_t *ctx);
 
 void biosim_log_emit(const biosim_log_ctx_t *ctx, biosim_log_level_t level, const char *file,
@@ -47,7 +49,7 @@ _Noreturn void biosim_die(const biosim_log_ctx_t *ctx, biosim_status_t code, int
     ;
 
 /* Short-circuits before evaluating variadic args when the level is filtered. */
-#define BS_LOG(ctx, lvl, ...)                                                                      \
+#define BIOSIM_LOG_TO(ctx, lvl, ...)                                                               \
     do {                                                                                           \
         if ((int)(lvl) <= BIOSIM_LOG_MAX_LEVEL && (ctx) != NULL &&                                 \
             (int)(lvl) <= (int)(ctx)->threshold) {                                                 \
@@ -55,11 +57,13 @@ _Noreturn void biosim_die(const biosim_log_ctx_t *ctx, biosim_status_t code, int
         }                                                                                          \
     } while (0)
 
-#define BIOSIM_ERRORF(ctx, ...) BS_LOG((ctx), BIOSIM_LOG_ERROR, __VA_ARGS__)
-#define BIOSIM_WARNF(ctx, ...)  BS_LOG((ctx), BIOSIM_LOG_WARN, __VA_ARGS__)
-#define BIOSIM_INFOF(ctx, ...)  BS_LOG((ctx), BIOSIM_LOG_INFO, __VA_ARGS__)
-#define BIOSIM_DEBUGF(ctx, ...) BS_LOG((ctx), BIOSIM_LOG_DEBUG, __VA_ARGS__)
-#define BIOSIM_TRACEF(ctx, ...) BS_LOG((ctx), BIOSIM_LOG_TRACE, __VA_ARGS__)
+/* Convenience macros for the default context. */
+#define BIOSIM_LOG(lvl, ...) BIOSIM_LOG_TO(&biosim_log_default_ctx, (lvl), __VA_ARGS__)
+#define BIOSIM_ERRORF(...)   BIOSIM_LOG(BIOSIM_LOG_ERROR, __VA_ARGS__)
+#define BIOSIM_WARNF(...)    BIOSIM_LOG(BIOSIM_LOG_WARN, __VA_ARGS__)
+#define BIOSIM_INFOF(...)    BIOSIM_LOG(BIOSIM_LOG_INFO, __VA_ARGS__)
+#define BIOSIM_DEBUGF(...)   BIOSIM_LOG(BIOSIM_LOG_DEBUG, __VA_ARGS__)
+#define BIOSIM_TRACEF(...)   BIOSIM_LOG(BIOSIM_LOG_TRACE, __VA_ARGS__)
 
 /* errno is captured at the macro call site before any internal call can
  * clobber it. */

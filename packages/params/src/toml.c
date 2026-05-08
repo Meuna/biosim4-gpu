@@ -1,3 +1,4 @@
+#include "biosim/core/log.h"
 #include "biosim/params/params.h"
 #include "tomlc17.h"
 
@@ -51,7 +52,8 @@ static void apply_table(biosim_params_t *p, toml_datum_t toptab) {
 biosim_status_t params_load_toml_file(biosim_params_t *p, const char *path) {
     toml_result_t result = toml_parse_file_ex(path);
     if (!result.ok) {
-        return BIOSIM_ERR_NOTFOUND;
+        BIOSIM_ERRORF("failed to parse TOML file '%s' (%s)", path, result.errmsg);
+        return BIOSIM_ERR_INVALID;
     }
     apply_table(p, result.toptab);
     toml_free(result);

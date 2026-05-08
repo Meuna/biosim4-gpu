@@ -127,19 +127,19 @@ statement of this rule.
 
 ## 9. Logging
 
-`core/log.h` provides a self-contained logger. The context is embedded in
-`biosim_sim_t` as `log`; callers pass `&sim->log` (or `&sim.log`).
+`core/log.h` provides a self-contained logger. A default context
+`biosim_log_default_ctx` is exported from `log.h`.
 
 ```c
 /* Initialise before biosim_sim_create() */
-biosim_log_init(&sim.log);
-sim.log.threshold = BIOSIM_LOG_INFO; /* or set from -v/-vv */
+biosim_log_init(&biosim_log_default_ctx);
+biosim_log_default_ctx.threshold = BIOSIM_LOG_INFO; /* or set from -v/-vv */
 
 /* Emit a log line (compile-time and runtime gated) */
-BIOSIM_INFOF(&sim.log, "gen=%u survivors=%u", sim.gen, n_surv);
+BIOSIM_INFOF("gen=%u survivors=%u", sim.gen, n_surv);
 
 /* Fatal exit with errno context captured at call site */
-BIOSIM_DIE(&sim.log, BIOSIM_ERR_IO, "cannot open '%s'", path);
+BIOSIM_DIE(BIOSIM_ERR_IO, "cannot open '%s'", path);
 ```
 
 **Levels** (value / macro suffix):

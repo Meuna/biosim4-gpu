@@ -1,4 +1,5 @@
 #include "biosim/params/barriers.h"
+#include "biosim/core/log.h"
 #include "tomlc17.h"
 
 #include <stdio.h>
@@ -24,6 +25,7 @@ static biosim_status_t parse_kind(const char *s, biosim_barrier_kind_t *out) {
         *out = BIOSIM_BARRIER_CIRCLE;
         return BIOSIM_OK;
     }
+    BIOSIM_ERRORF("invalid barrier kind '%s'. Accepted values are: hbar, vbar, square, circle", s);
     return BIOSIM_ERR_INVALID;
 }
 
@@ -94,7 +96,8 @@ biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier
 
     toml_result_t result = toml_parse_file_ex(toml_path);
     if (!result.ok) {
-        return BIOSIM_ERR_NOTFOUND;
+        BIOSIM_ERRORF("failed to parse TOML file '%s' (%s)", toml_path, result.errmsg);
+        return BIOSIM_ERR_INVALID;
     }
 
     /* alloc start here, free on exit label */
@@ -125,12 +128,13 @@ biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier
         (void)snprintf(key, sizeof(key), "barrier-%d", i + 1);
         toml_datum_t tab = toml_get(toptab, key);
         if (tab.type != TOML_TABLE) {
+            BIOSIM_ERRORF("key '%s' must be a TOML table", key);
             returncode = BIOSIM_ERR_INVALID;
             goto exit;
         }
-        biosim_status_t st = parse_barrier_table(tab, &specs[i]);
-        if (st != BIOSIM_OK) {
-            returncode = st;
+        returncode = parse_barrier_table(tab, &specs[i]);
+        if (returncode != BIOSIM_OK) {
+            BIOSIM_ERRORF("failed to parse barrier '%s'", key);
             goto exit;
         }
     }
@@ -142,5 +146,9 @@ biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier
 exit:
     free(specs);
     toml_free(result);
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("failed to load barrier parameters from '%s' (%s)", toml_path,
+                      biosim_strerror(returncode));
+    }
     return returncode;
 }

@@ -46,6 +46,12 @@ static const char *level_colors[] = {
 
 /* ── public API ─────────────────────────────────────────────────────────────── */
 
+biosim_log_ctx_t biosim_log_default_ctx = {
+    .threshold = BIOSIM_LOG_WARN,
+    .sink = NULL,
+    .use_color = 0,
+};
+
 void biosim_log_init(biosim_log_ctx_t *ctx) {
     ctx->threshold = BIOSIM_LOG_WARN;
     ctx->sink = NULL;
