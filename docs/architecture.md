@@ -2,15 +2,16 @@
 
 ## Package structure
 
-Three packages are implemented, with a strict acyclic dependency graph:
+Four packages are implemented, with a strict acyclic dependency graph:
 
 ```
 core (static lib — libc only)
   └── params (static lib — argtable3, tomlc17 PRIVATE)
-               └── sim-stepper (executable)
+      ├── sim-stepper (executable — single-threaded CPU reference)
+      └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
 ```
 
-`sim-gpu` and `viz` are designed but not yet implemented.
+`viz` is designed but not yet implemented.
 See [`STATUS.md`](../STATUS.md).
 
 ## `core`
@@ -163,6 +164,73 @@ biosim_sim_free(&sim);
 ```
 
 See [`docs/usage.md`](usage.md) for the command-line reference.
+
+## `sim-gpu`
+
+**Location:** `packages/sim-gpu/`  
+**Type:** Static library (`sim-gpu-lib`) + executable (`biosim-gpu`). Depends on
+`core`, `params`, and OpenCL (vcpkg port `opencl`).
+
+Implements the OpenCL GPU simulator. Kernel sources are embedded at build time as
+C string literals so the binary is self-contained; a filesystem override mechanism
+allows hot-swapping a kernel without rebuilding.
+
+### Kernel registry — two-level lookup
+
+`biosim_gpu_registry_get(kernel_name, exec_dir, &sources)` fills a
+`biosim_gpu_kernel_sources_t` bundle in two steps:
+
+1. **Filesystem override** — looks for `<exec_dir>/<kernel_name>.cl` alongside the
+   running binary. If found, reads the file into a malloc'd buffer and uses it as the
+   kernel source. Useful during development: edit the `.cl` file, re-run, no rebuild
+   needed.
+
+2. **Embedded fallback** — uses the C string literal compiled into the binary by
+   `EmbedKernels.cmake`.
+
+In both cases the bundle's `sources[]` array is:
+
+```
+sources[0] = biosim/core/types.h  (embedded preamble)
+sources[1] = biosim/core/rng.h    (embedded preamble)
+sources[2] = biosim/core/gene.h   (embedded preamble)
+sources[3] = <kernel source>      (override or embedded)
+```
+
+All four strings are passed to `clCreateProgramWithSource`, which concatenates them
+before compilation. The portable headers (types.h, rng.h, gene.h) provide type
+definitions and `biosim_rng_next` to kernel code without needing `#include`
+directives in the `.cl` file.
+
+### Kernel embryo — `k1_sensors.cl`
+
+Implements the sensor-evaluation phase of K1 (`feedforward_and_actions`). The
+kernel `k_sensor_eval` evaluates one Group-A self-only sensor for all agents in
+parallel:
+
+| Sensor ID | Sensor | Notes |
+|-----------|--------|-------|
+| 0 | `LOC_X` | Normalised x position |
+| 1 | `LOC_Y` | Normalised y position |
+| 2 | `BOUNDARY_DIST_X` | Distance to nearest x boundary |
+| 3 | `BOUNDARY_DIST_Y` | Distance to nearest y boundary |
+| 4 | `BOUNDARY_DIST` | Minimum of DIST_X and DIST_Y |
+| 5 | `LAST_MOVE_DIR_X` | Last move direction x component |
+| 6 | `LAST_MOVE_DIR_Y` | Last move direction y component |
+| 8 | `AGE` | step / steps_per_gen |
+| 9 | `RANDOM` | xorshift64 draw (mutates rng_state) |
+
+Sensor 7 (OSC1) requires `cos()` and is deferred. Group B/C/D sensors are not yet
+implemented.
+
+### Key types
+
+| Type | Role |
+|------|------|
+| `biosim_gpu_kernel_sources_t` | Bundle of source strings for one kernel program |
+| `biosim_gpu_runner_t` | OpenCL platform, device, context, and queue |
+
+See [`docs/gpu-design.md`](gpu-design.md) for the full kernel pipeline design.
 
 ## Build
 

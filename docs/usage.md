@@ -1,6 +1,6 @@
 # Usage
 
-## Running the simulator
+## `biosim-stepper` — CPU reference simulator
 
 ```sh
 biosim-stepper [--config <path>] [OPTIONS]
@@ -12,6 +12,48 @@ With no arguments, the simulator runs with compiled-in defaults.
 biosim-stepper --config my_run.toml
 biosim-stepper --config my_run.toml --pop 5000 --max-gen 500
 ```
+
+## `biosim-gpu` — OpenCL GPU simulator
+
+### Prerequisites
+
+An OpenCL runtime must be installed. For an easy smoke-test on Linux, install
+[POCL](http://portablecl.org/):
+
+```sh
+sudo apt install pocl-opencl-icd
+```
+
+POCL provides an OpenCL 3.0 CPU driver that does not require physical GPU hardware.
+See [`docs/build.md`](build.md#opencl-runtime-for-sim-gpu) for full details.
+
+### Running
+
+```sh
+biosim-gpu [--config <path>] [OPTIONS]
+```
+
+```sh
+biosim-gpu --pop 4096 --grid-size-x 128 --grid-size-y 128
+biosim-gpu --platform 0 --device 1    # select a specific OpenCL device
+```
+
+### Kernel filesystem override
+
+Place a `.cl` file with the same name as an embedded kernel alongside the binary
+to override it without rebuilding:
+
+```sh
+cp packages/sim-gpu/kernels/k1_sensors.cl build/debug/packages/sim-gpu/
+biosim-gpu   # loads k1_sensors.cl from the binary directory
+```
+
+### OpenCL parameters
+
+| CLI flag | TOML `[opencl]` key | Default | Description |
+|----------|---------------------|---------|-------------|
+| `--platform <n>` | `platform-index` | 0 | OpenCL platform index |
+| `--device <n>` | `device-index` | 0 | OpenCL device index within the platform |
 
 ## Parameters
 

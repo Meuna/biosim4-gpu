@@ -91,12 +91,13 @@ Windows or on OpenCL but compile cleanly on Linux host:
 
 ## Architecture
 
-Three packages, strict acyclic dependency graph:
+Four packages, strict acyclic dependency graph:
 
 ```
 core (static lib, libc only)
   └── params (static lib — CLI/TOML/parameter management)
-               └── sim-stepper (executable — single-threaded CPU reference)
+      ├── sim-stepper (executable — single-threaded CPU reference)
+      └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
 ```
 
 **`core`** — all shared simulation logic: genome operators, neural network
@@ -110,6 +111,11 @@ defaults; no extension mechanism.
 
 **`sim-stepper`** — orchestration loop only. All simulation logic lives in
 `core`; the stepper adds the parameter table and the generation/step loop.
+
+**`sim-gpu`** — OpenCL GPU simulator. `sim-gpu-lib` provides the kernel registry
+(two-level lookup: filesystem override → embedded fallback) and the OpenCL runner
+(platform/device/context/queue lifecycle). The `biosim-gpu` executable wires
+parameters to a simulation and dispatches kernels.
 
 ## Code Conventions (see `docs/conventions.md`)
 

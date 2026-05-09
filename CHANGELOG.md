@@ -8,6 +8,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sim-gpu` scaffold** — OpenCL GPU simulator package (`packages/sim-gpu/`):
+  - `sim-gpu-lib` static library — kernel registry and OpenCL runner.
+  - `biosim-gpu` executable — minimal parameter table (`population`, grid dimensions,
+    `steps-per-gen`, `max-generations`, `max-genome-len`, `max-neurons`,
+    `platform-index`, `device-index`) using the `params` library.
+  - `k1_sensors.cl` kernel embryo — evaluates Group-A self-only sensors
+    (LOC_X, LOC_Y, BOUNDARY_DIST_*, LAST_MOVE_DIR_*, AGE, RANDOM) for all agents
+    in parallel. OSC1 (sensor 7) deferred — requires `cos()`.
+  - **Two-level kernel registry** (`registry.c`): filesystem override (`.cl` file
+    alongside binary) falls back to C string literals embedded at build time via
+    the new `cmake/EmbedKernels.cmake` module (`biosim_embed_opencl_source()`).
+  - Preamble strategy: `types.h`, `rng.h`, `gene.h` from `core` are always embedded
+    and prepended as separate source strings to every `clCreateProgramWithSource`
+    call — kernels share the portable type definitions without `#include` directives.
+  - Unit test (`test_k1_sensors.c`): compares kernel output against the `core`
+    reference (`biosim_sensor_eval`) for all implemented sensors; gracefully
+    `IGNORE`s when no OpenCL platform is available.
+  - `vcpkg.json`: added `opencl` dependency (Khronos ICD loader + headers).
+  - `CMakeLists.txt`: `BIOSIM_BUILD_GPU` option (default `ON`) gates
+    `packages/sim-gpu`; `EmbedKernels.cmake` included unconditionally.
+
+### Documentation
+- **`docs/architecture.md`**: added `sim-gpu` package entry with two-level registry
+  lookup description, kernel embryo sensor table, and updated dependency graph.
+- **`docs/build.md`**: added OpenCL runtime prerequisite (POCL), updated "run the
+  simulators" section to list both executables, added `BIOSIM_BUILD_GPU=OFF` tip.
+- **`docs/usage.md`**: added `biosim-gpu` section covering prerequisites, CLI usage,
+  kernel filesystem override, and OpenCL parameter table.
+
 - **`wasm-sim-stepper` PoC**: new package that compiles the core simulation to
   WebAssembly via Emscripten. Hardcoded defaults (population 3000, 128×128 grid,
   x\_band challenge). Build with `cmake --preset wasm && cmake --build --preset wasm`;

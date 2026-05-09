@@ -24,6 +24,68 @@ On Ubuntu/Debian:
 sudo apt install cmake ninja-build gcc pkg-config clang-format clang-tidy
 ```
 
+### OpenCL runtime (for `sim-gpu`)
+
+The OpenCL GPU simulator (`sim-gpu`) links against the Khronos OpenCL ICD Loader
+supplied by vcpkg. To actually *run* the simulator or its tests you also need an
+OpenCL runtime registered with the ICD loader.
+
+The ICD loader finds runtimes via `.icd` files registered under
+`/etc/OpenCL/vendors/` (Linux) or the Windows registry. Use `clinfo` to confirm
+at least one platform is visible after installation:
+
+```sh
+sudo apt install clinfo   # diagnostic tool
+clinfo
+```
+
+#### GPU on Windows
+
+Install the official NVIDIA or AMD GPU driver. The OpenCL ICD is bundled with the
+driver; no extra steps are needed.
+
+#### GPU on Linux
+
+On Linux the GPU kernel driver is a separate package from the userspace OpenCL
+ICD. Whether the ICD is included in the driver package or must be installed
+separately depends on the vendor:
+
+- **NVIDIA** — the ICD (`nvidia.icd`) is typically included in the
+  `libnvidia-compute` package that ships with the driver. See the
+  [CUDA installation guide](https://developer.nvidia.com/cuda-downloads) for your
+  distribution.
+- **AMD** — install the [ROCm OpenCL runtime](https://rocm.docs.amd.com/) or, for
+  integrated/older cards, Mesa's OpenCL implementation
+  (`mesa-opencl-icd` on Debian/Ubuntu).
+- **Intel** — see the
+  [Intel Compute Runtime](https://github.com/intel/compute-runtime) for integrated
+  and Arc graphics (`intel-opencl-icd` on Debian/Ubuntu).
+
+If `clinfo` lists platforms but the simulator fails with permission errors, add
+yourself to the `render` group and re-login:
+
+```sh
+sudo usermod -aG render $USER
+```
+
+#### CPU fallback on Linux (POCL)
+
+[POCL](http://portablecl.org/) provides an OpenCL 3.0 CPU driver; no GPU is
+required:
+
+```sh
+sudo apt install pocl-opencl-icd
+```
+
+The GPU tests gracefully `IGNORE` (not fail) when no OpenCL platform is found, so
+`ctest` passes in environments without a runtime.
+
+To build without the GPU simulator entirely:
+
+```sh
+cmake --preset debug -DBIOSIM_BUILD_GPU=OFF
+```
+
 Check your CMake version with `cmake --version`. If the system package is older
 than 3.28, install a newer one from [cmake.org](https://cmake.org/download/) or
 via `uv install cmake`.
@@ -72,10 +134,14 @@ Available presets are defined in `CMakePresets.json`:
 cmake --build --preset debug
 ```
 
-## Run the simulator
+## Run the simulators
 
 ```sh
+# Single-threaded CPU reference simulator
 ./build/debug/packages/sim-stepper/biosim-stepper
+
+# OpenCL GPU simulator (requires an OpenCL runtime — see prerequisites)
+./build/debug/packages/sim-gpu/biosim-gpu
 ```
 
 See [`docs/usage.md`](usage.md) for the full parameter reference.

@@ -52,7 +52,11 @@ Functions that allocate multiple resources follow this pattern:
 - All other functions log once at their `exit:` label when
   `returncode != BIOSIM_OK`, using
   `BIOSIM_ERRORF("... (%s)", biosim_strerror(returncode))`.
-- Callers do not re-log errors returned from callees.
+- Callers do not re-log errors returned from `biosim_*` callees.
+- Callers exhaustively log OpenCL errors returned from `cl*` callees,
+  using `BIOSIM_ERRORF("cl... failed (OpenCL %d)", (int)err)` and
+  return `BIOSIM_ERR_OPENCL`. Macros in `cl_macros.h` help reduce
+  boilerplate.
 
 ## Host/device portability
 

@@ -7,12 +7,12 @@
 | `core` | Complete | Simulation logic, genome, nnet, agents, grid, challenges, snapshot |
 | `params` | Complete | CLI/TOML/parameter management |
 | `sim-stepper` | Complete | Single-threaded CPU reference simulator |
-| `sim-gpu` | Not started | Architecture documented in `docs/gpu-design.md` |
+| `sim-gpu` | In progress | Scaffold complete: package structure, two-level kernel registry, K1 sensor embryo (Group A minus OSC1), unit tests passing with POCL. Full generation loop and remaining K1 phases (feedforward, actions) pending. |
 | `viz` | Not started | Depends on stepper trace format (not yet defined) |
 
 ## Missing or incomplete
 
-- **GPU pipeline**: `sim-gpu` package not started. Five-kernel design documented in [`docs/gpu-design.md`](docs/gpu-design.md).
+- **GPU pipeline**: `sim-gpu` scaffold complete (package structure, two-level kernel registry, K1 sensor embryo for Group A sensors minus OSC1, unit tests). Full generation loop, feedforward pass, action application, and remaining K1 phases still pending. Five-kernel design documented in [`docs/gpu-design.md`](docs/gpu-design.md).
 - **Visualization**: `viz` package not started; trace format not yet defined.
 - **CI/CD**: No `.github/` workflows.
 - **Altruism challenge**: Placeholder — evaluator always returns `{false, 0.0f}`. Requires genome similarity computation not yet designed for GPU.
@@ -21,7 +21,7 @@
 
 ## Open GPU design questions
 
-These were deferred from the initial GPU data-model design. Each requires a decision before `sim-gpu` implementation begins.
+These were deferred from the initial GPU data-model design. Each requires a decision before the remaining `sim-gpu` kernel phases are implemented.
 
 1. **Genome-length divergence**: sort-then-iterate vs. uniform-loop-with-predicate — when does each win?
 

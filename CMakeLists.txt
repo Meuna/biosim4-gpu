@@ -24,10 +24,13 @@ set(CMAKE_C_EXTENSIONS OFF)
 # ── Global options (user-facing knobs) ────────────────────────────────────────
 
 # Build unit test executables (requires Unity via FetchContent)
-option(BIOSIM_BUILD_TESTS      "Build the test suite"                           ON)
+option(BIOSIM_BUILD_TESTS      "Build the test suite" ON)
 
 # Build standalone benchmark executables under benchmarks/
-option(BIOSIM_BUILD_BENCHMARKS "Build benchmark executables"                   OFF)
+option(BIOSIM_BUILD_BENCHMARKS "Build benchmark executables" OFF)
+
+# Build the OpenCL GPU simulator (requires OpenCL headers; runtime requires POCL or another ICD)
+option(BIOSIM_BUILD_GPU        "Build the OpenCL GPU simulator (sim-gpu)" ON)
 
 # Enable AddressSanitizer + UBSan (GCC/Clang only; MSVC supports ASan but not UBSan)
 option(BIOSIM_SANITIZE         "Enable address and undefined-behaviour sanitizers" OFF)
@@ -51,9 +54,9 @@ include(Dependencies)
 # Build metadata (git version, timestamp, build type) injected via compile definitions
 include(BuildVersion)
 
-# Kernel embedding: kernels are always embedded at build time; EmbedKernels.cmake
-# generates the C translation unit that holds them as string literals
-# include(EmbedKernels)      # uncomment once cmake/EmbedKernels.cmake exists
+# Kernel embedding: biosim_embed_opencl_source() generates a C translation unit
+# containing a .cl or .h file as a NUL-terminated string literal.
+include(EmbedKernels)
 
 # ── Packages ──────────────────────────────────────────────────────────────────
 
@@ -63,8 +66,10 @@ add_subdirectory(packages/core)
 # CLI/TOML parameter parsing library (depends on core + argtable3 + tomlc17)
 add_subdirectory(packages/params)
 
-# OpenCL batch simulator executable
-# add_subdirectory(packages/sim-gpu)     # depends on core + params + OpenCL
+# OpenCL GPU simulator (depends on core + params + OpenCL; optional at configure time)
+if(BIOSIM_BUILD_GPU)
+  add_subdirectory(packages/sim-gpu)
+endif()
 
 # Single-threaded CPU reference simulator executable
 add_subdirectory(packages/sim-stepper) # depends on core + params

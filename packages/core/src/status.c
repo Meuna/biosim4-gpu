@@ -14,6 +14,8 @@ const char *biosim_strerror(biosim_status_t code) {
         return "invalid data or configuration";
     case BIOSIM_ERR_IO:
         return "I/O failure";
+    case BIOSIM_ERR_OPENCL:
+        return "OpenCL error";
     case BIOSIM_EOF:
         return "unexpected end of file";
     case BIOSIM_WARN_UNKNOWN_KEY:
