@@ -8,30 +8,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sim-gpu` K1 kernel** — `k1_feedforward.cl` implements the full per-step
+  simulation pipeline for all agents in parallel:
+  - **Sensor evaluation**: Group A (LOC_X … RANDOM) + OSC1 (uses OpenCL built-in
+    `cos()`) + SIGNAL0 (reads signal buffer); Group B/C/D sensors stub at 0.5.
+  - **Neural network feedforward**: single pass over SoA-layout connection list;
+    writes updated `neuron_output`.
+  - **Action application**: self-fields (responsiveness, oscillator period,
+    long-probe distance); movement accumulators via `BIOSIM_DIR_DX/DY`; signal
+    emission via `atomic_add`; `KILL_FORWARD` is a no-op stub (deferred to K2).
+  - **Movement finalization**: `tanh`-squashed accumulator compared against
+    xorshift64 draws; writes clamped `desired_x`/`desired_y`.
+  - Unit tests (`test_k1_feedforward.c`): compares GPU desired positions against
+    the `core` reference per-agent pipeline; gracefully `IGNORE`s without OpenCL.
+- **`core/io_defs.h`** — new HOST/DEVICE portable header: `biosim_sensor_t`,
+  `biosim_action_t` enums, `BIOSIM_IO_SCHEMA_VERSION`, and `BIOSIM_DIR_DX/DY`
+  direction tables (with `__OPENCL_VERSION__` guard for `__constant` vs
+  `static const`). Included by host code via `io_catalogue.h` and embedded as a
+  preamble in every kernel program (slot 3 of `sources[]`).
 - **`sim-gpu` scaffold** — OpenCL GPU simulator package (`packages/sim-gpu/`):
   - `sim-gpu-lib` static library — kernel registry and OpenCL runner.
   - `biosim-gpu` executable — minimal parameter table (`population`, grid dimensions,
     `steps-per-gen`, `max-generations`, `max-genome-len`, `max-neurons`,
     `platform-index`, `device-index`) using the `params` library.
-  - `k1_sensors.cl` kernel embryo — evaluates Group-A self-only sensors
-    (LOC_X, LOC_Y, BOUNDARY_DIST_*, LAST_MOVE_DIR_*, AGE, RANDOM) for all agents
-    in parallel. OSC1 (sensor 7) deferred — requires `cos()`.
   - **Two-level kernel registry** (`registry.c`): filesystem override (`.cl` file
     alongside binary) falls back to C string literals embedded at build time via
     the new `cmake/EmbedKernels.cmake` module (`biosim_embed_opencl_source()`).
-  - Preamble strategy: `types.h`, `rng.h`, `gene.h` from `core` are always embedded
-    and prepended as separate source strings to every `clCreateProgramWithSource`
-    call — kernels share the portable type definitions without `#include` directives.
-  - Unit test (`test_k1_sensors.c`): compares kernel output against the `core`
-    reference (`biosim_sensor_eval`) for all implemented sensors; gracefully
-    `IGNORE`s when no OpenCL platform is available.
+  - Preamble strategy: `types.h`, `rng.h`, `gene.h`, `io_defs.h` from `core` are
+    always embedded and prepended as separate source strings to every
+    `clCreateProgramWithSource` call.
   - `vcpkg.json`: added `opencl` dependency (Khronos ICD loader + headers).
   - `CMakeLists.txt`: `BIOSIM_BUILD_GPU` option (default `ON`) gates
     `packages/sim-gpu`; `EmbedKernels.cmake` included unconditionally.
 
 ### Documentation
 - **`docs/architecture.md`**: added `sim-gpu` package entry with two-level registry
-  lookup description, kernel embryo sensor table, and updated dependency graph.
+  lookup description, K1 pipeline description, and updated dependency graph; added
+  `io_defs.h` row to the `core` header table.
+- **`docs/gpu-design.md`**: updated status to reflect K1 implemented.
 - **`docs/build.md`**: added OpenCL runtime prerequisite (POCL), updated "run the
   simulators" section to list both executables, added `BIOSIM_BUILD_GPU=OFF` tip.
 - **`docs/usage.md`**: added `biosim-gpu` section covering prerequisites, CLI usage,

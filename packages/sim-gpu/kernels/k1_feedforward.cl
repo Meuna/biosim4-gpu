@@ -1,0 +1,325 @@
+/* k1_feedforward.cl — K1: sensor evaluation, feedforward, actions, movement
+ *
+ * Preamble: biosim/core/types.h, rng.h, gene.h, and io_defs.h are prepended
+ * as separate source strings by the build system (clCreateProgramWithSource).
+ * Do NOT add #include directives for those files here.
+ *
+ * Sensor implementation:
+ *   Group A (0-9)   — fully implemented, including OSC1 (uses built-in cos)
+ *   SIGNAL0 (17)    — reads signal buffer at agent position
+ *   All others      — stub returning 0.5
+ *
+ * Action implementation:
+ *   Group A (0-2)   — SET_RESPONSIVENESS, SET_OSCILLATOR_PERIOD,
+ *                     SET_LONGPROBE_DIST (uses built-in tanh, pow)
+ *   Group B (3-14)  — movement accumulators
+ *   EMIT_SIGNAL0    — atomic_add on signal buffer
+ *   KILL_FORWARD    — no-op stub (requires grid buffer, deferred to K2)
+ */
+
+/* ── helpers ────────────────────────────────────────────────────────────── */
+
+static float rng_float_k(__global ulong *rng_state, uint idx) {
+    ulong state = rng_state[idx];
+    state = biosim_rng_next(&state);
+    rng_state[idx] = state;
+    return (float)(state >> 40) * (1.0F / 16777216.0F);
+}
+
+/* ── sensor evaluation ──────────────────────────────────────────────────── */
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+static float eval_sensor(int sensor_id, uint idx, short x, short y, uchar last_dir, ushort osc_per,
+                         uint step, uint steps_per_gen, int size_x, int size_y,
+                         __global ulong *rng_state, __global const uint *signal) {
+    switch (sensor_id) {
+    case BIOSIM_SENSOR_LOC_X:
+        return (float)(int)x / (float)(size_x - 1);
+
+    case BIOSIM_SENSOR_LOC_Y:
+        return (float)(int)y / (float)(size_y - 1);
+
+    case BIOSIM_SENSOR_BOUNDARY_DIST_X: {
+        int edge = size_x - (int)x - 1;
+        int d = (int)x < edge ? (int)x : edge;
+        return 2.0F * (float)d / (float)size_x;
+    }
+
+    case BIOSIM_SENSOR_BOUNDARY_DIST_Y: {
+        int edge = size_y - (int)y - 1;
+        int d = (int)y < edge ? (int)y : edge;
+        return 2.0F * (float)d / (float)size_y;
+    }
+
+    case BIOSIM_SENSOR_BOUNDARY_DIST: {
+        int xe = size_x - (int)x - 1;
+        int ye = size_y - (int)y - 1;
+        int ddx = (int)x < xe ? (int)x : xe;
+        int ddy = (int)y < ye ? (int)y : ye;
+        float fx = 2.0F * (float)ddx / (float)size_x;
+        float fy = 2.0F * (float)ddy / (float)size_y;
+        return fx < fy ? fx : fy;
+    }
+
+    case BIOSIM_SENSOR_LAST_MOVE_DIR_X: {
+        int dir = (int)(last_dir & 7u);
+        return ((float)BIOSIM_DIR_DX[dir] + 1.0F) * 0.5F;
+    }
+
+    case BIOSIM_SENSOR_LAST_MOVE_DIR_Y: {
+        int dir = (int)(last_dir & 7u);
+        return ((float)BIOSIM_DIR_DY[dir] + 1.0F) * 0.5F;
+    }
+
+    case BIOSIM_SENSOR_OSC1: {
+        uint period = (uint)osc_per;
+        if (period == 0u) {
+            period = 1u;
+        }
+        float phase = (float)(step % period) / (float)period;
+        return (1.0F - cos(phase * 6.28318530F)) * 0.5F;
+    }
+
+    case BIOSIM_SENSOR_AGE:
+        return (float)step / (float)steps_per_gen;
+
+    case BIOSIM_SENSOR_RANDOM: {
+        ulong state = rng_state[idx];
+        state = biosim_rng_next(&state);
+        rng_state[idx] = state;
+        return (float)(state >> 40) * (1.0F / 16777216.0F);
+    }
+
+    case BIOSIM_SENSOR_SIGNAL0: {
+        uint val = signal[(int)y * size_x + (int)x];
+        if (val > 255u) {
+            val = 255u;
+        }
+        return (float)val / 255.0F;
+    }
+
+    default:
+        return 0.5F;
+    }
+}
+
+/* ── K1 kernel ──────────────────────────────────────────────────────────── */
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+__kernel void k_feedforward(__global const uchar *alive, __global const short *loc_x,
+                            __global const short *loc_y, __global ushort *osc_period,
+                            __global const uchar *last_move_dir, __global float *responsiveness,
+                            __global uchar *long_probe_dist, __global const ushort *conn_packed,
+                            __global const short *conn_weight, __global const ushort *conn_length,
+                            __global float *neuron_output, __global const uchar *neuron_driven,
+                            __global const uchar *neuron_count, __global uint *signal, int size_x,
+                            int size_y, uint step, uint steps_per_gen, uint pop,
+                            __global ulong *rng_state, __global short *desired_x,
+                            __global short *desired_y) {
+    uint idx = get_global_id(0);
+
+    if (!alive[idx]) {
+        return;
+    }
+
+    short x = loc_x[idx];
+    short y = loc_y[idx];
+    uchar ldir = last_move_dir[idx];
+    ushort osc_per = osc_period[idx];
+    float resp = responsiveness[idx];
+
+    /* ── Phase 1: evaluate sensors ───────────────────────────────────────── */
+
+    float sensor_vals[BIOSIM_NUM_SENSORS];
+    for (int s = 0; s < BIOSIM_NUM_SENSORS; s++) {
+        sensor_vals[s] = eval_sensor(s, idx, x, y, ldir, osc_per, step, steps_per_gen, size_x,
+                                     size_y, rng_state, signal);
+    }
+
+    /* ── Phase 2: feedforward ────────────────────────────────────────────── */
+
+    float nacc[128];
+    float aval[BIOSIM_NUM_ACTIONS];
+    for (int k = 0; k < 128; k++) {
+        nacc[k] = 0.0F;
+    }
+    for (int a = 0; a < BIOSIM_NUM_ACTIONS; a++) {
+        aval[a] = 0.0F;
+    }
+
+    uint nconn = (uint)conn_length[idx];
+    uint ncount = (uint)neuron_count[idx];
+
+    for (uint j = 0u; j < nconn; j++) {
+        uint slot = j * pop + idx;
+        ushort packed = conn_packed[slot];
+        short raw_wgt = conn_weight[slot];
+
+        uint src_type = BIOSIM_GENE_SRC_TYPE(packed);
+        uint src_num = BIOSIM_GENE_SRC_NUM(packed);
+        uint sink_type = BIOSIM_GENE_SINK_TYPE(packed);
+        uint sink_num = BIOSIM_GENE_SINK_NUM(packed);
+
+        float source = (src_type == BIOSIM_GENE_IO) ? sensor_vals[src_num]
+                                                    : neuron_output[src_num * pop + idx];
+
+        float weighted = source * ((float)raw_wgt / BIOSIM_GENE_WEIGHT_SCALE);
+
+        if (sink_type == BIOSIM_GENE_NEURON) {
+            nacc[sink_num] += weighted;
+        } else {
+            aval[sink_num] += weighted;
+        }
+    }
+
+    for (uint k = 0u; k < ncount; k++) {
+        uint nslot = k * pop + idx;
+        neuron_output[nslot] = neuron_driven[nslot] ? tanh(nacc[k]) : 0.5F;
+    }
+
+    /* ── Phase 3: apply actions ──────────────────────────────────────────── */
+
+    float dx_sum = 0.0F;
+    float dy_sum = 0.0F;
+
+    /* Group A: self-field writers */
+    {
+        float t = tanh(aval[BIOSIM_ACTION_SET_RESPONSIVENESS]);
+        responsiveness[idx] = t * 0.5F + 0.5F;
+        resp = responsiveness[idx];
+    }
+
+    {
+        float t = tanh(aval[BIOSIM_ACTION_SET_OSCILLATOR_PERIOD]);
+        float f = 2.0F * pow(1024.0F, (t + 1.0F) * 0.5F);
+        if (f < 2.0F) {
+            f = 2.0F;
+        }
+        if (f > 2048.0F) {
+            f = 2048.0F;
+        }
+        osc_period[idx] = (ushort)f;
+    }
+
+    {
+        float t = tanh(aval[BIOSIM_ACTION_SET_LONGPROBE_DIST]);
+        float f = 1.0F + 31.0F * (t + 1.0F) * 0.5F;
+        if (f < 1.0F) {
+            f = 1.0F;
+        }
+        if (f > 32.0F) {
+            f = 32.0F;
+        }
+        long_probe_dist[idx] = (uchar)f;
+    }
+
+    /* Group B: movement accumulators */
+    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_X];
+    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_Y];
+
+    {
+        int dir = (int)(ldir & 7u);
+        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_FORWARD] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_FORWARD] * (float)BIOSIM_DIR_DY[dir];
+    }
+
+    {
+        int dir = (int)((ldir + 4u) & 7u);
+        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_REVERSE] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_REVERSE] * (float)BIOSIM_DIR_DY[dir];
+    }
+
+    {
+        int dir = (int)((ldir + 2u) & 7u);
+        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_LEFT] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_LEFT] * (float)BIOSIM_DIR_DY[dir];
+    }
+
+    {
+        int dir = (int)((ldir + 6u) & 7u);
+        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DY[dir];
+    }
+
+    {
+        int ldir_l = (int)((ldir + 2u) & 7u);
+        int rdir = (int)((ldir + 6u) & 7u);
+        float trl = tanh(aval[BIOSIM_ACTION_MOVE_RL]);
+        float rw = (trl + 1.0F) * 0.5F;
+        float lw = 1.0F - rw;
+        dx_sum += resp * ((float)BIOSIM_DIR_DX[rdir] * rw + (float)BIOSIM_DIR_DX[ldir_l] * lw);
+        dy_sum += resp * ((float)BIOSIM_DIR_DY[rdir] * rw + (float)BIOSIM_DIR_DY[ldir_l] * lw);
+    }
+
+    {
+        ulong state = rng_state[idx];
+        int rdir = (int)(biosim_rng_next(&state) % 8u);
+        rng_state[idx] = state;
+        dx_sum += resp * (float)BIOSIM_DIR_DX[rdir];
+        dy_sum += resp * (float)BIOSIM_DIR_DY[rdir];
+    }
+
+    dx_sum += resp * (float)BIOSIM_DIR_DX[0]; /* MOVE_EAST */
+    dy_sum += resp * (float)BIOSIM_DIR_DY[0];
+
+    dx_sum += resp * (float)BIOSIM_DIR_DX[4]; /* MOVE_WEST */
+    dy_sum += resp * (float)BIOSIM_DIR_DY[4];
+
+    dx_sum += resp * (float)BIOSIM_DIR_DX[2]; /* MOVE_NORTH */
+    dy_sum += resp * (float)BIOSIM_DIR_DY[2];
+
+    dx_sum += resp * (float)BIOSIM_DIR_DX[6]; /* MOVE_SOUTH */
+    dy_sum += resp * (float)BIOSIM_DIR_DY[6];
+
+    /* Group C: signal emission */
+    if (aval[BIOSIM_ACTION_EMIT_SIGNAL0] >= 0.5F) {
+        int ex = (int)x;
+        int ey = (int)y;
+        atomic_add(&signal[ey * size_x + ex], 2u);
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (dx == 0 && dy == 0) {
+                    continue;
+                }
+                int nx = ex + dx;
+                int ny = ey + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                atomic_add(&signal[ny * size_x + nx], 1u);
+            }
+        }
+    }
+
+    /* Group D: KILL_FORWARD — stub (requires grid, deferred to K2) */
+
+    /* ── Phase 4: finalize movement ──────────────────────────────────────── */
+
+    float lx = tanh(dx_sum * 0.5F);
+    float ly = tanh(dy_sum * 0.5F);
+
+    float rx = rng_float_k(rng_state, idx);
+    float ry = rng_float_k(rng_state, idx);
+
+    short step_x = (fabs(lx) > rx) ? (lx >= 0.0F ? (short)1 : (short)-1) : (short)0;
+    short step_y = (fabs(ly) > ry) ? (ly >= 0.0F ? (short)1 : (short)-1) : (short)0;
+
+    short nx = (short)((int)x + (int)step_x);
+    short ny = (short)((int)y + (int)step_y);
+
+    if (nx < (short)0) {
+        nx = (short)0;
+    }
+    if (nx >= (short)size_x) {
+        nx = (short)(size_x - 1);
+    }
+    if (ny < (short)0) {
+        ny = (short)0;
+    }
+    if (ny >= (short)size_y) {
+        ny = (short)(size_y - 1);
+    }
+
+    desired_x[idx] = nx;
+    desired_y[idx] = ny;
+}

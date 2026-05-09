@@ -63,6 +63,141 @@ static const biosim_param_entry_t sim_params[] = {
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))
 
+/* ── buffer layout helpers ──────────────────────────────────────────────── */
+
+typedef struct {
+    /* Per-agent fixed fields */
+    cl_mem alive;
+    cl_mem loc_x;
+    cl_mem loc_y;
+    cl_mem osc_period;
+    cl_mem last_move_dir;
+    cl_mem responsiveness;
+    cl_mem long_probe_dist;
+    /* Neural network (transposed SoA) */
+    cl_mem conn_packed;
+    cl_mem conn_weight;
+    cl_mem conn_length;
+    cl_mem neuron_output;
+    cl_mem neuron_driven;
+    cl_mem neuron_count;
+    /* Signal */
+    cl_mem signal;
+    /* Outputs */
+    cl_mem rng_state;
+    cl_mem desired_x;
+    cl_mem desired_y;
+} k1_buffers_t;
+
+static void k1_buffers_release(k1_buffers_t *b) {
+    CL_SAFE_RELEASE(clReleaseMemObject, b->desired_y);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->desired_x);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->rng_state);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->signal);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->neuron_count);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->neuron_driven);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->neuron_output);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->conn_length);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->conn_weight);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->conn_packed);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->long_probe_dist);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->responsiveness);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->last_move_dir);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->osc_period);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->loc_y);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->loc_x);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->alive);
+}
+
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+static biosim_status_t k1_buffers_create(const biosim_sim_t *sim, cl_context ctx,
+                                         k1_buffers_t *out) {
+    memset(out, 0, sizeof(*out));
+
+    const biosim_agents_t *a = &sim->agents;
+    const biosim_nnet_t *n = &sim->nnet;
+    const uint32_t pop = sim->population;
+    const uint16_t max_conn = n->max_conn;
+    const uint8_t max_neurons = n->max_neurons;
+
+    biosim_status_t returncode = BIOSIM_OK;
+    cl_int cl_err = CL_SUCCESS;
+
+#define MKBUF_RO(field, ptr, elem_size, count)                                                     \
+    CL_ASSIGN_OR_GOTO_EXIT(out->field,                                                             \
+                           clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,            \
+                                          (size_t)(count) * (elem_size), (void *)(ptr), &cl_err))
+
+#define MKBUF_RW(field, ptr, elem_size, count)                                                     \
+    CL_ASSIGN_OR_GOTO_EXIT(out->field,                                                             \
+                           clCreateBuffer(ctx, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,           \
+                                          (size_t)(count) * (elem_size), (void *)(ptr), &cl_err))
+
+#define MKBUF_WO(field, elem_size, count)                                                          \
+    CL_ASSIGN_OR_GOTO_EXIT(out->field,                                                             \
+                           clCreateBuffer(ctx, CL_MEM_WRITE_ONLY, (size_t)(count) * (elem_size),   \
+                                          NULL, &cl_err))
+
+    MKBUF_RO(alive, a->alive, sizeof(uint8_t), pop);
+    MKBUF_RO(loc_x, a->loc_x, sizeof(int16_t), pop);
+    MKBUF_RO(loc_y, a->loc_y, sizeof(int16_t), pop);
+    MKBUF_RW(osc_period, a->osc_period, sizeof(uint16_t), pop);
+    MKBUF_RO(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
+    MKBUF_RW(responsiveness, a->responsiveness, sizeof(float), pop);
+    MKBUF_RW(long_probe_dist, a->long_probe_dist, sizeof(uint8_t), pop);
+    MKBUF_RO(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)max_conn * pop);
+    MKBUF_RO(conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)max_conn * pop);
+    MKBUF_RO(conn_length, n->conn_length, sizeof(uint16_t), pop);
+    MKBUF_RW(neuron_output, n->neuron_output, sizeof(float), (size_t)max_neurons * pop);
+    MKBUF_RO(neuron_driven, n->neuron_driven, sizeof(uint8_t), (size_t)max_neurons * pop);
+    MKBUF_RO(neuron_count, n->neuron_count, sizeof(uint8_t), pop);
+    MKBUF_RW(signal, sim->signal, sizeof(uint32_t), sim->signal_len);
+    MKBUF_RW(rng_state, a->rng_state, sizeof(uint64_t), pop);
+    MKBUF_WO(desired_x, sizeof(int16_t), pop);
+    MKBUF_WO(desired_y, sizeof(int16_t), pop);
+
+#undef MKBUF_RO
+#undef MKBUF_RW
+#undef MKBUF_WO
+
+exit:
+    if (returncode != BIOSIM_OK) {
+        k1_buffers_release(out);
+    }
+    return returncode;
+}
+
+static void k1_set_args(cl_kernel kernel, const k1_buffers_t *b, const biosim_sim_t *sim) {
+    cl_int size_x = (cl_int)sim->size_x;
+    cl_int size_y = (cl_int)sim->size_y;
+    cl_uint step = (cl_uint)sim->step;
+    cl_uint steps_gen = (cl_uint)sim->steps_per_gen;
+    cl_uint pop = (cl_uint)sim->population;
+
+    (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&b->alive);
+    (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&b->loc_x);
+    (void)clSetKernelArg(kernel, 2U, sizeof(cl_mem), (const void *)&b->loc_y);
+    (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&b->osc_period);
+    (void)clSetKernelArg(kernel, 4U, sizeof(cl_mem), (const void *)&b->last_move_dir);
+    (void)clSetKernelArg(kernel, 5U, sizeof(cl_mem), (const void *)&b->responsiveness);
+    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&b->long_probe_dist);
+    (void)clSetKernelArg(kernel, 7U, sizeof(cl_mem), (const void *)&b->conn_packed);
+    (void)clSetKernelArg(kernel, 8U, sizeof(cl_mem), (const void *)&b->conn_weight);
+    (void)clSetKernelArg(kernel, 9U, sizeof(cl_mem), (const void *)&b->conn_length);
+    (void)clSetKernelArg(kernel, 10U, sizeof(cl_mem), (const void *)&b->neuron_output);
+    (void)clSetKernelArg(kernel, 11U, sizeof(cl_mem), (const void *)&b->neuron_driven);
+    (void)clSetKernelArg(kernel, 12U, sizeof(cl_mem), (const void *)&b->neuron_count);
+    (void)clSetKernelArg(kernel, 13U, sizeof(cl_mem), (const void *)&b->signal);
+    (void)clSetKernelArg(kernel, 14U, sizeof(cl_int), (const void *)&size_x);
+    (void)clSetKernelArg(kernel, 15U, sizeof(cl_int), (const void *)&size_y);
+    (void)clSetKernelArg(kernel, 16U, sizeof(cl_uint), (const void *)&step);
+    (void)clSetKernelArg(kernel, 17U, sizeof(cl_uint), (const void *)&steps_gen);
+    (void)clSetKernelArg(kernel, 18U, sizeof(cl_uint), (const void *)&pop);
+    (void)clSetKernelArg(kernel, 19U, sizeof(cl_mem), (const void *)&b->rng_state);
+    (void)clSetKernelArg(kernel, 20U, sizeof(cl_mem), (const void *)&b->desired_x);
+    (void)clSetKernelArg(kernel, 21U, sizeof(cl_mem), (const void *)&b->desired_y);
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int main(int argc, char **argv) {
     /* alloc start here, free on exit label */
@@ -70,19 +205,16 @@ int main(int argc, char **argv) {
     biosim_sim_t sim;
     biosim_gpu_runner_t runner;
     biosim_gpu_kernel_sources_t sources;
+    k1_buffers_t bufs;
     cl_program program = NULL;
     cl_kernel kernel = NULL;
-    cl_mem buf_locx = NULL;
-    cl_mem buf_locy = NULL;
-    cl_mem buf_dir = NULL;
-    cl_mem buf_rng = NULL;
-    cl_mem buf_out = NULL;
-    float *host_out = NULL;
+    int16_t *host_desired_x = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
     memset(&sim, 0, sizeof(sim));
     memset(&runner, 0, sizeof(runner));
     memset(&sources, 0, sizeof(sources));
+    memset(&bufs, 0, sizeof(bufs));
     biosim_log_init(&biosim_log_default_ctx);
 
     (void)signal(SIGINT, handle_signal);
@@ -135,7 +267,7 @@ int main(int argc, char **argv) {
     char exec_dir[4096];
     path_dirname(argv[0], exec_dir, sizeof(exec_dir));
 
-    returncode = biosim_gpu_registry_get("k1_sensors", exec_dir, &sources);
+    returncode = biosim_gpu_registry_get("k1_feedforward", exec_dir, &sources);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -146,73 +278,35 @@ int main(int argc, char **argv) {
     }
 
     cl_int cl_err = CL_SUCCESS;
-    CL_ASSIGN_OR_GOTO_EXIT(kernel, clCreateKernel(program, "k_sensor_eval", &cl_err));
+    CL_ASSIGN_OR_GOTO_EXIT(kernel, clCreateKernel(program, "k_feedforward", &cl_err));
 
-    uint32_t pop = sim.population;
-    size_t pop_bytes_s16 = (size_t)pop * sizeof(int16_t);
-    size_t pop_bytes_u8 = (size_t)pop * sizeof(uint8_t);
-    size_t pop_bytes_u64 = (size_t)pop * sizeof(uint64_t);
-    size_t pop_bytes_f32 = (size_t)pop * sizeof(float);
+    returncode = k1_buffers_create(&sim, runner.context, &bufs);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
 
-    CL_ASSIGN_OR_GOTO_EXIT(buf_locx,
-                           clCreateBuffer(runner.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                          pop_bytes_s16, sim.agents.loc_x, &cl_err));
+    k1_set_args(kernel, &bufs, &sim);
 
-    CL_ASSIGN_OR_GOTO_EXIT(buf_locy,
-                           clCreateBuffer(runner.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                          pop_bytes_s16, sim.agents.loc_y, &cl_err));
+    size_t global_size = (size_t)sim.population;
+    CL_GOTO_EXIT_ON_ERROR(
+        clEnqueueNDRangeKernel(runner.queue, kernel, 1U, NULL, &global_size, NULL, 0U, NULL, NULL));
 
-    CL_ASSIGN_OR_GOTO_EXIT(buf_dir,
-                           clCreateBuffer(runner.context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                          pop_bytes_u8, sim.agents.last_move_dir, &cl_err));
-
-    CL_ASSIGN_OR_GOTO_EXIT(buf_rng,
-                           clCreateBuffer(runner.context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-                                          pop_bytes_u64, sim.agents.rng_state, &cl_err));
-
-    CL_ASSIGN_OR_GOTO_EXIT(buf_out, clCreateBuffer(runner.context, CL_MEM_WRITE_ONLY, pop_bytes_f32,
-                                                   NULL, &cl_err));
-
-    host_out = malloc(pop_bytes_f32);
-    if (!host_out) {
+    host_desired_x = malloc((size_t)sim.population * sizeof(int16_t));
+    if (!host_desired_x) {
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
 
-    cl_int size_x = (cl_int)sim.size_x;
-    cl_int size_y = (cl_int)sim.size_y;
-    cl_uint step = (cl_uint)sim.step;
-    cl_uint steps_gen = (cl_uint)sim.steps_per_gen;
-    cl_int sensor_id = (cl_int)0; /* LOC_X */
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(runner.queue, bufs.desired_x, CL_TRUE, 0U,
+                                              (size_t)sim.population * sizeof(int16_t),
+                                              host_desired_x, 0U, NULL, NULL));
 
-    (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&buf_locx);
-    (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&buf_locy);
-    (void)clSetKernelArg(kernel, 2U, sizeof(cl_mem), (const void *)&buf_dir);
-    (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&buf_rng);
-    (void)clSetKernelArg(kernel, 4U, sizeof(cl_int), &size_x);
-    (void)clSetKernelArg(kernel, 5U, sizeof(cl_int), &size_y);
-    (void)clSetKernelArg(kernel, 6U, sizeof(cl_uint), &step);
-    (void)clSetKernelArg(kernel, 7U, sizeof(cl_uint), &steps_gen);
-    (void)clSetKernelArg(kernel, 8U, sizeof(cl_int), &sensor_id);
-    (void)clSetKernelArg(kernel, 9U, sizeof(cl_mem), (const void *)&buf_out);
-
-    size_t global_size = (size_t)pop;
-    CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(runner.queue, kernel, 1U, NULL, &global_size, NULL, 0U, NULL, NULL));
-
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(runner.queue, buf_out, CL_TRUE, 0U, pop_bytes_f32,
-                                              host_out, 0U, NULL, NULL));
-
-    printf("biosim-gpu: sensor LOC_X evaluated for %u agents (first = %.4f)\n", pop,
-           (double)host_out[0]);
+    printf("biosim-gpu: K1 step complete — agent 0 desired_x=%d (delta=%d)\n",
+           (int)host_desired_x[0], (int)(host_desired_x[0] - sim.agents.loc_x[0]));
 
 exit:
-    free(host_out);
-    CL_SAFE_RELEASE(clReleaseMemObject, buf_out);
-    CL_SAFE_RELEASE(clReleaseMemObject, buf_rng);
-    CL_SAFE_RELEASE(clReleaseMemObject, buf_dir);
-    CL_SAFE_RELEASE(clReleaseMemObject, buf_locy);
-    CL_SAFE_RELEASE(clReleaseMemObject, buf_locx);
+    free(host_desired_x);
+    k1_buffers_release(&bufs);
     CL_SAFE_RELEASE(clReleaseKernel, kernel);
     CL_SAFE_RELEASE(clReleaseProgram, program);
     biosim_gpu_kernel_sources_free(&sources);

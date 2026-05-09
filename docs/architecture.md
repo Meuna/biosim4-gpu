@@ -30,7 +30,8 @@ future GPU simulator need with identical behavior.
 | [`grid.h`](../packages/core/include/biosim/core/grid.h) | `biosim_grid_t` | <ul><li>`biosim_grid_at` — read a cell</li><li>`biosim_grid_set` — write a cell</li><li>`biosim_grid_find_empty` — random empty-cell search</li></ul> |
 | [`genome.h`](../packages/core/include/biosim/core/genome.h) | `biosim_genome_t` | <ul><li>`biosim_genome_init_slot` — randomize one agent's genome</li><li>`biosim_genome_copy_slot` — copy genome between slots</li><li>`biosim_genome_mutate` — point / insertion / deletion mutations</li><li>`biosim_genome_crossover` — single-point two-parent crossover</li><li>`biosim_genome_sort_by_length` — sort agents by descending length</li></ul> |
 | [`nnet.h`](../packages/core/include/biosim/core/nnet.h) | `biosim_nnet_t` | <ul><li>`biosim_nnet_compile` — compile genome into neural network</li><li>`biosim_nnet_feedforward` — run one feedforward pass</li></ul> |
-| [`io_catalogue.h`](../packages/core/include/biosim/core/io_catalogue.h) | `biosim_sensor_t`, `biosim_action_t` | <ul><li>`biosim_sensor_eval` — evaluate one sensor for an agent</li><li>`biosim_action_apply` — apply one action output</li><li>`biosim_action_finalize_movement` — commit pending movement</li></ul> |
+| [`io_defs.h`](../packages/core/include/biosim/core/io_defs.h) | `biosim_sensor_t`, `biosim_action_t` | HOST/DEVICE portable enums (21 sensors, 17 actions) and direction tables (`BIOSIM_DIR_DX`, `BIOSIM_DIR_DY`). Included by both host code and OpenCL kernels. |
+| [`io_catalogue.h`](../packages/core/include/biosim/core/io_catalogue.h) | — | HOST-only API: <ul><li>`biosim_sensor_eval` — evaluate one sensor for an agent</li><li>`biosim_action_apply` — apply one action output</li><li>`biosim_action_finalize_movement` — commit pending movement</li></ul> |
 | [`challenges.h`](../packages/core/include/biosim/core/challenges.h) | `biosim_challenge_spec_t` | <ul><li>`biosim_challenge_step` — per-step challenge hook</li><li>`biosim_generation_collect_survivors` — evaluate agents at gen end</li></ul> |
 | [`snapshot.h`](../packages/core/include/biosim/core/snapshot.h) | — | <ul><li>`biosim_snapshot_session_open` — open a write session</li><li>`biosim_snapshot_session_write` — write current generation's survivors</li><li>`biosim_snapshot_session_close` — finalize the file</li><li>`biosim_snapshot_restore` — load last record and reproduce</li></ul> |
 | [`rng.h`](../packages/core/include/biosim/core/rng.h) | — | <ul><li>`biosim_rng_next` — advance xorshift64 and return state</li><li>`biosim_rng_seed` — initialize from two uint64_t seeds</li></ul> |
@@ -191,37 +192,34 @@ allows hot-swapping a kernel without rebuilding.
 In both cases the bundle's `sources[]` array is:
 
 ```
-sources[0] = biosim/core/types.h  (embedded preamble)
-sources[1] = biosim/core/rng.h    (embedded preamble)
-sources[2] = biosim/core/gene.h   (embedded preamble)
-sources[3] = <kernel source>      (override or embedded)
+sources[0] = biosim/core/types.h   (embedded preamble)
+sources[1] = biosim/core/rng.h     (embedded preamble)
+sources[2] = biosim/core/gene.h    (embedded preamble)
+sources[3] = biosim/core/io_defs.h (embedded preamble)
+sources[4] = <kernel source>       (override or embedded)
 ```
 
-All four strings are passed to `clCreateProgramWithSource`, which concatenates them
-before compilation. The portable headers (types.h, rng.h, gene.h) provide type
-definitions and `biosim_rng_next` to kernel code without needing `#include`
-directives in the `.cl` file.
+All five strings are passed to `clCreateProgramWithSource`, which concatenates them
+before compilation. The portable headers provide type definitions, `biosim_rng_next`,
+gene-encoding macros, and sensor/action enums to kernel code without needing
+`#include` directives in the `.cl` file.
 
-### Kernel embryo — `k1_sensors.cl`
+### K1 kernel — `k1_feedforward.cl`
 
-Implements the sensor-evaluation phase of K1 (`feedforward_and_actions`). The
-kernel `k_sensor_eval` evaluates one Group-A self-only sensor for all agents in
-parallel:
+Implements one full simulation step per agent in parallel (`k_feedforward`). Each
+work-item runs the complete pipeline for one agent:
 
-| Sensor ID | Sensor | Notes |
-|-----------|--------|-------|
-| 0 | `LOC_X` | Normalised x position |
-| 1 | `LOC_Y` | Normalised y position |
-| 2 | `BOUNDARY_DIST_X` | Distance to nearest x boundary |
-| 3 | `BOUNDARY_DIST_Y` | Distance to nearest y boundary |
-| 4 | `BOUNDARY_DIST` | Minimum of DIST_X and DIST_Y |
-| 5 | `LAST_MOVE_DIR_X` | Last move direction x component |
-| 6 | `LAST_MOVE_DIR_Y` | Last move direction y component |
-| 8 | `AGE` | step / steps_per_gen |
-| 9 | `RANDOM` | xorshift64 draw (mutates rng_state) |
-
-Sensor 7 (OSC1) requires `cos()` and is deferred. Group B/C/D sensors are not yet
-implemented.
+1. **Sensor evaluation** — all 21 sensors; Group A (LOC_X … RANDOM) and SIGNAL0
+   are fully implemented; Group B/C/D sensors return 0.5 (stub).
+2. **Neural network feedforward** — single pass over the compiled connection list
+   stored in SoA layout (`conn_packed`, `conn_weight`); writes updated
+   `neuron_output`.
+3. **Action application** — Group A self-fields (responsiveness, oscillator period,
+   long-probe distance); Group B movement accumulators using `BIOSIM_DIR_DX/DY`;
+   Group C signal emission via `atomic_add`; `KILL_FORWARD` is a no-op stub
+   (requires grid buffer, deferred to K2).
+4. **Movement finalization** — `tanh`-squashed accumulator compared against two
+   xorshift64 draws; writes clamped `desired_x`/`desired_y`.
 
 ### Key types
 

@@ -6,10 +6,7 @@
 #include <math.h>
 #include <stdint.h>
 
-/* ── direction tables (0=E, CCW: E NE N NW W SW S SE) ──────────────────── */
-
-static const int8_t DIR_DX[8] = {1, 1, 0, -1, -1, -1, 0, 1};
-static const int8_t DIR_DY[8] = {0, -1, -1, -1, 0, 1, 1, 1};
+/* ── direction tables: see BIOSIM_BIOSIM_DIR_DX / BIOSIM_BIOSIM_DIR_DY in io_defs.h ──── */
 
 /* ── internal helpers ───────────────────────────────────────────────────── */
 
@@ -44,7 +41,7 @@ static void pop_visitor(biosim_coord_t coord, uint16_t cell, void *sim) {
 uint8_t biosim_get_dir(int dx, int dy) {
     uint8_t d;
     for (d = 0; d < 8U; d++) {
-        if ((int)DIR_DX[d] == dx && (int)DIR_DY[d] == dy) {
+        if ((int)BIOSIM_DIR_DX[d] == dx && (int)BIOSIM_DIR_DY[d] == dy) {
             break;
         }
     }
@@ -95,12 +92,12 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 
     case BIOSIM_SENSOR_LAST_MOVE_DIR_X: {
         uint8_t dir = agents->last_move_dir[idx];
-        return ((float)DIR_DX[dir & 7U] + 1.0F) * 0.5F;
+        return ((float)BIOSIM_DIR_DX[dir & 7U] + 1.0F) * 0.5F;
     }
 
     case BIOSIM_SENSOR_LAST_MOVE_DIR_Y: {
         uint8_t dir = agents->last_move_dir[idx];
-        return ((float)DIR_DY[dir & 7U] + 1.0F) * 0.5F;
+        return ((float)BIOSIM_DIR_DY[dir & 7U] + 1.0F) * 0.5F;
     }
 
     case BIOSIM_SENSOR_OSC1: {
@@ -151,7 +148,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 
     case BIOSIM_SENSOR_GENETIC_SIM_FWD: {
         uint8_t dir = agents->last_move_dir[idx] & 7U;
-        biosim_coord_t fwd = {(int16_t)(x + DIR_DX[dir]), (int16_t)(y + DIR_DY[dir])};
+        biosim_coord_t fwd = {(int16_t)(x + BIOSIM_DIR_DX[dir]), (int16_t)(y + BIOSIM_DIR_DY[dir])};
         if (!biosim_grid_in_bounds(grid, fwd)) {
             return 0.0F;
         }
@@ -225,29 +222,29 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
 
     case BIOSIM_ACTION_MOVE_FORWARD: {
         uint8_t dir = agents->last_move_dir[idx] & 7U;
-        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
-        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_REVERSE: {
         uint8_t dir = (uint8_t)((agents->last_move_dir[idx] + 4U) & 7U);
-        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
-        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_LEFT: {
         uint8_t dir = (uint8_t)((agents->last_move_dir[idx] + 2U) & 7U);
-        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
-        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_RIGHT: {
         uint8_t dir = (uint8_t)((agents->last_move_dir[idx] + 6U) & 7U);
-        agents->dx_sum[idx] += resp * val * (float)DIR_DX[dir];
-        agents->dy_sum[idx] += resp * val * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[dir];
         break;
     }
 
@@ -259,36 +256,38 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         float t = tanhf(val);
         float rw = (t + 1.0F) * 0.5F;
         float lw = 1.0F - rw;
-        agents->dx_sum[idx] += resp * ((float)DIR_DX[rdir] * rw + (float)DIR_DX[ldir] * lw);
-        agents->dy_sum[idx] += resp * ((float)DIR_DY[rdir] * rw + (float)DIR_DY[ldir] * lw);
+        agents->dx_sum[idx] +=
+            resp * ((float)BIOSIM_DIR_DX[rdir] * rw + (float)BIOSIM_DIR_DX[ldir] * lw);
+        agents->dy_sum[idx] +=
+            resp * ((float)BIOSIM_DIR_DY[rdir] * rw + (float)BIOSIM_DIR_DY[ldir] * lw);
         break;
     }
 
     case BIOSIM_ACTION_MOVE_RANDOM: {
         uint8_t dir = (uint8_t)(biosim_rng_next(&agents->rng_state[idx]) % 8U);
-        agents->dx_sum[idx] += resp * (float)DIR_DX[dir];
-        agents->dy_sum[idx] += resp * (float)DIR_DY[dir];
+        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[dir];
+        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_EAST:
-        agents->dx_sum[idx] += resp * (float)DIR_DX[0];
-        agents->dy_sum[idx] += resp * (float)DIR_DY[0];
+        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[0];
+        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[0];
         break;
 
     case BIOSIM_ACTION_MOVE_WEST:
-        agents->dx_sum[idx] += resp * (float)DIR_DX[4];
-        agents->dy_sum[idx] += resp * (float)DIR_DY[4];
+        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[4];
+        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[4];
         break;
 
     case BIOSIM_ACTION_MOVE_NORTH:
-        agents->dx_sum[idx] += resp * (float)DIR_DX[2];
-        agents->dy_sum[idx] += resp * (float)DIR_DY[2];
+        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[2];
+        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[2];
         break;
 
     case BIOSIM_ACTION_MOVE_SOUTH:
-        agents->dx_sum[idx] += resp * (float)DIR_DX[6];
-        agents->dy_sum[idx] += resp * (float)DIR_DY[6];
+        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[6];
+        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[6];
         break;
 
         /* ── group C: signal emission ─────────────────────────────────────── */
@@ -332,8 +331,8 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
             break;
         }
         uint8_t dir = agents->last_move_dir[idx] & 7U;
-        biosim_coord_t fwd = {(int16_t)(agents->loc_x[idx] + DIR_DX[dir]),
-                              (int16_t)(agents->loc_y[idx] + DIR_DY[dir])};
+        biosim_coord_t fwd = {(int16_t)(agents->loc_x[idx] + BIOSIM_DIR_DX[dir]),
+                              (int16_t)(agents->loc_y[idx] + BIOSIM_DIR_DY[dir])};
         if (!biosim_grid_in_bounds(&sim->grid, fwd)) {
             break;
         }

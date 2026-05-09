@@ -11,10 +11,11 @@
 extern const char biosim_gpu_preamble_types_h[];
 extern const char biosim_gpu_preamble_rng_h[];
 extern const char biosim_gpu_preamble_gene_h[];
+extern const char biosim_gpu_preamble_io_defs_h[];
 
 /* ── embedded kernel strings ────────────────────────────────────────────── */
 
-extern const char biosim_gpu_k1_sensors[];
+extern const char biosim_gpu_k1_feedforward[];
 
 /* ── kernel table ───────────────────────────────────────────────────────── */
 
@@ -24,7 +25,7 @@ typedef struct {
 } biosim_kernel_entry_t;
 
 static const biosim_kernel_entry_t KERNEL_TABLE[] = {
-    {"k1_sensors", biosim_gpu_k1_sensors},
+    {"k1_feedforward", biosim_gpu_k1_feedforward},
 };
 
 #define KERNEL_TABLE_COUNT (sizeof(KERNEL_TABLE) / sizeof(KERNEL_TABLE[0]))
@@ -112,6 +113,7 @@ biosim_status_t biosim_gpu_registry_get(const char *kernel_name, const char *exe
     out->sources[0] = biosim_gpu_preamble_types_h;
     out->sources[1] = biosim_gpu_preamble_rng_h;
     out->sources[2] = biosim_gpu_preamble_gene_h;
+    out->sources[3] = biosim_gpu_preamble_io_defs_h;
     out->count = BIOSIM_GPU_MAX_SOURCES;
 
     if (exec_dir) {

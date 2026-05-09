@@ -1,3 +1,6 @@
+/*
+ * HOST-ONLY: uses FILE*. Do NOT include from OpenCL kernel sources (.cl files).
+ */
 #ifndef BIOSIM_CORE_STATUS_H
 #define BIOSIM_CORE_STATUS_H
 

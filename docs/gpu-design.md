@@ -1,6 +1,7 @@
 # GPU Data Model Design
 
-**Status:** Designed, not yet implemented. See [`STATUS.md`](../STATUS.md).
+**Status:** K1 (`k_feedforward`) implemented. K2/K3 designed, not yet
+implemented. See [`STATUS.md`](../STATUS.md).
 
 This document describes the planned GPU/OpenCL architecture for `sim-gpu`. It
 is the reference for implementing that package. The single-threaded reference
