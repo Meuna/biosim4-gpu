@@ -38,6 +38,12 @@ biosim_embed_opencl_source(sim-gpu-lib
     biosim_gpu_k1_feedforward
 )
 
+# Embed the K2 kernel source as a fallback string.
+biosim_embed_opencl_source(sim-gpu-lib
+    "${CMAKE_CURRENT_SOURCE_DIR}/kernels/k2_movement_resolution.cl"
+    biosim_gpu_k2_movement_resolution
+)
+
 # ── biosim-gpu — the OpenCL simulator executable ───────────────────────────
 
 add_executable(biosim-gpu src/main.c)

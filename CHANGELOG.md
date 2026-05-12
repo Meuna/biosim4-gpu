@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sim-gpu` K2 kernel** — `k2_movement_resolution.cl` atomically commits
+  per-agent movement decisions (produced by K1) to the GPU grid:
+  - Each work-item attempts `atomic_cmpxchg` on its desired cell; losers stay
+    in place (lock-free, no serial drain).
+  - On success: clears the old cell with a plain write (safe — each cell is
+    exclusively owned by one agent), updates `loc_x`/`loc_y`, and records the
+    move direction in `last_move_dir`.
+  - Grid buffer is `uint32_t` per cell (required for OpenCL 1.x atomics); the
+    host converts from/to `uint16_t` at the boundary.
+  - First-version limitation: chained movement (agent A wants a cell that agent
+    B is vacating in the same launch) is not resolved; results may diverge from
+    the CPU reference.
+  - Unit tests (`test_k2_movement_resolution.c`): smoke test, successful move
+    to an empty cell, no-op when desired equals loc, blocked move into an
+    occupied cell.
 - **`sim-gpu` K1 kernel** — `k1_feedforward.cl` implements the full per-step
   simulation pipeline for all agents in parallel:
   - **Sensor evaluation**: Group A (LOC_X … RANDOM) + OSC1 (uses OpenCL built-in

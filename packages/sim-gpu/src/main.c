@@ -68,10 +68,10 @@ static const biosim_param_entry_t sim_params[] = {
 typedef struct {
     /* Per-agent fixed fields */
     cl_mem alive;
-    cl_mem loc_x;
-    cl_mem loc_y;
+    cl_mem loc_x; /* RW: K1 reads, K2 writes */
+    cl_mem loc_y; /* RW: K1 reads, K2 writes */
     cl_mem osc_period;
-    cl_mem last_move_dir;
+    cl_mem last_move_dir; /* RW: K1 reads, K2 writes */
     cl_mem responsiveness;
     cl_mem long_probe_dist;
     /* Neural network (transposed SoA) */
@@ -83,13 +83,16 @@ typedef struct {
     cl_mem neuron_count;
     /* Signal */
     cl_mem signal;
-    /* Outputs */
+    /* K1 output / K2 input */
     cl_mem rng_state;
-    cl_mem desired_x;
-    cl_mem desired_y;
+    cl_mem desired_x; /* RW: K1 writes, K2 reads */
+    cl_mem desired_y; /* RW: K1 writes, K2 reads */
+    /* Grid: K2 in/out, uint32_t per cell (required for OpenCL atomics) */
+    cl_mem grid;
 } k1_buffers_t;
 
-static void k1_buffers_release(k1_buffers_t *b) {
+static void kernel_buffers_release(k1_buffers_t *b) {
+    CL_SAFE_RELEASE(clReleaseMemObject, b->grid);
     CL_SAFE_RELEASE(clReleaseMemObject, b->desired_y);
     CL_SAFE_RELEASE(clReleaseMemObject, b->desired_x);
     CL_SAFE_RELEASE(clReleaseMemObject, b->rng_state);
@@ -139,10 +142,10 @@ static biosim_status_t k1_buffers_create(const biosim_sim_t *sim, cl_context ctx
                                           NULL, &cl_err))
 
     MKBUF_RO(alive, a->alive, sizeof(uint8_t), pop);
-    MKBUF_RO(loc_x, a->loc_x, sizeof(int16_t), pop);
-    MKBUF_RO(loc_y, a->loc_y, sizeof(int16_t), pop);
+    MKBUF_RW(loc_x, a->loc_x, sizeof(int16_t), pop);
+    MKBUF_RW(loc_y, a->loc_y, sizeof(int16_t), pop);
     MKBUF_RW(osc_period, a->osc_period, sizeof(uint16_t), pop);
-    MKBUF_RO(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
+    MKBUF_RW(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     MKBUF_RW(responsiveness, a->responsiveness, sizeof(float), pop);
     MKBUF_RW(long_probe_dist, a->long_probe_dist, sizeof(uint8_t), pop);
     MKBUF_RO(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)max_conn * pop);
@@ -153,8 +156,23 @@ static biosim_status_t k1_buffers_create(const biosim_sim_t *sim, cl_context ctx
     MKBUF_RO(neuron_count, n->neuron_count, sizeof(uint8_t), pop);
     MKBUF_RW(signal, sim->signal, sizeof(uint32_t), sim->signal_len);
     MKBUF_RW(rng_state, a->rng_state, sizeof(uint64_t), pop);
-    MKBUF_WO(desired_x, sizeof(int16_t), pop);
-    MKBUF_WO(desired_y, sizeof(int16_t), pop);
+    MKBUF_RW(desired_x, a->desired_x, sizeof(int16_t), pop);
+    MKBUF_RW(desired_y, a->desired_y, sizeof(int16_t), pop);
+
+    /* Grid: convert uint16_t cells → uint32_t for OpenCL atomic operations. */
+    {
+        size_t grid_cells = (size_t)sim->size_x * (size_t)sim->size_y;
+        uint32_t *tmp_grid = malloc(grid_cells * sizeof(uint32_t));
+        if (!tmp_grid) {
+            returncode = BIOSIM_ERR_NOMEM;
+            goto exit;
+        }
+        for (size_t gi = 0U; gi < grid_cells; gi++) {
+            tmp_grid[gi] = (uint32_t)sim->grid.cells[gi];
+        }
+        MKBUF_RW(grid, tmp_grid, sizeof(uint32_t), grid_cells);
+        free(tmp_grid);
+    }
 
 #undef MKBUF_RO
 #undef MKBUF_RW
@@ -162,7 +180,7 @@ static biosim_status_t k1_buffers_create(const biosim_sim_t *sim, cl_context ctx
 
 exit:
     if (returncode != BIOSIM_OK) {
-        k1_buffers_release(out);
+        kernel_buffers_release(out);
     }
     return returncode;
 }
@@ -198,22 +216,44 @@ static void k1_set_args(cl_kernel kernel, const k1_buffers_t *b, const biosim_si
     (void)clSetKernelArg(kernel, 21U, sizeof(cl_mem), (const void *)&b->desired_y);
 }
 
+static void k2_set_args(cl_kernel kernel, const k1_buffers_t *b, const biosim_sim_t *sim) {
+    cl_int size_x = (cl_int)sim->size_x;
+    cl_int size_y = (cl_int)sim->size_y;
+    cl_uint pop = (cl_uint)sim->population;
+
+    (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&b->alive);
+    (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&b->desired_x);
+    (void)clSetKernelArg(kernel, 2U, sizeof(cl_mem), (const void *)&b->desired_y);
+    (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&b->loc_x);
+    (void)clSetKernelArg(kernel, 4U, sizeof(cl_mem), (const void *)&b->loc_y);
+    (void)clSetKernelArg(kernel, 5U, sizeof(cl_mem), (const void *)&b->last_move_dir);
+    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&b->grid);
+    (void)clSetKernelArg(kernel, 7U, sizeof(cl_int), (const void *)&size_x);
+    (void)clSetKernelArg(kernel, 8U, sizeof(cl_int), (const void *)&size_y);
+    (void)clSetKernelArg(kernel, 9U, sizeof(cl_uint), (const void *)&pop);
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int main(int argc, char **argv) {
     /* alloc start here, free on exit label */
     biosim_params_t p;
     biosim_sim_t sim;
     biosim_gpu_runner_t runner;
-    biosim_gpu_kernel_sources_t sources;
+    biosim_gpu_kernel_sources_t k1_sources;
+    biosim_gpu_kernel_sources_t k2_sources;
     k1_buffers_t bufs;
-    cl_program program = NULL;
-    cl_kernel kernel = NULL;
+    cl_program k1_program = NULL;
+    cl_kernel k1_kernel = NULL;
+    cl_program k2_program = NULL;
+    cl_kernel k2_kernel = NULL;
     int16_t *host_desired_x = NULL;
+    int16_t *host_loc_x = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
     memset(&sim, 0, sizeof(sim));
     memset(&runner, 0, sizeof(runner));
-    memset(&sources, 0, sizeof(sources));
+    memset(&k1_sources, 0, sizeof(k1_sources));
+    memset(&k2_sources, 0, sizeof(k2_sources));
     memset(&bufs, 0, sizeof(bufs));
     biosim_log_init(&biosim_log_default_ctx);
 
@@ -267,29 +307,30 @@ int main(int argc, char **argv) {
     char exec_dir[4096];
     path_dirname(argv[0], exec_dir, sizeof(exec_dir));
 
-    returncode = biosim_gpu_registry_get("k1_feedforward", exec_dir, &sources);
+    returncode = biosim_gpu_registry_get("k1_feedforward", exec_dir, &k1_sources);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = biosim_gpu_program_build(&runner, sources.sources, sources.count, &program);
+    returncode =
+        biosim_gpu_program_build(&runner, k1_sources.sources, k1_sources.count, &k1_program);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
     cl_int cl_err = CL_SUCCESS;
-    CL_ASSIGN_OR_GOTO_EXIT(kernel, clCreateKernel(program, "k_feedforward", &cl_err));
+    CL_ASSIGN_OR_GOTO_EXIT(k1_kernel, clCreateKernel(k1_program, "k_feedforward", &cl_err));
 
     returncode = k1_buffers_create(&sim, runner.context, &bufs);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    k1_set_args(kernel, &bufs, &sim);
+    k1_set_args(k1_kernel, &bufs, &sim);
 
     size_t global_size = (size_t)sim.population;
-    CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(runner.queue, kernel, 1U, NULL, &global_size, NULL, 0U, NULL, NULL));
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueNDRangeKernel(runner.queue, k1_kernel, 1U, NULL, &global_size,
+                                                 NULL, 0U, NULL, NULL));
 
     host_desired_x = malloc((size_t)sim.population * sizeof(int16_t));
     if (!host_desired_x) {
@@ -304,12 +345,48 @@ int main(int argc, char **argv) {
     printf("biosim-gpu: K1 step complete — agent 0 desired_x=%d (delta=%d)\n",
            (int)host_desired_x[0], (int)(host_desired_x[0] - sim.agents.loc_x[0]));
 
+    /* ── K2: movement resolution ─────────────────────────────────────────── */
+
+    returncode = biosim_gpu_registry_get("k2_movement_resolution", exec_dir, &k2_sources);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    returncode =
+        biosim_gpu_program_build(&runner, k2_sources.sources, k2_sources.count, &k2_program);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    CL_ASSIGN_OR_GOTO_EXIT(k2_kernel, clCreateKernel(k2_program, "k_movement_resolution", &cl_err));
+
+    k2_set_args(k2_kernel, &bufs, &sim);
+
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueNDRangeKernel(runner.queue, k2_kernel, 1U, NULL, &global_size,
+                                                 NULL, 0U, NULL, NULL));
+
+    host_loc_x = malloc((size_t)sim.population * sizeof(int16_t));
+    if (!host_loc_x) {
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
+    }
+
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(runner.queue, bufs.loc_x, CL_TRUE, 0U,
+                                              (size_t)sim.population * sizeof(int16_t), host_loc_x,
+                                              0U, NULL, NULL));
+
+    printf("biosim-gpu: K2 step complete — agent 0 loc_x=%d\n", (int)host_loc_x[0]);
+
 exit:
+    free(host_loc_x);
     free(host_desired_x);
-    k1_buffers_release(&bufs);
-    CL_SAFE_RELEASE(clReleaseKernel, kernel);
-    CL_SAFE_RELEASE(clReleaseProgram, program);
-    biosim_gpu_kernel_sources_free(&sources);
+    kernel_buffers_release(&bufs);
+    CL_SAFE_RELEASE(clReleaseKernel, k1_kernel);
+    CL_SAFE_RELEASE(clReleaseProgram, k1_program);
+    biosim_gpu_kernel_sources_free(&k1_sources);
+    CL_SAFE_RELEASE(clReleaseKernel, k2_kernel);
+    CL_SAFE_RELEASE(clReleaseProgram, k2_program);
+    biosim_gpu_kernel_sources_free(&k2_sources);
     biosim_gpu_runner_free(&runner);
     biosim_sim_free(&sim);
     biosim_params_free(&p);

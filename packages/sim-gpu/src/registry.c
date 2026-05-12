@@ -16,6 +16,7 @@ extern const char biosim_gpu_preamble_io_defs_h[];
 /* ── embedded kernel strings ────────────────────────────────────────────── */
 
 extern const char biosim_gpu_k1_feedforward[];
+extern const char biosim_gpu_k2_movement_resolution[];
 
 /* ── kernel table ───────────────────────────────────────────────────────── */
 
@@ -26,6 +27,7 @@ typedef struct {
 
 static const biosim_kernel_entry_t KERNEL_TABLE[] = {
     {"k1_feedforward", biosim_gpu_k1_feedforward},
+    {"k2_movement_resolution", biosim_gpu_k2_movement_resolution},
 };
 
 #define KERNEL_TABLE_COUNT (sizeof(KERNEL_TABLE) / sizeof(KERNEL_TABLE[0]))
