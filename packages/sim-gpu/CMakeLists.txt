@@ -40,8 +40,14 @@ biosim_embed_opencl_source(sim-gpu-lib
 
 # Embed the K2 kernel source as a fallback string.
 biosim_embed_opencl_source(sim-gpu-lib
-    "${CMAKE_CURRENT_SOURCE_DIR}/kernels/k2_movement_resolution.cl"
-    biosim_gpu_k2_movement_resolution
+    "${CMAKE_CURRENT_SOURCE_DIR}/kernels/k2_kill_marked.cl"
+    biosim_gpu_k2_kill_marked
+)
+
+# Embed the K3 kernel source as a fallback string.
+biosim_embed_opencl_source(sim-gpu-lib
+    "${CMAKE_CURRENT_SOURCE_DIR}/kernels/k3_movement_resolution.cl"
+    biosim_gpu_k3_movement_resolution
 )
 
 # ── biosim-gpu — the OpenCL simulator executable ───────────────────────────

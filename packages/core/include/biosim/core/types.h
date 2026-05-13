@@ -19,8 +19,15 @@ typedef struct {
     int16_t y;
 } biosim_coord_t;
 
-/* Grid cell sentinel values */
+/* Grid cell sentinel values.
+ * In OpenCL kernels the grid buffer is __global uint *; use (uint) casts so
+ * comparisons are type-matched without implicit promotion warnings. */
+#ifdef __OPENCL_VERSION__
+#define BIOSIM_GRID_EMPTY   ((uint)0x0000U)
+#define BIOSIM_GRID_BARRIER ((uint)0xFFFFU)
+#else
 #define BIOSIM_GRID_EMPTY   ((uint16_t)0x0000U)
 #define BIOSIM_GRID_BARRIER ((uint16_t)0xFFFFU)
+#endif
 
 #endif /* BIOSIM_CORE_TYPES_H */

@@ -7,7 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`KILL_FORWARD` refactored to two-phase death** — eliminates a race condition
+  with population-density sensors that read the grid during K1:
+  - K1 no longer clears the grid cell of a killed agent. Instead it sets
+    `kill_marker[target] = 1` (new `uint8_t` SoA buffer in `biosim_agents_t`).
+  - New **K2 `k2_kill_marked.cl`** sweeps `kill_marker` after K1 completes and
+    clears each flagged agent's cell via `atomic_cmpxchg`. This guarantees the
+    grid is a stable read-only snapshot for all K1 work-items.
+  - Former **K2 `k2_movement_resolution.cl`** is renumbered to
+    **K3 `k3_movement_resolution.cl`**; no logic changes.
+  - `biosim_agents_t` gains `uint8_t *kill_marker` (allocated, freed, and
+    zero-initialised alongside the existing per-agent buffers).
+  - `k1_feedforward.cl` receives `kill_marker` as arg 24 (`__global uchar *`);
+    `grid` (arg 22) is now `__global const uint *` (read-only in K1).
+  - Test `test_k1_kill_forward_clears_grid` renamed to
+    `test_k1_kill_forward_marks_kill_marker`; now verifies `kill_marker` is set
+    and that the grid cell is *not* cleared by K1.
+  - New test file `test_k2_kill_marked.c` covering compile+run, cell cleared for
+    marked agent, cell unchanged for unmarked agent.
+
 ### Added
+- **`sim-gpu` K1 `KILL_FORWARD` action** — implemented Group D of `k1_feedforward.cl`:
+  - When `enable_kill` is set and the action accumulator exceeds 0.5, marks
+    the agent directly ahead dead (`alive[cell-1] = 0`) and clears its grid
+    cell (`grid[pos] = BIOSIM_GRID_EMPTY`) so K2 sees a consistent grid.
+  - Both writes are idempotent non-atomic stores; safety is guaranteed because
+    multiple killers writing the same cell write the same values, and K2 has
+    not yet launched.
+  - `alive` kernel argument changed from read-only to read-write.
+  - Two new K1 arguments: `grid` (arg 22, `__global uint *`) and `enable_kill`
+    (arg 23, `int`), matching the existing K2 grid buffer.
+  - `BIOSIM_GRID_EMPTY` / `BIOSIM_GRID_BARRIER` are now guarded in `types.h`
+    with `__OPENCL_VERSION__` so kernel code gets `(uint)` casts matching the
+    `uint32_t` grid buffer, while host code retains `(uint16_t)` casts.
+  - Unit test addition: `test_k1_kill_forward_clears_grid` verifies that every
+    agent newly killed by K1 has its grid cell cleared to `BIOSIM_GRID_EMPTY`.
 - **`sim-gpu` K2 kernel** — `k2_movement_resolution.cl` atomically commits
   per-agent movement decisions (produced by K1) to the GPU grid:
   - Each work-item attempts `atomic_cmpxchg` on its desired cell; losers stay

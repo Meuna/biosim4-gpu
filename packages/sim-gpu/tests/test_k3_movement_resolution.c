@@ -25,7 +25,7 @@ static cl_program g_program;
 static cl_kernel g_kernel;
 static int g_opencl_ok;
 
-/* GPU buffers for K2 inputs/outputs. */
+/* GPU buffers for K3 inputs/outputs. */
 static cl_mem g_buf_alive;
 static cl_mem g_buf_desired_x;
 static cl_mem g_buf_desired_y;
@@ -90,7 +90,7 @@ static void fixture_setup(void) {
 
     biosim_gpu_kernel_sources_t sources;
     memset(&sources, 0, sizeof(sources));
-    if (biosim_gpu_registry_get("k2_movement_resolution", NULL, &sources) != BIOSIM_OK) {
+    if (biosim_gpu_registry_get("k3_movement_resolution", NULL, &sources) != BIOSIM_OK) {
         g_opencl_ok = 0;
         return;
     }
@@ -124,7 +124,7 @@ static void fixture_setup(void) {
         return;
     }
 
-    /* Allocate GPU buffers (content uploaded per-test via setup_and_run_k2). */
+    /* Allocate GPU buffers (content uploaded per-test via run_k3). */
 #define MKRW(var, esz, cnt)                                                                        \
     do {                                                                                           \
         (var) = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE, (size_t)(cnt) * (esz), NULL,   \
@@ -212,10 +212,10 @@ typedef struct {
     const int16_t *desired_y;
     const uint8_t *last_move_dir;
     const uint32_t *grid; /* uint32_t, size_x * size_y */
-} k2_scenario_t;
+} k3_scenario_t;
 
-/* Upload scenario, dispatch K2, read back results.  Returns 1 on success. */
-static int setup_and_run_k2(const k2_scenario_t *s) {
+/* Upload scenario, dispatch K3, read back results.  Returns 1 on success. */
+static int run_k3(const k3_scenario_t *s) {
     cl_command_queue q = g_runner.queue;
     uint32_t pop = g_sim.population;
     size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
@@ -263,8 +263,8 @@ static int setup_and_run_k2(const k2_scenario_t *s) {
 
 /* ── tests ──────────────────────────────────────────────────────────────── */
 
-/* Verify K2 compiles and dispatches without error. */
-void test_k2_compiles_and_runs(void) {
+/* Verify K3 compiles and dispatches without error. */
+void test_k3_compiles_and_runs(void) {
     if (!g_opencl_ok) {
         TEST_IGNORE_MESSAGE("OpenCL not available");
     }
@@ -290,8 +290,8 @@ void test_k2_compiles_and_runs(void) {
     TEST_ASSERT_NOT_NULL(lmd);
     TEST_ASSERT_NOT_NULL(grid);
 
-    k2_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
-    TEST_ASSERT_TRUE_MESSAGE(setup_and_run_k2(&s), "K2 kernel dispatch failed");
+    k3_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
+    TEST_ASSERT_TRUE_MESSAGE(run_k3(&s), "K3 kernel dispatch failed");
 
     free(alive);
     free(loc_x);
@@ -304,9 +304,9 @@ void test_k2_compiles_and_runs(void) {
 
 /* An alive agent whose desired position is an empty adjacent cell must move
  * there.  Agent 0 is at (3,3) and desires (4,3) — an EAST step (direction 0).
- * After K2: loc_x[0]==4, grid[(3)*8+(4)]==1, grid[(3)*8+(3)]==0,
+ * After K3: loc_x[0]==4, grid[(3)*8+(4)]==1, grid[(3)*8+(3)]==0,
  * last_move_dir[0]==0 (EAST). */
-void test_k2_empty_cell_move(void) {
+void test_k3_empty_cell_move(void) {
     if (!g_opencl_ok) {
         TEST_IGNORE_MESSAGE("OpenCL not available");
     }
@@ -327,8 +327,8 @@ void test_k2_empty_cell_move(void) {
 
     (void)pop;
 
-    k2_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
-    TEST_ASSERT_TRUE_MESSAGE(setup_and_run_k2(&s), "K2 kernel dispatch failed");
+    k3_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
+    TEST_ASSERT_TRUE_MESSAGE(run_k3(&s), "K3 kernel dispatch failed");
 
     (void)grid_cells;
 
@@ -343,7 +343,7 @@ void test_k2_empty_cell_move(void) {
 
 /* An agent whose desired position equals its current position must not move and
  * must leave last_move_dir unchanged. */
-void test_k2_no_move_when_at_desired(void) {
+void test_k3_no_move_when_at_desired(void) {
     if (!g_opencl_ok) {
         TEST_IGNORE_MESSAGE("OpenCL not available");
     }
@@ -360,8 +360,8 @@ void test_k2_no_move_when_at_desired(void) {
     memset(grid, 0, sizeof(grid));
     grid[(size_t)(3 * sx + 3)] = 1U;
 
-    k2_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
-    TEST_ASSERT_TRUE_MESSAGE(setup_and_run_k2(&s), "K2 kernel dispatch failed");
+    k3_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
+    TEST_ASSERT_TRUE_MESSAGE(run_k3(&s), "K3 kernel dispatch failed");
 
     TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_x[0], "loc_x should be unchanged");
     TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_y[0], "loc_y should be unchanged");
@@ -373,8 +373,8 @@ void test_k2_no_move_when_at_desired(void) {
 
 /* An agent that desires a cell already occupied by another agent must stay.
  * Agent 0 is at (3,3) desiring (4,3); agent 1 is at (4,3) not moving.
- * After K2: agent 0 is still at (3,3); (4,3) still contains agent 1. */
-void test_k2_occupied_cell_blocked(void) {
+ * After K3: agent 0 is still at (3,3); (4,3) still contains agent 1. */
+void test_k3_occupied_cell_blocked(void) {
     if (!g_opencl_ok) {
         TEST_IGNORE_MESSAGE("OpenCL not available");
     }
@@ -392,8 +392,8 @@ void test_k2_occupied_cell_blocked(void) {
     grid[(size_t)(3 * sx + 3)] = 1U; /* agent 0 */
     grid[(size_t)(3 * sx + 4)] = 2U; /* agent 1 */
 
-    k2_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
-    TEST_ASSERT_TRUE_MESSAGE(setup_and_run_k2(&s), "K2 kernel dispatch failed");
+    k3_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
+    TEST_ASSERT_TRUE_MESSAGE(run_k3(&s), "K3 kernel dispatch failed");
 
     TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_x[0], "agent 0 should be blocked");
     TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_y[0], "agent 0 should be blocked");
@@ -408,10 +408,10 @@ void test_k2_occupied_cell_blocked(void) {
 int main(void) {
     UNITY_BEGIN();
     fixture_setup();
-    RUN_TEST(test_k2_compiles_and_runs);
-    RUN_TEST(test_k2_empty_cell_move);
-    RUN_TEST(test_k2_no_move_when_at_desired);
-    RUN_TEST(test_k2_occupied_cell_blocked);
+    RUN_TEST(test_k3_compiles_and_runs);
+    RUN_TEST(test_k3_empty_cell_move);
+    RUN_TEST(test_k3_no_move_when_at_desired);
+    RUN_TEST(test_k3_occupied_cell_blocked);
     fixture_teardown();
     return UNITY_END();
 }

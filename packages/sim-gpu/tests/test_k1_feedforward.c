@@ -1,4 +1,3 @@
-#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -60,6 +59,8 @@ static cl_mem g_buf_signal;
 static cl_mem g_buf_rng_state;
 static cl_mem g_buf_desired_x;
 static cl_mem g_buf_desired_y;
+static cl_mem g_buf_grid;
+static cl_mem g_buf_kill_marker;
 
 static void make_test_sim(biosim_sim_t *sim) {
     memset(sim, 0, sizeof(*sim));
@@ -147,12 +148,13 @@ static void fixture_setup(void) {
         return;
     }
 
+    size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
+
     /* Save initial mutable per-agent state. */
     memcpy(g_init_rng_state, a->rng_state, (size_t)pop * sizeof(uint64_t));
     memcpy(g_init_responsiveness, a->responsiveness, (size_t)pop * sizeof(float));
     memcpy(g_init_osc_period, a->osc_period, (size_t)pop * sizeof(uint16_t));
     memcpy(g_init_long_probe_dist, a->long_probe_dist, (size_t)pop * sizeof(uint8_t));
-
     const biosim_nnet_t *n = &g_sim.nnet;
     const uint16_t mc = n->max_conn;
     const uint8_t mn = n->max_neurons;
@@ -187,7 +189,7 @@ static void fixture_setup(void) {
         }                                                                                          \
     } while (0)
 
-    MKRO(g_buf_alive, a->alive, sizeof(uint8_t), pop);
+    MKRW(g_buf_alive, a->alive, sizeof(uint8_t), pop);
     MKRO(g_buf_loc_x, a->loc_x, sizeof(int16_t), pop);
     MKRO(g_buf_loc_y, a->loc_y, sizeof(int16_t), pop);
     MKRW(g_buf_osc_period, a->osc_period, sizeof(uint16_t), pop);
@@ -204,6 +206,27 @@ static void fixture_setup(void) {
     MKRW(g_buf_rng_state, a->rng_state, sizeof(uint64_t), pop);
     MKWO(g_buf_desired_x, sizeof(int16_t), pop);
     MKWO(g_buf_desired_y, sizeof(int16_t), pop);
+    {
+        uint32_t *grid32 = malloc(grid_cells * sizeof(uint32_t));
+        if (!grid32) {
+            g_opencl_ok = 0;
+            return;
+        }
+        for (size_t gi = 0U; gi < grid_cells; gi++) {
+            grid32[gi] = (uint32_t)g_sim.grid.cells[gi];
+        }
+        MKRO(g_buf_grid, grid32, sizeof(uint32_t), grid_cells);
+        free(grid32);
+    }
+    {
+        uint8_t *zero_km = calloc(pop, sizeof(uint8_t));
+        if (!zero_km) {
+            g_opencl_ok = 0;
+            return;
+        }
+        MKRW(g_buf_kill_marker, zero_km, sizeof(uint8_t), pop);
+        free(zero_km);
+    }
 
 #undef MKRO
 #undef MKRW
@@ -238,6 +261,10 @@ static void fixture_setup(void) {
     (void)clSetKernelArg(g_kernel, 19U, sizeof(cl_mem), (const void *)&g_buf_rng_state);
     (void)clSetKernelArg(g_kernel, 20U, sizeof(cl_mem), (const void *)&g_buf_desired_x);
     (void)clSetKernelArg(g_kernel, 21U, sizeof(cl_mem), (const void *)&g_buf_desired_y);
+    (void)clSetKernelArg(g_kernel, 22U, sizeof(cl_mem), (const void *)&g_buf_grid);
+    cl_int enable_kill = 0;
+    (void)clSetKernelArg(g_kernel, 23U, sizeof(cl_int), &enable_kill);
+    (void)clSetKernelArg(g_kernel, 24U, sizeof(cl_mem), (const void *)&g_buf_kill_marker);
 }
 
 static void fixture_teardown(void) {
@@ -261,6 +288,8 @@ static void fixture_teardown(void) {
             (v) = NULL;                                                                            \
         }                                                                                          \
     } while (0)
+    REL(g_buf_kill_marker);
+    REL(g_buf_grid);
     REL(g_buf_desired_y);
     REL(g_buf_desired_x);
     REL(g_buf_rng_state);
@@ -318,7 +347,6 @@ static int run_k1(void) {
                              g_init_long_probe_dist, 0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
-
     /* neuron_output starts at 0 from biosim_sim_create (calloc). */
     size_t neuron_bytes = (size_t)n->max_neurons * (size_t)pop * sizeof(float);
     if (clEnqueueWriteBuffer(q, g_buf_neuron_output, CL_FALSE, 0U, neuron_bytes, n->neuron_output,

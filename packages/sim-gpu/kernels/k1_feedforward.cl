@@ -14,7 +14,7 @@
  *                     SET_LONGPROBE_DIST (uses built-in tanh, pow)
  *   Group B (3-14)  — movement accumulators
  *   EMIT_SIGNAL0    — atomic_add on signal buffer
- *   KILL_FORWARD    — no-op stub (requires grid buffer, deferred to K2)
+ *   KILL_FORWARD    — marks forward agent dead and sets kill_marker (enable_kill gate)
  */
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
@@ -106,7 +106,7 @@ static float eval_sensor(int sensor_id, uint idx, short x, short y, uchar last_d
 /* ── K1 kernel ──────────────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-__kernel void k_feedforward(__global const uchar *alive, __global const short *loc_x,
+__kernel void k_feedforward(__global uchar *alive, __global const short *loc_x,
                             __global const short *loc_y, __global ushort *osc_period,
                             __global const uchar *last_move_dir, __global float *responsiveness,
                             __global uchar *long_probe_dist, __global const ushort *conn_packed,
@@ -115,7 +115,8 @@ __kernel void k_feedforward(__global const uchar *alive, __global const short *l
                             __global const uchar *neuron_count, __global uint *signal, int size_x,
                             int size_y, uint step, uint steps_per_gen, uint pop,
                             __global ulong *rng_state, __global short *desired_x,
-                            __global short *desired_y) {
+                            __global short *desired_y, __global const uint *grid, int enable_kill,
+                            __global uchar *kill_marker) {
     uint idx = get_global_id(0);
 
     if (!alive[idx]) {
@@ -291,7 +292,19 @@ __kernel void k_feedforward(__global const uchar *alive, __global const short *l
         }
     }
 
-    /* Group D: KILL_FORWARD — stub (requires grid, deferred to K2) */
+    /* Group D: KILL_FORWARD */
+    if (enable_kill && aval[BIOSIM_ACTION_KILL_FORWARD] >= 0.5F) {
+        int dir = (int)(ldir & 7u);
+        int fx = (int)x + BIOSIM_DIR_DX[dir];
+        int fy = (int)y + BIOSIM_DIR_DY[dir];
+        if (fx >= 0 && fx < size_x && fy >= 0 && fy < size_y) {
+            uint cell = grid[(int)fy * size_x + fx];
+            if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                alive[cell - 1u] = 0u;
+                kill_marker[cell - 1u] = 1u;
+            }
+        }
+    }
 
     /* ── Phase 4: finalize movement ──────────────────────────────────────── */
 

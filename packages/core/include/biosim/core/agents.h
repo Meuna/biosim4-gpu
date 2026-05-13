@@ -30,6 +30,7 @@ typedef struct {
     float *responsiveness;
     uint8_t *long_probe_dist;
     uint8_t *last_move_dir;
+    uint8_t *kill_marker;
     uint32_t *challenge_bits;
     uint64_t *rng_state;
     uint64_t *genome_fingerprint; /* zeroed until genome module is implemented */

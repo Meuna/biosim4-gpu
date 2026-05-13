@@ -31,6 +31,7 @@ biosim_status_t biosim_agents_create(uint32_t population, biosim_agents_t *out) 
     ALLOC(responsiveness, float)
     ALLOC(long_probe_dist, uint8_t)
     ALLOC(last_move_dir, uint8_t)
+    ALLOC(kill_marker, uint8_t)
     ALLOC(challenge_bits, uint32_t)
     ALLOC(rng_state, uint64_t)
     ALLOC(genome_fingerprint, uint64_t)
@@ -57,6 +58,7 @@ void biosim_agents_free(biosim_agents_t *agents) {
     free(agents->responsiveness);
     free(agents->long_probe_dist);
     free(agents->last_move_dir);
+    free(agents->kill_marker);
     free(agents->challenge_bits);
     free(agents->rng_state);
     free(agents->genome_fingerprint);
@@ -83,6 +85,7 @@ void biosim_agents_init_slot(biosim_agents_t *agents, uint32_t idx, biosim_coord
     agents->responsiveness[idx] = 0.5F;
     agents->long_probe_dist[idx] = long_probe_dist;
     agents->last_move_dir[idx] = 0;
+    agents->kill_marker[idx] = 0;
     agents->challenge_bits[idx] = 0;
     agents->rng_state[idx] = biosim_rng_seed(idx, rng_seed);
     agents->genome_fingerprint[idx] = 0;

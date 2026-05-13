@@ -63,6 +63,7 @@ Let `N = population` (dead agents keep their slot; slots reuse at the next gener
 | `responsiveness[N]` | `float` | Action gating |
 | `long_probe_dist[N]` | `uint8_t` | Longprobe sensor range |
 | `last_move_dir[N]` | `uint8_t` | Direction sensors |
+| `kill_marker[N]` | `uint8_t` | Transient: K1 KILL_FORWARD sets; K2 clears grid cell |
 | `challenge_bits[N]` | `uint32_t` | Per-challenge accumulator |
 | `rng_state[N]` | `uint64_t` | Per-agent xorshift64 state |
 | `genome_fingerprint[N]` | `uint64_t` | Precomputed; replaces `GENETIC_SIM_FWD` |
@@ -142,20 +143,20 @@ K1: feedforward_and_actions
     Reads:  alive, loc_*, osc_period, last_move_dir, responsiveness,
             long_probe_dist, genome_fingerprint, conn_packed, conn_weight,
             conn_length, neuron_output, neuron_driven, neuron_count,
-            grid (image2d_t), signal (image2d_t), rng_state
+            grid (read-only), signal (image2d_t), rng_state
     Writes: neuron_output (new), responsiveness, osc_period, long_probe_dist,
             desired_x, desired_y, alive (KILL_FORWARD targets — idempotent),
-            signal (atomic_add for EMIT_SIGNAL), rng_state
+            kill_marker (KILL_FORWARD targets), signal (atomic_add), rng_state
     Size:   N work-items
 
-K2: movement_resolution
+K2: kill_marked
+    Reads:  kill_marker, loc_*
+    Writes: grid (atomic_cmpxchg — clears grid cells for kill-marked agents)
+    Size:   N work-items
+
+K3: movement_resolution
     Reads:  alive, loc_*, desired_x, desired_y
     Writes: loc_*, last_move_dir, grid (atomic_cmpxchg)
-    Size:   N work-items
-
-K3: post_death_grid_cleanup
-    Reads:  alive, loc_*, grid
-    Writes: grid (atomic_cmpxchg — clears dead agents' former cells)
     Size:   N work-items
 
 K4: signal_fade
@@ -183,9 +184,13 @@ which agent wins a contested cell depends on hardware scheduling.
 
 ### Death conflicts (`KILL_FORWARD`)
 
-Writing `alive[target] = 0` is idempotent: multiple killers of the same target
-produce the correct result without atomics. A cleanup pass in K3 then clears
-dead agents' grid cells.
+Writing `alive[target] = 0` and `kill_marker[target] = 1` is idempotent:
+multiple killers of the same target produce the correct result without atomics.
+K1 only stamps the marker; it does not touch the grid. K2 (`kill_marked`) then
+sweeps `kill_marker` and clears each flagged agent's grid cell via
+`atomic_cmpxchg`. This two-phase approach ensures the grid is a stable
+read-only snapshot during K1, which is required by population-density sensors
+that count occupied cells in the neighbourhood.
 
 ## Generation boundary (host-side)
 
