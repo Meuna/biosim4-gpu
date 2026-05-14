@@ -12,3 +12,8 @@ add_executable(sim-gpu-k3-movement-tests test_k3_movement_resolution.c)
 target_link_libraries(sim-gpu-k3-movement-tests PRIVATE sim-gpu-lib core unity OpenCL::OpenCL)
 target_compile_features(sim-gpu-k3-movement-tests PRIVATE c_std_11)
 add_test(NAME sim-gpu-k3-movement-tests COMMAND sim-gpu-k3-movement-tests)
+
+add_executable(sim-gpu-k4-signal-fade-tests test_k4_signal_fade.c)
+target_link_libraries(sim-gpu-k4-signal-fade-tests PRIVATE sim-gpu-lib core unity OpenCL::OpenCL)
+target_compile_features(sim-gpu-k4-signal-fade-tests PRIVATE c_std_11)
+add_test(NAME sim-gpu-k4-signal-fade-tests COMMAND sim-gpu-k4-signal-fade-tests)

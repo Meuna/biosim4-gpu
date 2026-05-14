@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **K4 `signal_fade` kernel** — decays the signal layer by 1 per step
+  (`signal[c] = max(0, signal[c] - 1)`); dispatched over `size_x × size_y`
+  work-items after K3. Registered in the kernel registry and wired into the
+  `sim-gpu` main dispatch loop. Unit-tested with POCL.
+
 ### Changed
 - **Grid cell type widened from `uint16_t` to `uint32_t`; coordinates from `int16_t` to `int32_t`** —
   `OpenCL`'s `atomic_cmpxchg` requires 32-bit operands; matching the host types eliminates

@@ -7,12 +7,12 @@
 | `core` | Complete | Simulation logic, genome, nnet, agents, grid, challenges, snapshot |
 | `params` | Complete | CLI/TOML/parameter management |
 | `sim-stepper` | Complete | Single-threaded CPU reference simulator |
-| `sim-gpu` | In progress | K1 (`k_feedforward`) complete: sensor evaluation (Group A + OSC1 + SIGNAL0), neural network feedforward, action application, movement finalization, unit tests passing with POCL. K2/K3 (grid conflict resolution, generation boundary) pending. |
+| `sim-gpu` | In progress | K1–K4 complete: feedforward (sensors, nnet, actions), kill-marked grid cleanup, movement resolution, signal fade. K5 (`challenge_step_eval`) pending. |
 | `viz` | Not started | Depends on stepper trace format (not yet defined) |
 
 ## Missing or incomplete
 
-- **GPU pipeline**: K1 (`k_feedforward`) complete — full per-step simulation pipeline (sensors, feedforward, actions, movement finalization) for all agents in parallel. K2/K3 (grid conflict resolution, generation boundary) still pending. Five-kernel design documented in [`docs/gpu-design.md`](docs/gpu-design.md).
+- **GPU pipeline**: K1–K4 complete — feedforward (sensors, nnet, actions, movement finalization), kill-marked grid cleanup, movement resolution, and signal fade. K5 (`challenge_eval`) still pending. Five-kernel design documented in [`docs/gpu-design.md`](docs/gpu-design.md).
 - **Visualization**: `viz` package not started; trace format not yet defined.
 - **CI/CD**: No `.github/` workflows.
 - **Altruism challenge**: Placeholder — evaluator always returns `{false, 0.0f}`. Requires genome similarity computation not yet designed for GPU.

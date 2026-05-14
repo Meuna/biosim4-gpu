@@ -1,6 +1,6 @@
 # GPU Data Model Design
 
-**Status:** K1 (`k_feedforward`) implemented. K2/K3 designed, not yet
+**Status:** K1–K4 implemented. K5 (`challenge_step_eval`) designed, not yet
 implemented. See [`STATUS.md`](../STATUS.md).
 
 This document describes the planned GPU/OpenCL architecture for `sim-gpu`. It
@@ -165,7 +165,7 @@ K4: signal_fade
     Writes: signal (signal[c] = max(0, signal[c] - FADE_AMOUNT))
     Size:   SIZE_X * SIZE_Y work-items
 
-K5: challenge_eval
+K5: challenge_step_eval
     Reads:  alive, loc_*, birth_*, challenge_bits
     Writes: challenge_bits, alive (some challenges kill early)
     Size:   N work-items

@@ -50,6 +50,12 @@ biosim_embed_opencl_source(sim-gpu-lib
     biosim_gpu_k3_movement_resolution
 )
 
+# Embed the K4 kernel source as a fallback string.
+biosim_embed_opencl_source(sim-gpu-lib
+    "${CMAKE_CURRENT_SOURCE_DIR}/kernels/k4_signal_fade.cl"
+    biosim_gpu_k4_signal_fade
+)
+
 # ── biosim-gpu — the OpenCL simulator executable ───────────────────────────
 
 add_executable(biosim-gpu src/main.c)

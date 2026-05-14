@@ -239,6 +239,10 @@ static void k3_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
     (void)clSetKernelArg(kernel, 9U, sizeof(cl_uint), (const void *)&pop);
 }
 
+static void k4_set_args(cl_kernel kernel, const kernel_buffers_t *b) {
+    (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&b->signal);
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int main(int argc, char **argv) {
     /* alloc start here, free on exit label */
@@ -248,6 +252,7 @@ int main(int argc, char **argv) {
     biosim_gpu_kernel_sources_t k1_sources;
     biosim_gpu_kernel_sources_t k2_sources;
     biosim_gpu_kernel_sources_t k3_sources;
+    biosim_gpu_kernel_sources_t k4_sources;
     kernel_buffers_t bufs;
     cl_program k1_program = NULL;
     cl_kernel k1_kernel = NULL;
@@ -255,6 +260,8 @@ int main(int argc, char **argv) {
     cl_kernel k2_kernel = NULL;
     cl_program k3_program = NULL;
     cl_kernel k3_kernel = NULL;
+    cl_program k4_program = NULL;
+    cl_kernel k4_kernel = NULL;
     int32_t *host_desired_x = NULL;
     int32_t *host_loc_x = NULL;
     biosim_status_t returncode = BIOSIM_OK;
@@ -264,6 +271,7 @@ int main(int argc, char **argv) {
     memset(&k1_sources, 0, sizeof(k1_sources));
     memset(&k2_sources, 0, sizeof(k2_sources));
     memset(&k3_sources, 0, sizeof(k3_sources));
+    memset(&k4_sources, 0, sizeof(k4_sources));
     memset(&bufs, 0, sizeof(bufs));
     biosim_log_init(&biosim_log_default_ctx);
 
@@ -409,6 +417,29 @@ int main(int argc, char **argv) {
 
     printf("biosim-gpu: K3 step complete — agent 0 loc_x=%d\n", (int)host_loc_x[0]);
 
+    /* ── K4: signal_fade ─────────────────────────────────────────────────── */
+
+    returncode = biosim_gpu_registry_get("k4_signal_fade", exec_dir, &k4_sources);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    returncode =
+        biosim_gpu_program_build(&runner, k4_sources.sources, k4_sources.count, &k4_program);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    CL_ASSIGN_OR_GOTO_EXIT(k4_kernel, clCreateKernel(k4_program, "k_signal_fade", &cl_err));
+
+    k4_set_args(k4_kernel, &bufs);
+
+    size_t k4_global_size = (size_t)sim.size_x * (size_t)sim.size_y;
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueNDRangeKernel(runner.queue, k4_kernel, 1U, NULL, &k4_global_size,
+                                                 NULL, 0U, NULL, NULL));
+
+    printf("biosim-gpu: K4 step complete\n");
+
 exit:
     free(host_loc_x);
     free(host_desired_x);
@@ -422,6 +453,9 @@ exit:
     CL_SAFE_RELEASE(clReleaseKernel, k3_kernel);
     CL_SAFE_RELEASE(clReleaseProgram, k3_program);
     biosim_gpu_kernel_sources_free(&k3_sources);
+    CL_SAFE_RELEASE(clReleaseKernel, k4_kernel);
+    CL_SAFE_RELEASE(clReleaseProgram, k4_program);
+    biosim_gpu_kernel_sources_free(&k4_sources);
     biosim_gpu_runner_free(&runner);
     biosim_sim_free(&sim);
     biosim_params_free(&p);
