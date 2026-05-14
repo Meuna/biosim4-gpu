@@ -138,7 +138,7 @@ cmake --build --preset debug
 
 ```sh
 # Single-threaded CPU reference simulator
-./build/debug/packages/sim-stepper/biosim-stepper
+./build/debug/packages/sim-ref/biosim-ref
 
 # OpenCL GPU simulator (requires an OpenCL runtime — see prerequisites)
 ./build/debug/packages/sim-gpu/biosim-gpu

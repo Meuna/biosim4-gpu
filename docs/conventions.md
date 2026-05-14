@@ -3,7 +3,7 @@
 ## Naming
 
 - **Files and directories**: `snake_case.c`, `snake_case.h`. Package
-  directory names may use hyphens (`sim-gpu`, `sim-stepper`) — they
+  directory names may use hyphens (`sim-gpu`, `sim-ref`) — they
   are not C identifiers.
 - **Public API symbols**: `biosim_` prefix — e.g. `biosim_genome_mutate`,
   not `mutate_genome`.

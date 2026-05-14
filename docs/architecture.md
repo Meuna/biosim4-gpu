@@ -7,7 +7,7 @@ Four packages are implemented, with a strict acyclic dependency graph:
 ```
 core (static lib — libc only)
   └── cfgparse (static lib — argtable3, tomlc17 PRIVATE)
-      ├── sim-stepper (executable — single-threaded CPU reference)
+      ├── sim-ref (executable — single-threaded CPU reference)
       └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
 ```
 
@@ -127,9 +127,9 @@ Each layer overrides the previous.
 See [`docs/formats.md`](formats.md) for the TOML layout.  
 See [`docs/usage.md`](usage.md) for the full parameter reference.
 
-## `sim-stepper`
+## `sim-ref`
 
-**Location:** `packages/sim-stepper/`  
+**Location:** `packages/sim-ref/`  
 **Type:** Executable. Depends on `core` and `cfgparse`.
 
 A thin orchestration shell. `main.c` parses parameters, populates
@@ -144,7 +144,7 @@ first-come-first-served by index.
 ### Main loop
 
 ```c
-// packages/sim-stepper/src/main.c — main loop (simplified)
+// packages/sim-ref/src/main.c — main loop (simplified)
 biosim_params_parse(&p, progname, version, argc, argv);
 biosim_barrier_params_load(config_path, &barriers, &n_barriers);
 biosim_challenge_spec_from_params(&p, &challenge);
@@ -267,7 +267,7 @@ drives the K1→K5 kernel sequence each step.
 | `biosim_gpu_pipeline_sync_from_host(p, sim)` | Re-upload all mutable buffers after `biosim_sim_next_generation` |
 | `biosim_gpu_pipeline_free(p)` | Release all GPU resources |
 
-The main loop in `biosim-gpu` is a direct parallel of `sim-stepper`'s loop:
+The main loop in `biosim-gpu` is a direct parallel of `sim-ref`'s loop:
 ```c
 // inner loop — no host/device sync
 while (sim.step < sim.steps_per_gen) {

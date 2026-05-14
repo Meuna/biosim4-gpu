@@ -72,7 +72,7 @@ if(BIOSIM_BUILD_GPU)
 endif()
 
 # Single-threaded CPU reference simulator executable
-add_subdirectory(packages/sim-stepper) # depends on core + cfgparse
+add_subdirectory(packages/sim-ref) # depends on core + cfgparse
 
 # WebAssembly PoC: hardcoded sim, no params, generates standalone HTML
 add_subdirectory(packages/wasm-sim-stepper)

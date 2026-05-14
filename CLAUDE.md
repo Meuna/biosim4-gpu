@@ -7,7 +7,7 @@ code in this repository.
 
 GPU port of [biosim4](https://github.com/davidrmiller/biosim4) (by David R.
 Miller) using OpenCL. Four packages are implemented: `core`, `cfgparse`,
-`sim-stepper`, and `sim-gpu`.
+`sim-ref`, and `sim-gpu`.
 
 ## Working with this repository
 
@@ -97,7 +97,7 @@ Four packages, strict acyclic dependency graph:
 ```
 core (static lib, libc only)
   └── cfgparse (static lib — CLI/TOML parsing)
-      ├── sim-stepper (executable — single-threaded CPU reference)
+      ├── sim-ref (executable — single-threaded CPU reference)
       └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
 ```
 
@@ -113,8 +113,8 @@ fields, allocate heap resources, and spawn the initial population.
 No shared defaults; no extension mechanism. The parameter data model lives in
 `core/params.h`.
 
-**`sim-stepper`** — orchestration loop only. All simulation logic lives in
-`core`; the stepper adds the parameter table and the generation/step loop.
+**`sim-ref`** — deterministic reference scheduler. All simulation logic lives in
+`core`; `sim-ref` adds the parameter table and the generation/step loop.
 
 **`sim-gpu`** — OpenCL GPU simulator. `sim-gpu-lib` provides the kernel registry
 (two-level lookup: filesystem override → embedded fallback) and the OpenCL runner

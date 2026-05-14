@@ -5,7 +5,7 @@ See [`STATUS.md`](../STATUS.md).
 
 This document describes the planned GPU/OpenCL architecture for `sim-gpu`. It
 is the reference for implementing that package. The single-threaded reference
-implementation in `sim-stepper` follows the same data model principles where
+implementation in `sim-ref` follows the same data model principles where
 they apply to CPU code.
 
 Companion document: [`docs/legacy-data-model.md`](legacy-data-model.md) —

@@ -6,7 +6,7 @@
 |---------|--------|-------|
 | `core` | Complete | Simulation logic, genome, nnet, agents, grid, challenges, snapshot |
 | `params` | Complete | CLI/TOML/parameter management |
-| `sim-stepper` | Complete | Single-threaded CPU reference simulator |
+| `sim-ref` | Complete | Single-threaded CPU reference simulator |
 | `sim-gpu` | In progress | K1–K5 complete: feedforward (sensors, nnet, actions), kill-marked grid cleanup, movement resolution, signal fade, challenge eval. Generation loop pending. |
 | `viz` | Not started | Depends on stepper trace format (not yet defined) |
 

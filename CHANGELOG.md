@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **`sim-stepper` renamed to `sim-ref`** — the package is now named `sim-ref`
+  and the binary `biosim-ref`, reflecting its permanent role as the
+  deterministic single-threaded reference scheduler for `core`, not a step
+  engine for a visualiser.
+
+
 - **Portable header renames** — established `_defs.h` as the uniform suffix
   for device-portable (OpenCL-safe) type/enum/constant-only headers:
   `types.h` → `grid_defs.h`, `challenge_kinds.h` → `challenge_defs.h`.
@@ -32,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   full generation-boundary cycle).
 - **Full generation+step loop in `biosim-gpu`** — `main.c` now drives the
   complete outer generation / inner step loop identical in structure to
-  `sim-stepper`, replacing the single-step smoke test.
+  `sim-ref`, replacing the single-step smoke test.
 - **`challenge_kinds.h`** — split `biosim_challenge_kind_t` enum out of
   `challenge_spec.h` into a new host+device-compatible header with no `<stdbool.h>`
   dependency; prepended to all OpenCL kernel builds as a 5th preamble source
@@ -54,8 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `biosim_challenge_spec_t *`, `biosim_barrier_spec_t *`, and `n_barriers`; reads all
   13 configuration fields internally and zeros the struct with `memset` before any
   allocation. Callers no longer pre-populate struct fields; the manual assignment
-  boilerplate is removed from `sim-stepper/main.c`, `sim-gpu/main.c`, and
-  `wasm-sim-stepper/main.c`. All GPU test files gain a local `make_test_sim` helper
+  boilerplate is removed from `sim-ref/main.c`, `sim-gpu/main.c`, and
+  `wasm-sim-ref/main.c`. All GPU test files gain a local `make_test_sim` helper
   that builds a `biosim_params_t` inline; core test files use the new
   `sim_test_create` / `sim_test_make_light` / `sim_test_make_medium` helpers from
   `sim_test_utils`.
@@ -188,13 +194,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`docs/usage.md`**: added `biosim-gpu` section covering prerequisites, CLI usage,
   kernel filesystem override, and OpenCL parameter table.
 
-- **`wasm-sim-stepper` PoC**: new package that compiles the core simulation to
+- **`wasm-sim-ref` PoC**: new package that compiles the core simulation to
   WebAssembly via Emscripten. Hardcoded defaults (population 3000, 128×128 grid,
   x\_band challenge). Build with `cmake --preset wasm && cmake --build --preset wasm`;
-  open `build/wasm/packages/wasm-sim-stepper/biosim-wasm-stepper.html` in a browser
+  open `build/wasm/packages/wasm-sim-ref/biosim-wasm-stepper.html` in a browser
   to see census data logged each generation. `BIOSIM_BUILD_PARAMS` CMake option added
-  to gate the params/sim-stepper packages (default ON).
-- **Signal handling in `sim-stepper`**: `SIGINT` and `SIGTERM` (plus `SIGBREAK`
+  to gate the params/sim-ref packages (default ON).
+- **Signal handling in `sim-ref`**: `SIGINT` and `SIGTERM` (plus `SIGBREAK`
   on Windows) now trigger a clean shutdown — the generation loop exits after the
   current generation, `biosim_sim_free` finalizes any open snapshot session, and
   the process exits 0.
@@ -242,9 +248,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `PARAM_COUNT` param type added to the params library: a counted CLI flag
     (`arg_litn`) whose repetition count is stored as `int`; readable via
     `biosim_params_get_int`. Used for `-v/-vv` verbosity.
-  - `--verbose/-v` flag in `biosim-stepper`: `-v` → INFO threshold,
+  - `--verbose/-v` flag in `biosim-ref`: `-v` → INFO threshold,
     `-vv` → DEBUG threshold. Default is WARN.
-  - All `fprintf(stderr, ...)` calls in `snapshot.c` and `sim-stepper/main.c`
+  - All `fprintf(stderr, ...)` calls in `snapshot.c` and `sim-ref/main.c`
     migrated to `BIOSIM_ERRORF`/`BIOSIM_WARNF`.
 - **Generation snapshot format** (`core/snapshot`): BSM4 binary file format
   (little-endian, 32-byte header + sequential generation records) for
@@ -268,7 +274,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `biosim_sim_next_generation` now writes the snapshot session (when active),
   resets `step`/`kills`, and increments `gen` — callers no longer need to manage
   these counters or the snapshot write.
-- **Snapshot CLI flags** (`sim-stepper`): `--snapshot-in PATH` restores from
+- **Snapshot CLI flags** (`sim-ref`): `--snapshot-in PATH` restores from
   the last generation record in a file; `--snapshot-out PATH` writes survivor
   snapshots (errors if the file already exists); `--snapshot-interval N` writes
   every N generations (default 0 = final generation only).
@@ -279,7 +285,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   scores are unavailable (uniform parent selection applied instead).
 
 ### Added
-- **Sexual reproduction** (`core/generation.c`, `sim-stepper`): two new boolean
+- **Sexual reproduction** (`core/generation.c`, `sim-ref`): two new boolean
   parameters gate reproduction behaviour:
   - `[genome] sexual-reproduction` (default `false`): when true, each offspring
     genome is produced by single-point crossover of two parent genomes instead of
@@ -305,7 +311,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   survival rates.
 
 ### Added
-- **Multi-generation loop** (`sim-stepper`): outer generation loop driven by the new
+- **Multi-generation loop** (`sim-ref`): outer generation loop driven by the new
   `max-generations` parameter (default 1000). Each generation runs the full step
   loop, then calls `biosim_context_advance_gen` to evaluate the challenge, reproduce
   survivors (asexual: random-parent copy + point mutation), recompile all neural
@@ -320,7 +326,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   challenge and will reproduce), `kills` (agents killed by `KILL_FORWARD` during
   the generation, 0 when `enable-kill` is false), mean/std-dev genome length
   (variability), phenotype diversity (% unique compiled-nnet fingerprints among
-  survivors), and mean challenge score. `sim-stepper/main.c` prints aligned
+  survivors), and mean challenge score. `sim-ref/main.c` prints aligned
   fixed-width columns; each generation fits on one line.
 - **`biosim_context_t` kill tracking** (`core/context.h`): `enable_kill` (bool,
   set by simulator at creation) and `kills` (uint32_t, reset to 0 each generation
@@ -356,7 +362,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   core algorithms need at runtime. Populated from `biosim_params_t` by the
   simulator before the simulation loop; replaces direct param lookups inside
   `core`.
-- **CLI/TOML dual parameter stack** (`sim-stepper`): three-pass resolution —
+- **CLI/TOML dual parameter stack** (`sim-ref`): three-pass resolution —
   defaults → TOML file → CLI flags.
 - **Genome module** (`core/genome.h` + `core/genome.c`): transposed SoA genome
   buffers (`conn[gene_slot * N + agent]`, `wgt[gene_slot * N + agent]`,
@@ -389,7 +395,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`core` package is now the single-thread reference implementation**
   (`core/step.h`, `core/step.c`, `core/gen.h`, `core/gen.c`): step logic
   (`step_agent`) and generation logic (`biosim_context_advance_gen`,
-  `biosim_gen_stats_t`) moved from `sim-stepper` into `core`. The stepper is
+  `biosim_gen_stats_t`) moved from `sim-ref` into `core`. The stepper is
   now a thin orchestration shell — `main()` fills `biosim_context_t` and
   drives a triple-nested `for` loop with no simulation logic of its own.
 - **`biosim_context_t` is now the complete simulation state**
@@ -399,7 +405,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   added. `biosim_context_create` now takes only `(sim, barriers, n_barriers)`
   — the caller pre-populates the configuration fields, then `create` allocates
   all heap resources and spawns the initial population.
-- **`biosim_stepper_t` removed** (`sim-stepper/step.h`): superseded by the
+- **`biosim_stepper_t` removed** (`sim-ref/step.h`): superseded by the
   expanded `biosim_context_t`. All stepper-specific fields (`step`, `gen`,
   `mutation_rate`, `gen_rng`) now live directly on the context.
 - **`biosim_sense_ctx_t` and `biosim_act_ctx_t` removed** (`core/io_catalogue.h`):

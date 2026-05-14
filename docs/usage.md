@@ -1,16 +1,16 @@
 # Usage
 
-## `biosim-stepper` — CPU reference simulator
+## `biosim-ref` — CPU reference simulator
 
 ```sh
-biosim-stepper [--config <path>] [OPTIONS]
+biosim-ref [--config <path>] [OPTIONS]
 ```
 
 With no arguments, the simulator runs with compiled-in defaults.
 
 ```sh
-biosim-stepper --config my_run.toml
-biosim-stepper --config my_run.toml --pop 5000 --max-gen 500
+biosim-ref --config my_run.toml
+biosim-ref --config my_run.toml --pop 5000 --max-gen 500
 ```
 
 ## `biosim-gpu` — OpenCL GPU simulator

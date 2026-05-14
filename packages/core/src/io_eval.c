@@ -1,6 +1,6 @@
 #include "biosim/core/io_eval.h"
-#include "biosim/core/rng.h"
 #include "biosim/core/grid_defs.h"
+#include "biosim/core/rng.h"
 
 #include <assert.h>
 #include <math.h>

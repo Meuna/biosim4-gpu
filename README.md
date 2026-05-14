@@ -5,7 +5,7 @@ A GPU-accelerated port of [biosim4](https://github.com/davidrmiller/biosim4)
 to C11/OpenCL, with a single-threaded CPU reference simulator.
 
 The GPU simulator (`sim-gpu`) is designed but not yet implemented. The
-single-threaded reference simulator (`sim-stepper`) is complete and produces
+single-threaded reference simulator (`sim-ref`) is complete and produces
 correct simulation results.
 
 ## Motivation
@@ -41,10 +41,10 @@ cmake --preset debug
 cmake --build --preset debug
 
 # Run with defaults (3000 agents, 128×128 grid, 1000 generations)
-./build/debug/packages/sim-stepper/biosim-stepper
+./build/debug/packages/sim-ref/biosim-ref
 
 # Run with a config file
-./build/debug/packages/sim-stepper/biosim-stepper --config my_run.toml
+./build/debug/packages/sim-ref/biosim-ref --config my_run.toml
 ```
 
 ## Repository map
@@ -53,7 +53,7 @@ cmake --build --preset debug
 |------|----------|
 | `packages/core/` | Simulation logic (genome, nnet, agents, grid, challenges, snapshot) |
 | `packages/params/` | CLI/TOML/parameter management |
-| `packages/sim-stepper/` | Single-threaded CPU simulator |
+| `packages/sim-ref/` | Single-threaded CPU simulator |
 | `docs/architecture.md` | Package structure, key types and functions |
 | `docs/build.md` | Prerequisites, build steps, lint/format targets |
 | `docs/usage.md` | CLI reference, TOML format, challenges, barriers |

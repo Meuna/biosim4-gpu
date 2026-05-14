@@ -3,7 +3,7 @@
 ## Snapshot binary format
 
 Snapshots capture the survivor genomes of completed generations. They are
-written by `sim-stepper` after challenge evaluation and before reproduction,
+written by `sim-ref` after challenge evaluation and before reproduction,
 at the configured interval (`--snapshot-interval`).
 
 The format is binary, little-endian throughout.
@@ -86,7 +86,7 @@ named tables.
 
 ```toml
 # Top-level (no table)
-# (none in sim-stepper)
+# (none in sim-ref)
 
 [simulation]
 population      = 3000
