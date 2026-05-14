@@ -1,23 +1,24 @@
 #include "biosim/core/challenges.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
+#include "sim_test_utils.h"
 #include "unity.h"
 
 #include <stdlib.h>
-#include <string.h>
 
 static biosim_sim_t sim;
 
 void setUp(void) {
-    memset(&sim, 0, sizeof(sim));
-    sim.population = 1;
-    sim.size_x = 128;
-    sim.size_y = 128;
-    sim.genome_max_len = 8;
-    sim.max_neurons = 3;
-    sim.long_probe_dist = 8;
-    sim.steps_per_gen = 300;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_cfg_t){
+                                                               .population = 1U,
+                                                               .size_x = 128,
+                                                               .size_y = 128,
+                                                               .genome_max_len = 8U,
+                                                               .max_neurons = 3U,
+                                                               .long_probe_dist = 8U,
+                                                               .steps_per_gen = 300U,
+                                                               .population_sensor_radius = 1,
+                                                           }));
     sim.agents.loc_x[0] = 64;
     sim.agents.loc_y[0] = 64;
     sim.agents.birth_x[0] = 64;

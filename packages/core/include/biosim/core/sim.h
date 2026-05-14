@@ -11,6 +11,7 @@
 #include "biosim/core/genome.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/nnet.h"
+#include "biosim/core/params.h"
 #include "biosim/core/status.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,15 +23,14 @@ struct biosim_census;
 /*
  * Full simulation state for the single-threaded reference implementation.
  *
- * Sset configuration fields, then call biosim_sim_create() to allocate all
- * heap resources. biosim_sim_free() releases them.
+ * Call biosim_sim_create() with a resolved biosim_params_t to configure all
+ * fields, allocate all heap resources, and spawn the initial population.
+ * biosim_sim_free() releases them.
  */
 typedef struct {
     uint32_t max_generations; /* number of generation loops */
 
-    /* ── allocation-time configuration ───────────────────────────────────────
-     * Set these before calling biosim_sim_create(); they are read once
-     * during allocation and remain valid for the lifetime of the context.*/
+    /* ── allocation-time configuration ─────────────────────────────────────── */
     uint32_t population;     /* agent count */
     int32_t size_x;          /* grid width */
     int32_t size_y;          /* grid height */
@@ -38,22 +38,19 @@ typedef struct {
     uint8_t max_neurons;     /* maximum hidden-neuron count per agent */
     uint8_t long_probe_dist; /* default long-probe sensor range (cells) */
 
-    /* ── runtime configuration ───────────────────────────────────────────────
-     * Set these before or after create(); they are read every step/gen.     */
+    /* ── runtime configuration ──────────────────────────────────────────────── */
     uint32_t steps_per_gen;
     int32_t population_sensor_radius;
     bool enable_kill;
     biosim_challenge_spec_t challenge;
 
-    /* ── generation state ────────────────────────────────────────────────────
-     * Managed by biosim_challenge_step() and biosim_sim_advance_gen(). */
+    /* ── generation state ───────────────────────────────────────────────────── */
     uint32_t step;                  /* step index within the current generation */
     uint32_t gen;                   /* generation index (0-based) */
     float mutation_rate;            /* per-gene point-mutation probability */
     bool sexual_reproduction;       /* use two-parent crossover; default false */
     bool choose_parents_by_fitness; /* bias toward high-score survivors; default false */
-    uint64_t gen_rng;               /* RNG state for generation-boundary operations;
-                                     * must be initialised before biosim_sim_create() */
+    uint64_t gen_rng;               /* RNG state for generation-boundary operations */
 
     /* ── simulation resources ────────────────────────────────────────────────
      * Allocated by biosim_sim_create(); released by biosim_sim_free().*/
@@ -83,12 +80,13 @@ typedef struct {
 /*
  * Lifecycle
  *
- * biosim_sim_create — allocate all heap resources described by the
- * configuration fields already set in *sim, place barriers on the grid,
+ * biosim_sim_create — zero *sim, read all configuration from *p, copy
+ * *challenge, allocate all heap resources, place barriers on the grid,
  * and spawn the initial population.  barriers/n_barriers may be NULL/0.
  */
-biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
-                                  uint32_t n_barriers);
+biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_params_t *p,
+                                  const biosim_challenge_spec_t *challenge,
+                                  const biosim_barrier_spec_t *barriers, uint32_t n_barriers);
 
 void biosim_sim_free(biosim_sim_t *sim);
 

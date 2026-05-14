@@ -39,10 +39,9 @@ future GPU simulator need with identical behavior.
 | [`log.h`](../packages/core/include/biosim/core/log.h) | `biosim_log_ctx_t` | <ul><li>`biosim_log_init` — set threshold, detect terminal color</li><li>`BIOSIM_ERRORF` / `WARNF` / `INFOF` / `DEBUGF` / `TRACEF` — level-gated macros</li></ul> |
 | [`params.h`](../packages/core/include/biosim/core/params.h) | `biosim_params_t`, `biosim_param_entry_t` | <ul><li>`biosim_params_set_int` / `_float` / `_bool` / `_string` — typed setters</li><li>`biosim_params_get_int` / `_float` / `_bool` / `_string` — typed getters (abort on type mismatch)</li><li>`biosim_params_find` — locate an entry by key</li></ul> |
 
-`biosim_sim_t` is the complete simulation state. Set the configuration fields
-(`population`, `size_x`, `size_y`, `genome_max_len`, `max_neurons`,
-`long_probe_dist`, `steps_per_gen`, and others), then call `biosim_sim_create`
-to allocate all heap resources and spawn the initial population.
+`biosim_sim_t` is the complete simulation state. Call `biosim_sim_create` with a
+parsed `biosim_params_t` and `biosim_challenge_spec_t` to configure all fields,
+allocate all heap resources, and spawn the initial population.
 `biosim_sim_free` releases everything, including any open snapshot session.
 
 ### SoA data layout
@@ -148,8 +147,7 @@ first-come-first-served by index.
 biosim_params_parse(&p, progname, version, argc, argv);
 biosim_barrier_params_load(config_path, &barriers, &n_barriers);
 biosim_challenge_spec_from_params(&p, &challenge);
-// ... populate sim fields from params ...
-biosim_sim_create(&sim, barriers, n_barriers);
+biosim_sim_create(&sim, &p, &challenge, barriers, n_barriers);
 
 biosim_snapshot_restore(snap_in_path, &sim);           // if --snapshot-in
 biosim_snapshot_session_open(&sim, snap_out_path, N);  // if --snapshot-out

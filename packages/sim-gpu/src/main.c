@@ -3,10 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "biosim/cfgparse/barriers.h"
+#include "biosim/cfgparse/challenges.h"
 #include "biosim/core/census.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
-#include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
 #include "biosim/sim-gpu/pipeline.h"
@@ -42,16 +43,35 @@ static void path_dirname(const char *path, char *buf, size_t bufsize) {
 
 // clang-format off
 static const biosim_param_entry_t sim_params[] = {
-    {"verbose",         NULL,        {.i = 0},    PARAM_COUNT, false, false, "verbose",       "v"},
-    {"population",      "simulation",{.i = 1024}, PARAM_INT,   false, true,  "pop",           "p"},
-    {"grid-size-x",     "simulation",{.i = 64},   PARAM_INT,   false, true,  "grid-size-x",   "x"},
-    {"grid-size-y",     "simulation",{.i = 64},   PARAM_INT,   false, true,  "grid-size-y",   "y"},
-    {"steps-per-gen",   "simulation",{.i = 300},  PARAM_INT,   false, true,  "steps-per-gen", NULL},
-    {"max-generations", "simulation",{.i = 100},  PARAM_INT,   false, true,  "max-gen",       NULL},
-    {"max-genome-len",  "genome",    {.i = 24},   PARAM_INT,   false, true,  "max-genome-len",NULL},
-    {"max-neurons",     "genome",    {.i = 5},    PARAM_INT,   false, true,  "max-neurons",   NULL},
-    {"platform-index",  "opencl",    {.i = 0},    PARAM_INT,   false, true,  "platform",      NULL},
-    {"device-index",    "opencl",    {.i = 0},    PARAM_INT,   false, true,  "device",        NULL},
+    {"verbose",                   NULL,         {.i = 0},         PARAM_COUNT,  false, false, "verbose",        "v"},
+    {"population",                "simulation", {.i = 3000},      PARAM_INT,    false, true,  "pop",            "p"},
+    {"grid-size-x",               "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-x",    "x"},
+    {"grid-size-y",               "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-y",    "y"},
+    {"steps-per-gen",             "simulation", {.i = 300},       PARAM_INT,    false, true,  "steps-per-gen",  NULL},
+    {"max-generations",           "simulation", {.i = 1000},      PARAM_INT,    false, true,  "max-gen",        NULL},
+    {"max-genome-len",            "genome",     {.i = 24},        PARAM_INT,    false, true,  "max-genome-len", NULL},
+    {"max-neurons",               "genome",     {.i = 5},         PARAM_INT,    false, true,  "max-neurons",    NULL},
+    {"point-mutation-rate",       "genome",     {.f = 0.001},     PARAM_FLOAT,  false, true,  "point-mut-rate", NULL},
+    {"sexual-reproduction",       "genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"choose-parents-by-fitness", "genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"long-probe-dist",           "sensors",    {.i = 16},        PARAM_INT,    false, true,  NULL,             NULL},
+    {"population-sensor-radius",  "sensors",    {.i = 2},         PARAM_INT,    false, true,  NULL,             NULL},
+    {"enable-kill",               "actions",    {.b = false},     PARAM_BOOL,   false, true,  "enable-kill",    NULL},
+    {"kind",                      "challenge",  {.s = "x_band"},  PARAM_STRING, false, true,  NULL,             NULL},
+    {"x-min",                     "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"x-max",                     "challenge",  {.f = 1.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"mirror",                    "challenge",  {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"x",                         "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"y",                         "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"radius",                    "challenge",  {.f = 0.333},     PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"weighted",                  "challenge",  {.b = true},      PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"min-n",                     "challenge",  {.f = 5.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"max-n",                     "challenge",  {.f = 8.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"exclude-border",            "challenge",  {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"outer-r",                   "challenge",  {.f = 0.25},      PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"inner-r",                   "challenge",  {.f = 0.012},     PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"platform-index",            "opencl",     {.i = 0},         PARAM_INT,    false, true,  "platform",       NULL},
+    {"device-index",              "opencl",     {.i = 0},         PARAM_INT,    false, true,  "device",         NULL},
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))
@@ -63,6 +83,8 @@ int main(int argc, char **argv) {
     biosim_sim_t sim;
     biosim_gpu_runner_t runner;
     biosim_gpu_pipeline_t pipeline;
+    biosim_barrier_spec_t *barriers = NULL;
+    biosim_challenge_spec_t challenge;
     biosim_status_t returncode = BIOSIM_OK;
 
     memset(&sim, 0, sizeof(sim));
@@ -97,19 +119,19 @@ int main(int argc, char **argv) {
         biosim_log_default_ctx.threshold = BIOSIM_LOG_DEBUG;
     }
 
-    sim.population = (uint32_t)biosim_params_get_int(&p, "population");
-    sim.size_x = biosim_params_get_int(&p, "grid-size-x");
-    sim.size_y = biosim_params_get_int(&p, "grid-size-y");
-    sim.genome_max_len = (uint16_t)biosim_params_get_int(&p, "max-genome-len");
-    sim.max_neurons = (uint8_t)biosim_params_get_int(&p, "max-neurons");
-    sim.steps_per_gen = (uint32_t)biosim_params_get_int(&p, "steps-per-gen");
-    sim.max_generations = (uint32_t)biosim_params_get_int(&p, "max-generations");
-    sim.long_probe_dist = 16U;
-    sim.gen_rng = biosim_rng_seed(0U, 1U);
-
-    returncode = biosim_sim_create(&sim, NULL, 0U);
+    uint32_t n_barriers = 0U;
+    returncode = biosim_barrier_params_load(p.config_path, &barriers, &n_barriers);
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF("sim create failed (%s)", biosim_strerror(returncode));
+        goto exit;
+    }
+
+    returncode = biosim_challenge_spec_from_params(&p, &challenge);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    returncode = biosim_sim_create(&sim, &p, &challenge, barriers, n_barriers);
+    if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
@@ -168,6 +190,7 @@ exit:
     biosim_gpu_pipeline_free(&pipeline);
     biosim_gpu_runner_free(&runner);
     biosim_sim_free(&sim);
+    free(barriers);
     biosim_params_free(&p);
 
     if (returncode != BIOSIM_OK) {

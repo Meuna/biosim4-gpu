@@ -7,13 +7,37 @@
 #include "biosim/core/nnet.h"
 #include "biosim/core/sim.h"
 
+#include <stdbool.h>
 #include <stdint.h>
 
-/* ── sim factories ──────────────────────────────────────────────────────────
+/* ── sim factory config ─────────────────────────────────────────────────────
+ * Passed to sim_test_create().  Unspecified fields in a compound literal
+ * zero-initialise (population_sensor_radius=0, mutation_rate=0, etc.) which
+ * is safe for tests that do not exercise those features. */
+typedef struct {
+    uint32_t population;
+    int32_t size_x;
+    int32_t size_y;
+    uint16_t genome_max_len;
+    uint8_t max_neurons;
+    uint8_t long_probe_dist;
+    uint32_t steps_per_gen;
+    int32_t population_sensor_radius;
+    float mutation_rate;
+    bool sexual_reproduction;
+    bool choose_parents_by_fitness;
+} sim_test_cfg_t;
+
+/* Build and allocate a sim from an explicit config.  The challenge is set to
+ * x_band [0, 1] with no mirror; tests that need a different challenge may
+ * overwrite sim->challenge after the call. */
+biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_cfg_t *cfg);
+
+/* ── named presets ──────────────────────────────────────────────────────────
  * Minimal sim: pop=4, 4x4 grid, genome_max_len=4, max_neurons=2.
  * Richer sim:  pop=64, 32x32 grid, 8 steps/gen, mutation enabled. */
-biosim_sim_t sim_test_make_light(void);
-biosim_sim_t sim_test_make_medium(void);
+biosim_status_t sim_test_make_light(biosim_sim_t *sim);
+biosim_status_t sim_test_make_medium(biosim_sim_t *sim);
 
 /* Run all steps of one full generation (does not call biosim_sim_next_generation). */
 void sim_test_run_one_gen(biosim_sim_t *sim);

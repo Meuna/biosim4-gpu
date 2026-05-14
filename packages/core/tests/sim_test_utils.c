@@ -1,6 +1,7 @@
 #include "sim_test_utils.h"
 
-#include "biosim/core/rng.h"
+#include "biosim/core/challenge_spec.h"
+#include "biosim/core/params.h"
 #include "biosim/core/sim.h"
 #include "unity.h"
 
@@ -10,50 +11,83 @@
 
 /* ── sim factories ──────────────────────────────────────────────────────────── */
 
-biosim_sim_t sim_test_make_light(void) {
-    static uint32_t call_count = 0U;
+/* clang-format off */
+static const biosim_param_entry_t k_test_params[] = {
+    {"max-generations",           "simulation", {.i = 100},   PARAM_INT,   false, true, NULL, NULL},
+    {"population",                "simulation", {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"grid-size-x",               "simulation", {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"grid-size-y",               "simulation", {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"max-genome-len",            "genome",     {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"max-neurons",               "genome",     {.i = 2},     PARAM_INT,   false, true, NULL, NULL},
+    {"long-probe-dist",           "sensors",    {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"steps-per-gen",             "simulation", {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
+    {"population-sensor-radius",  "sensors",    {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
+    {"enable-kill",               "actions",    {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"point-mutation-rate",       "genome",     {.f = 0.0},   PARAM_FLOAT, false, true, NULL, NULL},
+    {"sexual-reproduction",       "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"choose-parents-by-fitness", "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+};
+/* clang-format on */
+#define K_TEST_PARAMS_COUNT (sizeof(k_test_params) / sizeof(k_test_params[0]))
 
-    biosim_sim_t s;
-    memset(&s, 0, sizeof(s));
-    s.population = 4U;
-    s.size_x = 4;
-    s.size_y = 4;
-    s.genome_max_len = 4U;
-    s.max_neurons = 2U;
-    s.long_probe_dist = 4U;
-    s.steps_per_gen = 1;
-    s.population_sensor_radius = 1;
-    s.challenge.kind = BIOSIM_CHALLENGE_X_BAND;
-    s.challenge.x_band.x_min = 0.0F;
-    s.challenge.x_band.x_max = 1.0F;
-    s.challenge.x_band.mirror = false;
-    s.mutation_rate = 0.0F;
-    s.gen_rng = biosim_rng_seed(0U, ++call_count);
-    return s;
+biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_cfg_t *cfg) {
+    biosim_params_t p;
+    biosim_status_t rc = biosim_params_init(&p, k_test_params, K_TEST_PARAMS_COUNT);
+    if (rc != BIOSIM_OK) {
+        return rc;
+    }
+
+    (void)biosim_params_set_int(&p, "population", (int)cfg->population);
+    (void)biosim_params_set_int(&p, "grid-size-x", (int)cfg->size_x);
+    (void)biosim_params_set_int(&p, "grid-size-y", (int)cfg->size_y);
+    (void)biosim_params_set_int(&p, "max-genome-len", (int)cfg->genome_max_len);
+    (void)biosim_params_set_int(&p, "max-neurons", (int)cfg->max_neurons);
+    (void)biosim_params_set_int(&p, "long-probe-dist", (int)cfg->long_probe_dist);
+    (void)biosim_params_set_int(&p, "steps-per-gen", (int)cfg->steps_per_gen);
+    (void)biosim_params_set_int(&p, "population-sensor-radius", (int)cfg->population_sensor_radius);
+    (void)biosim_params_set_float(&p, "point-mutation-rate", (double)cfg->mutation_rate);
+    (void)biosim_params_set_bool(&p, "sexual-reproduction", cfg->sexual_reproduction);
+    (void)biosim_params_set_bool(&p, "choose-parents-by-fitness", cfg->choose_parents_by_fitness);
+
+    biosim_challenge_spec_t challenge;
+    memset(&challenge, 0, sizeof(challenge));
+    challenge.kind = BIOSIM_CHALLENGE_X_BAND;
+    challenge.x_band.x_min = 0.0F;
+    challenge.x_band.x_max = 1.0F;
+    challenge.x_band.mirror = false;
+
+    rc = biosim_sim_create(sim, &p, &challenge, NULL, 0U);
+    biosim_params_free(&p);
+    return rc;
 }
 
-biosim_sim_t sim_test_make_medium(void) {
-    static uint32_t call_count = 0U;
+biosim_status_t sim_test_make_light(biosim_sim_t *sim) {
+    return sim_test_create(sim, &(sim_test_cfg_t){
+                                    .population = 4U,
+                                    .size_x = 4,
+                                    .size_y = 4,
+                                    .genome_max_len = 4U,
+                                    .max_neurons = 2U,
+                                    .long_probe_dist = 4U,
+                                    .steps_per_gen = 1U,
+                                    .population_sensor_radius = 1,
+                                });
+}
 
-    biosim_sim_t s;
-    memset(&s, 0, sizeof(s));
-    s.population = 64U;
-    s.size_x = 32;
-    s.size_y = 32;
-    s.genome_max_len = 24U;
-    s.max_neurons = 3U;
-    s.long_probe_dist = 8U;
-    s.steps_per_gen = 16U;
-    s.population_sensor_radius = 4;
-    s.challenge.kind = BIOSIM_CHALLENGE_X_BAND;
-    s.challenge.x_band.x_min = 0.25F;
-    s.challenge.x_band.x_max = 0.75F;
-    s.challenge.x_band.mirror = true;
-    s.mutation_rate = 0.01F;
-    s.choose_parents_by_fitness = true;
-    s.sexual_reproduction = true;
-    s.gen_rng = biosim_rng_seed(0U, ++call_count);
-    return s;
+biosim_status_t sim_test_make_medium(biosim_sim_t *sim) {
+    return sim_test_create(sim, &(sim_test_cfg_t){
+                                    .population = 64U,
+                                    .size_x = 32,
+                                    .size_y = 32,
+                                    .genome_max_len = 24U,
+                                    .max_neurons = 3U,
+                                    .long_probe_dist = 8U,
+                                    .steps_per_gen = 16U,
+                                    .population_sensor_radius = 4,
+                                    .mutation_rate = 0.01F,
+                                    .sexual_reproduction = true,
+                                    .choose_parents_by_fitness = true,
+                                });
 }
 
 void sim_test_run_one_gen(biosim_sim_t *sim) {

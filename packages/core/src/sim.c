@@ -5,6 +5,7 @@
 #include "biosim/core/generation.h"
 #include "biosim/core/io_catalogue.h"
 #include "biosim/core/log.h"
+#include "biosim/core/params.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/snapshot.h"
 
@@ -37,34 +38,47 @@ exit:
     return returncode;
 }
 
-biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
-                                  uint32_t n_barriers) {
+biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_params_t *p,
+                                  const biosim_challenge_spec_t *challenge,
+                                  const biosim_barrier_spec_t *barriers, uint32_t n_barriers) {
     /* alloc start here, free on exit label */
-    const uint32_t pop = sim->population;
-    const int32_t size_x = sim->size_x;
-    const int32_t size_y = sim->size_y;
-    const uint16_t genome_max_len = sim->genome_max_len;
-    const uint8_t max_neurons = sim->max_neurons;
+    memset(sim, 0, sizeof(*sim));
+
+    sim->max_generations = (uint32_t)biosim_params_get_int(p, "max-generations");
+    sim->population = (uint32_t)biosim_params_get_int(p, "population");
+    sim->size_x = biosim_params_get_int(p, "grid-size-x");
+    sim->size_y = biosim_params_get_int(p, "grid-size-y");
+    sim->genome_max_len = (uint16_t)biosim_params_get_int(p, "max-genome-len");
+    sim->max_neurons = (uint8_t)biosim_params_get_int(p, "max-neurons");
+    sim->long_probe_dist = (uint8_t)biosim_params_get_int(p, "long-probe-dist");
+    sim->steps_per_gen = (uint32_t)biosim_params_get_int(p, "steps-per-gen");
+    sim->population_sensor_radius = biosim_params_get_int(p, "population-sensor-radius");
+    sim->enable_kill = biosim_params_get_bool(p, "enable-kill");
+    sim->mutation_rate = (float)biosim_params_get_float(p, "point-mutation-rate");
+    sim->sexual_reproduction = biosim_params_get_bool(p, "sexual-reproduction");
+    sim->choose_parents_by_fitness = biosim_params_get_bool(p, "choose-parents-by-fitness");
+    sim->challenge = *challenge;
+    sim->gen_rng = biosim_rng_seed(0U, 1U);
+
     biosim_status_t returncode = BIOSIM_OK;
 
-    sim->kills = 0;
-
-    returncode = biosim_grid_create(size_x, size_y, &sim->grid);
+    returncode = biosim_grid_create(sim->size_x, sim->size_y, &sim->grid);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = biosim_agents_create(pop, &sim->agents);
+    returncode = biosim_agents_create(sim->population, &sim->agents);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = biosim_genome_create(pop, genome_max_len, &sim->genome);
+    returncode = biosim_genome_create(sim->population, sim->genome_max_len, &sim->genome);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = biosim_nnet_create(pop, genome_max_len, max_neurons, &sim->nnet);
+    returncode =
+        biosim_nnet_create(sim->population, sim->genome_max_len, sim->max_neurons, &sim->nnet);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -74,7 +88,7 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
         goto exit;
     }
 
-    sim->signal_len = (size_t)size_x * (size_t)size_y;
+    sim->signal_len = (size_t)sim->size_x * (size_t)sim->size_y;
     sim->signal = (uint32_t *)calloc(sim->signal_len, sizeof(uint32_t));
     if (sim->signal == NULL) {
         returncode = BIOSIM_ERR_NOMEM;

@@ -38,12 +38,12 @@ target_compile_features(core-barriers-tests PRIVATE c_std_11)
 add_test(NAME core-barriers-tests COMMAND core-barriers-tests)
 
 add_executable(core-challenge-tests test_challenges.c)
-target_link_libraries(core-challenge-tests PRIVATE core unity)
+target_link_libraries(core-challenge-tests PRIVATE core-sim-test-utils)
 target_compile_features(core-challenge-tests PRIVATE c_std_11)
 add_test(NAME core-challenge-tests COMMAND core-challenge-tests)
 
 add_executable(core-challenge-grid-tests test_challenges_grid.c)
-target_link_libraries(core-challenge-grid-tests PRIVATE core unity)
+target_link_libraries(core-challenge-grid-tests PRIVATE core-sim-test-utils)
 target_compile_features(core-challenge-grid-tests PRIVATE c_std_11)
 add_test(NAME core-challenge-grid-tests COMMAND core-challenge-grid-tests)
 

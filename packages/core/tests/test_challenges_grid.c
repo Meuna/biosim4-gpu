@@ -2,10 +2,10 @@
 #include "biosim/core/grid.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
+#include "sim_test_utils.h"
 #include "unity.h"
 
 #include <stdlib.h>
-#include <string.h>
 
 static biosim_sim_t sim;
 
@@ -23,14 +23,14 @@ static void place_agent(uint32_t i, int32_t x, int32_t y) {
 }
 
 void setUp(void) {
-    memset(&sim, 0, sizeof(sim));
-    sim.population = 10;
-    sim.size_x = 64;
-    sim.size_y = 64;
-    sim.genome_max_len = 8;
-    sim.max_neurons = 3;
-    sim.long_probe_dist = 8;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_cfg_t){
+                                                               .population = 10U,
+                                                               .size_x = 64,
+                                                               .size_y = 64,
+                                                               .genome_max_len = 8U,
+                                                               .max_neurons = 3U,
+                                                               .long_probe_dist = 8U,
+                                                           }));
     biosim_grid_zero_fill(&sim.grid);
     for (uint32_t i = 0; i < sim.agents.population; i++) {
         sim.agents.alive[i] = 0;

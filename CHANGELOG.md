@@ -37,6 +37,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sim-gpu` main dispatch loop. Unit-tested with POCL.
 
 ### Changed
+- **`biosim_sim_create` signature extended** — now accepts `biosim_params_t *`,
+  `biosim_challenge_spec_t *`, `biosim_barrier_spec_t *`, and `n_barriers`; reads all
+  13 configuration fields internally and zeros the struct with `memset` before any
+  allocation. Callers no longer pre-populate struct fields; the manual assignment
+  boilerplate is removed from `sim-stepper/main.c`, `sim-gpu/main.c`, and
+  `wasm-sim-stepper/main.c`. All GPU test files gain a local `make_test_sim` helper
+  that builds a `biosim_params_t` inline; core test files use the new
+  `sim_test_create` / `sim_test_make_light` / `sim_test_make_medium` helpers from
+  `sim_test_utils`.
+- **`params` module moved from `params` package into `core`** — `biosim_params_t`,
+  `biosim_param_entry_t`, and all typed getters/setters now live in
+  `packages/core/include/biosim/core/params.h` and `packages/core/src/params.c`.
+  The former `params` package is renamed to `cfgparse`; it retains only
+  `biosim_params_parse` (CLI + TOML) and no longer owns the data model.
+- **`sim-gpu` fully configured** — `biosim-gpu` now parses challenges and barriers
+  via `biosim_challenge_spec_from_params` / `biosim_barrier_params_load` and links
+  `cfgparse`. The parameter table is expanded from 10 to 29 entries covering all
+  simulation, genome, sensor, action, challenge, and OpenCL parameters.
 - **Grid cell type widened from `uint16_t` to `uint32_t`; coordinates from `int16_t` to `int32_t`** —
   `OpenCL`'s `atomic_cmpxchg` requires 32-bit operands; matching the host types eliminates
   temporary conversion buffers at every host/device boundary:

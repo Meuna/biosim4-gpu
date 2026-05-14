@@ -8,7 +8,6 @@
 #include "biosim/core/census.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
-#include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/snapshot.h"
 
@@ -21,36 +20,36 @@ static void handle_signal(int sig) {
 
 // clang-format off
 static const biosim_param_entry_t sim_params[] = {
-    {"verbose",                  NULL,         {.i = 0},         PARAM_COUNT,  false, false, "verbose",        "v"},
-    {"population",               "simulation", {.i = 3000},      PARAM_INT,    false, true,  "pop",            "p"},
-    {"grid-size-x",              "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-x",    "x"},
-    {"grid-size-y",              "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-y",    "y"},
-    {"steps-per-gen",            "simulation", {.i = 300},       PARAM_INT,    false, true,  "steps-per-gen",  NULL},
-    {"max-generations",          "simulation", {.i = 1000},      PARAM_INT,    false, true,  "max-gen",        NULL},
-    {"max-genome-len",           "genome",     {.i = 24},        PARAM_INT,    false, true,  "max-genome-len", NULL},
-    {"max-neurons",              "genome",     {.i = 5},         PARAM_INT,    false, true,  "max-neurons",    NULL},
-    {"point-mutation-rate",      "genome",     {.f = 0.001},     PARAM_FLOAT,  false, true,  "point-mut-rate", NULL},
-    {"sexual-reproduction",      "genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
-    {"choose-parents-by-fitness","genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
-    {"long-probe-dist",          "sensors",    {.i = 16},        PARAM_INT,    false, true,  NULL,             NULL},
-    {"population-sensor-radius", "sensors",    {.i = 2},         PARAM_INT,    false, true,  NULL,             NULL},
-    {"enable-kill",              "actions",    {.b = false},     PARAM_BOOL,   false, true,  "enable-kill",    NULL},
-    {"kind",                     "challenge",  {.s = "x_band"},  PARAM_STRING, false, true,  NULL,             NULL},
-    {"x-min",                    "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"x-max",                    "challenge",  {.f = 1.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"mirror",                   "challenge",  {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
-    {"x",                        "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"y",                        "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"radius",                   "challenge",  {.f = 0.333},     PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"weighted",                 "challenge",  {.b = true},      PARAM_BOOL,   false, true,  NULL,             NULL},
-    {"min-n",                    "challenge",  {.f = 5.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"max-n",                    "challenge",  {.f = 8.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"exclude-border",           "challenge",  {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
-    {"outer-r",                  "challenge",  {.f = 0.25},      PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"inner-r",                  "challenge",  {.f = 0.012},     PARAM_FLOAT,  false, true,  NULL,             NULL},
-    {"in",                       "snapshot",   {.s = NULL},      PARAM_STRING, false, true,  NULL,             NULL},
-    {"out",                      "snapshot",   {.s = NULL},      PARAM_STRING, false, true,  NULL,             NULL},
-    {"interval",                 "snapshot",   {.i = 0},         PARAM_INT,    false, true,  NULL,             NULL},
+    {"verbose",                   NULL,         {.i = 0},         PARAM_COUNT,  false, false, "verbose",        "v"},
+    {"population",                "simulation", {.i = 3000},      PARAM_INT,    false, true,  "pop",            "p"},
+    {"grid-size-x",               "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-x",    "x"},
+    {"grid-size-y",               "simulation", {.i = 128},       PARAM_INT,    false, true,  "grid-size-y",    "y"},
+    {"steps-per-gen",             "simulation", {.i = 300},       PARAM_INT,    false, true,  "steps-per-gen",  NULL},
+    {"max-generations",           "simulation", {.i = 1000},      PARAM_INT,    false, true,  "max-gen",        NULL},
+    {"max-genome-len",            "genome",     {.i = 24},        PARAM_INT,    false, true,  "max-genome-len", NULL},
+    {"max-neurons",               "genome",     {.i = 5},         PARAM_INT,    false, true,  "max-neurons",    NULL},
+    {"point-mutation-rate",       "genome",     {.f = 0.001},     PARAM_FLOAT,  false, true,  "point-mut-rate", NULL},
+    {"sexual-reproduction",       "genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"choose-parents-by-fitness", "genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"long-probe-dist",           "sensors",    {.i = 16},        PARAM_INT,    false, true,  NULL,             NULL},
+    {"population-sensor-radius",  "sensors",    {.i = 2},         PARAM_INT,    false, true,  NULL,             NULL},
+    {"enable-kill",               "actions",    {.b = false},     PARAM_BOOL,   false, true,  "enable-kill",    NULL},
+    {"kind",                      "challenge",  {.s = "x_band"},  PARAM_STRING, false, true,  NULL,             NULL},
+    {"x-min",                     "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"x-max",                     "challenge",  {.f = 1.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"mirror",                    "challenge",  {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"x",                         "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"y",                         "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"radius",                    "challenge",  {.f = 0.333},     PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"weighted",                  "challenge",  {.b = true},      PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"min-n",                     "challenge",  {.f = 5.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"max-n",                     "challenge",  {.f = 8.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"exclude-border",            "challenge",  {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
+    {"outer-r",                   "challenge",  {.f = 0.25},      PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"inner-r",                   "challenge",  {.f = 0.012},     PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"in",                        "snapshot",   {.s = NULL},      PARAM_STRING, false, true,  NULL,             NULL},
+    {"out",                       "snapshot",   {.s = NULL},      PARAM_STRING, false, true,  NULL,             NULL},
+    {"interval",                  "snapshot",   {.i = 0},         PARAM_INT,    false, true,  NULL,             NULL},
 };
 // clang-format on
 #define SIM_PARAMS_COUNT (sizeof(sim_params) / sizeof(sim_params[0]))
@@ -109,23 +108,7 @@ int main(int argc, char **argv) {
 
     /* ── create simulation ───────────────────────────────────────────────── */
 
-    sim.max_generations = (uint32_t)biosim_params_get_int(&p, "max-generations");
-    sim.population = (uint32_t)biosim_params_get_int(&p, "population");
-    sim.size_x = (int16_t)biosim_params_get_int(&p, "grid-size-x");
-    sim.size_y = (int16_t)biosim_params_get_int(&p, "grid-size-y");
-    sim.genome_max_len = (uint16_t)biosim_params_get_int(&p, "max-genome-len");
-    sim.max_neurons = (uint8_t)biosim_params_get_int(&p, "max-neurons");
-    sim.long_probe_dist = (uint8_t)biosim_params_get_int(&p, "long-probe-dist");
-    sim.steps_per_gen = (uint32_t)biosim_params_get_int(&p, "steps-per-gen");
-    sim.population_sensor_radius = (int16_t)biosim_params_get_int(&p, "population-sensor-radius");
-    sim.challenge = challenge;
-    sim.enable_kill = biosim_params_get_bool(&p, "enable-kill");
-    sim.mutation_rate = (float)biosim_params_get_float(&p, "point-mutation-rate");
-    sim.sexual_reproduction = biosim_params_get_bool(&p, "sexual-reproduction");
-    sim.choose_parents_by_fitness = biosim_params_get_bool(&p, "choose-parents-by-fitness");
-    sim.gen_rng = biosim_rng_seed(0U, 1U);
-
-    returncode = biosim_sim_create(&sim, barriers, n_barriers);
+    returncode = biosim_sim_create(&sim, &p, &challenge, barriers, n_barriers);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }

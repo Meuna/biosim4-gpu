@@ -20,8 +20,8 @@ void test_write_header_correct_magic(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     (void)fseek(f, 0L, SEEK_SET);
@@ -38,8 +38,8 @@ void test_read_header_roundtrip(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     (void)fseek(f, 0L, SEEK_SET);
@@ -62,8 +62,8 @@ void test_bad_magic_returns_invalid(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
     (void)fseek(f, 0L, SEEK_SET);
     (void)fputc(0x00, f); /* corrupt magic */
@@ -79,8 +79,8 @@ void test_genome_roundtrip_single_record(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     /* Use all 4 agents as "survivors" */
@@ -91,8 +91,8 @@ void test_genome_roundtrip_single_record(void) {
                           biosim_snapshot_write_genome(f, &sim, survivors, scores, n_surv));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
-    biosim_sim_t sim2 = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim2));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -125,8 +125,8 @@ void test_multi_gen_load_last(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
@@ -140,8 +140,8 @@ void test_multi_gen_load_last(void) {
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
 
-    biosim_sim_t sim2 = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim2));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -167,8 +167,8 @@ void test_multi_gen_scan_without_gen_count(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
@@ -180,8 +180,8 @@ void test_multi_gen_scan_without_gen_count(void) {
     }
     /* Deliberately do NOT call finalize, so generation_count stays 0 */
 
-    biosim_sim_t sim2 = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim2));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -207,8 +207,8 @@ void test_load_gen_index(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
@@ -220,8 +220,8 @@ void test_load_gen_index(void) {
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
 
-    biosim_sim_t sim2 = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim2));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -245,8 +245,8 @@ void test_load_gen_out_of_range(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
@@ -254,8 +254,8 @@ void test_load_gen_out_of_range(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
-    biosim_sim_t sim2 = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim2));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -278,9 +278,17 @@ void test_population_load_file_larger_than_sim(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim_write = sim_test_make_light();
-    sim_write.population = 6U;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim_write, NULL, 0));
+    biosim_sim_t sim_write;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim_write, &(sim_test_cfg_t){
+                                                                     .population = 6U,
+                                                                     .size_x = 4,
+                                                                     .size_y = 4,
+                                                                     .genome_max_len = 4U,
+                                                                     .max_neurons = 2U,
+                                                                     .long_probe_dist = 4U,
+                                                                     .steps_per_gen = 1U,
+                                                                     .population_sensor_radius = 1,
+                                                                 }));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim_write));
 
     uint32_t survivors[6] = {0U, 1U, 2U, 3U, 4U, 5U};
@@ -289,8 +297,8 @@ void test_population_load_file_larger_than_sim(void) {
                           biosim_snapshot_write_genome(f, &sim_write, survivors, scores, 6U));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
-    biosim_sim_t sim_read = sim_test_make_light(); /* population = 4 */
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim_read, NULL, 0));
+    biosim_sim_t sim_read;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim_read)); /* population = 4 */
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -320,8 +328,8 @@ void test_population_load_file_smaller_than_sim(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim_write = sim_test_make_light(); /* population = 4 */
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim_write, NULL, 0));
+    biosim_sim_t sim_write;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim_write)); /* population = 4 */
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim_write));
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
@@ -330,9 +338,17 @@ void test_population_load_file_smaller_than_sim(void) {
                           biosim_snapshot_write_genome(f, &sim_write, survivors, scores, 4U));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
-    biosim_sim_t sim_read = sim_test_make_light();
-    sim_read.population = 6U;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim_read, NULL, 0));
+    biosim_sim_t sim_read;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim_read, &(sim_test_cfg_t){
+                                                                    .population = 6U,
+                                                                    .size_x = 4,
+                                                                    .size_y = 4,
+                                                                    .genome_max_len = 4U,
+                                                                    .max_neurons = 2U,
+                                                                    .long_probe_dist = 4U,
+                                                                    .steps_per_gen = 1U,
+                                                                    .population_sensor_radius = 1,
+                                                                }));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -369,8 +385,8 @@ void test_session_restore_identical_second_generation(void) {
 
     biosim_census_t census;
 
-    biosim_sim_t sim1 = sim_test_make_medium();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim1, NULL, 0));
+    biosim_sim_t sim1;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_medium(&sim1));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim1, path, 1));
 
     /* gen 0: step×8, evaluate, snapshot_write, reproduce */
@@ -379,8 +395,8 @@ void test_session_restore_identical_second_generation(void) {
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim1));
 
-    biosim_sim_t sim2 = sim_test_make_medium();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_medium(&sim2));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_restore(path, &sim2));
 
     /* Run both sims to the end of gen 1 */
@@ -405,8 +421,8 @@ void test_load_last_truncated_last_gen(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     /* Write only the entry_size prefix — no payload follows */
@@ -414,8 +430,8 @@ void test_load_last_truncated_last_gen(void) {
     (void)fwrite(&fake_size, 8U, 1U, f);
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
-    biosim_sim_t sim2 = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim2));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -439,13 +455,13 @@ void test_load_last_no_complete_gen(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    biosim_sim_t sim = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim, NULL, 0));
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
     /* No genome entries; generation_count stays 0 */
 
-    biosim_sim_t sim2 = sim_test_make_light();
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_create(&sim2, NULL, 0));
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_light(&sim2));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;

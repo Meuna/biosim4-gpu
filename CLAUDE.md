@@ -6,8 +6,8 @@ code in this repository.
 ## Project
 
 GPU port of [biosim4](https://github.com/davidrmiller/biosim4) (by David R.
-Miller) using OpenCL. Three packages are implemented: `core`, `cfgparse`, and
-`sim-stepper`. The GPU simulator (`sim-gpu`) is designed but not yet implemented.
+Miller) using OpenCL. Four packages are implemented: `core`, `cfgparse`,
+`sim-stepper`, and `sim-gpu`.
 
 ## Working with this repository
 
@@ -103,8 +103,9 @@ core (static lib, libc only)
 **`core`** — all shared simulation logic: genome operators, neural network
 compilation, sensor/action catalogues, challenge evaluation, portable xorshift64
 RNG, snapshot serialization, parameter data model (`biosim_params_t`).
-`biosim_sim_t` is the complete simulation state; pre-populate configuration
-fields, then call `biosim_sim_create`.
+`biosim_sim_t` is the complete simulation state; call `biosim_sim_create` with
+a parsed `biosim_params_t` and `biosim_challenge_spec_t` to configure all
+fields, allocate heap resources, and spawn the initial population.
 
 **`cfgparse`** — CLI argument parsing and TOML config loading. Each simulator's
 `main.c` defines its own exhaustive entry table and calls `biosim_params_parse`.

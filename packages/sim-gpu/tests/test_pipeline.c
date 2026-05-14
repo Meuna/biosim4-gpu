@@ -10,8 +10,9 @@
 
 #include "biosim/core/census.h"
 #include "biosim/core/challenge_kinds.h"
+#include "biosim/core/challenge_spec.h"
 #include "biosim/core/log.h"
-#include "biosim/core/rng.h"
+#include "biosim/core/params.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
 #include "biosim/sim-gpu/pipeline.h"
@@ -25,19 +26,37 @@ static biosim_gpu_runner_t g_runner;
 static biosim_gpu_pipeline_t g_pipeline;
 static int g_opencl_ok;
 
-static void make_test_sim(biosim_sim_t *sim) {
-    memset(sim, 0, sizeof(*sim));
-    sim->population = 32U;
-    sim->size_x = 16;
-    sim->size_y = 16;
-    sim->genome_max_len = 4U;
-    sim->max_neurons = 2U;
-    sim->long_probe_dist = 4U;
-    sim->steps_per_gen = 5U;
-    sim->step = 0U;
-    sim->gen_rng = biosim_rng_seed(0U, 1U);
-    sim->challenge.kind = BIOSIM_CHALLENGE_TOUCH_ANY_WALL;
-    sim->enable_kill = 0;
+/* clang-format off */
+static const biosim_param_entry_t k_sim_params[] = {
+    {"max-generations",           "simulation", {.i = 100},   PARAM_INT,   false, true, NULL, NULL},
+    {"population",                "simulation", {.i = 32},    PARAM_INT,   false, true, NULL, NULL},
+    {"grid-size-x",               "simulation", {.i = 16},    PARAM_INT,   false, true, NULL, NULL},
+    {"grid-size-y",               "simulation", {.i = 16},    PARAM_INT,   false, true, NULL, NULL},
+    {"max-genome-len",            "genome",     {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"max-neurons",               "genome",     {.i = 2},     PARAM_INT,   false, true, NULL, NULL},
+    {"long-probe-dist",           "sensors",    {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"steps-per-gen",             "simulation", {.i = 5},     PARAM_INT,   false, true, NULL, NULL},
+    {"population-sensor-radius",  "sensors",    {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
+    {"enable-kill",               "actions",    {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"point-mutation-rate",       "genome",     {.f = 0.0},   PARAM_FLOAT, false, true, NULL, NULL},
+    {"sexual-reproduction",       "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"choose-parents-by-fitness", "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+};
+/* clang-format on */
+
+static biosim_status_t make_test_sim(biosim_sim_t *sim) {
+    biosim_params_t p;
+    biosim_status_t rc =
+        biosim_params_init(&p, k_sim_params, sizeof(k_sim_params) / sizeof(k_sim_params[0]));
+    if (rc != BIOSIM_OK) {
+        return rc;
+    }
+    biosim_challenge_spec_t challenge;
+    memset(&challenge, 0, sizeof(challenge));
+    challenge.kind = BIOSIM_CHALLENGE_TOUCH_ANY_WALL;
+    rc = biosim_sim_create(sim, &p, &challenge, NULL, 0U);
+    biosim_params_free(&p);
+    return rc;
 }
 
 /* ── OpenCL availability probe ──────────────────────────────────────────── */
@@ -64,8 +83,7 @@ static void fixture_setup(void) {
         return;
     }
 
-    make_test_sim(&g_sim);
-    if (biosim_sim_create(&g_sim, NULL, 0U) != BIOSIM_OK) {
+    if (make_test_sim(&g_sim) != BIOSIM_OK) {
         g_opencl_ok = 0;
         return;
     }
