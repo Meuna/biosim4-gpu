@@ -27,7 +27,9 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim_sim_t *sim);
 
 /* Convert sim->agents.dx_sum[idx]/dy_sum[idx] to desired_x/desired_y using a
- * probabilistic step. Call once per agent after all actions have fired. */
-void biosim_action_finalize_movement(uint32_t idx, biosim_sim_t *sim);
+ * probabilistic step. Call once per agent after all actions have fired.
+ * The result is a proposal; grid availability is resolved by
+ * biosim_sim_next_step. */
+void biosim_action_propose_move(uint32_t idx, biosim_sim_t *sim);
 
 #endif /* BIOSIM_CORE_IO_CATALOGUE_H */

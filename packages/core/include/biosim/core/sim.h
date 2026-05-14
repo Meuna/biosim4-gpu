@@ -93,11 +93,18 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
 void biosim_sim_free(biosim_sim_t *sim);
 
 /* Advance one agent by one step: evaluate sensors, run feedforward, apply
- * actions, finalize movement. */
+ * actions, and propose a move (desired_x/desired_y). Grid granting and kill
+ * commits are deferred to biosim_sim_next_step. */
 void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i);
 
-/* Finalize the current step: fade the signal layer, run the per-step
- * challenge hook, and increment sim->step. */
+/* Finalize the current step:
+ *   1. Commit kills — agents with kill_marker set are marked dead and their
+ *      grid cells cleared (mirrors GPU K2).
+ *   2. Grant movement — each alive agent's proposed move is granted if the
+ *      target cell is empty; first-come, first-served (mirrors GPU K3).
+ *   3. Fade the signal layer (mirrors GPU K4).
+ *   4. Run the per-step challenge hook and increment sim->step.
+ */
 void biosim_sim_next_step(biosim_sim_t *sim);
 
 /*

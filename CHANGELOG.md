@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **`core` step pipeline aligned with GPU two-phase model** — `biosim_sim_step_agent`
+  now only proposes a move (sense → feedforward → act → `biosim_action_propose_move`);
+  kill commits and grid grants are deferred to `biosim_sim_next_step`, which runs a
+  kill-commit loop (≈ K2) then a first-come-first-served grant loop (≈ K3) before
+  fading the signal and running the challenge hook. `biosim_action_finalize_movement`
+  is renamed `biosim_action_propose_move` to reflect that it produces a desired
+  position rather than an executed move. `biosim_action_apply` KILL_FORWARD now stamps
+  `kill_marker[target] = 1` instead of immediately zeroing `alive` and clearing the
+  grid cell.
 - **`KILL_FORWARD` refactored to two-phase death** — eliminates a race condition
   with population-density sensors that read the grid during K1:
   - K1 no longer clears the grid cell of a killed agent. Instead it sets

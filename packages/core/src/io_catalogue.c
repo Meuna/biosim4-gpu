@@ -340,9 +340,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         if (cell == BIOSIM_GRID_EMPTY || cell == BIOSIM_GRID_BARRIER) {
             break;
         }
-        agents->alive[(uint32_t)(cell - 1U)] = 0U;
-        biosim_grid_set(&sim->grid, fwd, BIOSIM_GRID_EMPTY);
-        sim->kills++;
+        agents->kill_marker[(uint32_t)(cell - 1U)] = 1U;
         break;
     }
 
@@ -352,9 +350,9 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
     }
 }
 
-/* ── movement finalisation ──────────────────────────────────────────────── */
+/* ── movement proposal ──────────────────────────────────────────────────── */
 
-void biosim_action_finalize_movement(uint32_t idx, biosim_sim_t *sim) {
+void biosim_action_propose_move(uint32_t idx, biosim_sim_t *sim) {
     assert(sim != NULL);
 
     biosim_agents_t *agents = &sim->agents;

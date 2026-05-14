@@ -413,7 +413,7 @@ static void run_host_step_agent(uint32_t idx) {
         biosim_action_apply((biosim_action_t)act, action_vals[act], idx, &g_sim);
     }
 
-    biosim_action_finalize_movement(idx, &g_sim);
+    biosim_action_propose_move(idx, &g_sim);
 }
 
 /* ── tests ──────────────────────────────────────────────────────────────── */

@@ -110,6 +110,31 @@ void biosim_sim_free(biosim_sim_t *sim) {
 
 /* ── per-step ───────────────────────────────────────────────────────────── */
 
+static void sim_grant_move(biosim_sim_t *sim, uint32_t i) {
+    if (!sim->agents.alive[i]) {
+        return;
+    }
+    const int dx = (int)sim->agents.desired_x[i] - (int)sim->agents.loc_x[i];
+    const int dy = (int)sim->agents.desired_y[i] - (int)sim->agents.loc_y[i];
+    if (dx == 0 && dy == 0) {
+        return;
+    }
+    biosim_coord_t target;
+    target.x = sim->agents.desired_x[i];
+    target.y = sim->agents.desired_y[i];
+    if (biosim_grid_at(&sim->grid, target) != BIOSIM_GRID_EMPTY) {
+        return;
+    }
+    biosim_coord_t old_loc;
+    old_loc.x = sim->agents.loc_x[i];
+    old_loc.y = sim->agents.loc_y[i];
+    biosim_grid_set(&sim->grid, old_loc, BIOSIM_GRID_EMPTY);
+    biosim_grid_set(&sim->grid, target, (uint16_t)(i + 1U));
+    sim->agents.loc_x[i] = target.x;
+    sim->agents.loc_y[i] = target.y;
+    sim->agents.last_move_dir[i] = biosim_get_dir(dx, dy);
+}
+
 void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i) {
     float sensor_vals[BIOSIM_NUM_SENSORS];
     float action_vals[BIOSIM_NUM_ACTIONS];
@@ -129,41 +154,32 @@ void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i) {
         biosim_action_apply((biosim_action_t)a, action_vals[a], i, sim);
     }
 
-    /* KILL_FORWARD targets others, not self; still guard in case a prior agent
-     * killed this one during action application. */
-    if (!sim->agents.alive[i]) {
-        return;
-    }
-
-    biosim_action_finalize_movement(i, sim);
-
-    const int dx = (int)sim->agents.desired_x[i] - (int)sim->agents.loc_x[i];
-    const int dy = (int)sim->agents.desired_y[i] - (int)sim->agents.loc_y[i];
-
-    if (dx == 0 && dy == 0) {
-        return;
-    }
-
-    biosim_coord_t target;
-    target.x = sim->agents.desired_x[i];
-    target.y = sim->agents.desired_y[i];
-
-    if (biosim_grid_at(&sim->grid, target) != BIOSIM_GRID_EMPTY) {
-        return;
-    }
-
-    biosim_coord_t old_loc;
-    old_loc.x = sim->agents.loc_x[i];
-    old_loc.y = sim->agents.loc_y[i];
-
-    biosim_grid_set(&sim->grid, old_loc, BIOSIM_GRID_EMPTY);
-    biosim_grid_set(&sim->grid, target, (uint16_t)(i + 1U));
-    sim->agents.loc_x[i] = target.x;
-    sim->agents.loc_y[i] = target.y;
-    sim->agents.last_move_dir[i] = biosim_get_dir(dx, dy);
+    biosim_action_propose_move(i, sim);
 }
 
 void biosim_sim_next_step(biosim_sim_t *sim) {
+    const uint32_t pop = sim->agents.population;
+
+    /* Phase 1 (≈ K2): commit kills and clear grid cells. */
+    for (uint32_t i = 0U; i < pop; i++) {
+        if (!sim->agents.kill_marker[i]) {
+            continue;
+        }
+        sim->agents.alive[i] = 0U;
+        biosim_coord_t loc;
+        loc.x = sim->agents.loc_x[i];
+        loc.y = sim->agents.loc_y[i];
+        biosim_grid_set(&sim->grid, loc, BIOSIM_GRID_EMPTY);
+        sim->kills++;
+        sim->agents.kill_marker[i] = 0U;
+    }
+
+    /* Phase 2 (≈ K3): grant movement — first-come, first-served. */
+    for (uint32_t i = 0U; i < pop; i++) {
+        sim_grant_move(sim, i);
+    }
+
+    /* Signal fade (≈ K4). */
     for (size_t j = 0; j < sim->signal_len; j++) {
         if (sim->signal[j] > 0) {
             sim->signal[j]--;

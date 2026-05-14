@@ -497,8 +497,12 @@ void test_kill_forward_above_threshold(void) {
     biosim_agents_init_slot(&sim.agents, 1, fwd, 16, 99ULL);
 
     biosim_action_apply(BIOSIM_ACTION_KILL_FORWARD, 1.0F, 0, &sim);
-    TEST_ASSERT_EQUAL_UINT8(0U, sim.agents.alive[1]);
+    /* Kill is deferred: marker set, agent still alive, grid cell still occupied. */
+    TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.kill_marker[1]);
+    TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.alive[1]);
+    TEST_ASSERT_EQUAL_UINT16(2U, biosim_grid_at(&sim.grid, fwd));
 
+    sim.agents.kill_marker[1] = 0U;
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
 }
 
@@ -516,7 +520,7 @@ void test_kill_forward_empty_cell_no_crash(void) {
 void test_finalize_no_accumulation(void) {
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_finalize_movement(0, &sim);
+    biosim_action_propose_move(0, &sim);
     /* With zero sums tanh gives 0, so the step probability is 0; desired == loc. */
     TEST_ASSERT_EQUAL_INT16(sim.agents.loc_x[0], sim.agents.desired_x[0]);
     TEST_ASSERT_EQUAL_INT16(sim.agents.loc_y[0], sim.agents.desired_y[0]);
@@ -526,7 +530,7 @@ void test_finalize_boundary_clamp_east(void) {
     sim.agents.loc_x[0] = GRID_W - 1;
     sim.agents.dx_sum[0] = 100.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_finalize_movement(0, &sim);
+    biosim_action_propose_move(0, &sim);
     TEST_ASSERT_TRUE(sim.agents.desired_x[0] < GRID_W);
 }
 
@@ -534,7 +538,7 @@ void test_finalize_boundary_clamp_west(void) {
     sim.agents.loc_x[0] = 0;
     sim.agents.dx_sum[0] = -100.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_finalize_movement(0, &sim);
+    biosim_action_propose_move(0, &sim);
     TEST_ASSERT_TRUE(sim.agents.desired_x[0] >= 0);
 }
 
@@ -542,7 +546,7 @@ void test_finalize_boundary_clamp_north(void) {
     sim.agents.loc_y[0] = 0;
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = -100.0F;
-    biosim_action_finalize_movement(0, &sim);
+    biosim_action_propose_move(0, &sim);
     TEST_ASSERT_TRUE(sim.agents.desired_y[0] >= 0);
 }
 
@@ -550,7 +554,7 @@ void test_finalize_boundary_clamp_south(void) {
     sim.agents.loc_y[0] = GRID_H - 1;
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = 100.0F;
-    biosim_action_finalize_movement(0, &sim);
+    biosim_action_propose_move(0, &sim);
     TEST_ASSERT_TRUE(sim.agents.desired_y[0] < GRID_H);
 }
 
@@ -562,7 +566,7 @@ void test_finalize_strong_east_steps_one_cell(void) {
     int16_t start_y = sim.agents.loc_y[0];
     sim.agents.dx_sum[0] = 100.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_finalize_movement(0, &sim);
+    biosim_action_propose_move(0, &sim);
     TEST_ASSERT_EQUAL_INT16(start_x + 1, sim.agents.desired_x[0]);
     TEST_ASSERT_EQUAL_INT16(start_y, sim.agents.desired_y[0]);
 }
@@ -575,7 +579,7 @@ void test_finalize_strong_north_steps_one_cell(void) {
     int16_t start_y = sim.agents.loc_y[0];
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = -100.0F;
-    biosim_action_finalize_movement(0, &sim);
+    biosim_action_propose_move(0, &sim);
     TEST_ASSERT_EQUAL_INT16(start_x, sim.agents.desired_x[0]);
     TEST_ASSERT_EQUAL_INT16(start_y - 1, sim.agents.desired_y[0]);
 }
