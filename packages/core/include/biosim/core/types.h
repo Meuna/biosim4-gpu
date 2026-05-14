@@ -9,25 +9,27 @@
 #ifdef __OPENCL_VERSION__
 typedef short int16_t;
 typedef ushort uint16_t;
+typedef int int32_t;
+typedef uint uint32_t;
 #else
 #include <stdint.h>
 #endif
 
 /* 2D grid coordinate — split into separate SoA buffers for GPU, packed here for host use */
 typedef struct {
-    int16_t x;
-    int16_t y;
+    int32_t x;
+    int32_t y;
 } biosim_coord_t;
 
 /* Grid cell sentinel values.
- * In OpenCL kernels the grid buffer is __global uint *; use (uint) casts so
- * comparisons are type-matched without implicit promotion warnings. */
+ * Cell encoding: BIOSIM_GRID_EMPTY (0), BIOSIM_GRID_BARRIER (0xFFFFFFFF),
+ * or a 1-based agent index in [1, 0xFFFFFFFE]. */
 #ifdef __OPENCL_VERSION__
-#define BIOSIM_GRID_EMPTY   ((uint)0x0000U)
-#define BIOSIM_GRID_BARRIER ((uint)0xFFFFU)
+#define BIOSIM_GRID_EMPTY   ((uint)0x00000000U)
+#define BIOSIM_GRID_BARRIER ((uint)0xFFFFFFFFU)
 #else
-#define BIOSIM_GRID_EMPTY   ((uint16_t)0x0000U)
-#define BIOSIM_GRID_BARRIER ((uint16_t)0xFFFFU)
+#define BIOSIM_GRID_EMPTY   ((uint32_t)0x00000000U)
+#define BIOSIM_GRID_BARRIER ((uint32_t)0xFFFFFFFFU)
 #endif
 
 #endif /* BIOSIM_CORE_TYPES_H */

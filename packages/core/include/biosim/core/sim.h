@@ -32,8 +32,8 @@ typedef struct {
      * Set these before calling biosim_sim_create(); they are read once
      * during allocation and remain valid for the lifetime of the context.*/
     uint32_t population;     /* agent count */
-    int16_t size_x;          /* grid width */
-    int16_t size_y;          /* grid height */
+    int32_t size_x;          /* grid width */
+    int32_t size_y;          /* grid height */
     uint16_t genome_max_len; /* maximum genome length (genes per agent) */
     uint8_t max_neurons;     /* maximum hidden-neuron count per agent */
     uint8_t long_probe_dist; /* default long-probe sensor range (cells) */
@@ -41,7 +41,7 @@ typedef struct {
     /* ── runtime configuration ───────────────────────────────────────────────
      * Set these before or after create(); they are read every step/gen.     */
     uint32_t steps_per_gen;
-    int16_t population_sensor_radius;
+    int32_t population_sensor_radius;
     bool enable_kill;
     biosim_challenge_spec_t challenge;
 

@@ -144,8 +144,8 @@ static biosim_status_t kernel_buffers_create(const biosim_sim_t *sim, cl_context
                                           NULL, &cl_err))
 
     MKBUF_RW(alive, a->alive, sizeof(uint8_t), pop);
-    MKBUF_RW(loc_x, a->loc_x, sizeof(int16_t), pop);
-    MKBUF_RW(loc_y, a->loc_y, sizeof(int16_t), pop);
+    MKBUF_RW(loc_x, a->loc_x, sizeof(int32_t), pop);
+    MKBUF_RW(loc_y, a->loc_y, sizeof(int32_t), pop);
     MKBUF_RW(osc_period, a->osc_period, sizeof(uint16_t), pop);
     MKBUF_RW(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     MKBUF_RW(responsiveness, a->responsiveness, sizeof(float), pop);
@@ -158,24 +158,11 @@ static biosim_status_t kernel_buffers_create(const biosim_sim_t *sim, cl_context
     MKBUF_RO(neuron_count, n->neuron_count, sizeof(uint8_t), pop);
     MKBUF_RW(signal, sim->signal, sizeof(uint32_t), sim->signal_len);
     MKBUF_RW(rng_state, a->rng_state, sizeof(uint64_t), pop);
-    MKBUF_RW(desired_x, a->desired_x, sizeof(int16_t), pop);
-    MKBUF_RW(desired_y, a->desired_y, sizeof(int16_t), pop);
+    MKBUF_RW(desired_x, a->desired_x, sizeof(int32_t), pop);
+    MKBUF_RW(desired_y, a->desired_y, sizeof(int32_t), pop);
     MKBUF_RW(kill_marker, a->kill_marker, sizeof(uint8_t), pop);
-
-    /* Grid: convert uint16_t cells → uint32_t for OpenCL atomic operations. */
-    {
-        size_t grid_cells = (size_t)sim->size_x * (size_t)sim->size_y;
-        uint32_t *tmp_grid = malloc(grid_cells * sizeof(uint32_t));
-        if (!tmp_grid) {
-            returncode = BIOSIM_ERR_NOMEM;
-            goto exit;
-        }
-        for (size_t gi = 0U; gi < grid_cells; gi++) {
-            tmp_grid[gi] = (uint32_t)sim->grid.cells[gi];
-        }
-        MKBUF_RW(grid, tmp_grid, sizeof(uint32_t), grid_cells);
-        free(tmp_grid);
-    }
+    size_t grid_cells = (size_t)sim->size_x * (size_t)sim->size_y;
+    MKBUF_RW(grid, sim->grid.cells, sizeof(uint32_t), grid_cells);
 
 #undef MKBUF_RO
 #undef MKBUF_RW
@@ -189,8 +176,8 @@ exit:
 }
 
 static void k1_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosim_sim_t *sim) {
-    cl_int size_x = (cl_int)sim->size_x;
-    cl_int size_y = (cl_int)sim->size_y;
+    cl_int size_x = sim->size_x;
+    cl_int size_y = sim->size_y;
     cl_uint step = (cl_uint)sim->step;
     cl_uint steps_gen = (cl_uint)sim->steps_per_gen;
     cl_uint pop = (cl_uint)sim->population;
@@ -224,7 +211,7 @@ static void k1_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
 }
 
 static void k2_kill_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosim_sim_t *sim) {
-    cl_int size_x = (cl_int)sim->size_x;
+    cl_int size_x = sim->size_x;
     cl_uint pop = (cl_uint)sim->population;
 
     (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&b->kill_marker);
@@ -236,8 +223,8 @@ static void k2_kill_set_args(cl_kernel kernel, const kernel_buffers_t *b, const 
 }
 
 static void k3_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosim_sim_t *sim) {
-    cl_int size_x = (cl_int)sim->size_x;
-    cl_int size_y = (cl_int)sim->size_y;
+    cl_int size_x = sim->size_x;
+    cl_int size_y = sim->size_y;
     cl_uint pop = (cl_uint)sim->population;
 
     (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&b->alive);
@@ -268,8 +255,8 @@ int main(int argc, char **argv) {
     cl_kernel k2_kernel = NULL;
     cl_program k3_program = NULL;
     cl_kernel k3_kernel = NULL;
-    int16_t *host_desired_x = NULL;
-    int16_t *host_loc_x = NULL;
+    int32_t *host_desired_x = NULL;
+    int32_t *host_loc_x = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
     memset(&sim, 0, sizeof(sim));
@@ -304,8 +291,8 @@ int main(int argc, char **argv) {
     }
 
     sim.population = (uint32_t)biosim_params_get_int(&p, "population");
-    sim.size_x = (int16_t)biosim_params_get_int(&p, "grid-size-x");
-    sim.size_y = (int16_t)biosim_params_get_int(&p, "grid-size-y");
+    sim.size_x = biosim_params_get_int(&p, "grid-size-x");
+    sim.size_y = biosim_params_get_int(&p, "grid-size-y");
     sim.genome_max_len = (uint16_t)biosim_params_get_int(&p, "max-genome-len");
     sim.max_neurons = (uint8_t)biosim_params_get_int(&p, "max-neurons");
     sim.steps_per_gen = (uint32_t)biosim_params_get_int(&p, "steps-per-gen");
@@ -357,14 +344,14 @@ int main(int argc, char **argv) {
     CL_GOTO_EXIT_ON_ERROR(clEnqueueNDRangeKernel(runner.queue, k1_kernel, 1U, NULL, &global_size,
                                                  NULL, 0U, NULL, NULL));
 
-    host_desired_x = malloc((size_t)sim.population * sizeof(int16_t));
+    host_desired_x = malloc((size_t)sim.population * sizeof(int32_t));
     if (!host_desired_x) {
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
 
     CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(runner.queue, bufs.desired_x, CL_TRUE, 0U,
-                                              (size_t)sim.population * sizeof(int16_t),
+                                              (size_t)sim.population * sizeof(int32_t),
                                               host_desired_x, 0U, NULL, NULL));
 
     printf("biosim-gpu: K1 step complete — agent 0 desired_x=%d (delta=%d)\n",
@@ -410,14 +397,14 @@ int main(int argc, char **argv) {
     CL_GOTO_EXIT_ON_ERROR(clEnqueueNDRangeKernel(runner.queue, k3_kernel, 1U, NULL, &global_size,
                                                  NULL, 0U, NULL, NULL));
 
-    host_loc_x = malloc((size_t)sim.population * sizeof(int16_t));
+    host_loc_x = malloc((size_t)sim.population * sizeof(int32_t));
     if (!host_loc_x) {
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
 
     CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(runner.queue, bufs.loc_x, CL_TRUE, 0U,
-                                              (size_t)sim.population * sizeof(int16_t), host_loc_x,
+                                              (size_t)sim.population * sizeof(int32_t), host_loc_x,
                                               0U, NULL, NULL));
 
     printf("biosim-gpu: K3 step complete — agent 0 loc_x=%d\n", (int)host_loc_x[0]);

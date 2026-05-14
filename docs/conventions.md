@@ -73,6 +73,8 @@ Three headers are shared with OpenCL kernel sources: `core/types.h`,
   #ifdef __OPENCL_VERSION__
   typedef short  int16_t;
   typedef ushort uint16_t;
+  typedef int    int32_t;
+  typedef uint   uint32_t;
   #else
   #include <stdint.h>
   #endif

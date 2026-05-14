@@ -43,9 +43,9 @@ uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *surviv
  */
 static void clear_agents_from_grid(biosim_sim_t *sim) {
     biosim_grid_t *grid = &sim->grid;
-    for (int y = 0; y < (int)grid->size_y; y++) {
-        for (int x = 0; x < (int)grid->size_x; x++) {
-            uint16_t *cell = &grid->cells[y * grid->size_x + x];
+    for (int32_t y = 0; y < grid->size_y; y++) {
+        for (int32_t x = 0; x < grid->size_x; x++) {
+            uint32_t *cell = &grid->cells[y * grid->size_x + x];
             if (*cell != BIOSIM_GRID_BARRIER) {
                 *cell = BIOSIM_GRID_EMPTY;
             }
@@ -89,7 +89,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
         }
         biosim_agents_init_slot(agents, i, loc, long_probe_dist, biosim_rng_seed(i, gen_seed));
         agents->genome_fingerprint[i] = fp;
-        biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
+        biosim_grid_set(grid, loc, i + 1U);
     }
 
 exit:

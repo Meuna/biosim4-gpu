@@ -35,13 +35,10 @@ static cl_mem g_buf_last_move_dir;
 static cl_mem g_buf_grid;
 
 /* Host readback arrays (allocated in fixture_setup, sized to population). */
-static int16_t *g_result_loc_x;
-static int16_t *g_result_loc_y;
+static int32_t *g_result_loc_x;
+static int32_t *g_result_loc_y;
 static uint8_t *g_result_last_move_dir;
 static uint32_t *g_result_grid;
-
-/* Scratch buffer for uint16_t → uint32_t grid conversion. */
-static uint32_t *g_tmp_grid;
 
 /* ── OpenCL availability probe ──────────────────────────────────────────── */
 
@@ -112,14 +109,12 @@ static void fixture_setup(void) {
     uint32_t pop = g_sim.population;
     size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
 
-    g_result_loc_x = malloc((size_t)pop * sizeof(int16_t));
-    g_result_loc_y = malloc((size_t)pop * sizeof(int16_t));
+    g_result_loc_x = malloc((size_t)pop * sizeof(int32_t));
+    g_result_loc_y = malloc((size_t)pop * sizeof(int32_t));
     g_result_last_move_dir = malloc((size_t)pop * sizeof(uint8_t));
     g_result_grid = malloc(grid_cells * sizeof(uint32_t));
-    g_tmp_grid = malloc(grid_cells * sizeof(uint32_t));
 
-    if (!g_result_loc_x || !g_result_loc_y || !g_result_last_move_dir || !g_result_grid ||
-        !g_tmp_grid) {
+    if (!g_result_loc_x || !g_result_loc_y || !g_result_last_move_dir || !g_result_grid) {
         g_opencl_ok = 0;
         return;
     }
@@ -136,18 +131,18 @@ static void fixture_setup(void) {
     } while (0)
 
     MKRW(g_buf_alive, sizeof(uint8_t), pop);
-    MKRW(g_buf_desired_x, sizeof(int16_t), pop);
-    MKRW(g_buf_desired_y, sizeof(int16_t), pop);
-    MKRW(g_buf_loc_x, sizeof(int16_t), pop);
-    MKRW(g_buf_loc_y, sizeof(int16_t), pop);
+    MKRW(g_buf_desired_x, sizeof(int32_t), pop);
+    MKRW(g_buf_desired_y, sizeof(int32_t), pop);
+    MKRW(g_buf_loc_x, sizeof(int32_t), pop);
+    MKRW(g_buf_loc_y, sizeof(int32_t), pop);
     MKRW(g_buf_last_move_dir, sizeof(uint8_t), pop);
     MKRW(g_buf_grid, sizeof(uint32_t), grid_cells);
 
 #undef MKRW
 
     /* Set fixed kernel arguments (same across all tests). */
-    cl_int size_x = (cl_int)g_sim.size_x;
-    cl_int size_y = (cl_int)g_sim.size_y;
+    cl_int size_x = g_sim.size_x;
+    cl_int size_y = g_sim.size_y;
     cl_uint pop_arg = (cl_uint)g_sim.population;
 
     (void)clSetKernelArg(g_kernel, 0U, sizeof(cl_mem), (const void *)&g_buf_alive);
@@ -167,12 +162,10 @@ static void fixture_teardown(void) {
     free(g_result_loc_y);
     free(g_result_last_move_dir);
     free(g_result_grid);
-    free(g_tmp_grid);
     g_result_loc_x = NULL;
     g_result_loc_y = NULL;
     g_result_last_move_dir = NULL;
     g_result_grid = NULL;
-    g_tmp_grid = NULL;
 
 #define REL(v)                                                                                     \
     do {                                                                                           \
@@ -206,10 +199,10 @@ static void fixture_teardown(void) {
 
 typedef struct {
     const uint8_t *alive;
-    const int16_t *loc_x;
-    const int16_t *loc_y;
-    const int16_t *desired_x;
-    const int16_t *desired_y;
+    const int32_t *loc_x;
+    const int32_t *loc_y;
+    const int32_t *desired_x;
+    const int32_t *desired_y;
     const uint8_t *last_move_dir;
     const uint32_t *grid; /* uint32_t, size_x * size_y */
 } k3_scenario_t;
@@ -227,10 +220,10 @@ static int run_k3(const k3_scenario_t *s) {
     }
 
     WR(g_buf_alive, s->alive, sizeof(uint8_t), pop);
-    WR(g_buf_loc_x, s->loc_x, sizeof(int16_t), pop);
-    WR(g_buf_loc_y, s->loc_y, sizeof(int16_t), pop);
-    WR(g_buf_desired_x, s->desired_x, sizeof(int16_t), pop);
-    WR(g_buf_desired_y, s->desired_y, sizeof(int16_t), pop);
+    WR(g_buf_loc_x, s->loc_x, sizeof(int32_t), pop);
+    WR(g_buf_loc_y, s->loc_y, sizeof(int32_t), pop);
+    WR(g_buf_desired_x, s->desired_x, sizeof(int32_t), pop);
+    WR(g_buf_desired_y, s->desired_y, sizeof(int32_t), pop);
     WR(g_buf_last_move_dir, s->last_move_dir, sizeof(uint8_t), pop);
     WR(g_buf_grid, s->grid, sizeof(uint32_t), grid_cells);
 
@@ -248,8 +241,8 @@ static int run_k3(const k3_scenario_t *s) {
         return 0;                                                                                  \
     }
 
-    RD(g_buf_loc_x, g_result_loc_x, sizeof(int16_t), pop);
-    RD(g_buf_loc_y, g_result_loc_y, sizeof(int16_t), pop);
+    RD(g_buf_loc_x, g_result_loc_x, sizeof(int32_t), pop);
+    RD(g_buf_loc_y, g_result_loc_y, sizeof(int32_t), pop);
     RD(g_buf_last_move_dir, g_result_last_move_dir, sizeof(uint8_t), pop);
 
 #undef RD
@@ -275,10 +268,10 @@ void test_k3_compiles_and_runs(void) {
     size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
 
     uint8_t *alive = calloc(pop, sizeof(uint8_t));
-    int16_t *loc_x = calloc(pop, sizeof(int16_t));
-    int16_t *loc_y = calloc(pop, sizeof(int16_t));
-    int16_t *desired_x = calloc(pop, sizeof(int16_t));
-    int16_t *desired_y = calloc(pop, sizeof(int16_t));
+    int32_t *loc_x = calloc(pop, sizeof(int32_t));
+    int32_t *loc_y = calloc(pop, sizeof(int32_t));
+    int32_t *desired_x = calloc(pop, sizeof(int32_t));
+    int32_t *desired_y = calloc(pop, sizeof(int32_t));
     uint8_t *lmd = calloc(pop, sizeof(uint8_t));
     uint32_t *grid = calloc(grid_cells, sizeof(uint32_t));
 
@@ -316,10 +309,10 @@ void test_k3_empty_cell_move(void) {
     size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
 
     uint8_t alive[4] = {1, 0, 0, 0};
-    int16_t loc_x[4] = {3, 0, 0, 0};
-    int16_t loc_y[4] = {3, 0, 0, 0};
-    int16_t desired_x[4] = {4, 0, 0, 0}; /* EAST */
-    int16_t desired_y[4] = {3, 0, 0, 0};
+    int32_t loc_x[4] = {3, 0, 0, 0};
+    int32_t loc_y[4] = {3, 0, 0, 0};
+    int32_t desired_x[4] = {4, 0, 0, 0}; /* EAST */
+    int32_t desired_y[4] = {3, 0, 0, 0};
     uint8_t lmd[4] = {0, 0, 0, 0};
     uint32_t grid[64]; /* 8*8 */
     memset(grid, 0, sizeof(grid));
@@ -332,8 +325,8 @@ void test_k3_empty_cell_move(void) {
 
     (void)grid_cells;
 
-    TEST_ASSERT_EQUAL_INT16_MESSAGE(4, g_result_loc_x[0], "loc_x not updated after move");
-    TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_y[0], "loc_y changed unexpectedly");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(4, g_result_loc_x[0], "loc_x not updated after move");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(3, g_result_loc_y[0], "loc_y changed unexpectedly");
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(0U, g_result_last_move_dir[0], "last_move_dir should be EAST");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, g_result_grid[(size_t)(3 * sx + 4)],
                                      "target cell should contain agent");
@@ -351,10 +344,10 @@ void test_k3_no_move_when_at_desired(void) {
     int sx = (int)g_sim.size_x;
 
     uint8_t alive[4] = {1, 0, 0, 0};
-    int16_t loc_x[4] = {3, 0, 0, 0};
-    int16_t loc_y[4] = {3, 0, 0, 0};
-    int16_t desired_x[4] = {3, 0, 0, 0}; /* same as loc */
-    int16_t desired_y[4] = {3, 0, 0, 0};
+    int32_t loc_x[4] = {3, 0, 0, 0};
+    int32_t loc_y[4] = {3, 0, 0, 0};
+    int32_t desired_x[4] = {3, 0, 0, 0}; /* same as loc */
+    int32_t desired_y[4] = {3, 0, 0, 0};
     uint8_t lmd[4] = {2, 0, 0, 0}; /* arbitrary initial direction */
     uint32_t grid[64];
     memset(grid, 0, sizeof(grid));
@@ -363,8 +356,8 @@ void test_k3_no_move_when_at_desired(void) {
     k3_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
     TEST_ASSERT_TRUE_MESSAGE(run_k3(&s), "K3 kernel dispatch failed");
 
-    TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_x[0], "loc_x should be unchanged");
-    TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_y[0], "loc_y should be unchanged");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(3, g_result_loc_x[0], "loc_x should be unchanged");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(3, g_result_loc_y[0], "loc_y should be unchanged");
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(2U, g_result_last_move_dir[0],
                                     "last_move_dir should be unchanged");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, g_result_grid[(size_t)(3 * sx + 3)],
@@ -382,10 +375,10 @@ void test_k3_occupied_cell_blocked(void) {
     int sx = (int)g_sim.size_x;
 
     uint8_t alive[4] = {1, 1, 0, 0};
-    int16_t loc_x[4] = {3, 4, 0, 0};
-    int16_t loc_y[4] = {3, 3, 0, 0};
-    int16_t desired_x[4] = {4, 4, 0, 0}; /* agent 0 wants (4,3); agent 1 stays */
-    int16_t desired_y[4] = {3, 3, 0, 0};
+    int32_t loc_x[4] = {3, 4, 0, 0};
+    int32_t loc_y[4] = {3, 3, 0, 0};
+    int32_t desired_x[4] = {4, 4, 0, 0}; /* agent 0 wants (4,3); agent 1 stays */
+    int32_t desired_y[4] = {3, 3, 0, 0};
     uint8_t lmd[4] = {0, 0, 0, 0};
     uint32_t grid[64];
     memset(grid, 0, sizeof(grid));
@@ -395,8 +388,8 @@ void test_k3_occupied_cell_blocked(void) {
     k3_scenario_t s = {alive, loc_x, loc_y, desired_x, desired_y, lmd, grid};
     TEST_ASSERT_TRUE_MESSAGE(run_k3(&s), "K3 kernel dispatch failed");
 
-    TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_x[0], "agent 0 should be blocked");
-    TEST_ASSERT_EQUAL_INT16_MESSAGE(3, g_result_loc_y[0], "agent 0 should be blocked");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(3, g_result_loc_x[0], "agent 0 should be blocked");
+    TEST_ASSERT_EQUAL_INT32_MESSAGE(3, g_result_loc_y[0], "agent 0 should be blocked");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(2U, g_result_grid[(size_t)(3 * sx + 4)],
                                      "occupied cell should still hold agent 1");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, g_result_grid[(size_t)(3 * sx + 3)],

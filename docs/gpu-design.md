@@ -57,8 +57,8 @@ Let `N = population` (dead agents keep their slot; slots reuse at the next gener
 | Buffer | Type | Notes |
 |--------|------|-------|
 | `alive[N]` | `uint8_t` | 0 = dead |
-| `loc_x[N]`, `loc_y[N]` | `int16_t` | Split for independent coalesced access |
-| `birth_x[N]`, `birth_y[N]` | `int16_t` | Used by challenge evaluation |
+| `loc_x[N]`, `loc_y[N]` | `int32_t` | Split for independent coalesced access |
+| `birth_x[N]`, `birth_y[N]` | `int32_t` | Used by challenge evaluation |
 | `osc_period[N]` | `uint16_t` | OSC1 sensor |
 | `responsiveness[N]` | `float` | Action gating |
 | `long_probe_dist[N]` | `uint8_t` | Longprobe sensor range |
@@ -67,7 +67,7 @@ Let `N = population` (dead agents keep their slot; slots reuse at the next gener
 | `challenge_bits[N]` | `uint32_t` | Per-challenge accumulator |
 | `rng_state[N]` | `uint64_t` | Per-agent xorshift64 state |
 | `genome_fingerprint[N]` | `uint64_t` | Precomputed; replaces `GENETIC_SIM_FWD` |
-| `desired_x[N]`, `desired_y[N]` | `int16_t` | Transient: feedforward → movement kernel |
+| `desired_x[N]`, `desired_y[N]` | `int32_t` | Transient: feedforward → movement kernel |
 
 Total fixed per-agent footprint: ~40 bytes/agent. At `N = 4096`: ~160 KiB before genome and nnet.
 
@@ -110,13 +110,14 @@ single-pass feedforward where accumulators stay in private (register) memory.
 
 ```c
 // GPU:
-__global uint16_t grid[SIZE_X * SIZE_Y];   // row-major: grid[y * SIZE_X + x]
+__global uint grid[SIZE_X * SIZE_Y];   // row-major: grid[y * SIZE_X + x]
 
 // Host:
-typedef struct { uint16_t *cells; int16_t size_x; int16_t size_y; } biosim_grid_t;
+typedef struct { uint32_t *cells; int32_t size_x; int32_t size_y; } biosim_grid_t;
 ```
 
-Cell encoding: `0` = empty, `0xFFFF` = barrier, otherwise agent index + 1.
+Cell encoding: `0` = empty, `0xFFFFFFFF` = barrier, otherwise agent index + 1 (`[1, 0xFFFFFFFE]`).
+The host and GPU types match — no conversion is needed at host/device boundaries.
 
 During the parallel phase the grid is read-only; binding it as `image2d_t`
 enables the texture cache for neighborhood scans. A separate write pass
@@ -223,9 +224,9 @@ For `N = 4096`, `SIZE_X = SIZE_Y = 128`, `GENOME_MAX_LEN = 256`, `MAX_NEURONS = 
 | Neural net connections | 8 MiB |
 | Neuron outputs | 512 KiB |
 | Neuron driven flags | 128 KiB |
-| Grid | 32 KiB |
+| Grid | 64 KiB |
 | Signal | 64 KiB |
-| Transient desired_x / desired_y | 16 KiB |
+| Transient desired_x / desired_y | 32 KiB |
 | **Total** | **~13 MiB** |
 
 Scaling `N` to 65,536 yields ~200 MiB — trivial on any modern 4 GiB+ GPU.

@@ -119,14 +119,14 @@ static void fixture_setup(void) {
     } while (0)
 
     MKRW(g_buf_kill_marker, sizeof(uint8_t), pop);
-    MKRW(g_buf_loc_x, sizeof(int16_t), pop);
-    MKRW(g_buf_loc_y, sizeof(int16_t), pop);
+    MKRW(g_buf_loc_x, sizeof(int32_t), pop);
+    MKRW(g_buf_loc_y, sizeof(int32_t), pop);
     MKRW(g_buf_grid, sizeof(uint32_t), grid_cells);
 
 #undef MKRW
 
     /* Set fixed kernel arguments (same across all tests). */
-    cl_int size_x = (cl_int)g_sim.size_x;
+    cl_int size_x = g_sim.size_x;
     cl_uint pop_arg = (cl_uint)g_sim.population;
 
     (void)clSetKernelArg(g_kernel, 0U, sizeof(cl_mem), (const void *)&g_buf_kill_marker);
@@ -170,8 +170,8 @@ static void fixture_teardown(void) {
 
 typedef struct {
     const uint8_t *kill_marker;
-    const int16_t *loc_x;
-    const int16_t *loc_y;
+    const int32_t *loc_x;
+    const int32_t *loc_y;
     const uint32_t *grid;
 } k2_scenario_t;
 
@@ -187,8 +187,8 @@ static int run_k2(const k2_scenario_t *s) {
     }
 
     WR(g_buf_kill_marker, s->kill_marker, sizeof(uint8_t), pop);
-    WR(g_buf_loc_x, s->loc_x, sizeof(int16_t), pop);
-    WR(g_buf_loc_y, s->loc_y, sizeof(int16_t), pop);
+    WR(g_buf_loc_x, s->loc_x, sizeof(int32_t), pop);
+    WR(g_buf_loc_y, s->loc_y, sizeof(int32_t), pop);
     WR(g_buf_grid, s->grid, sizeof(uint32_t), grid_cells);
 
 #undef WR
@@ -219,8 +219,8 @@ void test_k2_kill_marked_compiles_and_runs(void) {
     size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
 
     uint8_t *km = calloc(pop, sizeof(uint8_t));
-    int16_t *lx = calloc(pop, sizeof(int16_t));
-    int16_t *ly = calloc(pop, sizeof(int16_t));
+    int32_t *lx = calloc(pop, sizeof(int32_t));
+    int32_t *ly = calloc(pop, sizeof(int32_t));
     uint32_t *grid = calloc(grid_cells, sizeof(uint32_t));
 
     TEST_ASSERT_NOT_NULL(km);
@@ -248,8 +248,8 @@ void test_k2_kill_marked_clears_marked_cell(void) {
     int sx = (int)g_sim.size_x;
 
     uint8_t km[4] = {1, 0, 0, 0}; /* agent 0 marked */
-    int16_t lx[4] = {3, 0, 0, 0};
-    int16_t ly[4] = {3, 0, 0, 0};
+    int32_t lx[4] = {3, 0, 0, 0};
+    int32_t ly[4] = {3, 0, 0, 0};
     uint32_t grid[64];
     memset(grid, 0, sizeof(grid));
     grid[(size_t)(3 * sx + 3)] = 1U; /* agent 0 at (3,3) */
@@ -272,8 +272,8 @@ void test_k2_kill_marked_skips_unmarked(void) {
     int sx = (int)g_sim.size_x;
 
     uint8_t km[4] = {0, 0, 0, 0}; /* no agent marked */
-    int16_t lx[4] = {2, 0, 0, 0};
-    int16_t ly[4] = {2, 0, 0, 0};
+    int32_t lx[4] = {2, 0, 0, 0};
+    int32_t ly[4] = {2, 0, 0, 0};
     uint32_t grid[64];
     memset(grid, 0, sizeof(grid));
     grid[(size_t)(2 * sx + 2)] = 1U; /* agent 0 at (2,2) */

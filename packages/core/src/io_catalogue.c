@@ -27,7 +27,7 @@ typedef struct {
     uint32_t visited;
 } pop_count_t;
 
-static void pop_visitor(biosim_coord_t coord, uint16_t cell, void *sim) {
+static void pop_visitor(biosim_coord_t coord, uint32_t cell, void *sim) {
     (void)coord;
     pop_count_t *pc = (pop_count_t *)sim;
     pc->visited++;
@@ -56,10 +56,10 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 
     const biosim_agents_t *agents = &sim->agents;
     const biosim_grid_t *grid = &sim->grid;
-    const int16_t sx = grid->size_x;
-    const int16_t sy = grid->size_y;
-    const int16_t x = agents->loc_x[idx];
-    const int16_t y = agents->loc_y[idx];
+    const int32_t sx = grid->size_x;
+    const int32_t sy = grid->size_y;
+    const int32_t x = agents->loc_x[idx];
+    const int32_t y = agents->loc_y[idx];
 
     switch (sensor) {
     case BIOSIM_SENSOR_LOC_X:
@@ -69,22 +69,22 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         return (float)y / (float)(sy - 1);
 
     case BIOSIM_SENSOR_BOUNDARY_DIST_X: {
-        int16_t tmp = (int16_t)(sx - x - 1);
-        int16_t d = (int16_t)(x < tmp ? x : tmp);
+        int32_t tmp = sx - x - 1;
+        int32_t d = x < tmp ? x : tmp;
         return 2.0F * (float)d / (float)sx;
     }
 
     case BIOSIM_SENSOR_BOUNDARY_DIST_Y: {
-        int16_t tmp = (int16_t)(sy - y - 1);
-        int16_t d = (int16_t)(y < tmp ? y : tmp);
+        int32_t tmp = sy - y - 1;
+        int32_t d = y < tmp ? y : tmp;
         return 2.0F * (float)d / (float)sy;
     }
 
     case BIOSIM_SENSOR_BOUNDARY_DIST: {
-        int16_t xtmp = (int16_t)(sx - x - 1);
-        int16_t ytmp = (int16_t)(sy - y - 1);
-        int16_t ddx = (int16_t)(x < xtmp ? x : xtmp);
-        int16_t ddy = (int16_t)(y < ytmp ? y : ytmp);
+        int32_t xtmp = sx - x - 1;
+        int32_t ytmp = sy - y - 1;
+        int32_t ddx = x < xtmp ? x : xtmp;
+        int32_t ddy = y < ytmp ? y : ytmp;
         float fnx = 2.0F * (float)ddx / (float)sx;
         float fny = 2.0F * (float)ddy / (float)sy;
         return fnx < fny ? fnx : fny;
@@ -118,7 +118,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 
     case BIOSIM_SENSOR_POPULATION: {
         biosim_coord_t center = {x, y};
-        int16_t r = sim->population_sensor_radius;
+        int32_t r = sim->population_sensor_radius;
         pop_count_t pc = {0U, 0U};
         biosim_grid_visit_neighborhood(grid, center, r, pop_visitor, &pc);
         if (pc.visited == 0U) {
@@ -148,11 +148,11 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 
     case BIOSIM_SENSOR_GENETIC_SIM_FWD: {
         uint8_t dir = agents->last_move_dir[idx] & 7U;
-        biosim_coord_t fwd = {(int16_t)(x + BIOSIM_DIR_DX[dir]), (int16_t)(y + BIOSIM_DIR_DY[dir])};
+        biosim_coord_t fwd = {x + BIOSIM_DIR_DX[dir], y + BIOSIM_DIR_DY[dir]};
         if (!biosim_grid_in_bounds(grid, fwd)) {
             return 0.0F;
         }
-        uint16_t cell = biosim_grid_at(grid, fwd);
+        uint32_t cell = biosim_grid_at(grid, fwd);
         if (cell == BIOSIM_GRID_EMPTY || cell == BIOSIM_GRID_BARRIER) {
             return 0.0F;
         }
@@ -297,22 +297,22 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         if (val < 0.5F) {
             break;
         }
-        const int16_t ex = agents->loc_x[idx];
-        const int16_t ey = agents->loc_y[idx];
-        const int16_t gsz_x = sim->grid.size_x;
-        const int16_t gsz_y = sim->grid.size_y;
+        const int32_t ex = agents->loc_x[idx];
+        const int32_t ey = agents->loc_y[idx];
+        const int32_t gsz_x = sim->grid.size_x;
+        const int32_t gsz_y = sim->grid.size_y;
         /* center cell: +2 */
         size_t ci = (size_t)ey * (size_t)gsz_x + (size_t)ex;
         uint32_t cv = sim->signal[ci] + 2U;
         sim->signal[ci] = cv > 255U ? 255U : cv;
         /* neighbours within radius 1.5: dx²+dy² ≤ 2 (all 8 immediate neighbours) */
-        for (int16_t dy = -1; dy <= 1; dy++) {
-            for (int16_t dx = -1; dx <= 1; dx++) {
+        for (int32_t dy = -1; dy <= 1; dy++) {
+            for (int32_t dx = -1; dx <= 1; dx++) {
                 if (dx == 0 && dy == 0) {
                     continue;
                 }
-                int16_t nx = (int16_t)(ex + dx);
-                int16_t ny = (int16_t)(ey + dy);
+                int32_t nx = ex + dx;
+                int32_t ny = ey + dy;
                 if (nx < 0 || nx >= gsz_x || ny < 0 || ny >= gsz_y) {
                     continue;
                 }
@@ -331,12 +331,12 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
             break;
         }
         uint8_t dir = agents->last_move_dir[idx] & 7U;
-        biosim_coord_t fwd = {(int16_t)(agents->loc_x[idx] + BIOSIM_DIR_DX[dir]),
-                              (int16_t)(agents->loc_y[idx] + BIOSIM_DIR_DY[dir])};
+        biosim_coord_t fwd = {agents->loc_x[idx] + BIOSIM_DIR_DX[dir],
+                              agents->loc_y[idx] + BIOSIM_DIR_DY[dir]};
         if (!biosim_grid_in_bounds(&sim->grid, fwd)) {
             break;
         }
-        uint16_t cell = biosim_grid_at(&sim->grid, fwd);
+        uint32_t cell = biosim_grid_at(&sim->grid, fwd);
         if (cell == BIOSIM_GRID_EMPTY || cell == BIOSIM_GRID_BARRIER) {
             break;
         }
@@ -356,41 +356,41 @@ void biosim_action_propose_move(uint32_t idx, biosim_sim_t *sim) {
     assert(sim != NULL);
 
     biosim_agents_t *agents = &sim->agents;
-    const int16_t size_x = sim->grid.size_x;
-    const int16_t size_y = sim->grid.size_y;
+    const int32_t size_x = sim->grid.size_x;
+    const int32_t size_y = sim->grid.size_y;
 
     /* Squash accumulated sums to a probability magnitude in (-1, 1). */
     float lx = tanhf(agents->dx_sum[idx] * 0.5F);
     float ly = tanhf(agents->dy_sum[idx] * 0.5F);
 
     /* Compare magnitude against a uniform random; take a step if it wins. */
-    int16_t step_x;
+    int32_t step_x;
     if (fabsf(lx) > rng_float(&agents->rng_state[idx])) {
-        step_x = (int16_t)(lx >= 0.0F ? 1 : -1);
+        step_x = lx >= 0.0F ? 1 : -1;
     } else {
-        step_x = (int16_t)0;
+        step_x = 0;
     }
-    int16_t step_y;
+    int32_t step_y;
     if (fabsf(ly) > rng_float(&agents->rng_state[idx])) {
-        step_y = (int16_t)(ly >= 0.0F ? 1 : -1);
+        step_y = ly >= 0.0F ? 1 : -1;
     } else {
-        step_y = (int16_t)0;
+        step_y = 0;
     }
 
-    int16_t nx = (int16_t)(agents->loc_x[idx] + step_x);
-    int16_t ny = (int16_t)(agents->loc_y[idx] + step_y);
+    int32_t nx = agents->loc_x[idx] + step_x;
+    int32_t ny = agents->loc_y[idx] + step_y;
 
     if (nx < 0) {
         nx = 0;
     }
     if (nx >= size_x) {
-        nx = (int16_t)(size_x - 1);
+        nx = size_x - 1;
     }
     if (ny < 0) {
         ny = 0;
     }
     if (ny >= size_y) {
-        ny = (int16_t)(size_y - 1);
+        ny = size_y - 1;
     }
 
     agents->desired_x[idx] = nx;

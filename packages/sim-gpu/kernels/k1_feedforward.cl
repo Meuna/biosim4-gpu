@@ -29,25 +29,25 @@ static float rng_float_k(__global ulong *rng_state, uint idx) {
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-static float eval_sensor(int sensor_id, uint idx, short x, short y, uchar last_dir, ushort osc_per,
+static float eval_sensor(int sensor_id, uint idx, int x, int y, uchar last_dir, ushort osc_per,
                          uint step, uint steps_per_gen, int size_x, int size_y,
                          __global ulong *rng_state, __global const uint *signal) {
     switch (sensor_id) {
     case BIOSIM_SENSOR_LOC_X:
-        return (float)(int)x / (float)(size_x - 1);
+        return (float)x / (float)(size_x - 1);
 
     case BIOSIM_SENSOR_LOC_Y:
-        return (float)(int)y / (float)(size_y - 1);
+        return (float)y / (float)(size_y - 1);
 
     case BIOSIM_SENSOR_BOUNDARY_DIST_X: {
-        int edge = size_x - (int)x - 1;
-        int d = (int)x < edge ? (int)x : edge;
+        int edge = size_x - x - 1;
+        int d = x < edge ? x : edge;
         return 2.0F * (float)d / (float)size_x;
     }
 
     case BIOSIM_SENSOR_BOUNDARY_DIST_Y: {
-        int edge = size_y - (int)y - 1;
-        int d = (int)y < edge ? (int)y : edge;
+        int edge = size_y - y - 1;
+        int d = y < edge ? y : edge;
         return 2.0F * (float)d / (float)size_y;
     }
 
@@ -106,16 +106,16 @@ static float eval_sensor(int sensor_id, uint idx, short x, short y, uchar last_d
 /* ── K1 kernel ──────────────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-__kernel void k_feedforward(__global uchar *alive, __global const short *loc_x,
-                            __global const short *loc_y, __global ushort *osc_period,
+__kernel void k_feedforward(__global uchar *alive, __global const int *loc_x,
+                            __global const int *loc_y, __global ushort *osc_period,
                             __global const uchar *last_move_dir, __global float *responsiveness,
                             __global uchar *long_probe_dist, __global const ushort *conn_packed,
                             __global const short *conn_weight, __global const ushort *conn_length,
                             __global float *neuron_output, __global const uchar *neuron_driven,
                             __global const uchar *neuron_count, __global uint *signal, int size_x,
                             int size_y, uint step, uint steps_per_gen, uint pop,
-                            __global ulong *rng_state, __global short *desired_x,
-                            __global short *desired_y, __global const uint *grid, int enable_kill,
+                            __global ulong *rng_state, __global int *desired_x,
+                            __global int *desired_y, __global const uint *grid, int enable_kill,
                             __global uchar *kill_marker) {
     uint idx = get_global_id(0);
 
@@ -123,8 +123,8 @@ __kernel void k_feedforward(__global uchar *alive, __global const short *loc_x,
         return;
     }
 
-    short x = loc_x[idx];
-    short y = loc_y[idx];
+    int x = loc_x[idx];
+    int y = loc_y[idx];
     uchar ldir = last_move_dir[idx];
     ushort osc_per = osc_period[idx];
     float resp = responsiveness[idx];
@@ -314,23 +314,23 @@ __kernel void k_feedforward(__global uchar *alive, __global const short *loc_x,
     float rx = rng_float_k(rng_state, idx);
     float ry = rng_float_k(rng_state, idx);
 
-    short step_x = (fabs(lx) > rx) ? (lx >= 0.0F ? (short)1 : (short)-1) : (short)0;
-    short step_y = (fabs(ly) > ry) ? (ly >= 0.0F ? (short)1 : (short)-1) : (short)0;
+    int step_x = (fabs(lx) > rx) ? (lx >= 0.0F ? 1 : -1) : 0;
+    int step_y = (fabs(ly) > ry) ? (ly >= 0.0F ? 1 : -1) : 0;
 
-    short nx = (short)((int)x + (int)step_x);
-    short ny = (short)((int)y + (int)step_y);
+    int nx = x + step_x;
+    int ny = y + step_y;
 
-    if (nx < (short)0) {
-        nx = (short)0;
+    if (nx < 0) {
+        nx = 0;
     }
-    if (nx >= (short)size_x) {
-        nx = (short)(size_x - 1);
+    if (nx >= size_x) {
+        nx = size_x - 1;
     }
-    if (ny < (short)0) {
-        ny = (short)0;
+    if (ny < 0) {
+        ny = 0;
     }
-    if (ny >= (short)size_y) {
-        ny = (short)(size_y - 1);
+    if (ny >= size_y) {
+        ny = size_y - 1;
     }
 
     desired_x[idx] = nx;

@@ -16,12 +16,12 @@ void tearDown(void) {
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
-static biosim_coord_t coord(int16_t x, int16_t y) {
+static biosim_coord_t coord(int32_t x, int32_t y) {
     biosim_coord_t c = {x, y};
     return c;
 }
 
-static void count_visitor(biosim_coord_t c, uint16_t cell, void *sim) {
+static void count_visitor(biosim_coord_t c, uint32_t cell, void *sim) {
     (void)c;
     (void)cell;
     (*(int *)sim)++;
@@ -30,8 +30,8 @@ static void count_visitor(biosim_coord_t c, uint16_t cell, void *sim) {
 /* ── tests ──────────────────────────────────────────────────────────────── */
 
 void test_fresh_grid_all_empty(void) {
-    for (int16_t y = 0; y < g.size_y; y++) {
-        for (int16_t x = 0; x < g.size_x; x++) {
+    for (int32_t y = 0; y < g.size_y; y++) {
+        for (int32_t x = 0; x < g.size_x; x++) {
             TEST_ASSERT_TRUE(biosim_grid_is_empty(&g, coord(x, y)));
         }
     }
@@ -39,12 +39,12 @@ void test_fresh_grid_all_empty(void) {
 
 void test_set_and_at_agent(void) {
     biosim_grid_set(&g, coord(3, 4), 7);
-    TEST_ASSERT_EQUAL_UINT16(7, biosim_grid_at(&g, coord(3, 4)));
+    TEST_ASSERT_EQUAL_UINT32(7, biosim_grid_at(&g, coord(3, 4)));
 }
 
 void test_set_and_at_barrier(void) {
     biosim_grid_set(&g, coord(1, 2), BIOSIM_GRID_BARRIER);
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(1, 2)));
+    TEST_ASSERT_EQUAL_UINT32(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(1, 2)));
 }
 
 void test_predicates_empty(void) {
@@ -124,8 +124,8 @@ void test_find_empty_returns_valid_coord(void) {
 
 void test_find_empty_full_grid_returns_notfound(void) {
     /* Fill every cell with an agent index */
-    for (int16_t y = 0; y < g.size_y; y++) {
-        for (int16_t x = 0; x < g.size_x; x++) {
+    for (int32_t y = 0; y < g.size_y; y++) {
+        for (int32_t x = 0; x < g.size_x; x++) {
             biosim_grid_set(&g, coord(x, y), 1);
         }
     }
@@ -136,8 +136,8 @@ void test_find_empty_full_grid_returns_notfound(void) {
 
 void test_find_last_empty_cell_returns_valid_coord(void) {
     /* Occupy every cell except (3,5) — find_empty must return exactly that coord */
-    for (int16_t y = 0; y < g.size_y; y++) {
-        for (int16_t x = 0; x < g.size_x; x++) {
+    for (int32_t y = 0; y < g.size_y; y++) {
+        for (int32_t x = 0; x < g.size_x; x++) {
             biosim_grid_set(&g, coord(x, y), 1);
         }
     }
@@ -146,8 +146,8 @@ void test_find_last_empty_cell_returns_valid_coord(void) {
     uint64_t rng = biosim_rng_seed(0, 1);
     biosim_coord_t c;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_grid_find_empty(&g, &rng, &c));
-    TEST_ASSERT_EQUAL_INT16(3, c.x);
-    TEST_ASSERT_EQUAL_INT16(5, c.y);
+    TEST_ASSERT_EQUAL_INT32(3, c.x);
+    TEST_ASSERT_EQUAL_INT32(5, c.y);
 }
 
 /* ── runner ─────────────────────────────────────────────────────────────── */

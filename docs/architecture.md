@@ -59,10 +59,10 @@ all work-items advance to gene `j` together, they read contiguous memory.
 typedef struct {
     uint32_t  population;
     /* Position — split for independent coalesced access on GPU */
-    int16_t  *loc_x;
-    int16_t  *loc_y;
-    int16_t  *birth_x;
-    int16_t  *birth_y;
+    int32_t  *loc_x;
+    int32_t  *loc_y;
+    int32_t  *birth_x;
+    int32_t  *birth_y;
     uint8_t  *alive;
     uint16_t *osc_period;
     float    *responsiveness;
@@ -72,8 +72,8 @@ typedef struct {
     uint64_t *rng_state;
     uint64_t *genome_fingerprint;
     /* Transient per-step movement targets */
-    int16_t  *desired_x;
-    int16_t  *desired_y;
+    int32_t  *desired_x;
+    int32_t  *desired_y;
     float    *dx_sum;
     float    *dy_sum;
 } biosim_agents_t;

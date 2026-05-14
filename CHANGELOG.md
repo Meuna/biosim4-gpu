@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Grid cell type widened from `uint16_t` to `uint32_t`; coordinates from `int16_t` to `int32_t`** —
+  `OpenCL`'s `atomic_cmpxchg` requires 32-bit operands; matching the host types eliminates
+  temporary conversion buffers at every host/device boundary:
+  - `biosim_grid_t.cells` changed from `uint16_t *` to `uint32_t *`.
+  - `biosim_grid_t.size_x/size_y` changed from `int16_t` to `int32_t`.
+  - `BIOSIM_GRID_BARRIER` changed from `0xFFFFU` to `0xFFFFFFFFU`; encoding is now
+    `0` = empty, `0xFFFFFFFF` = barrier, `[1, 0xFFFFFFFE]` = agent index + 1.
+  - `biosim_coord_t.{x,y}` changed from `int16_t` to `int32_t`.
+  - `biosim_sim_t.{size_x,size_y,population_sensor_radius}` changed from `int16_t` to `int32_t`.
+  - Agent SoA arrays `loc_x`, `loc_y`, `birth_x`, `birth_y`, `desired_x`, `desired_y`
+    changed from `int16_t *` to `int32_t *`.
+  - OpenCL kernels K1/K2/K3 updated to use `int` for all coordinate parameters and
+    locals; `short` casts removed throughout.
+  - `sim-gpu/src/main.c` and all test files: temporary `uint32_t tmp_grid` conversion
+    buffers removed; `sim->grid.cells` is now passed directly to `clCreateBuffer`.
+  - `types.h` OpenCL portability branch gains `typedef int int32_t; typedef uint uint32_t;`.
+
+
 - **`core` step pipeline aligned with GPU two-phase model** — `biosim_sim_step_agent`
   now only proposes a move (sense → feedforward → act → `biosim_action_propose_move`);
   kill commits and grid grants are deferred to `biosim_sim_next_step`, which runs a

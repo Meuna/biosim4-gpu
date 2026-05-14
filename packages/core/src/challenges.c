@@ -8,8 +8,8 @@
 
 /* ── shared geometry helpers ────────────────────────────────────────────── */
 
-static bool on_border(int16_t x, int16_t y, int16_t w, int16_t h) {
-    return x == 0 || x == (int16_t)(w - 1) || y == 0 || y == (int16_t)(h - 1);
+static bool on_border(int32_t x, int32_t y, int32_t w, int32_t h) {
+    return x == 0 || x == w - 1 || y == 0 || y == h - 1;
 }
 
 static float euclid(float dx, float dy) {
@@ -18,7 +18,7 @@ static float euclid(float dx, float dy) {
 
 /* ── neighbor counting for neighborhood challenges ──────────────────────── */
 
-static void count_occupied_cb(biosim_coord_t coord, uint16_t cell, void *sim) {
+static void count_occupied_cb(biosim_coord_t coord, uint32_t cell, void *sim) {
     (void)coord;
     if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
         (*(int *)sim)++;
@@ -27,14 +27,14 @@ static void count_occupied_cb(biosim_coord_t coord, uint16_t cell, void *sim) {
 
 /* ── x_band ─────────────────────────────────────────────────────────────── */
 
-static bool in_x_band(int16_t x, int16_t size_x, float x_min, float x_max) {
-    int16_t lo = (int16_t)(x_min * (float)size_x);
-    int16_t hi = (int16_t)(x_max * (float)size_x);
+static bool in_x_band(int32_t x, int32_t size_x, float x_min, float x_max) {
+    int32_t lo = (int32_t)(x_min * (float)size_x);
+    int32_t hi = (int32_t)(x_max * (float)size_x);
     return x >= lo && x < hi;
 }
 
-static biosim_challenge_result_t eval_x_band(const biosim_challenge_spec_t *spec, int16_t loc_x,
-                                             int16_t size_x) {
+static biosim_challenge_result_t eval_x_band(const biosim_challenge_spec_t *spec, int32_t loc_x,
+                                             int32_t size_x) {
     biosim_challenge_result_t r = {false, 0.0F};
     float x_min = spec->x_band.x_min;
     float x_max = spec->x_band.x_max;
@@ -51,8 +51,8 @@ static biosim_challenge_result_t eval_x_band(const biosim_challenge_spec_t *spec
 
 /* ── disc ────────────────────────────────────────────────────────────────── */
 
-static biosim_challenge_result_t eval_disc(const biosim_challenge_spec_t *spec, int16_t loc_x,
-                                           int16_t loc_y, int16_t size_x, int16_t size_y) {
+static biosim_challenge_result_t eval_disc(const biosim_challenge_spec_t *spec, int32_t loc_x,
+                                           int32_t loc_y, int32_t size_x, int32_t size_y) {
     biosim_challenge_result_t r = {false, 0.0F};
     float x = spec->disc.x * (float)size_x;
     float y = spec->disc.y * (float)size_y;
@@ -67,8 +67,8 @@ static biosim_challenge_result_t eval_disc(const biosim_challenge_spec_t *spec, 
 
 /* ── corners ─────────────────────────────────────────────────────────────── */
 
-static biosim_challenge_result_t eval_corners(const biosim_challenge_spec_t *spec, int16_t loc_x,
-                                              int16_t loc_y, int16_t size_x, int16_t size_y) {
+static biosim_challenge_result_t eval_corners(const biosim_challenge_spec_t *spec, int32_t loc_x,
+                                              int32_t loc_y, int32_t size_x, int32_t size_y) {
     biosim_challenge_result_t r = {false, 0.0F};
     float radius = spec->corners.radius * (float)size_x;
     float w = (float)(size_x - 1);
@@ -102,13 +102,13 @@ static biosim_challenge_result_t eval_corners(const biosim_challenge_spec_t *spe
 /* ── neighbor_count ──────────────────────────────────────────────────────── */
 
 static biosim_challenge_result_t eval_neighbor_count(const biosim_challenge_spec_t *spec,
-                                                     int16_t loc_x, int16_t loc_y, int16_t size_x,
-                                                     int16_t size_y, const biosim_grid_t *grid) {
+                                                     int32_t loc_x, int32_t loc_y, int32_t size_x,
+                                                     int32_t size_y, const biosim_grid_t *grid) {
     biosim_challenge_result_t r = {false, 0.0F};
     if (spec->neighbor_count.exclude_border && on_border(loc_x, loc_y, size_x, size_y)) {
         return r;
     }
-    int16_t rpx = (int16_t)(spec->neighbor_count.radius * (float)size_x);
+    int32_t rpx = (int32_t)(spec->neighbor_count.radius * (float)size_x);
     int count = 0;
     biosim_coord_t centre = {loc_x, loc_y};
     biosim_grid_visit_neighborhood(grid, centre, rpx, count_occupied_cb, &count);
@@ -124,13 +124,13 @@ static biosim_challenge_result_t eval_neighbor_count(const biosim_challenge_spec
 /* ── center_sparse ───────────────────────────────────────────────────────── */
 
 static biosim_challenge_result_t eval_center_sparse(const biosim_challenge_spec_t *spec,
-                                                    int16_t loc_x, int16_t loc_y, int16_t size_x,
-                                                    int16_t size_y, const biosim_grid_t *grid) {
+                                                    int32_t loc_x, int32_t loc_y, int32_t size_x,
+                                                    int32_t size_y, const biosim_grid_t *grid) {
     biosim_challenge_result_t r = {false, 0.0F};
     float x = spec->center_sparse.x * (float)size_x;
     float y = spec->center_sparse.y * (float)size_y;
     float outer_px = spec->center_sparse.outer_r * (float)size_x;
-    int16_t inner_rpx = (int16_t)(spec->center_sparse.inner_r * (float)size_x);
+    int32_t inner_rpx = (int32_t)(spec->center_sparse.inner_r * (float)size_x);
 
     float dist_out = euclid((float)loc_x - x, (float)loc_y - y);
     if (dist_out > outer_px) {
@@ -152,8 +152,8 @@ static biosim_challenge_result_t eval_center_sparse(const biosim_challenge_spec_
 
 /* ── against_wall ────────────────────────────────────────────────────────── */
 
-static biosim_challenge_result_t eval_against_wall(int16_t loc_x, int16_t loc_y, int16_t size_x,
-                                                   int16_t size_y) {
+static biosim_challenge_result_t eval_against_wall(int32_t loc_x, int32_t loc_y, int32_t size_x,
+                                                   int32_t size_y) {
     biosim_challenge_result_t r = {on_border(loc_x, loc_y, size_x, size_y), 0.0F};
     if (r.passed) {
         r.score = 1.0F;
@@ -163,9 +163,9 @@ static biosim_challenge_result_t eval_against_wall(int16_t loc_x, int16_t loc_y,
 
 /* ── migrate_distance ────────────────────────────────────────────────────── */
 
-static biosim_challenge_result_t eval_migrate_distance(int16_t loc_x, int16_t loc_y,
-                                                       int16_t birth_x, int16_t birth_y,
-                                                       int16_t size_x, int16_t size_y) {
+static biosim_challenge_result_t eval_migrate_distance(int32_t loc_x, int32_t loc_y,
+                                                       int32_t birth_x, int32_t birth_y,
+                                                       int32_t size_x, int32_t size_y) {
     float dx = (float)(loc_x - birth_x);
     float dy = (float)(loc_y - birth_y);
     float dist = euclid(dx, dy);
@@ -177,15 +177,15 @@ static biosim_challenge_result_t eval_migrate_distance(int16_t loc_x, int16_t lo
 /* ── pairs ───────────────────────────────────────────────────────────────── */
 
 /* Count 8-connected occupied neighbours of (x,y); record the last one. */
-static int count_8_neighbours(const biosim_grid_t *grid, int16_t x, int16_t y, int16_t *out_x,
-                              int16_t *out_y) {
+static int count_8_neighbours(const biosim_grid_t *grid, int32_t x, int32_t y, int32_t *out_x,
+                              int32_t *out_y) {
     int count = 0;
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             if (dx == 0 && dy == 0) {
                 continue;
             }
-            biosim_coord_t cell = {(int16_t)(x + dx), (int16_t)(y + dy)};
+            biosim_coord_t cell = {x + dx, y + dy};
             if (biosim_grid_in_bounds(grid, cell) && biosim_grid_is_occupied(grid, cell)) {
                 count++;
                 *out_x = cell.x;
@@ -197,14 +197,14 @@ static int count_8_neighbours(const biosim_grid_t *grid, int16_t x, int16_t y, i
 }
 
 /* Check whether (nb_x,nb_y) has any 8-connected occupied neighbour other than (skip_x,skip_y). */
-static bool neighbour_has_extra(const biosim_grid_t *grid, int16_t nb_x, int16_t nb_y,
-                                int16_t skip_x, int16_t skip_y) {
+static bool neighbour_has_extra(const biosim_grid_t *grid, int32_t nb_x, int32_t nb_y,
+                                int32_t skip_x, int32_t skip_y) {
     for (int dx = -1; dx <= 1; dx++) {
         for (int dy = -1; dy <= 1; dy++) {
             if (dx == 0 && dy == 0) {
                 continue;
             }
-            biosim_coord_t cell = {(int16_t)(nb_x + dx), (int16_t)(nb_y + dy)};
+            biosim_coord_t cell = {nb_x + dx, nb_y + dy};
             if (cell.x == skip_x && cell.y == skip_y) {
                 continue;
             }
@@ -216,14 +216,14 @@ static bool neighbour_has_extra(const biosim_grid_t *grid, int16_t nb_x, int16_t
     return false;
 }
 
-static biosim_challenge_result_t eval_pairs(int16_t loc_x, int16_t loc_y, int16_t size_x,
-                                            int16_t size_y, const biosim_grid_t *grid) {
+static biosim_challenge_result_t eval_pairs(int32_t loc_x, int32_t loc_y, int32_t size_x,
+                                            int32_t size_y, const biosim_grid_t *grid) {
     biosim_challenge_result_t r = {false, 0.0F};
     if (on_border(loc_x, loc_y, size_x, size_y)) {
         return r;
     }
-    int16_t nb_x = 0;
-    int16_t nb_y = 0;
+    int32_t nb_x = 0;
+    int32_t nb_y = 0;
     int count = count_8_neighbours(grid, loc_x, loc_y, &nb_x, &nb_y);
     if (count != 1) {
         return r;
@@ -252,7 +252,7 @@ static biosim_challenge_result_t eval_location_sequence(uint32_t challenge_bits)
 /* ── near_barrier ────────────────────────────────────────────────────────── */
 
 static biosim_challenge_result_t eval_near_barrier(const biosim_challenge_spec_t *spec,
-                                                   int16_t loc_x, int16_t loc_y, int16_t size_x,
+                                                   int32_t loc_x, int32_t loc_y, int32_t size_x,
                                                    const biosim_coord_t *ctrs, uint32_t n_ctrs) {
     biosim_challenge_result_t r = {false, 0.0F};
     if (n_ctrs == 0U) {
@@ -277,10 +277,10 @@ static biosim_challenge_result_t eval_near_barrier(const biosim_challenge_spec_t
 
 biosim_challenge_result_t biosim_challenge_eval(const biosim_challenge_spec_t *spec,
                                                 uint32_t agent_idx, const biosim_sim_t *sim) {
-    int16_t loc_x = sim->agents.loc_x[agent_idx];
-    int16_t loc_y = sim->agents.loc_y[agent_idx];
-    int16_t size_x = sim->grid.size_x;
-    int16_t size_y = sim->grid.size_y;
+    int32_t loc_x = sim->agents.loc_x[agent_idx];
+    int32_t loc_y = sim->agents.loc_y[agent_idx];
+    int32_t size_x = sim->grid.size_x;
+    int32_t size_y = sim->grid.size_y;
 
     switch (spec->kind) {
     case BIOSIM_CHALLENGE_X_BAND:
@@ -343,8 +343,8 @@ biosim_challenge_result_t biosim_challenge_eval(const biosim_challenge_spec_t *s
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void biosim_challenge_step(biosim_sim_t *sim) {
     uint32_t n = sim->agents.population;
-    int16_t w = sim->grid.size_x;
-    int16_t h = sim->grid.size_y;
+    int32_t w = sim->grid.size_x;
+    int32_t h = sim->grid.size_y;
 
     switch (sim->challenge.kind) {
 
@@ -360,12 +360,12 @@ void biosim_challenge_step(biosim_sim_t *sim) {
         break;
 
     case BIOSIM_CHALLENGE_RADIOACTIVE_WALLS: {
-        int16_t radioactive_x = (int16_t)(sim->step < sim->steps_per_gen / 2 ? 0 : w - 1);
+        int32_t radioactive_x = sim->step < sim->steps_per_gen / 2 ? 0 : w - 1;
         for (uint32_t i = 0; i < n; i++) {
             if (!sim->agents.alive[i]) {
                 continue;
             }
-            int dist = abs((int)sim->agents.loc_x[i] - (int)radioactive_x);
+            int dist = abs(sim->agents.loc_x[i] - radioactive_x);
             if (dist == 0) {
                 sim->agents.alive[i] = 0;
                 continue;
@@ -392,8 +392,8 @@ void biosim_challenge_step(biosim_sim_t *sim) {
                 if (sim->agents.challenge_bits[i] & bit) {
                     continue;
                 }
-                int dx = (int)sim->agents.loc_x[i] - (int)sim->barrier_ctrs[b].x;
-                int dy = (int)sim->agents.loc_y[i] - (int)sim->barrier_ctrs[b].y;
+                int dx = sim->agents.loc_x[i] - sim->barrier_ctrs[b].x;
+                int dy = sim->agents.loc_y[i] - sim->barrier_ctrs[b].y;
                 if (dx * dx + dy * dy <= rpx_sq) {
                     sim->agents.challenge_bits[i] |= bit;
                 }

@@ -41,8 +41,8 @@ biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_barrier_spec_t
                                   uint32_t n_barriers) {
     /* alloc start here, free on exit label */
     const uint32_t pop = sim->population;
-    const int16_t size_x = sim->size_x;
-    const int16_t size_y = sim->size_y;
+    const int32_t size_x = sim->size_x;
+    const int32_t size_y = sim->size_y;
     const uint16_t genome_max_len = sim->genome_max_len;
     const uint8_t max_neurons = sim->max_neurons;
     biosim_status_t returncode = BIOSIM_OK;
@@ -129,7 +129,7 @@ static void sim_grant_move(biosim_sim_t *sim, uint32_t i) {
     old_loc.x = sim->agents.loc_x[i];
     old_loc.y = sim->agents.loc_y[i];
     biosim_grid_set(&sim->grid, old_loc, BIOSIM_GRID_EMPTY);
-    biosim_grid_set(&sim->grid, target, (uint16_t)(i + 1U));
+    biosim_grid_set(&sim->grid, target, i + 1U);
     sim->agents.loc_x[i] = target.x;
     sim->agents.loc_y[i] = target.y;
     sim->agents.last_move_dir[i] = biosim_get_dir(dx, dy);

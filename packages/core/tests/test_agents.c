@@ -13,7 +13,7 @@ void tearDown(void) {
     biosim_agents_free(&agents);
 }
 
-static biosim_coord_t coord(int16_t x, int16_t y) {
+static biosim_coord_t coord(int32_t x, int32_t y) {
     biosim_coord_t c = {x, y};
     return c;
 }

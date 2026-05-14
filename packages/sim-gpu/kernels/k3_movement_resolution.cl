@@ -28,9 +28,9 @@ static uchar k3_get_dir(int dx, int dy) {
 
 /* ── K3 kernel ──────────────────────────────────────────────────────────── */
 
-__kernel void k_movement_resolution(__global const uchar *alive, __global const short *desired_x,
-                                    __global const short *desired_y, __global short *loc_x,
-                                    __global short *loc_y, __global uchar *last_move_dir,
+__kernel void k_movement_resolution(__global const uchar *alive, __global const int *desired_x,
+                                    __global const int *desired_y, __global int *loc_x,
+                                    __global int *loc_y, __global uchar *last_move_dir,
                                     __global uint *grid, int size_x, int size_y, uint pop) {
     uint idx = get_global_id(0);
 
@@ -38,18 +38,18 @@ __kernel void k_movement_resolution(__global const uchar *alive, __global const 
         return;
     }
 
-    short cx = loc_x[idx];
-    short cy = loc_y[idx];
-    short tx = desired_x[idx];
-    short ty = desired_y[idx];
-    int dx = (int)tx - (int)cx;
-    int dy = (int)ty - (int)cy;
+    int cx = loc_x[idx];
+    int cy = loc_y[idx];
+    int tx = desired_x[idx];
+    int ty = desired_y[idx];
+    int dx = tx - cx;
+    int dy = ty - cy;
 
     if (dx == 0 && dy == 0) {
         return;
     }
 
-    int ti = (int)ty * size_x + (int)tx;
+    int ti = ty * size_x + tx;
     uint new_val = idx + 1u;
 
     /* Atomically claim the target cell.  Fails if occupied or is a barrier. */
@@ -60,7 +60,7 @@ __kernel void k_movement_resolution(__global const uchar *alive, __global const 
 
     /* Commit: clear old cell (safe — exclusively owned by this agent) and
      * update agent position and last-move direction. */
-    int oi = (int)cy * size_x + (int)cx;
+    int oi = cy * size_x + cx;
     grid[oi] = BIOSIM_GRID_EMPTY;
 
     loc_x[idx] = tx;

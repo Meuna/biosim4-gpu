@@ -27,8 +27,8 @@ static cl_kernel g_kernel;
 static int g_opencl_ok;
 
 /* Per-agent GPU output buffers (host-side readback). */
-static int16_t *g_gpu_desired_x;
-static int16_t *g_gpu_desired_y;
+static int32_t *g_gpu_desired_x;
+static int32_t *g_gpu_desired_y;
 
 /* Snapshots of mutable per-agent fields taken at fixture_setup time.
  * These are re-uploaded to the GPU at the start of each run_k1() call and
@@ -136,8 +136,8 @@ static void fixture_setup(void) {
     const biosim_agents_t *a = &g_sim.agents;
 
     /* Allocate host-side readback and snapshot buffers. */
-    g_gpu_desired_x = malloc((size_t)pop * sizeof(int16_t));
-    g_gpu_desired_y = malloc((size_t)pop * sizeof(int16_t));
+    g_gpu_desired_x = malloc((size_t)pop * sizeof(int32_t));
+    g_gpu_desired_y = malloc((size_t)pop * sizeof(int32_t));
     g_init_rng_state = malloc((size_t)pop * sizeof(uint64_t));
     g_init_responsiveness = malloc((size_t)pop * sizeof(float));
     g_init_osc_period = malloc((size_t)pop * sizeof(uint16_t));
@@ -190,8 +190,8 @@ static void fixture_setup(void) {
     } while (0)
 
     MKRW(g_buf_alive, a->alive, sizeof(uint8_t), pop);
-    MKRO(g_buf_loc_x, a->loc_x, sizeof(int16_t), pop);
-    MKRO(g_buf_loc_y, a->loc_y, sizeof(int16_t), pop);
+    MKRO(g_buf_loc_x, a->loc_x, sizeof(int32_t), pop);
+    MKRO(g_buf_loc_y, a->loc_y, sizeof(int32_t), pop);
     MKRW(g_buf_osc_period, a->osc_period, sizeof(uint16_t), pop);
     MKRO(g_buf_last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     MKRW(g_buf_responsiveness, a->responsiveness, sizeof(float), pop);
@@ -204,20 +204,9 @@ static void fixture_setup(void) {
     MKRO(g_buf_neuron_count, n->neuron_count, sizeof(uint8_t), pop);
     MKRW(g_buf_signal, g_sim.signal, sizeof(uint32_t), g_sim.signal_len);
     MKRW(g_buf_rng_state, a->rng_state, sizeof(uint64_t), pop);
-    MKWO(g_buf_desired_x, sizeof(int16_t), pop);
-    MKWO(g_buf_desired_y, sizeof(int16_t), pop);
-    {
-        uint32_t *grid32 = malloc(grid_cells * sizeof(uint32_t));
-        if (!grid32) {
-            g_opencl_ok = 0;
-            return;
-        }
-        for (size_t gi = 0U; gi < grid_cells; gi++) {
-            grid32[gi] = (uint32_t)g_sim.grid.cells[gi];
-        }
-        MKRO(g_buf_grid, grid32, sizeof(uint32_t), grid_cells);
-        free(grid32);
-    }
+    MKWO(g_buf_desired_x, sizeof(int32_t), pop);
+    MKWO(g_buf_desired_y, sizeof(int32_t), pop);
+    MKRO(g_buf_grid, g_sim.grid.cells, sizeof(uint32_t), grid_cells);
     {
         uint8_t *zero_km = calloc(pop, sizeof(uint8_t));
         if (!zero_km) {
@@ -233,8 +222,8 @@ static void fixture_setup(void) {
 #undef MKWO
 
     /* Set all kernel arguments (scalars stay fixed across runs). */
-    cl_int size_x = (cl_int)g_sim.size_x;
-    cl_int size_y = (cl_int)g_sim.size_y;
+    cl_int size_x = g_sim.size_x;
+    cl_int size_y = g_sim.size_y;
     cl_uint step = (cl_uint)g_sim.step;
     cl_uint steps_gen = (cl_uint)g_sim.steps_per_gen;
     cl_uint pop_arg = (cl_uint)g_sim.population;
@@ -366,11 +355,11 @@ static int run_k1(void) {
         return 0;
     }
 
-    if (clEnqueueReadBuffer(q, g_buf_desired_x, CL_FALSE, 0U, (size_t)pop * sizeof(int16_t),
+    if (clEnqueueReadBuffer(q, g_buf_desired_x, CL_FALSE, 0U, (size_t)pop * sizeof(int32_t),
                             g_gpu_desired_x, 0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
-    if (clEnqueueReadBuffer(q, g_buf_desired_y, CL_TRUE, 0U, (size_t)pop * sizeof(int16_t),
+    if (clEnqueueReadBuffer(q, g_buf_desired_y, CL_TRUE, 0U, (size_t)pop * sizeof(int32_t),
                             g_gpu_desired_y, 0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
@@ -435,9 +424,9 @@ void test_k1_compiles_and_runs(void) {
             continue;
         }
         TEST_ASSERT_TRUE(g_gpu_desired_x[i] >= 0);
-        TEST_ASSERT_TRUE(g_gpu_desired_x[i] < (int16_t)g_sim.size_x);
+        TEST_ASSERT_TRUE(g_gpu_desired_x[i] < g_sim.size_x);
         TEST_ASSERT_TRUE(g_gpu_desired_y[i] >= 0);
-        TEST_ASSERT_TRUE(g_gpu_desired_y[i] < (int16_t)g_sim.size_y);
+        TEST_ASSERT_TRUE(g_gpu_desired_y[i] < g_sim.size_y);
     }
 }
 

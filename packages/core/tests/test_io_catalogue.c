@@ -200,11 +200,11 @@ void test_population_all_neighbors_occupied(void) {
     /* Fill a 3×3 area around agent with other agents (indices 1..8) so every
      * cell in the default radius-2 neighbourhood is occupied. */
     biosim_grid_zero_fill(&sim.grid);
-    int16_t x = sim.agents.loc_x[0];
-    int16_t y = sim.agents.loc_y[0];
-    for (int16_t dy = -1; dy <= 1; dy++) {
-        for (int16_t dx = -1; dx <= 1; dx++) {
-            biosim_coord_t c = {(int16_t)(x + dx), (int16_t)(y + dy)};
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    for (int32_t dy = -1; dy <= 1; dy++) {
+        for (int32_t dx = -1; dx <= 1; dx++) {
+            biosim_coord_t c = {x + dx, y + dy};
             biosim_grid_set(&sim.grid, c, 1U); /* mark as occupied */
         }
     }
@@ -237,14 +237,14 @@ void test_signal0_midrange(void) {
 void test_genetic_sim_fwd_empty_forward(void) {
     /* dir=0 (E): forward cell is (x+1, y) — ensure it is empty */
     sim.agents.last_move_dir[0] = 0;
-    biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
+    biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim));
 }
 
 void test_genetic_sim_fwd_barrier_forward(void) {
     sim.agents.last_move_dir[0] = 0;
-    biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
+    biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_BARRIER);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_GENETIC_SIM_FWD, 0, &sim));
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
@@ -253,7 +253,7 @@ void test_genetic_sim_fwd_barrier_forward(void) {
 void test_genetic_sim_fwd_identical_fingerprint(void) {
     /* Place a neighbour with the same fingerprint one cell to the east. */
     sim.agents.last_move_dir[0] = 0;
-    biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
+    biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, 2U); /* agent index 1 (1-based) */
     sim.agents.genome_fingerprint[0] = 0xDEADBEEFCAFEBABEULL;
     sim.agents.genome_fingerprint[1] = 0xDEADBEEFCAFEBABEULL;
@@ -263,7 +263,7 @@ void test_genetic_sim_fwd_identical_fingerprint(void) {
 
 void test_genetic_sim_fwd_all_bits_differ(void) {
     sim.agents.last_move_dir[0] = 0;
-    biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
+    biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, 2U);
     sim.agents.genome_fingerprint[0] = 0x0000000000000000ULL;
     sim.agents.genome_fingerprint[1] = 0xFFFFFFFFFFFFFFFFULL;
@@ -479,7 +479,7 @@ void test_emit_signal0_clamped_at_255(void) {
 
 void test_kill_forward_below_threshold(void) {
     sim.agents.last_move_dir[0] = 0;
-    biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
+    biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, 2U); /* agent 1 */
     biosim_agents_init_slot(&sim.agents, 1, fwd, 16, 99ULL);
 
@@ -492,7 +492,7 @@ void test_kill_forward_below_threshold(void) {
 void test_kill_forward_above_threshold(void) {
     sim.enable_kill = true;
     sim.agents.last_move_dir[0] = 0;
-    biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
+    biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, 2U); /* agent 1 */
     biosim_agents_init_slot(&sim.agents, 1, fwd, 16, 99ULL);
 
@@ -500,7 +500,7 @@ void test_kill_forward_above_threshold(void) {
     /* Kill is deferred: marker set, agent still alive, grid cell still occupied. */
     TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.kill_marker[1]);
     TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.alive[1]);
-    TEST_ASSERT_EQUAL_UINT16(2U, biosim_grid_at(&sim.grid, fwd));
+    TEST_ASSERT_EQUAL_UINT32(2U, biosim_grid_at(&sim.grid, fwd));
 
     sim.agents.kill_marker[1] = 0U;
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
@@ -509,7 +509,7 @@ void test_kill_forward_above_threshold(void) {
 void test_kill_forward_empty_cell_no_crash(void) {
     sim.enable_kill = true;
     sim.agents.last_move_dir[0] = 0;
-    biosim_coord_t fwd = {(int16_t)(sim.agents.loc_x[0] + 1), sim.agents.loc_y[0]};
+    biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
     biosim_action_apply(BIOSIM_ACTION_KILL_FORWARD, 1.0F, 0, &sim);
     /* No assertion needed — just verifying no crash. */
@@ -522,8 +522,8 @@ void test_finalize_no_accumulation(void) {
     sim.agents.dy_sum[0] = 0.0F;
     biosim_action_propose_move(0, &sim);
     /* With zero sums tanh gives 0, so the step probability is 0; desired == loc. */
-    TEST_ASSERT_EQUAL_INT16(sim.agents.loc_x[0], sim.agents.desired_x[0]);
-    TEST_ASSERT_EQUAL_INT16(sim.agents.loc_y[0], sim.agents.desired_y[0]);
+    TEST_ASSERT_EQUAL_INT32(sim.agents.loc_x[0], sim.agents.desired_x[0]);
+    TEST_ASSERT_EQUAL_INT32(sim.agents.loc_y[0], sim.agents.desired_y[0]);
 }
 
 void test_finalize_boundary_clamp_east(void) {
@@ -562,26 +562,26 @@ void test_finalize_strong_east_steps_one_cell(void) {
     /* Large dx_sum: tanh(100*0.5)≈1.0 > any rng_float draw → step is certain. */
     sim.agents.loc_x[0] = GRID_W / 2;
     sim.agents.loc_y[0] = GRID_H / 2;
-    int16_t start_x = sim.agents.loc_x[0];
-    int16_t start_y = sim.agents.loc_y[0];
+    int32_t start_x = sim.agents.loc_x[0];
+    int32_t start_y = sim.agents.loc_y[0];
     sim.agents.dx_sum[0] = 100.0F;
     sim.agents.dy_sum[0] = 0.0F;
     biosim_action_propose_move(0, &sim);
-    TEST_ASSERT_EQUAL_INT16(start_x + 1, sim.agents.desired_x[0]);
-    TEST_ASSERT_EQUAL_INT16(start_y, sim.agents.desired_y[0]);
+    TEST_ASSERT_EQUAL_INT32(start_x + 1, sim.agents.desired_x[0]);
+    TEST_ASSERT_EQUAL_INT32(start_y, sim.agents.desired_y[0]);
 }
 
 void test_finalize_strong_north_steps_one_cell(void) {
     /* Large negative dy_sum → certain northward step (decreasing y). */
     sim.agents.loc_x[0] = GRID_W / 2;
     sim.agents.loc_y[0] = GRID_H / 2;
-    int16_t start_x = sim.agents.loc_x[0];
-    int16_t start_y = sim.agents.loc_y[0];
+    int32_t start_x = sim.agents.loc_x[0];
+    int32_t start_y = sim.agents.loc_y[0];
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = -100.0F;
     biosim_action_propose_move(0, &sim);
-    TEST_ASSERT_EQUAL_INT16(start_x, sim.agents.desired_x[0]);
-    TEST_ASSERT_EQUAL_INT16(start_y - 1, sim.agents.desired_y[0]);
+    TEST_ASSERT_EQUAL_INT32(start_x, sim.agents.desired_x[0]);
+    TEST_ASSERT_EQUAL_INT32(start_y - 1, sim.agents.desired_y[0]);
 }
 
 /* ── runner ─────────────────────────────────────────────────────────────── */

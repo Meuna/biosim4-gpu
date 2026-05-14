@@ -9,17 +9,17 @@
 
 static biosim_sim_t sim;
 
-static biosim_coord_t coord(int16_t x, int16_t y) {
+static biosim_coord_t coord(int32_t x, int32_t y) {
     biosim_coord_t c = {x, y};
     return c;
 }
 
 /* Place agent i at (x,y), mark alive, and stamp the grid. */
-static void place_agent(uint32_t i, int16_t x, int16_t y) {
+static void place_agent(uint32_t i, int32_t x, int32_t y) {
     sim.agents.loc_x[i] = x;
     sim.agents.loc_y[i] = y;
     sim.agents.alive[i] = 1;
-    biosim_grid_set(&sim.grid, coord(x, y), (uint16_t)(i + 1U));
+    biosim_grid_set(&sim.grid, coord(x, y), i + 1U);
 }
 
 void setUp(void) {
@@ -45,7 +45,7 @@ void tearDown(void) {
 
 void test_neighbor_count_in_range_passes(void) {
     /* Agent 0 at (32,32); two neighbours at (33,32) and (34,32).
-     * radius = 0.08F → rpx = (int16_t)(0.08 * 64) = 5 pixels.
+     * radius = 0.08F → rpx = (int32_t)(0.08 * 64) = 5 pixels.
      * visit_neighborhood counts agent 0 itself plus the two neighbours = 3. */
     place_agent(0, 32, 32);
     place_agent(1, 33, 32);

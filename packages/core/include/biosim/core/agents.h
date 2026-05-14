@@ -1,7 +1,7 @@
 /*
  * HOST-ONLY: this header uses heap pointers and host standard types.
  * Do NOT include it from OpenCL kernel sources (.cl files).
- * GPU kernels receive individual uint16_t * / float * buffer arguments.
+ * GPU kernels receive individual int32_t * / float * buffer arguments.
  */
 #ifndef BIOSIM_CORE_AGENTS_H
 #define BIOSIM_CORE_AGENTS_H
@@ -19,10 +19,10 @@ typedef struct {
     uint32_t population;
 
     /* Position (split SoA for independent coalesced access on GPU) */
-    int16_t *loc_x;
-    int16_t *loc_y;
-    int16_t *birth_x;
-    int16_t *birth_y;
+    int32_t *loc_x;
+    int32_t *loc_y;
+    int32_t *birth_x;
+    int32_t *birth_y;
 
     /* Per-agent state */
     uint8_t *alive;
@@ -36,8 +36,8 @@ typedef struct {
     uint64_t *genome_fingerprint; /* zeroed until genome module is implemented */
 
     /* Transient per-step movement targets (feedforward → movement kernel) */
-    int16_t *desired_x;
-    int16_t *desired_y;
+    int32_t *desired_x;
+    int32_t *desired_y;
     float *dx_sum; /* accumulated action movement in x before finalisation */
     float *dy_sum; /* accumulated action movement in y before finalisation */
 } biosim_agents_t;
