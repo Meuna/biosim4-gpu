@@ -1,10 +1,10 @@
 /*
- * HOST/DEVICE PORTABILITY: this header is included by OpenCL kernel sources.
+ * HOST/DEVICE: this header is included by OpenCL kernel sources.
  * Do NOT add <stdio.h>, <stdlib.h>, <string.h>, or any other host-only header.
  * OpenCL C has no <stdint.h>; the guard below provides compatible typedefs.
  */
-#ifndef BIOSIM_CORE_TYPES_H
-#define BIOSIM_CORE_TYPES_H
+#ifndef BIOSIM_CORE_GRID_DEFS_H
+#define BIOSIM_CORE_GRID_DEFS_H
 
 #ifdef __OPENCL_VERSION__
 typedef short int16_t;
@@ -32,4 +32,4 @@ typedef struct {
 #define BIOSIM_GRID_BARRIER ((uint32_t)0xFFFFFFFFU)
 #endif
 
-#endif /* BIOSIM_CORE_TYPES_H */
+#endif /* BIOSIM_CORE_GRID_DEFS_H */

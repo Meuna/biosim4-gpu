@@ -31,7 +31,7 @@ future GPU simulator need with identical behavior.
 | [`genome.h`](../packages/core/include/biosim/core/genome.h) | `biosim_genome_t` | <ul><li>`biosim_genome_init_slot` — randomize one agent's genome</li><li>`biosim_genome_copy_slot` — copy genome between slots</li><li>`biosim_genome_mutate` — point / insertion / deletion mutations</li><li>`biosim_genome_crossover` — single-point two-parent crossover</li><li>`biosim_genome_sort_by_length` — sort agents by descending length</li></ul> |
 | [`nnet.h`](../packages/core/include/biosim/core/nnet.h) | `biosim_nnet_t` | <ul><li>`biosim_nnet_compile` — compile genome into neural network</li><li>`biosim_nnet_feedforward` — run one feedforward pass</li></ul> |
 | [`io_defs.h`](../packages/core/include/biosim/core/io_defs.h) | `biosim_sensor_t`, `biosim_action_t` | HOST/DEVICE portable enums (21 sensors, 17 actions) and direction tables (`BIOSIM_DIR_DX`, `BIOSIM_DIR_DY`). Included by both host code and OpenCL kernels. |
-| [`io_catalogue.h`](../packages/core/include/biosim/core/io_catalogue.h) | — | HOST-only API: <ul><li>`biosim_sensor_eval` — evaluate one sensor for an agent</li><li>`biosim_action_apply` — apply one action output</li><li>`biosim_action_propose_move` — convert accumulated dx/dy into desired_x/desired_y</li></ul> |
+| [`io_eval.h`](../packages/core/include/biosim/core/io_eval.h) | — | HOST-only API: <ul><li>`biosim_sensor_eval` — evaluate one sensor for an agent</li><li>`biosim_action_apply` — apply one action output</li><li>`biosim_action_propose_move` — convert accumulated dx/dy into desired_x/desired_y</li></ul> |
 | [`challenges.h`](../packages/core/include/biosim/core/challenges.h) | `biosim_challenge_spec_t` | <ul><li>`biosim_challenge_step` — per-step challenge hook</li><li>`biosim_generation_collect_survivors` — evaluate agents at gen end</li></ul> |
 | [`snapshot.h`](../packages/core/include/biosim/core/snapshot.h) | — | <ul><li>`biosim_snapshot_session_open` — open a write session</li><li>`biosim_snapshot_session_write` — write current generation's survivors</li><li>`biosim_snapshot_session_close` — finalize the file</li><li>`biosim_snapshot_restore` — load last record and reproduce</li></ul> |
 | [`rng.h`](../packages/core/include/biosim/core/rng.h) | — | <ul><li>`biosim_rng_next` — advance xorshift64 and return state</li><li>`biosim_rng_seed` — initialize from two uint64_t seeds</li></ul> |
@@ -91,17 +91,18 @@ typedef struct {
 
 ### Host/device portability
 
-Three headers are shared with OpenCL kernel sources and must compile as both
-C11 and OpenCL C:
+Five headers are shared with OpenCL kernel sources and must compile as both
+C11 and OpenCL C (see [`docs/conventions.md`](conventions.md) for the
+`_defs.h` convention and portability rules):
 
-- `core/types.h` — `biosim_coord_t`, `BIOSIM_GRID_EMPTY`,
-  `BIOSIM_GRID_BARRIER`
+- `core/grid_defs.h` — `biosim_coord_t`, `BIOSIM_GRID_EMPTY`,
+  `BIOSIM_GRID_BARRIER`, fixed-width integer typedefs for OpenCL C
 - `core/rng.h` — `biosim_rng_next`, `biosim_rng_seed`
 - `core/gene.h` — gene bit-layout macros (`BIOSIM_GENE_PACK`,
   `BIOSIM_GENE_SRC_TYPE`, ...)
-
-These headers carry no host-only includes. See
-[`docs/conventions.md`](conventions.md) for the portability rules.
+- `core/io_defs.h` — `biosim_sensor_t`, `biosim_action_t` enums and
+  direction tables (`BIOSIM_DIR_DX`, `BIOSIM_DIR_DY`)
+- `core/challenge_defs.h` — `biosim_challenge_kind_t` enum
 
 ## `cfgparse`
 
@@ -193,11 +194,12 @@ allows hot-swapping a kernel without rebuilding.
 In both cases the bundle's `sources[]` array is:
 
 ```
-sources[0] = biosim/core/types.h   (embedded preamble)
-sources[1] = biosim/core/rng.h     (embedded preamble)
-sources[2] = biosim/core/gene.h    (embedded preamble)
-sources[3] = biosim/core/io_defs.h (embedded preamble)
-sources[4] = <kernel source>       (override or embedded)
+sources[0] = biosim/core/grid_defs.h     (embedded preamble)
+sources[1] = biosim/core/rng.h           (embedded preamble)
+sources[2] = biosim/core/gene.h          (embedded preamble)
+sources[3] = biosim/core/io_defs.h       (embedded preamble)
+sources[4] = biosim/core/challenge_defs.h (embedded preamble)
+sources[5] = <kernel source>             (override or embedded)
 ```
 
 All five strings are passed to `clCreateProgramWithSource`, which concatenates them

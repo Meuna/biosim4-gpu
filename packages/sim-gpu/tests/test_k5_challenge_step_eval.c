@@ -8,7 +8,7 @@
 #include <CL/opencl.h>
 #endif
 
-#include "biosim/core/challenge_kinds.h"
+#include "biosim/core/challenge_defs.h"
 #include "biosim/core/challenge_spec.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"

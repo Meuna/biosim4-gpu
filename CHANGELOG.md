@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Portable header renames** — established `_defs.h` as the uniform suffix
+  for device-portable (OpenCL-safe) type/enum/constant-only headers:
+  `types.h` → `grid_defs.h`, `challenge_kinds.h` → `challenge_defs.h`.
+  `io_defs.h` already followed this convention and is unchanged.
+- **`io_catalogue` module renamed to `io_eval`** — `io_catalogue.h/c` →
+  `io_eval.h/c`; the catalogue (sensor/action enum listing) lives in
+  `io_defs.h`; the host-only evaluator is now `io_eval`. Test renamed to
+  `test_io_eval.c`.
+- **`docs/conventions.md` updated** — host/device portability section now
+  lists all 5 preamble headers, documents the `_defs.h` convention, and
+  standardizes the prologue comment style.
+
 ### Added
 - **`pipeline` module (`sim-gpu-lib`)** — new `biosim_gpu_pipeline_t` type with
   `create` / `step` / `sync_to_host` / `sync_from_host` / `free` API; owns the

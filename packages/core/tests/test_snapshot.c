@@ -3,7 +3,7 @@
 
 #include "biosim/core/census.h"
 #include "biosim/core/generation.h"
-#include "biosim/core/io_catalogue.h"
+#include "biosim/core/io_eval.h"
 #include "biosim/core/sim.h"
 #include "unity.h"
 

@@ -6,8 +6,8 @@
 #ifndef BIOSIM_CORE_AGENTS_H
 #define BIOSIM_CORE_AGENTS_H
 
+#include "biosim/core/grid_defs.h"
 #include "biosim/core/status.h"
-#include "biosim/core/types.h"
 #include <stdint.h>
 
 /*

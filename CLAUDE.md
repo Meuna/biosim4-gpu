@@ -23,7 +23,7 @@ Miller) using OpenCL. Four packages are implemented: `core`, `cfgparse`,
   Unity framework (see `docs/conventions.md`).
 
 - **Increment the snapshot schema version** when modifying `biosim_sensor_t` or
-  `biosim_action_t` in `io_catalogue.h`.
+  `biosim_action_t` in `io_defs.h`.
 
 - **Increment the snapshot format version** when modifying the snapshot interface.
 
@@ -68,7 +68,8 @@ Three mistakes are easy to make and hard to spot. They break the build on
 Windows or on OpenCL but compile cleanly on Linux host:
 
 1. **Host-only includes in shared headers.** Headers consumed by OpenCL kernels
-   (`core/types.h`, `core/rng.h`, `core/gene.h`) must not include `<stdio.h>`,
+   (`core/grid_defs.h`, `core/io_defs.h`, `core/challenge_defs.h`,
+   `core/rng.h`, `core/gene.h`) must not include `<stdio.h>`,
    `<stdlib.h>`, `<string.h>`, or any other host-only standard header. Every
    such header carries a prologue comment flagging the constraint — respect it.
 
@@ -131,9 +132,11 @@ parameters to a simulation and dispatches kernels.
 - **No mutable global state** in `core` — all state passed by parameter
 - **Error handling:** functions return `biosim_status_t`; asserts only for
   invariants that indicate bugs
-- **Host/device portability:** `core/types.h`, `core/rng.h`, `core/gene.h`
-  must compile as both C11 and OpenCL C — no `<stdio.h>`, `<stdlib.h>`,
-  `<string.h>`. Mark such headers with a prologue comment.
+- **Host/device portability:** `core/grid_defs.h`, `core/io_defs.h`,
+  `core/challenge_defs.h`, `core/rng.h`, `core/gene.h` must compile as
+  both C11 and OpenCL C — no `<stdio.h>`, `<stdlib.h>`, `<string.h>`.
+  Use `_defs.h` suffix for pure type/enum/constant-only shared headers.
+  Mark all shared headers with `/* HOST/DEVICE: ... */` prologue comment.
 - **CMake:** target-first only (`target_*` commands); no top-level
   `include_directories()` or `add_definitions()`
 

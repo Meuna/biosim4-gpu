@@ -11,7 +11,7 @@ add_library(core STATIC
   src/agents.c
   src/genome.c
   src/nnet.c
-  src/io_catalogue.c
+  src/io_eval.c
   src/snapshot.c
   src/status.c
 )

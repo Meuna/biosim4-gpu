@@ -1,6 +1,6 @@
 #include "biosim/core/barriers.h"
+#include "biosim/core/grid_defs.h"
 #include "biosim/core/rng.h"
-#include "biosim/core/types.h"
 
 #include <stddef.h>
 #include <stdint.h>

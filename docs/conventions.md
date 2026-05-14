@@ -60,14 +60,34 @@ Functions that allocate multiple resources follow this pattern:
 
 ## Host/device portability
 
-Three headers are shared with OpenCL kernel sources: `core/types.h`,
-`core/rng.h`, `core/gene.h`. They must compile as both C11 and OpenCL C:
+Five headers are shared with OpenCL kernel sources and prepended to every
+kernel program as a preamble: `core/grid_defs.h`, `core/rng.h`,
+`core/gene.h`, `core/io_defs.h`, `core/challenge_defs.h`.
+
+### Naming convention
+
+- **`*_defs.h`** — device-portable header containing only enum/type/macro
+  definitions (no functions, no stdlib, no host struct types with pointers).
+  These are the portable vocabulary headers — safe to include from both C11
+  host code and OpenCL C kernel sources.
+- **`*.h`** (no `_defs` suffix) — host-only header. Marked with
+  `/* HOST-ONLY: ... */`. May use `<stdbool.h>`, heap pointers, function
+  signatures that reference `biosim_sim_t`.
+
+Headers with inline functions that are also device-portable (`rng.h`,
+`gene.h`) follow their own domain naming — the `_defs` suffix specifically
+means "type/enum/constant definitions only, no functions."
+
+### Portability requirements
+
+Shared headers must compile as both C11 and OpenCL C:
 
 - No `<stdio.h>`, `<stdlib.h>`, `<string.h>`, or any other host-only
   standard header.
 - No heap allocation, no function pointers, no host struct types with
   pointer members.
-- Fixed-width integer types defined via the portability guard in `types.h`:
+- Fixed-width integer types defined via the portability guard in
+  `grid_defs.h`:
 
   ```c
   #ifdef __OPENCL_VERSION__
@@ -80,9 +100,9 @@ Three headers are shared with OpenCL kernel sources: `core/types.h`,
   #endif
   ```
 
-Every such header carries a prologue comment: `/* OPENCL-SAFE: ... */`.
-Headers that are host-only carry
-`/* HOST-ONLY: do not include from .cl files. */`.
+Every `_defs.h` header carries a prologue comment:
+`/* HOST/DEVICE: this header is included by OpenCL kernel sources. ... */`.
+Host-only headers carry `/* HOST-ONLY: ... */`.
 
 ## No mutable global state in `core`
 

@@ -2,11 +2,11 @@
 
 #include "biosim/core/challenges.h"
 #include "biosim/core/grid.h"
-#include "biosim/core/io_catalogue.h"
+#include "biosim/core/grid_defs.h"
+#include "biosim/core/io_eval.h"
 #include "biosim/core/log.h"
 #include "biosim/core/nnet.h"
 #include "biosim/core/rng.h"
-#include "biosim/core/types.h"
 
 #include <assert.h>
 #include <stdlib.h>

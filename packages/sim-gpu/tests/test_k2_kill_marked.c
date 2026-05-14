@@ -9,11 +9,11 @@
 #endif
 
 #include "biosim/core/challenge_spec.h"
+#include "biosim/core/grid_defs.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
-#include "biosim/core/types.h"
 #include "biosim/sim-gpu/registry.h"
 #include "biosim/sim-gpu/runner.h"
 #include "unity.h"

@@ -9,7 +9,7 @@
 #endif
 
 #include "biosim/core/challenge_spec.h"
-#include "biosim/core/io_catalogue.h"
+#include "biosim/core/io_eval.h"
 #include "biosim/core/log.h"
 #include "biosim/core/nnet.h"
 #include "biosim/core/params.h"

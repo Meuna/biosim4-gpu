@@ -1,12 +1,13 @@
 /*
- * HOST + DEVICE: safe for OpenCL kernel sources.
+ * HOST/DEVICE: this header is included by OpenCL kernel sources.
+ * Do NOT add <stdio.h>, <stdlib.h>, <string.h>, or any other host-only header.
  *
  * biosim_challenge_kind_t — the challenge kind discriminant.
  * Kept separate from challenge_spec.h so that OpenCL kernels can include this
  * header without pulling in <stdbool.h> (which is HOST-ONLY).
  */
-#ifndef BIOSIM_CORE_CHALLENGE_KINDS_H
-#define BIOSIM_CORE_CHALLENGE_KINDS_H
+#ifndef BIOSIM_CORE_CHALLENGE_DEFS_H
+#define BIOSIM_CORE_CHALLENGE_DEFS_H
 
 typedef enum {
     BIOSIM_CHALLENGE_X_BAND,
@@ -24,4 +25,4 @@ typedef enum {
     BIOSIM_CHALLENGE_ALTRUISM,
 } biosim_challenge_kind_t;
 
-#endif /* BIOSIM_CORE_CHALLENGE_KINDS_H */
+#endif /* BIOSIM_CORE_CHALLENGE_DEFS_H */

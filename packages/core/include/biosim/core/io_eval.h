@@ -2,8 +2,8 @@
  * HOST-ONLY: this header references biosim_sim_t which contains heap
  * pointers. Do NOT include from OpenCL kernel sources (.cl files).
  */
-#ifndef BIOSIM_CORE_IO_CATALOGUE_H
-#define BIOSIM_CORE_IO_CATALOGUE_H
+#ifndef BIOSIM_CORE_IO_EVAL_H
+#define BIOSIM_CORE_IO_EVAL_H
 
 #include "biosim/core/io_defs.h"
 #include "biosim/core/sim.h"
@@ -32,4 +32,4 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
  * biosim_sim_next_step. */
 void biosim_action_propose_move(uint32_t idx, biosim_sim_t *sim);
 
-#endif /* BIOSIM_CORE_IO_CATALOGUE_H */
+#endif /* BIOSIM_CORE_IO_EVAL_H */

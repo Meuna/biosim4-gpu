@@ -6,8 +6,8 @@
 #ifndef BIOSIM_CORE_GRID_H
 #define BIOSIM_CORE_GRID_H
 
+#include "biosim/core/grid_defs.h"
 #include "biosim/core/status.h"
-#include "biosim/core/types.h"
 #include <stdbool.h>
 #include <stdint.h>
 

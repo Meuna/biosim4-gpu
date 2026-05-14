@@ -7,13 +7,13 @@
  * cannot itself be included by sim.h. Keeping the spec types here breaks
  * that cycle cleanly — sim.h includes this header only.
  *
- * biosim_challenge_kind_t is defined in challenge_kinds.h (HOST + DEVICE)
+ * biosim_challenge_kind_t is defined in challenge_defs.h (HOST + DEVICE)
  * and included here.
  */
 #ifndef BIOSIM_CORE_CHALLENGE_SPEC_H
 #define BIOSIM_CORE_CHALLENGE_SPEC_H
 
-#include "biosim/core/challenge_kinds.h"
+#include "biosim/core/challenge_defs.h"
 #include <stdbool.h>
 
 /*

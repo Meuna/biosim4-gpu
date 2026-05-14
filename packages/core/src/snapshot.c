@@ -2,7 +2,7 @@
 #include "biosim/core/log.h"
 
 #include "biosim/core/generation.h"
-#include "biosim/core/io_catalogue.h"
+#include "biosim/core/io_eval.h"
 
 #include <stdlib.h>
 #include <string.h>

@@ -1,8 +1,8 @@
 #include "biosim/core/barriers.h"
 #include "biosim/core/grid.h"
+#include "biosim/core/grid_defs.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/status.h"
-#include "biosim/core/types.h"
 #include "unity.h"
 
 static biosim_grid_t g;

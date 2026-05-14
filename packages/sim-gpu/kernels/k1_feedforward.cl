@@ -1,6 +1,6 @@
 /* k1_feedforward.cl — K1: sensor evaluation, feedforward, actions, movement
  *
- * Preamble: biosim/core/types.h, rng.h, gene.h, and io_defs.h are prepended
+ * Preamble: grid_defs.h, rng.h, gene.h, and io_defs.h are prepended
  * as separate source strings by the build system (clCreateProgramWithSource).
  * Do NOT add #include directives for those files here.
  *

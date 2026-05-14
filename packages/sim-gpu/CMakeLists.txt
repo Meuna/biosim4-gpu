@@ -17,8 +17,8 @@ target_compile_definitions(sim-gpu-lib PUBLIC CL_TARGET_OPENCL_VERSION=300)
 # Embed portable headers as preamble strings (always loaded before any kernel).
 # Generated files define: const char <var>[] = "...";
 biosim_embed_opencl_source(sim-gpu-lib
-    "${CMAKE_SOURCE_DIR}/packages/core/include/biosim/core/types.h"
-    biosim_gpu_preamble_types_h
+    "${CMAKE_SOURCE_DIR}/packages/core/include/biosim/core/grid_defs.h"
+    biosim_gpu_preamble_grid_defs_h
 )
 biosim_embed_opencl_source(sim-gpu-lib
     "${CMAKE_SOURCE_DIR}/packages/core/include/biosim/core/rng.h"
@@ -33,8 +33,8 @@ biosim_embed_opencl_source(sim-gpu-lib
     biosim_gpu_preamble_io_defs_h
 )
 biosim_embed_opencl_source(sim-gpu-lib
-    "${CMAKE_SOURCE_DIR}/packages/core/include/biosim/core/challenge_kinds.h"
-    biosim_gpu_preamble_challenge_kinds_h
+    "${CMAKE_SOURCE_DIR}/packages/core/include/biosim/core/challenge_defs.h"
+    biosim_gpu_preamble_challenge_defs_h
 )
 
 # Embed the K1 kernel source as a fallback string.

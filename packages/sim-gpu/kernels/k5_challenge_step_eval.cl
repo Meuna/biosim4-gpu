@@ -1,7 +1,7 @@
 /* k5_challenge_step_eval.cl — K5: per-step challenge hook
  *
- * Preamble: biosim/core/types.h, rng.h, gene.h, io_defs.h, and
- * challenge_kinds.h are prepended as separate source strings by the build
+ * Preamble: grid_defs.h, rng.h, gene.h, io_defs.h, and
+ * challenge_defs.h are prepended as separate source strings by the build
  * system. Do NOT add #include here.
  *
  * Global work size: population (caller's responsibility).
