@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`pipeline` module (`sim-gpu-lib`)** — new `biosim_gpu_pipeline_t` type with
+  `create` / `step` / `sync_to_host` / `sync_from_host` / `free` API; owns the
+  five compiled programs, kernel handles, and all GPU buffers for one simulation
+  session.  `step` enqueues K1→K5 with no host/device sync; generation boundaries
+  use `sync_to_host` + `biosim_sim_next_generation` + `sync_from_host`.
+  Kernel buffer creation and argument setup are factored out of `main.c` into
+  this module; only the per-step `step` scalar arg is updated on each call.
+  Integration-tested by `test_pipeline.c` (step loop, alive-count invariant,
+  full generation-boundary cycle).
+- **Full generation+step loop in `biosim-gpu`** — `main.c` now drives the
+  complete outer generation / inner step loop identical in structure to
+  `sim-stepper`, replacing the single-step smoke test.
 - **`challenge_kinds.h`** — split `biosim_challenge_kind_t` enum out of
   `challenge_spec.h` into a new host+device-compatible header with no `<stdbool.h>`
   dependency; prepended to all OpenCL kernel builds as a 5th preamble source

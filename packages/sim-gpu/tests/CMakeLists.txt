@@ -22,3 +22,8 @@ add_executable(sim-gpu-k5-challenge-step-eval-tests test_k5_challenge_step_eval.
 target_link_libraries(sim-gpu-k5-challenge-step-eval-tests PRIVATE sim-gpu-lib core unity OpenCL::OpenCL)
 target_compile_features(sim-gpu-k5-challenge-step-eval-tests PRIVATE c_std_11)
 add_test(NAME sim-gpu-k5-challenge-step-eval-tests COMMAND sim-gpu-k5-challenge-step-eval-tests)
+
+add_executable(sim-gpu-pipeline-tests test_pipeline.c)
+target_link_libraries(sim-gpu-pipeline-tests PRIVATE sim-gpu-lib core unity OpenCL::OpenCL)
+target_compile_features(sim-gpu-pipeline-tests PRIVATE c_std_11)
+add_test(NAME sim-gpu-pipeline-tests COMMAND sim-gpu-pipeline-tests)

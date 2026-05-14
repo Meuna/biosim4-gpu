@@ -113,24 +113,24 @@ static void fixture_setup(void) {
     }
 
     /* Allocate device buffers at maximum size; contents are uploaded per test. */
-    g_buf_alive = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE,
-                                 (size_t)pop * sizeof(uint8_t), NULL, &cl_err);
-    g_buf_loc_x = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE,
-                                 (size_t)pop * sizeof(int32_t), NULL, &cl_err);
-    g_buf_loc_y = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE,
-                                 (size_t)pop * sizeof(int32_t), NULL, &cl_err);
+    g_buf_alive = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE, (size_t)pop * sizeof(uint8_t),
+                                 NULL, &cl_err);
+    g_buf_loc_x = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE, (size_t)pop * sizeof(int32_t),
+                                 NULL, &cl_err);
+    g_buf_loc_y = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE, (size_t)pop * sizeof(int32_t),
+                                 NULL, &cl_err);
     g_buf_challenge_bits = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE,
                                           (size_t)pop * sizeof(uint32_t), NULL, &cl_err);
     g_buf_rng_state = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE,
                                      (size_t)pop * sizeof(uint64_t), NULL, &cl_err);
-    g_buf_grid = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE,
-                                grid_cells * sizeof(uint32_t), NULL, &cl_err);
+    g_buf_grid = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE, grid_cells * sizeof(uint32_t),
+                                NULL, &cl_err);
     /* barrier_ctrs: 2 ints minimum (even when unused) */
-    g_buf_barrier_ctrs = clCreateBuffer(g_runner.context, CL_MEM_READ_ONLY,
-                                        2U * sizeof(int32_t), NULL, &cl_err);
+    g_buf_barrier_ctrs =
+        clCreateBuffer(g_runner.context, CL_MEM_READ_ONLY, 2U * sizeof(int32_t), NULL, &cl_err);
 
-    if (!g_buf_alive || !g_buf_loc_x || !g_buf_loc_y || !g_buf_challenge_bits ||
-        !g_buf_rng_state || !g_buf_grid || !g_buf_barrier_ctrs) {
+    if (!g_buf_alive || !g_buf_loc_x || !g_buf_loc_y || !g_buf_challenge_bits || !g_buf_rng_state ||
+        !g_buf_grid || !g_buf_barrier_ctrs) {
         g_opencl_ok = 0;
     }
 }
@@ -206,8 +206,8 @@ static int run_k5(const k5_scenario_t *s) {
     size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
 
     /* Upload per-agent arrays */
-    if (clEnqueueWriteBuffer(q, g_buf_alive, CL_FALSE, 0U, (size_t)pop * sizeof(uint8_t),
-                             s->alive, 0U, NULL, NULL) != CL_SUCCESS) {
+    if (clEnqueueWriteBuffer(q, g_buf_alive, CL_FALSE, 0U, (size_t)pop * sizeof(uint8_t), s->alive,
+                             0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
     if (clEnqueueWriteBuffer(q, g_buf_loc_x, CL_FALSE, 0U, (size_t)pop * sizeof(int32_t), s->loc_x,
@@ -218,9 +218,8 @@ static int run_k5(const k5_scenario_t *s) {
                              0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
-    if (clEnqueueWriteBuffer(q, g_buf_challenge_bits, CL_FALSE, 0U,
-                             (size_t)pop * sizeof(uint32_t), s->cbits, 0U, NULL,
-                             NULL) != CL_SUCCESS) {
+    if (clEnqueueWriteBuffer(q, g_buf_challenge_bits, CL_FALSE, 0U, (size_t)pop * sizeof(uint32_t),
+                             s->cbits, 0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
     if (clEnqueueWriteBuffer(q, g_buf_rng_state, CL_FALSE, 0U, (size_t)pop * sizeof(uint64_t),
@@ -233,7 +232,7 @@ static int run_k5(const k5_scenario_t *s) {
     }
     /* barrier_ctrs: upload 2 ints minimum */
     size_t ctr_bytes = (s->n_barrier_ctrs == 0U) ? 2U * sizeof(int32_t)
-                                                  : (size_t)s->n_barrier_ctrs * 2U * sizeof(int32_t);
+                                                 : (size_t)s->n_barrier_ctrs * 2U * sizeof(int32_t);
     if (clEnqueueWriteBuffer(q, g_buf_barrier_ctrs, CL_FALSE, 0U, ctr_bytes, s->barrier_ctrs, 0U,
                              NULL, NULL) != CL_SUCCESS) {
         return 0;
@@ -274,9 +273,8 @@ static int run_k5(const k5_scenario_t *s) {
                             g_result_alive, 0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
-    if (clEnqueueReadBuffer(q, g_buf_challenge_bits, CL_FALSE, 0U,
-                            (size_t)pop * sizeof(uint32_t), g_result_cbits, 0U, NULL,
-                            NULL) != CL_SUCCESS) {
+    if (clEnqueueReadBuffer(q, g_buf_challenge_bits, CL_FALSE, 0U, (size_t)pop * sizeof(uint32_t),
+                            g_result_cbits, 0U, NULL, NULL) != CL_SUCCESS) {
         return 0;
     }
     if (clEnqueueReadBuffer(q, g_buf_grid, CL_TRUE, 0U, grid_cells * sizeof(uint32_t),
@@ -317,12 +315,18 @@ void test_k5_compiles_and_runs_noop(void) {
     rng[0] = 12345U;
     grid[(size_t)3 * (size_t)g_sim.size_x + 3U] = 1U;
 
-    k5_scenario_t s = {alive,          loc_x,
-                       loc_y,          cbits,
-                       rng,            grid,
-                       dummy_ctr,      0U,
-                       0U,             g_sim.steps_per_gen,
-                       BIOSIM_CHALLENGE_X_BAND, 0.0F};
+    k5_scenario_t s = {alive,
+                       loc_x,
+                       loc_y,
+                       cbits,
+                       rng,
+                       grid,
+                       dummy_ctr,
+                       0U,
+                       0U,
+                       g_sim.steps_per_gen,
+                       BIOSIM_CHALLENGE_X_BAND,
+                       0.0F};
 
     TEST_ASSERT_TRUE_MESSAGE(run_k5(&s), "K5 kernel dispatch failed");
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(1U, g_result_alive[0], "agent must stay alive for no-op kind");
@@ -501,8 +505,7 @@ void test_k5_location_sequence_sets_bit(void) {
     TEST_ASSERT_TRUE_MESSAGE(run_k5(&s), "K5 kernel dispatch failed");
     TEST_ASSERT_TRUE_MESSAGE((g_result_cbits[0] & 1U) != 0U,
                              "agent at barrier centre must acquire bit 0");
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1U, g_result_alive[0],
-                                    "location_sequence must not kill agent");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(1U, g_result_alive[0], "location_sequence must not kill agent");
 
     free(alive);
     free(loc_x);

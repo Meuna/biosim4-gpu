@@ -221,12 +221,69 @@ work-item runs the complete pipeline for one agent:
 4. **Movement finalization** — `tanh`-squashed accumulator compared against two
    xorshift64 draws; writes clamped `desired_x`/`desired_y`.
 
+### K2 kernel — `k2_kill_marked.cl`
+
+Runs after K1. One work-item per agent (`N` work-items). Clear the cell for each
+agent whose `kill_marker` flag was set by K1's `KILL_FORWARD` action.
+
+### K3 kernel — `k3_movement_resolution.cl`
+
+Runs after K2. One work-item per alive agent (`N` work-items). Each agent attempts
+to claim its `desired_x`/`desired_y` target with `atomic_cmpxchg`
+(`BIOSIM_GRID_EMPTY → agent_index + 1`). On success: the old cell is cleared
+(non-atomic; each agent exclusively owns its current cell at this point) and
+`loc_x`, `loc_y`, `last_move_dir` are updated. On failure (cell already occupied
+or is a barrier): the agent stays in place silently. Because multiple agents may
+contest the same cell and the winner is determined by hardware scheduling order,
+movement outcomes are non-deterministic and do not match the CPU reference.
+
+### K4 kernel — `k4_signal_fade.cl`
+
+Runs after K3. One work-item per grid cell (`SIZE_X × SIZE_Y` work-items). Each
+work-item decrements its cell's signal value by 1, clamping at 0 to prevent
+underflow: `signal[c] = (signal[c] > 0) ? signal[c] - 1 : 0`. Signal values are
+`uint32_t` with meaningful range 0–255; the upper 24 bits are unused.
+
+### K5 kernel — `k5_challenge_step_eval.cl`
+
+Runs after K4. One work-item per alive agent (`N` work-items). GPU port of
+`biosim_challenge_step()`. Three challenge kinds are handled: `TOUCH_ANY_WALL`,
+`RADIOACTIVE_WALLS` and `LOCATION_SEQUENCE.
+
+### `pipeline` module — GPU simulation engine
+
+`biosim_gpu_pipeline_t` is the GPU-side counterpart of `core`'s `biosim_sim_t`:
+it owns the programs, kernels, and GPU buffers for one simulation session and
+drives the K1→K5 kernel sequence each step.
+
+| Function | Role |
+|----------|------|
+| `biosim_gpu_pipeline_create(sim, runner, exec_dir, out)` | Build programs, allocate GPU buffers, upload initial state; set all static kernel args once |
+| `biosim_gpu_pipeline_step(p, sim)` | Enqueue one complete step (K1→K5); no clFinish |
+| `biosim_gpu_pipeline_sync_to_host(p, sim)` | clFinish + download alive, loc, challenge_bits, signal for generation evaluation |
+| `biosim_gpu_pipeline_sync_from_host(p, sim)` | Re-upload all mutable buffers after `biosim_sim_next_generation` |
+| `biosim_gpu_pipeline_free(p)` | Release all GPU resources |
+
+The main loop in `biosim-gpu` is a direct parallel of `sim-stepper`'s loop:
+```c
+// inner loop — no host/device sync
+while (sim.step < sim.steps_per_gen) {
+    biosim_gpu_pipeline_step(&pipeline, &sim);
+    sim.step++;
+}
+// generation boundary
+biosim_gpu_pipeline_sync_to_host(&pipeline, &sim);
+biosim_sim_next_generation(&sim, &census);
+biosim_gpu_pipeline_sync_from_host(&pipeline, &sim);
+```
+
 ### Key types
 
 | Type | Role |
 |------|------|
 | `biosim_gpu_kernel_sources_t` | Bundle of source strings for one kernel program |
 | `biosim_gpu_runner_t` | OpenCL platform, device, context, and queue |
+| `biosim_gpu_pipeline_t` | Programs, kernels, and GPU buffers for one session |
 
 See [`docs/gpu-design.md`](gpu-design.md) for the full kernel pipeline design.
 

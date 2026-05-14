@@ -197,13 +197,12 @@ that count occupied cells in the neighbourhood.
 
 At the end of each generation the host:
 
-1. Reads back `alive[]` and survivor genome buffers.
-2. Evaluates survivors (challenge-based fitness).
-3. Pairs survivors and produces child genomes (crossover + mutation).
-4. Compiles each child genome into a neural network.
-5. Computes genome fingerprints.
-6. Decides spawn locations.
-7. Writes the full new population state to the device.
+1. Reads back `alive[]`, `loc_x/y`, `challenge_bits`, and `signal` via
+   `biosim_gpu_pipeline_sync_to_host`.
+2. Evaluates survivors (challenge-based fitness) and reproduces the population
+   via `biosim_sim_next_generation`.
+3. Writes the full new population state (all mutable buffers) back to the device
+   via `biosim_gpu_pipeline_sync_from_host`.
 
 Keeping the boundary on the host means the GPU refactoring does not require
 rewriting reproduction logic.
