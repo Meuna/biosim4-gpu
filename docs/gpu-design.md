@@ -1,7 +1,7 @@
 # GPU Data Model Design
 
-**Status:** K1–K4 implemented. K5 (`challenge_step_eval`) designed, not yet
-implemented. See [`STATUS.md`](../STATUS.md).
+**Status:** K1–K5 implemented. Full per-step pipeline complete.
+See [`STATUS.md`](../STATUS.md).
 
 This document describes the planned GPU/OpenCL architecture for `sim-gpu`. It
 is the reference for implementing that package. The single-threaded reference
@@ -166,8 +166,8 @@ K4: signal_fade
     Size:   SIZE_X * SIZE_Y work-items
 
 K5: challenge_step_eval
-    Reads:  alive, loc_*, birth_*, challenge_bits
-    Writes: challenge_bits, alive (some challenges kill early)
+    Reads:  alive, loc_*, challenge_bits, rng_state, grid
+    Writes: challenge_bits, alive (challenge kills), grid (challenge-killed agents cleared)
     Size:   N work-items
 ```
 

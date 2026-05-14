@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`challenge_kinds.h`** — split `biosim_challenge_kind_t` enum out of
+  `challenge_spec.h` into a new host+device-compatible header with no `<stdbool.h>`
+  dependency; prepended to all OpenCL kernel builds as a 5th preamble source
+  (`BIOSIM_GPU_PREAMBLE_COUNT` bumped from 4 to 5).
+- **K5 `challenge_step_eval` kernel** — per-step challenge hook porting
+  `biosim_challenge_step()`; handles `TOUCH_ANY_WALL` (border detection),
+  `RADIOACTIVE_WALLS` (probabilistic kill + immediate grid cell clear), and
+  `LOCATION_SEQUENCE` (barrier proximity sequencing); dispatched over `population`
+  work-items after K4. Killed agents' grid cells are cleared immediately (no atomics
+  needed — each agent uniquely owns one cell after K3). Completes the 5-kernel
+  per-step GPU pipeline.
 - **K4 `signal_fade` kernel** — decays the signal layer by 1 per step
   (`signal[c] = max(0, signal[c] - 1)`); dispatched over `size_x × size_y`
   work-items after K3. Registered in the kernel registry and wired into the

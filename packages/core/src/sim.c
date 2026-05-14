@@ -185,6 +185,8 @@ void biosim_sim_next_step(biosim_sim_t *sim) {
             sim->signal[j]--;
         }
     }
+
+    /* Step level challenges (≈ K5). */
     biosim_challenge_step(sim);
     sim->step++;
 }

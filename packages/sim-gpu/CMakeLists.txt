@@ -31,6 +31,10 @@ biosim_embed_opencl_source(sim-gpu-lib
     "${CMAKE_SOURCE_DIR}/packages/core/include/biosim/core/io_defs.h"
     biosim_gpu_preamble_io_defs_h
 )
+biosim_embed_opencl_source(sim-gpu-lib
+    "${CMAKE_SOURCE_DIR}/packages/core/include/biosim/core/challenge_kinds.h"
+    biosim_gpu_preamble_challenge_kinds_h
+)
 
 # Embed the K1 kernel source as a fallback string.
 biosim_embed_opencl_source(sim-gpu-lib
@@ -54,6 +58,12 @@ biosim_embed_opencl_source(sim-gpu-lib
 biosim_embed_opencl_source(sim-gpu-lib
     "${CMAKE_CURRENT_SOURCE_DIR}/kernels/k4_signal_fade.cl"
     biosim_gpu_k4_signal_fade
+)
+
+# Embed the K5 kernel source as a fallback string.
+biosim_embed_opencl_source(sim-gpu-lib
+    "${CMAKE_CURRENT_SOURCE_DIR}/kernels/k5_challenge_step_eval.cl"
+    biosim_gpu_k5_challenge_step_eval
 )
 
 # ── biosim-gpu — the OpenCL simulator executable ───────────────────────────

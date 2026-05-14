@@ -12,6 +12,7 @@ extern const char biosim_gpu_preamble_types_h[];
 extern const char biosim_gpu_preamble_rng_h[];
 extern const char biosim_gpu_preamble_gene_h[];
 extern const char biosim_gpu_preamble_io_defs_h[];
+extern const char biosim_gpu_preamble_challenge_kinds_h[];
 
 /* ── embedded kernel strings ────────────────────────────────────────────── */
 
@@ -19,6 +20,7 @@ extern const char biosim_gpu_k1_feedforward[];
 extern const char biosim_gpu_k2_kill_marked[];
 extern const char biosim_gpu_k3_movement_resolution[];
 extern const char biosim_gpu_k4_signal_fade[];
+extern const char biosim_gpu_k5_challenge_step_eval[];
 
 /* ── kernel table ───────────────────────────────────────────────────────── */
 
@@ -32,6 +34,7 @@ static const biosim_kernel_entry_t KERNEL_TABLE[] = {
     {"k2_kill_marked", biosim_gpu_k2_kill_marked},
     {"k3_movement_resolution", biosim_gpu_k3_movement_resolution},
     {"k4_signal_fade", biosim_gpu_k4_signal_fade},
+    {"k5_challenge_step_eval", biosim_gpu_k5_challenge_step_eval},
 };
 
 #define KERNEL_TABLE_COUNT (sizeof(KERNEL_TABLE) / sizeof(KERNEL_TABLE[0]))
@@ -120,6 +123,7 @@ biosim_status_t biosim_gpu_registry_get(const char *kernel_name, const char *exe
     out->sources[1] = biosim_gpu_preamble_rng_h;
     out->sources[2] = biosim_gpu_preamble_gene_h;
     out->sources[3] = biosim_gpu_preamble_io_defs_h;
+    out->sources[4] = biosim_gpu_preamble_challenge_kinds_h;
     out->count = BIOSIM_GPU_MAX_SOURCES;
 
     if (exec_dir) {

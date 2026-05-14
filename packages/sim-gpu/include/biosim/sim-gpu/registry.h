@@ -9,8 +9,9 @@
 
 /* ── kernel source bundle ─────────────────────────────────────────────────── */
 
-/* Preamble strings prepended to every kernel program: types.h, rng.h, gene.h, io_defs.h */
-#define BIOSIM_GPU_PREAMBLE_COUNT 4U
+/* Preamble strings prepended to every kernel program:
+ * types.h, rng.h, gene.h, io_defs.h, challenge_kinds.h */
+#define BIOSIM_GPU_PREAMBLE_COUNT 5U
 
 /* Maximum source strings per program: preamble + one kernel source */
 #define BIOSIM_GPU_MAX_SOURCES (BIOSIM_GPU_PREAMBLE_COUNT + 1U)
@@ -19,7 +20,7 @@
  * Bundle of source strings ready to pass to clCreateProgramWithSource.
  *
  * sources[0..BIOSIM_GPU_PREAMBLE_COUNT-1] always point to embedded preamble
- * strings (types.h, rng.h, gene.h, io_defs.h).
+ * strings (types.h, rng.h, gene.h, io_defs.h, challenge_kinds.h).
  * sources[BIOSIM_GPU_PREAMBLE_COUNT] points to the kernel source — either the
  * embedded fallback or a buffer loaded from the filesystem override.
  */
