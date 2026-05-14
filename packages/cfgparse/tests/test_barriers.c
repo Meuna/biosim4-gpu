@@ -1,6 +1,6 @@
+#include "biosim/cfgparse/barriers.h"
 #include "biosim/core/barriers.h"
 #include "biosim/core/status.h"
-#include "biosim/params/barriers.h"
 #include "unity.h"
 
 #include <stdint.h>

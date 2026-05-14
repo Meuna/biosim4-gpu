@@ -1,4 +1,4 @@
-#include "biosim/params/barriers.h"
+#include "biosim/cfgparse/barriers.h"
 #include "biosim/core/log.h"
 #include "tomlc17.h"
 

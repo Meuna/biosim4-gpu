@@ -5,10 +5,10 @@
 
 #include "biosim/core/census.h"
 #include "biosim/core/log.h"
+#include "biosim/core/params.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
-#include "biosim/params/params.h"
 #include "biosim/sim-gpu/pipeline.h"
 #include "biosim/sim-gpu/runner.h"
 

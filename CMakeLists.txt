@@ -63,16 +63,16 @@ include(EmbedKernels)
 # Shared simulation logic: genome, neural net, RNG, challenges (no deps)
 add_subdirectory(packages/core)
 
-# CLI/TOML parameter parsing library (depends on core + argtable3 + tomlc17)
-add_subdirectory(packages/params)
+# CLI/TOML configuration parsing library (depends on core + argtable3 + tomlc17)
+add_subdirectory(packages/cfgparse)
 
-# OpenCL GPU simulator (depends on core + params + OpenCL; optional at configure time)
+# OpenCL GPU simulator (depends on core + cfgparse + OpenCL; optional at configure time)
 if(BIOSIM_BUILD_GPU)
   add_subdirectory(packages/sim-gpu)
 endif()
 
 # Single-threaded CPU reference simulator executable
-add_subdirectory(packages/sim-stepper) # depends on core + params
+add_subdirectory(packages/sim-stepper) # depends on core + cfgparse
 
 # WebAssembly PoC: hardcoded sim, no params, generates standalone HTML
 add_subdirectory(packages/wasm-sim-stepper)

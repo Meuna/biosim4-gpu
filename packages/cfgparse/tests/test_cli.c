@@ -1,5 +1,5 @@
+#include "biosim/core/params.h"
 #include "biosim/core/status.h"
-#include "biosim/params/params.h"
 
 #include "unity.h"
 

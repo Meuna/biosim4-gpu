@@ -1,9 +1,9 @@
-#ifndef BIOSIM_PARAMS_CHALLENGES_H
-#define BIOSIM_PARAMS_CHALLENGES_H
+#ifndef BIOSIM_CFGPARSE_CHALLENGES_H
+#define BIOSIM_CFGPARSE_CHALLENGES_H
 
 #include "biosim/core/challenge_spec.h"
+#include "biosim/core/params.h"
 #include "biosim/core/status.h"
-#include "biosim/params/params.h"
 
 /*
  * Build a biosim_challenge_spec_t from an already-resolved biosim_params_t.
@@ -19,4 +19,4 @@
 biosim_status_t biosim_challenge_spec_from_params(const biosim_params_t *p,
                                                   biosim_challenge_spec_t *out);
 
-#endif /* BIOSIM_PARAMS_CHALLENGES_H */
+#endif /* BIOSIM_CFGPARSE_CHALLENGES_H */

@@ -6,7 +6,7 @@ code in this repository.
 ## Project
 
 GPU port of [biosim4](https://github.com/davidrmiller/biosim4) (by David R.
-Miller) using OpenCL. Three packages are implemented: `core`, `params`, and
+Miller) using OpenCL. Three packages are implemented: `core`, `cfgparse`, and
 `sim-stepper`. The GPU simulator (`sim-gpu`) is designed but not yet implemented.
 
 ## Working with this repository
@@ -95,19 +95,21 @@ Four packages, strict acyclic dependency graph:
 
 ```
 core (static lib, libc only)
-  └── params (static lib — CLI/TOML/parameter management)
+  └── cfgparse (static lib — CLI/TOML parsing)
       ├── sim-stepper (executable — single-threaded CPU reference)
       └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
 ```
 
 **`core`** — all shared simulation logic: genome operators, neural network
 compilation, sensor/action catalogues, challenge evaluation, portable xorshift64
-RNG, snapshot serialization. `biosim_sim_t` is the complete simulation state;
-pre-populate configuration fields, then call `biosim_sim_create`.
+RNG, snapshot serialization, parameter data model (`biosim_params_t`).
+`biosim_sim_t` is the complete simulation state; pre-populate configuration
+fields, then call `biosim_sim_create`.
 
-**`params`** — CLI/TOML/parameter management. Each simulator's `main.c` defines
-its own exhaustive entry table and calls `biosim_params_parse`. No shared
-defaults; no extension mechanism.
+**`cfgparse`** — CLI argument parsing and TOML config loading. Each simulator's
+`main.c` defines its own exhaustive entry table and calls `biosim_params_parse`.
+No shared defaults; no extension mechanism. The parameter data model lives in
+`core/params.h`.
 
 **`sim-stepper`** — orchestration loop only. All simulation logic lives in
 `core`; the stepper adds the parameter table and the generation/step loop.

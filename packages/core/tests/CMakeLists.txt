@@ -53,3 +53,8 @@ target_compile_features(core-snapshot-tests PRIVATE c_std_11)
 target_compile_definitions(core-snapshot-tests PRIVATE
     BIOSIM_TEST_TMPDIR="${CMAKE_CURRENT_BINARY_DIR}")
 add_test(NAME core-snapshot-tests COMMAND core-snapshot-tests)
+
+add_executable(core-params-tests test_params.c)
+target_link_libraries(core-params-tests PRIVATE core unity)
+target_compile_features(core-params-tests PRIVATE c_std_11)
+add_test(NAME core-params-tests COMMAND core-params-tests)

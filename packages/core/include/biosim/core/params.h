@@ -1,5 +1,5 @@
-#ifndef BIOSIM_PARAMS_H
-#define BIOSIM_PARAMS_H
+#ifndef BIOSIM_CORE_PARAMS_H
+#define BIOSIM_CORE_PARAMS_H
 
 #include "biosim/core/status.h"
 #include <stdbool.h>
@@ -64,4 +64,4 @@ const char *biosim_params_get_string(const biosim_params_t *p, const char *key);
 /* Introspection */
 const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const char *key);
 
-#endif /* BIOSIM_PARAMS_H */
+#endif /* BIOSIM_CORE_PARAMS_H */

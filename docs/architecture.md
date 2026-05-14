@@ -6,7 +6,7 @@ Four packages are implemented, with a strict acyclic dependency graph:
 
 ```
 core (static lib — libc only)
-  └── params (static lib — argtable3, tomlc17 PRIVATE)
+  └── cfgparse (static lib — argtable3, tomlc17 PRIVATE)
       ├── sim-stepper (executable — single-threaded CPU reference)
       └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
 ```
@@ -37,6 +37,7 @@ future GPU simulator need with identical behavior.
 | [`rng.h`](../packages/core/include/biosim/core/rng.h) | — | <ul><li>`biosim_rng_next` — advance xorshift64 and return state</li><li>`biosim_rng_seed` — initialize from two uint64_t seeds</li></ul> |
 | [`status.h`](../packages/core/include/biosim/core/status.h) | `biosim_status_t` | <ul><li>`biosim_strerror` — map status code to human-readable string</li></ul> |
 | [`log.h`](../packages/core/include/biosim/core/log.h) | `biosim_log_ctx_t` | <ul><li>`biosim_log_init` — set threshold, detect terminal color</li><li>`BIOSIM_ERRORF` / `WARNF` / `INFOF` / `DEBUGF` / `TRACEF` — level-gated macros</li></ul> |
+| [`params.h`](../packages/core/include/biosim/core/params.h) | `biosim_params_t`, `biosim_param_entry_t` | <ul><li>`biosim_params_set_int` / `_float` / `_bool` / `_string` — typed setters</li><li>`biosim_params_get_int` / `_float` / `_bool` / `_string` — typed getters (abort on type mismatch)</li><li>`biosim_params_find` — locate an entry by key</li></ul> |
 
 `biosim_sim_t` is the complete simulation state. Set the configuration fields
 (`population`, `size_x`, `size_y`, `genome_max_len`, `max_neurons`,
@@ -103,20 +104,22 @@ C11 and OpenCL C:
 These headers carry no host-only includes. See
 [`docs/conventions.md`](conventions.md) for the portability rules.
 
-## `params`
+## `cfgparse`
 
-**Location:** `packages/params/`  
+**Location:** `packages/cfgparse/`  
 **Type:** Static library. Depends on `core` (PUBLIC), argtable3 and tomlc17
 (PRIVATE).
 
-Owns all CLI and TOML parsing. Each simulator's `main.c` declares a static
+Owns CLI argument parsing and TOML config file loading. The parameter data
+model (`biosim_params_t`, `biosim_param_entry_t`, setters/getters) lives in
+`core/params.h`. Each simulator's `main.c` declares a static
 `biosim_param_entry_t[]` table — one entry per parameter — and calls
-`biosim_params_parse` once at startup. The `params` package does the rest.
+`biosim_params_parse` once at startup. The `cfgparse` package does the rest.
 
-| Type | Role |
-|------|------|
-| `biosim_param_entry_t` | One parameter: name, TOML table, default, type, CLI flag |
-| `biosim_params_t` | Dynamic array of entries; resolved values after three-pass parse |
+| Header | Role |
+|--------|------|
+| `biosim/cfgparse/barriers.h` | `biosim_barrier_params_load` — parse barrier specs from a TOML file |
+| `biosim/cfgparse/challenges.h` | `biosim_challenge_spec_from_params` — build a challenge spec from resolved params |
 
 Resolution order: compiled-in defaults → TOML file (`--config`) → CLI flags.
 Each layer overrides the previous.
@@ -127,7 +130,7 @@ See [`docs/usage.md`](usage.md) for the full parameter reference.
 ## `sim-stepper`
 
 **Location:** `packages/sim-stepper/`  
-**Type:** Executable. Depends on `core` and `params`.
+**Type:** Executable. Depends on `core` and `cfgparse`.
 
 A thin orchestration shell. `main.c` parses parameters, populates
 `biosim_sim_t`, and drives a two-level loop — generation loop over step loop
@@ -170,7 +173,7 @@ See [`docs/usage.md`](usage.md) for the command-line reference.
 
 **Location:** `packages/sim-gpu/`  
 **Type:** Static library (`sim-gpu-lib`) + executable (`biosim-gpu`). Depends on
-`core`, `params`, and OpenCL (vcpkg port `opencl`).
+`core`, `cfgparse`, and OpenCL (vcpkg port `opencl`).
 
 Implements the OpenCL GPU simulator. Kernel sources are embedded at build time as
 C string literals so the binary is self-contained; a filesystem override mechanism

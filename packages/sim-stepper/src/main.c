@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "biosim/cfgparse/barriers.h"
+#include "biosim/cfgparse/challenges.h"
 #include "biosim/core/census.h"
 #include "biosim/core/log.h"
+#include "biosim/core/params.h"
 #include "biosim/core/rng.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/snapshot.h"
-#include "biosim/params/barriers.h"
-#include "biosim/params/challenges.h"
-#include "biosim/params/params.h"
 
 static volatile sig_atomic_t g_halt_requested = 0;
 

@@ -1,5 +1,5 @@
-#ifndef BIOSIM_PARAMS_BARRIERS_H
-#define BIOSIM_PARAMS_BARRIERS_H
+#ifndef BIOSIM_CFGPARSE_BARRIERS_H
+#define BIOSIM_CFGPARSE_BARRIERS_H
 
 #include "biosim/core/barriers.h"
 #include "biosim/core/status.h"
@@ -22,4 +22,4 @@
 biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier_spec_t **specs_out,
                                            uint32_t *n_out);
 
-#endif /* BIOSIM_PARAMS_BARRIERS_H */
+#endif /* BIOSIM_CFGPARSE_BARRIERS_H */

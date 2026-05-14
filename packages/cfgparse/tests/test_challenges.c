@@ -1,6 +1,6 @@
+#include "biosim/cfgparse/challenges.h"
+#include "biosim/core/params.h"
 #include "biosim/core/status.h"
-#include "biosim/params/challenges.h"
-#include "biosim/params/params.h"
 #include "unity.h"
 
 /* clang-format off */

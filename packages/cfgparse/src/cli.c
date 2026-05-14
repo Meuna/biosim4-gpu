@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "biosim/core/log.h"
+#include "biosim/core/params.h"
 #include "biosim/core/status.h"
-#include "biosim/params/params.h"
 
 /* Forward declaration of internal TOML loader defined in toml.c */
 biosim_status_t params_load_toml_file(biosim_params_t *p, const char *path);

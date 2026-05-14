@@ -1,4 +1,4 @@
-#include "biosim/params/challenges.h"
+#include "biosim/cfgparse/challenges.h"
 #include "biosim/core/log.h"
 
 #include <string.h>

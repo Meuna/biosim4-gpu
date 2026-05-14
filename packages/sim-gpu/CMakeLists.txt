@@ -71,7 +71,7 @@ biosim_embed_opencl_source(sim-gpu-lib
 
 add_executable(biosim-gpu src/main.c)
 target_compile_features(biosim-gpu PRIVATE c_std_11)
-target_link_libraries(biosim-gpu PRIVATE sim-gpu-lib params core OpenCL::OpenCL
+target_link_libraries(biosim-gpu PRIVATE sim-gpu-lib cfgparse core OpenCL::OpenCL
     $<$<PLATFORM_ID:Linux>:m>)
 target_compile_definitions(biosim-gpu PRIVATE BIOSIM_PROGNAME="biosim-gpu")
 biosim_target_git_version(biosim-gpu)

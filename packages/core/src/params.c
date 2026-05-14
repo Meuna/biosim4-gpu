@@ -1,4 +1,4 @@
-#include "biosim/params/params.h"
+#include "biosim/core/params.h"
 
 #include <assert.h>
 #include <stdlib.h>

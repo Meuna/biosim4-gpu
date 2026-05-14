@@ -4,6 +4,7 @@ add_library(core STATIC
   src/challenges.c
   src/generation.c
   src/log.c
+  src/params.c
   src/sim.c
   src/grid.c
   src/rng.c

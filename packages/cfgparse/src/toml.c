@@ -1,5 +1,5 @@
 #include "biosim/core/log.h"
-#include "biosim/params/params.h"
+#include "biosim/core/params.h"
 #include "tomlc17.h"
 
 static void apply_table(biosim_params_t *p, toml_datum_t toptab) {
