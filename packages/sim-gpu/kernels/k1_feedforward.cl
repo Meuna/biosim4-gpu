@@ -51,7 +51,7 @@ static float eval_sensor(
     __global const uint *signal,
     __global const uint *grid,
     int pop_sensor_radius,
-    uchar long_probe
+    uchar los_range_val
 ) {
     switch (sensor_id) {
     case BIOSIM_SENSOR_LOC_X:
@@ -280,7 +280,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int step_x = BIOSIM_DIR_DX[dir];
         int step_y = BIOSIM_DIR_DY[dir];
-        uint dist = (uint)long_probe;
+        uint dist = (uint)los_range_val;
         if (dist == 0u) {
             return 0.0F;
         }
@@ -305,7 +305,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int step_x = BIOSIM_DIR_DX[dir];
         int step_y = BIOSIM_DIR_DY[dir];
-        uint dist = (uint)long_probe;
+        uint dist = (uint)los_range_val;
         if (dist == 0u) {
             return 0.0F;
         }
@@ -334,7 +334,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int step_x = BIOSIM_DIR_DX[dir];
         int step_y = BIOSIM_DIR_DY[dir];
-        uint dist = (uint)long_probe;
+        uint dist = (uint)los_range_val;
         if (dist == 0u) {
             return 0.0F;
         }
@@ -412,7 +412,7 @@ __kernel void k_feedforward(
     __global ushort *osc_period,
     __global const uchar *last_move_dir,
     __global float *responsiveness,
-    __global uchar *long_probe_dist,
+    __global uchar *los_range,
     __global const ushort *conn_packed,
     __global const short *conn_weight,
     __global const ushort *conn_length,
@@ -444,7 +444,7 @@ __kernel void k_feedforward(
     uchar ldir = last_move_dir[idx];
     ushort osc_per = osc_period[idx];
     float resp = responsiveness[idx];
-    uchar long_probe = long_probe_dist[idx];
+    uchar los_range_val = los_range[idx];
 
     /* ── Phase 1: evaluate sensors ───────────────────────────────────────── */
 
@@ -465,7 +465,7 @@ __kernel void k_feedforward(
             signal,
             grid,
             pop_sensor_radius,
-            long_probe
+            los_range_val
         );
     }
 
@@ -543,7 +543,7 @@ __kernel void k_feedforward(
         if (f > 32.0F) {
             f = 32.0F;
         }
-        long_probe_dist[idx] = (uchar)f;
+        los_range[idx] = (uchar)f;
     }
 
     /* Group B: movement accumulators */

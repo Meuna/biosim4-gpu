@@ -33,7 +33,7 @@ void setUp(void) {
                 .size_y = 64,
                 .genome_max_len = 8U,
                 .max_neurons = 3U,
-                .long_probe_dist = 8U,
+                .los_range = 8U,
             }
         )
     );

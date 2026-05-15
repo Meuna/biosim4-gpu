@@ -66,7 +66,7 @@ typedef struct {
     uint8_t  *alive;
     uint16_t *osc_period;
     float    *responsiveness;
-    uint8_t  *long_probe_dist;
+    uint8_t  *los_range;
     uint8_t  *last_move_dir;
     uint32_t *challenge_bits;
     uint64_t *rng_state;

@@ -61,7 +61,7 @@ Let `N = population` (dead agents keep their slot; slots reuse at the next gener
 | `birth_x[N]`, `birth_y[N]` | `int32_t` | Used by challenge evaluation |
 | `osc_period[N]` | `uint16_t` | OSC1 sensor |
 | `responsiveness[N]` | `float` | Action gating |
-| `long_probe_dist[N]` | `uint8_t` | Longprobe sensor range |
+| `los_range[N]` | `uint8_t` | Longprobe sensor range |
 | `last_move_dir[N]` | `uint8_t` | Direction sensors |
 | `kill_marker[N]` | `uint8_t` | Transient: K1 KILL_FORWARD sets; K2 clears grid cell |
 | `challenge_bits[N]` | `uint32_t` | Per-challenge accumulator |
@@ -142,10 +142,10 @@ barrier):
 ```
 K1: feedforward_and_actions
     Reads:  alive, loc_*, osc_period, last_move_dir, responsiveness,
-            long_probe_dist, genome_fingerprint, conn_packed, conn_weight,
+            los_range, genome_fingerprint, conn_packed, conn_weight,
             conn_length, neuron_output, neuron_driven, neuron_count,
             grid (read-only), signal (image2d_t), rng_state
-    Writes: neuron_output (new), responsiveness, osc_period, long_probe_dist,
+    Writes: neuron_output (new), responsiveness, osc_period, los_range,
             desired_x, desired_y, alive (KILL_FORWARD targets — idempotent),
             kill_marker (KILL_FORWARD targets), signal (atomic_add), rng_state
     Size:   N work-items

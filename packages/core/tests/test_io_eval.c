@@ -20,7 +20,7 @@ void setUp(void) {
     sim.signal_len = (size_t)GRID_W * (size_t)GRID_H;
     sim.signal = calloc(sim.signal_len, sizeof(uint32_t));
     sim.steps_per_gen = 300;
-    sim.population_sensor_radius = 2;
+    sim.sensor_radius = 2;
 
     /* place agent 0 at the centre of the grid */
     biosim_coord_t ctr = {GRID_W / 2, GRID_H / 2};
@@ -244,52 +244,52 @@ void test_signal0_fwd_empty(void) {
 void test_signal0_fwd_all_max(void) {
     /* dist=2, both cells = 255 → density = (255+255)/(2*255) = 1.0 */
     sim.agents.last_move_dir[0] = 0;
-    sim.agents.long_probe_dist[0] = 2U;
+    sim.agents.los_range[0] = 2U;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     sim.signal[(size_t)y * GRID_W + (size_t)(x + 1)] = 255U;
     sim.signal[(size_t)y * GRID_W + (size_t)(x + 2)] = 255U;
     TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_FWD, 0, &sim));
-    sim.agents.long_probe_dist[0] = 16U;
+    sim.agents.los_range[0] = 16U;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 }
 
 void test_signal0_fwd_partial(void) {
     /* dist=2, step-1 = 255, step-2 = 0 → density = 255/(2*255) = 0.5 */
     sim.agents.last_move_dir[0] = 0;
-    sim.agents.long_probe_dist[0] = 2U;
+    sim.agents.los_range[0] = 2U;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     sim.signal[(size_t)y * GRID_W + (size_t)(x + 1)] = 255U;
     TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_FWD, 0, &sim));
-    sim.agents.long_probe_dist[0] = 16U;
+    sim.agents.los_range[0] = 16U;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 }
 
 void test_signal0_fwd_dist_zero(void) {
     /* dist=0 → immediate 0.0 regardless of signal */
     sim.agents.last_move_dir[0] = 0;
-    sim.agents.long_probe_dist[0] = 0U;
+    sim.agents.los_range[0] = 0U;
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     sim.signal[(size_t)y * GRID_W + (size_t)(x + 1)] = 200U;
     TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_FWD, 0, &sim));
-    sim.agents.long_probe_dist[0] = 16U;
+    sim.agents.los_range[0] = 16U;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 }
 
 void test_signal0_fwd_over_255(void) {
     /* dist=1, val=300 → clamped to 255; density = 255/(1*255) = 1.0 */
     sim.agents.last_move_dir[0] = 0;
-    sim.agents.long_probe_dist[0] = 1U;
+    sim.agents.los_range[0] = 1U;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     sim.signal[(size_t)y * GRID_W + (size_t)(x + 1)] = 300U;
     TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_FWD, 0, &sim));
-    sim.agents.long_probe_dist[0] = 16U;
+    sim.agents.los_range[0] = 16U;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 }
 
@@ -490,9 +490,9 @@ void test_longprobe_pop_fwd_barrier_stops(void) {
 void test_longprobe_pop_fwd_dist_zero(void) {
     /* dist=0 → immediate 0.0 regardless of grid */
     sim.agents.last_move_dir[0] = 0;
-    sim.agents.long_probe_dist[0] = 0U;
+    sim.agents.los_range[0] = 0U;
     TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim));
-    sim.agents.long_probe_dist[0] = 16U;
+    sim.agents.los_range[0] = 16U;
 }
 
 /* ── POPULATION_LR ──────────────────────────────────────────────────────── */
@@ -721,9 +721,9 @@ void test_longprobe_bar_fwd_agent_skipped(void) {
 void test_longprobe_bar_fwd_dist_zero(void) {
     /* dist=0 → immediate 0.0 */
     sim.agents.last_move_dir[0] = 0;
-    sim.agents.long_probe_dist[0] = 0U;
+    sim.agents.los_range[0] = 0U;
     TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_BAR_FWD, 0, &sim));
-    sim.agents.long_probe_dist[0] = 16U;
+    sim.agents.los_range[0] = 16U;
 }
 
 /* ── SET_RESPONSIVENESS ─────────────────────────────────────────────────── */
@@ -757,12 +757,12 @@ void test_set_oscillator_period_large_negative(void) {
 
 void test_set_longprobe_dist_large_negative(void) {
     biosim_action_apply(BIOSIM_ACTION_SET_LONGPROBE_DIST, -100.0F, 0, &sim);
-    TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.long_probe_dist[0]);
+    TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.los_range[0]);
 }
 
 void test_set_longprobe_dist_large_positive(void) {
     biosim_action_apply(BIOSIM_ACTION_SET_LONGPROBE_DIST, 100.0F, 0, &sim);
-    TEST_ASSERT_EQUAL_UINT8(32U, sim.agents.long_probe_dist[0]);
+    TEST_ASSERT_EQUAL_UINT8(32U, sim.agents.los_range[0]);
 }
 
 /* ── movement accumulators ──────────────────────────────────────────────── */

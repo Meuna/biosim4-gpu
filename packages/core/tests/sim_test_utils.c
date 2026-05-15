@@ -19,9 +19,9 @@ static const biosim_param_entry_t k_test_params[] = {
     {"grid-size-y",               NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
     {"max-genome-len",            NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
     {"max-neurons",               NULL,  {.i = 2},     PARAM_INT,   false, true, NULL, NULL},
-    {"long-probe-dist",           NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"los-range",                 NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
     {"steps-per-gen",             NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
-    {"population-sensor-radius",  NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
+    {"sensor-radius",             NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
     {"enable-kill",               NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
     {"point-mutation-rate",       NULL,  {.f = 0.0},   PARAM_FLOAT, false, true, NULL, NULL},
     {"sexual-reproduction",       NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
@@ -42,9 +42,9 @@ biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg) {
     (void)biosim_params_set_int(&p, "grid-size-y", (int)cfg->size_y);
     (void)biosim_params_set_int(&p, "max-genome-len", (int)cfg->genome_max_len);
     (void)biosim_params_set_int(&p, "max-neurons", (int)cfg->max_neurons);
-    (void)biosim_params_set_int(&p, "long-probe-dist", (int)cfg->long_probe_dist);
+    (void)biosim_params_set_int(&p, "los-range", (int)cfg->los_range);
     (void)biosim_params_set_int(&p, "steps-per-gen", (int)cfg->steps_per_gen);
-    (void)biosim_params_set_int(&p, "population-sensor-radius", (int)cfg->population_sensor_radius);
+    (void)biosim_params_set_int(&p, "sensor-radius", (int)cfg->sensor_radius);
     (void)biosim_params_set_float(&p, "point-mutation-rate", (double)cfg->mutation_rate);
     (void)biosim_params_set_bool(&p, "sexual-reproduction", cfg->sexual_reproduction);
     (void)biosim_params_set_bool(&p, "choose-parents-by-fitness", cfg->choose_parents_by_fitness);
@@ -70,9 +70,9 @@ biosim_status_t sim_test_make_8x8(biosim_sim_t *sim) {
             .size_y = 8,
             .genome_max_len = 4U,
             .max_neurons = 2U,
-            .long_probe_dist = 4U,
+            .los_range = 4U,
             .steps_per_gen = 1U,
-            .population_sensor_radius = 1,
+            .sensor_radius = 1,
         }
     );
 }
@@ -89,9 +89,9 @@ biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
             .size_y = 32,
             .genome_max_len = 24U,
             .max_neurons = 3U,
-            .long_probe_dist = 8U,
+            .los_range = 8U,
             .steps_per_gen = 16U,
-            .population_sensor_radius = 4,
+            .sensor_radius = 4,
             .mutation_rate = 0.01F,
             .sexual_reproduction = true,
             .choose_parents_by_fitness = true,
@@ -120,9 +120,9 @@ biosim_status_t sim_test_make_128x128(biosim_sim_t *sim) {
             .size_y = 128,
             .genome_max_len = 24U,
             .max_neurons = 5U,
-            .long_probe_dist = 8U,
+            .los_range = 8U,
             .steps_per_gen = 16U,
-            .population_sensor_radius = 4,
+            .sensor_radius = 4,
             .mutation_rate = 0.01F,
             .sexual_reproduction = true,
             .choose_parents_by_fitness = true,
@@ -154,7 +154,7 @@ void assert_agents_equal(const biosim_agents_t *a, const biosim_agents_t *b) {
         TEST_ASSERT_EQUAL_UINT8(a->alive[i], b->alive[i]);
         TEST_ASSERT_EQUAL_UINT16(a->osc_period[i], b->osc_period[i]);
         TEST_ASSERT_EQUAL_FLOAT(a->responsiveness[i], b->responsiveness[i]);
-        TEST_ASSERT_EQUAL_UINT8(a->long_probe_dist[i], b->long_probe_dist[i]);
+        TEST_ASSERT_EQUAL_UINT8(a->los_range[i], b->los_range[i]);
         TEST_ASSERT_EQUAL_UINT8(a->last_move_dir[i], b->last_move_dir[i]);
         TEST_ASSERT_EQUAL_UINT32(a->challenge_bits[i], b->challenge_bits[i]);
         TEST_ASSERT_EQUAL_UINT64(a->rng_state[i], b->rng_state[i]);

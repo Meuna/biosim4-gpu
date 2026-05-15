@@ -69,8 +69,8 @@ static void fixture_setup(void) {
     if (fixture_status != BIOSIM_OK) {
         return;
     }
-    sim.population_sensor_radius = 16;
-    sim.long_probe_dist = 16;
+    sim.sensor_radius = 16;
+    sim.los_range = 16;
 
     fixture_status = gpu_test_kernel_runtime_create(
         &runner, &program, &kernel, "k1_feedforward", "k_feedforward"
@@ -94,7 +94,7 @@ static void fixture_setup(void) {
     memcpy(init_rng_state, a->rng_state, (size_t)pop * sizeof(uint64_t));
     memcpy(init_responsiveness, a->responsiveness, (size_t)pop * sizeof(float));
     memcpy(init_osc_period, a->osc_period, (size_t)pop * sizeof(uint16_t));
-    memcpy(init_los_range, a->long_probe_dist, (size_t)pop * sizeof(uint8_t));
+    memcpy(init_los_range, a->los_range, (size_t)pop * sizeof(uint8_t));
     const biosim_nnet_t *n = &sim.nnet;
     const uint16_t mc = n->max_conn;
     const uint8_t mn = n->max_neurons;
@@ -106,7 +106,7 @@ static void fixture_setup(void) {
     MKRW(buf_osc_period, a->osc_period, sizeof(uint16_t), pop);
     MKRO(buf_last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     MKRW(buf_responsiveness, a->responsiveness, sizeof(float), pop);
-    MKRW(buf_los_range, a->long_probe_dist, sizeof(uint8_t), pop);
+    MKRW(buf_los_range, a->los_range, sizeof(uint8_t), pop);
     MKRO(buf_conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)mc * pop);
     MKRO(buf_conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)mc * pop);
     MKRO(buf_conn_length, n->conn_length, sizeof(uint16_t), pop);
@@ -127,7 +127,7 @@ static void fixture_setup(void) {
     cl_uint steps_gen = (cl_uint)sim.steps_per_gen;
     cl_uint pop_arg = (cl_uint)sim.population;
     cl_int enable_kill = 0;
-    cl_int sensor_radius = (cl_int)sim.population_sensor_radius;
+    cl_int sensor_radius = (cl_int)sim.sensor_radius;
 
     (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&buf_alive);
     (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&buf_loc_x);
@@ -239,7 +239,7 @@ static void run_host_step_agent(uint32_t idx) {
     a->rng_state[idx] = init_rng_state[idx];
     a->responsiveness[idx] = init_responsiveness[idx];
     a->osc_period[idx] = init_osc_period[idx];
-    a->long_probe_dist[idx] = init_los_range[idx];
+    a->los_range[idx] = init_los_range[idx];
     for (uint8_t k = 0U; k < n->max_neurons; k++) {
         n->neuron_output[(size_t)k * pop + idx] = 0.0F;
     }
@@ -289,7 +289,7 @@ void test_k1_compiles_and_runs(void) {
 
 /* Compare GPU desired positions against the host reference for every alive
  * agent. Both sides start from the same initial state (rng_state, neuron
- * outputs, responsiveness, osc_period, long_probe_dist, signal=0), so they
+ * outputs, responsiveness, osc_period, los_range, signal=0), so they
  * must produce identical results. */
 void test_k1_matches_host_reference(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(BIOSIM_OK, fixture_status, "fixture setup failed");

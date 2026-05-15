@@ -118,7 +118,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 
     case BIOSIM_SENSOR_POPULATION: {
         biosim_coord_t center = {x, y};
-        int32_t r = sim->population_sensor_radius;
+        int32_t r = sim->sensor_radius;
         pop_count_t pc = {0U, 0U};
         biosim_grid_visit_neighborhood(grid, center, r, pop_visitor, &pc);
         if (pc.visited == 0U) {
@@ -131,7 +131,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        int32_t r = sim->population_sensor_radius;
+        int32_t r = sim->sensor_radius;
         uint32_t visited = 0U;
         uint32_t occupied = 0U;
         for (int32_t dy = -r; dy <= r; dy++) {
@@ -163,7 +163,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        int32_t r = sim->population_sensor_radius;
+        int32_t r = sim->sensor_radius;
         uint32_t l_occ = 0U;
         uint32_t r_occ = 0U;
         for (int32_t dy = -r; dy <= r; dy++) {
@@ -199,7 +199,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        int32_t r = sim->population_sensor_radius;
+        int32_t r = sim->sensor_radius;
         uint32_t visited = 0U;
         uint32_t barrier = 0U;
         for (int32_t dy = -r; dy <= r; dy++) {
@@ -230,7 +230,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        int32_t r = sim->population_sensor_radius;
+        int32_t r = sim->sensor_radius;
         uint32_t l_bar = 0U;
         uint32_t r_bar = 0U;
         for (int32_t dy = -r; dy <= r; dy++) {
@@ -265,11 +265,11 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        uint8_t dist = agents->long_probe_dist[idx];
-        if (dist == 0U) {
+        uint8_t range = agents->los_range[idx];
+        if (range == 0U) {
             return 0.0F;
         }
-        for (uint8_t i = 1U; i <= dist; i++) {
+        for (uint8_t i = 1U; i <= range; i++) {
             biosim_coord_t c = {x + (int32_t)i * fwd_x, y + (int32_t)i * fwd_y};
             if (!biosim_grid_in_bounds(grid, c)) {
                 break;
@@ -279,7 +279,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
                 break;
             }
             if (cell != BIOSIM_GRID_EMPTY) {
-                return (float)i / (float)dist;
+                return (float)i / (float)range;
             }
         }
         return 0.0F;
@@ -289,17 +289,17 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        uint8_t dist = agents->long_probe_dist[idx];
-        if (dist == 0U) {
+        uint8_t range = agents->los_range[idx];
+        if (range == 0U) {
             return 0.0F;
         }
-        for (uint8_t i = 1U; i <= dist; i++) {
+        for (uint8_t i = 1U; i <= range; i++) {
             biosim_coord_t c = {x + (int32_t)i * fwd_x, y + (int32_t)i * fwd_y};
             if (!biosim_grid_in_bounds(grid, c)) {
                 break;
             }
             if (biosim_grid_at(grid, c) == BIOSIM_GRID_BARRIER) {
-                return (float)i / (float)dist;
+                return (float)i / (float)range;
             }
         }
         return 0.0F;
@@ -319,13 +319,13 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        uint8_t dist = agents->long_probe_dist[idx];
-        if (dist == 0U) {
+        uint8_t range = agents->los_range[idx];
+        if (range == 0U) {
             return 0.0F;
         }
         uint32_t total = 0U;
         uint32_t visited = 0U;
-        for (uint8_t i = 1U; i <= dist; i++) {
+        for (uint8_t i = 1U; i <= range; i++) {
             biosim_coord_t c = {x + (int32_t)i * fwd_x, y + (int32_t)i * fwd_y};
             if (!biosim_grid_in_bounds(grid, c)) {
                 break;
@@ -348,7 +348,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
-        int32_t r = sim->population_sensor_radius;
+        int32_t r = sim->sensor_radius;
         uint32_t l_sum = 0U;
         uint32_t r_sum = 0U;
         for (int32_t dy = -r; dy <= r; dy++) {
@@ -446,7 +446,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         if (f > 32.0F) {
             f = 32.0F;
         }
-        agents->long_probe_dist[idx] = (uint8_t)f;
+        agents->los_range[idx] = (uint8_t)f;
         break;
     }
 

@@ -25,7 +25,7 @@ static void kernel_buffers_release(kernel_buffers_t *b) {
     CL_SAFE_RELEASE(clReleaseMemObject, b->conn_length);
     CL_SAFE_RELEASE(clReleaseMemObject, b->conn_weight);
     CL_SAFE_RELEASE(clReleaseMemObject, b->conn_packed);
-    CL_SAFE_RELEASE(clReleaseMemObject, b->long_probe_dist);
+    CL_SAFE_RELEASE(clReleaseMemObject, b->los_range);
     CL_SAFE_RELEASE(clReleaseMemObject, b->responsiveness);
     CL_SAFE_RELEASE(clReleaseMemObject, b->last_move_dir);
     CL_SAFE_RELEASE(clReleaseMemObject, b->osc_period);
@@ -79,7 +79,7 @@ static biosim_status_t kernel_buffers_create(
     MKBUF_RW(osc_period, a->osc_period, sizeof(uint16_t), pop);
     MKBUF_RW(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     MKBUF_RW(responsiveness, a->responsiveness, sizeof(float), pop);
-    MKBUF_RW(long_probe_dist, a->long_probe_dist, sizeof(uint8_t), pop);
+    MKBUF_RW(los_range, a->los_range, sizeof(uint8_t), pop);
     MKBUF_RO(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)max_conn * pop);
     MKBUF_RO(conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)max_conn * pop);
     MKBUF_RO(conn_length, n->conn_length, sizeof(uint16_t), pop);
@@ -131,7 +131,7 @@ static void k1_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
     cl_uint steps_gen = (cl_uint)sim->steps_per_gen;
     cl_uint pop = (cl_uint)sim->population;
     cl_int enable_kill_val = (cl_int)(sim->enable_kill ? 1 : 0);
-    cl_int sensor_radius = (cl_int)sim->population_sensor_radius;
+    cl_int sensor_radius = (cl_int)sim->sensor_radius;
 
     (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&b->alive);
     (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&b->loc_x);
@@ -139,7 +139,7 @@ static void k1_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
     (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&b->osc_period);
     (void)clSetKernelArg(kernel, 4U, sizeof(cl_mem), (const void *)&b->last_move_dir);
     (void)clSetKernelArg(kernel, 5U, sizeof(cl_mem), (const void *)&b->responsiveness);
-    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&b->long_probe_dist);
+    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&b->los_range);
     (void)clSetKernelArg(kernel, 7U, sizeof(cl_mem), (const void *)&b->conn_packed);
     (void)clSetKernelArg(kernel, 8U, sizeof(cl_mem), (const void *)&b->conn_weight);
     (void)clSetKernelArg(kernel, 9U, sizeof(cl_mem), (const void *)&b->conn_length);
@@ -478,7 +478,7 @@ biosim_status_t biosim_gpu_pipeline_sync_from_host(
     WRITE_BUF(osc_period, a->osc_period, sizeof(uint16_t), pop);
     WRITE_BUF(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     WRITE_BUF(responsiveness, a->responsiveness, sizeof(float), pop);
-    WRITE_BUF(long_probe_dist, a->long_probe_dist, sizeof(uint8_t), pop);
+    WRITE_BUF(los_range, a->los_range, sizeof(uint8_t), pop);
     WRITE_BUF(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)p->max_conn * pop);
     WRITE_BUF(conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)p->max_conn * pop);
     WRITE_BUF(conn_length, n->conn_length, sizeof(uint16_t), pop);

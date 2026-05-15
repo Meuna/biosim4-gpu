@@ -36,11 +36,11 @@ typedef struct {
     int32_t size_y;          /* grid height */
     uint16_t genome_max_len; /* maximum genome length (genes per agent) */
     uint8_t max_neurons;     /* maximum hidden-neuron count per agent */
-    uint8_t long_probe_dist; /* default long-probe sensor range (cells) */
+    uint8_t los_range;       /* default long-probe sensor range (cells) */
 
     /* ── runtime configuration ──────────────────────────────────────────────── */
     uint32_t steps_per_gen;
-    int32_t population_sensor_radius;
+    int32_t sensor_radius;
     bool enable_kill;
     biosim_challenge_spec_t challenge;
 

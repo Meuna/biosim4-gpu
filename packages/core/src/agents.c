@@ -29,7 +29,7 @@ biosim_status_t biosim_agents_create(uint32_t population, biosim_agents_t *out) 
     ALLOC(alive, uint8_t)
     ALLOC(osc_period, uint16_t)
     ALLOC(responsiveness, float)
-    ALLOC(long_probe_dist, uint8_t)
+    ALLOC(los_range, uint8_t)
     ALLOC(last_move_dir, uint8_t)
     ALLOC(kill_marker, uint8_t)
     ALLOC(challenge_bits, uint32_t)
@@ -56,7 +56,7 @@ void biosim_agents_free(biosim_agents_t *agents) {
     free(agents->alive);
     free(agents->osc_period);
     free(agents->responsiveness);
-    free(agents->long_probe_dist);
+    free(agents->los_range);
     free(agents->last_move_dir);
     free(agents->kill_marker);
     free(agents->challenge_bits);
@@ -72,11 +72,7 @@ void biosim_agents_free(biosim_agents_t *agents) {
 /* ── slot initialisation ────────────────────────────────────────────────── */
 
 void biosim_agents_init_slot(
-    biosim_agents_t *agents,
-    uint32_t idx,
-    biosim_coord_t loc,
-    uint8_t long_probe_dist,
-    uint64_t rng_seed
+    biosim_agents_t *agents, uint32_t idx, biosim_coord_t loc, uint8_t los_range, uint64_t rng_seed
 ) {
     assert(agents != NULL);
     assert(idx < agents->population);
@@ -88,7 +84,7 @@ void biosim_agents_init_slot(
     agents->birth_y[idx] = loc.y;
     agents->osc_period[idx] = 34;
     agents->responsiveness[idx] = 0.5F;
-    agents->long_probe_dist[idx] = long_probe_dist;
+    agents->los_range[idx] = los_range;
     agents->last_move_dir[idx] = 0;
     agents->kill_marker[idx] = 0;
     agents->challenge_bits[idx] = 0;

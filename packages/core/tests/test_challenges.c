@@ -19,9 +19,9 @@ void setUp(void) {
                 .size_y = 128,
                 .genome_max_len = 8U,
                 .max_neurons = 3U,
-                .long_probe_dist = 8U,
+                .los_range = 8U,
                 .steps_per_gen = 300U,
-                .population_sensor_radius = 1,
+                .sensor_radius = 1,
             }
         )
     );

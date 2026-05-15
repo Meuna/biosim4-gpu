@@ -30,7 +30,7 @@ typedef struct {
     cl_mem osc_period;
     cl_mem last_move_dir; /* RW: K1 reads, K3 writes */
     cl_mem responsiveness;
-    cl_mem long_probe_dist;
+    cl_mem los_range;
     /* Neural network (transposed SoA) */
     cl_mem conn_packed;
     cl_mem conn_weight;
@@ -120,7 +120,7 @@ biosim_status_t biosim_gpu_pipeline_sync_to_host(const biosim_gpu_pipeline_t *p,
 /*
  * Re-upload all mutable state from *sim after biosim_sim_next_generation:
  *   alive, loc_x, loc_y, osc_period, last_move_dir, responsiveness,
- *   long_probe_dist, conn_packed, conn_weight, conn_length,
+ *   los_range, conn_packed, conn_weight, conn_length,
  *   neuron_output, neuron_driven, neuron_count, signal, rng_state,
  *   kill_marker, challenge_bits, grid.
  * barrier_ctrs is static and is never re-uploaded.

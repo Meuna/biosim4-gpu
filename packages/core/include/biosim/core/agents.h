@@ -28,7 +28,7 @@ typedef struct {
     uint8_t *alive;
     uint16_t *osc_period;
     float *responsiveness;
-    uint8_t *long_probe_dist;
+    uint8_t *los_range;
     uint8_t *last_move_dir;
     uint8_t *kill_marker;
     uint32_t *challenge_bits;
@@ -51,11 +51,7 @@ void biosim_agents_free(biosim_agents_t *agents);
  * applies biological defaults, and seeds its RNG from (idx, rng_seed).
  */
 void biosim_agents_init_slot(
-    biosim_agents_t *agents,
-    uint32_t idx,
-    biosim_coord_t loc,
-    uint8_t long_probe_dist,
-    uint64_t rng_seed
+    biosim_agents_t *agents, uint32_t idx, biosim_coord_t loc, uint8_t los_range, uint64_t rng_seed
 );
 
 #endif /* BIOSIM_CORE_AGENTS_H */

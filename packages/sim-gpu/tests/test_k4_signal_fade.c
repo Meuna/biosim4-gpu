@@ -38,9 +38,9 @@ static void fixture_setup(void) {
             .size_y = 8,
             .genome_max_len = 2U,
             .max_neurons = 1U,
-            .long_probe_dist = 4U,
+            .los_range = 4U,
             .steps_per_gen = 100U,
-            .population_sensor_radius = 1,
+            .sensor_radius = 1,
         }
     );
     if (fixture_status != BIOSIM_OK) {

@@ -9,17 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **`BIOSIM_SENSOR_SIGNAL0_FWD`** — forward signal-density probe implemented in
-  both CPU reference (`core`) and GPU K1 kernel; walks up to `long_probe_dist`
+  both CPU reference (`core`) and GPU K1 kernel; walks up to `los_range`
   cells in the agent's last-move direction, sums signal values (clamped to 255),
   and returns the per-cell average normalised to [0, 1]
   (`sum / (visited × 255)`), or 0.0 if no in-bounds cells are found.
 - **`BIOSIM_SENSOR_SIGNAL0_LR`** — lateral signed-ratio signal sensor implemented
   in both CPU reference (`core`) and GPU K1 kernel; sums normalised signal
-  values across the left and right half-discs (radius `population_sensor_radius`)
+  values across the left and right half-discs (radius `sensor_radius`)
   and returns `(L−R)/(L+R)` in [−1, 1], or 0.0 when both sides are zero.
 - **`BIOSIM_SENSOR_BARRIER_FWD`** — forward half-disc barrier-density sensor
   implemented in both CPU reference (`core`) and GPU K1 kernel; uses
-  `population_sensor_radius` as the disc radius, returns
+  `sensor_radius` as the disc radius, returns
   `barrier_cell_count / visited` in [0, 1].
 - **`BIOSIM_SENSOR_BARRIER_LR`** — lateral signed-ratio barrier sensor
   implemented in both CPU reference (`core`) and GPU K1 kernel; returns
@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   left and right half-discs.
 - **`BIOSIM_SENSOR_LONGPROBE_BAR_FWD`** — forward ray-cast barrier probe
   implemented in both CPU reference (`core`) and GPU K1 kernel; skips agents
-  (agents are transparent), returns `steps_to_first_barrier / long_probe_dist`,
+  (agents are transparent), returns `steps_to_first_barrier / los_range`,
   0.0 if no barrier found before a grid boundary.
 - **Barriers in `sim_test_make_32x32`** — the 32×32 simulation fixture used by
   GPU kernel tests now includes a fixed horizontal bar at centre (16, 16) with
@@ -35,14 +35,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sim_test_scn_t` gained optional `barrier_specs` / `n_barrier_specs` fields;
   `sim_test_create` threads them through to `biosim_sim_create`.
 - **`BIOSIM_SENSOR_POPULATION` on GPU** — K1 now computes the population-density
-  sensor via a circular-disc neighbourhood scan (radius `population_sensor_radius`)
+  sensor via a circular-disc neighbourhood scan (radius `sensor_radius`)
   instead of returning the 0.5 stub.
 - **`BIOSIM_SENSOR_POPULATION_FWD`** — forward half-disc population-density sensor
   implemented in both CPU reference (`core`) and GPU K1 kernel; counts occupied
   cells in the forward half of the disc (`dx·fwd_x + dy·fwd_y > 0`).
 - **`BIOSIM_SENSOR_LONGPROBE_POP_FWD`** — forward ray-cast population probe
   implemented in both CPU reference (`core`) and GPU K1 kernel; returns
-  `steps_to_first_agent / long_probe_dist`, 0.0 if no agent found before a
+  `steps_to_first_agent / los_range`, 0.0 if no agent found before a
   barrier or grid boundary.
 - **`BIOSIM_SENSOR_POPULATION_LR`** — lateral signed-ratio population sensor
   implemented in both CPU reference (`core`) and GPU K1 kernel; returns
@@ -131,7 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `BIOSIM_GRID_BARRIER` changed from `0xFFFFU` to `0xFFFFFFFFU`; encoding is now
     `0` = empty, `0xFFFFFFFF` = barrier, `[1, 0xFFFFFFFE]` = agent index + 1.
   - `biosim_coord_t.{x,y}` changed from `int16_t` to `int32_t`.
-  - `biosim_sim_t.{size_x,size_y,population_sensor_radius}` changed from `int16_t` to `int32_t`.
+  - `biosim_sim_t.{size_x,size_y,sensor_radius}` changed from `int16_t` to `int32_t`.
   - Agent SoA arrays `loc_x`, `loc_y`, `birth_x`, `birth_y`, `desired_x`, `desired_y`
     changed from `int16_t *` to `int32_t *`.
   - OpenCL kernels K1/K2/K3 updated to use `int` for all coordinate parameters and
@@ -396,7 +396,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mixing, guards against zero state).
 - **Per-agent SoA buffers** (`core/agents.h` + `core/agents.c`): all 13 fixed-size
   per-agent buffers from GPU data model §4.1 (`alive`, `loc_x/y`, `birth_x/y`,
-  `age`, `osc_period`, `responsiveness`, `long_probe_dist`, `last_move_dir`,
+  `age`, `osc_period`, `responsiveness`, `los_range`, `last_move_dir`,
   `challenge_bits`, `rng_state`, `genome_fingerprint`) plus transient movement
   targets (`desired_x/y`). Lifecycle: `biosim_agents_create` / `biosim_agents_free` /
   `biosim_agents_init_slot`.
@@ -407,7 +407,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CLI). The extension mechanism (`biosim_params_extend`) is removed — each
   simulator's `main.c` defines its own exhaustive entry table.
 - **`biosim_context_t`** (`core/context.h`): new core module holding scalar
-  configuration values (`steps_per_gen`, `population_sensor_radius`) that
+  configuration values (`steps_per_gen`, `sensor_radius`) that
   core algorithms need at runtime. Populated from `biosim_params_t` by the
   simulator before the simulation loop; replaces direct param lookups inside
   `core`.
@@ -449,7 +449,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   drives a triple-nested `for` loop with no simulation logic of its own.
 - **`biosim_context_t` is now the complete simulation state**
   (`core/context.h`): six allocation-time configuration fields (`population`,
-  `size_x`, `size_y`, `genome_max_len`, `max_neurons`, `long_probe_dist`) and
+  `size_x`, `size_y`, `genome_max_len`, `max_neurons`, `los_range`) and
   four generation-state fields (`step`, `gen`, `mutation_rate`, `gen_rng`)
   added. `biosim_context_create` now takes only `(sim, barriers, n_barriers)`
   — the caller pre-populates the configuration fields, then `create` allocates

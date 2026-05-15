@@ -101,8 +101,8 @@ file (`--config`) → CLI flags. Each layer overrides the previous.
 
 | CLI flag | TOML `[sensors]` key | Default | Description |
 |----------|----------------------|---------|-------------|
-| `--sensors-long-probe-dist <n>` | `long-probe-dist` | 16 | Default long-probe sensor range (cells) |
-| `--sensors-population-sensor-radius <n>` | `population-sensor-radius` | 2 | Radius for population-density sensors |
+| `--sensors-los-range <n>` | `los-range` | 16 | Default long-probe sensor range (cells) |
+| `--sensors-sensor-radius <n>` | `sensor-radius` | 2 | Radius for radial sensors |
 
 ### Actions
 
@@ -129,15 +129,15 @@ steps-per-gen   = 300
 max-generations = 1000
 
 [genome]
-max-genome-len           = 24
-max-neurons              = 5
-point-mutation-rate      = 0.001
-sexual-reproduction      = false
+max-genome-len            = 24
+max-neurons               = 5
+point-mutation-rate       = 0.001
+sexual-reproduction       = false
 choose-parents-by-fitness = false
 
 [sensors]
-long-probe-dist           = 16
-population-sensor-radius  = 2
+los-range     = 16
+sensor-radius = 2
 
 [actions]
 enable-kill = false

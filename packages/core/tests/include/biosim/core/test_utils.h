@@ -13,7 +13,7 @@
 
 /* ── sim factory config ─────────────────────────────────────────────────────
  * Passed to sim_test_create().  Unspecified fields in a compound literal
- * zero-initialise (population_sensor_radius=0, mutation_rate=0, etc.) which
+ * zero-initialise (sensor_radius=0, mutation_rate=0, etc.) which
  * is safe for tests that do not exercise those features. */
 typedef struct {
     uint32_t population;
@@ -21,9 +21,9 @@ typedef struct {
     int32_t size_y;
     uint16_t genome_max_len;
     uint8_t max_neurons;
-    uint8_t long_probe_dist;
+    uint8_t los_range;
     uint32_t steps_per_gen;
-    int32_t population_sensor_radius;
+    int32_t sensor_radius;
     float mutation_rate;
     bool sexual_reproduction;
     bool choose_parents_by_fitness;

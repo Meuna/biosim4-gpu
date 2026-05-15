@@ -63,7 +63,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
 
     const uint32_t pop = agents->population;
     const uint16_t g_max_len = genome->max_len;
-    const uint8_t long_probe_dist = sim->long_probe_dist;
+    const uint8_t los_range = sim->los_range;
 
     clear_agents_from_grid(sim);
 
@@ -88,7 +88,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
         if (returncode != BIOSIM_OK) {
             goto exit;
         }
-        biosim_agents_init_slot(agents, i, loc, long_probe_dist, biosim_rng_seed(i, gen_seed));
+        biosim_agents_init_slot(agents, i, loc, los_range, biosim_rng_seed(i, gen_seed));
         agents->genome_fingerprint[i] = fp;
         biosim_grid_set(grid, loc, i + 1U);
     }
@@ -330,7 +330,7 @@ static biosim_status_t reproduce_one_agent(
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
-    biosim_agents_init_slot(agents, i, loc, sim->long_probe_dist, biosim_rng_seed(i, gen_seed));
+    biosim_agents_init_slot(agents, i, loc, sim->los_range, biosim_rng_seed(i, gen_seed));
     agents->genome_fingerprint[i] = fp;
     biosim_grid_set(grid, loc, (uint16_t)(i + 1U));
 

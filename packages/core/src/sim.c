@@ -55,9 +55,9 @@ biosim_status_t biosim_sim_create(
     sim->size_y = biosim_params_get_int(p, "grid-size-y");
     sim->genome_max_len = (uint16_t)biosim_params_get_int(p, "max-genome-len");
     sim->max_neurons = (uint8_t)biosim_params_get_int(p, "max-neurons");
-    sim->long_probe_dist = (uint8_t)biosim_params_get_int(p, "long-probe-dist");
+    sim->los_range = (uint8_t)biosim_params_get_int(p, "los-range");
     sim->steps_per_gen = (uint32_t)biosim_params_get_int(p, "steps-per-gen");
-    sim->population_sensor_radius = biosim_params_get_int(p, "population-sensor-radius");
+    sim->sensor_radius = biosim_params_get_int(p, "sensor-radius");
     sim->enable_kill = biosim_params_get_bool(p, "enable-kill");
     sim->mutation_rate = (float)biosim_params_get_float(p, "point-mutation-rate");
     sim->sexual_reproduction = biosim_params_get_bool(p, "sexual-reproduction");

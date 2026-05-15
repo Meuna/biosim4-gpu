@@ -39,7 +39,7 @@ void test_create_state_buffers_non_null(void) {
     TEST_ASSERT_NOT_NULL(agents.alive);
     TEST_ASSERT_NOT_NULL(agents.osc_period);
     TEST_ASSERT_NOT_NULL(agents.responsiveness);
-    TEST_ASSERT_NOT_NULL(agents.long_probe_dist);
+    TEST_ASSERT_NOT_NULL(agents.los_range);
 }
 
 void test_create_misc_buffers_non_null(void) {
@@ -86,7 +86,7 @@ void test_init_slot_biological_defaults(void) {
     biosim_agents_init_slot(&agents, 0, coord(0, 0), 16, 1);
     TEST_ASSERT_EQUAL_UINT16(34, agents.osc_period[0]);
     TEST_ASSERT_FLOAT_WITHIN(1e-6F, 0.5F, agents.responsiveness[0]);
-    TEST_ASSERT_EQUAL_UINT8(16, agents.long_probe_dist[0]);
+    TEST_ASSERT_EQUAL_UINT8(16, agents.los_range[0]);
     TEST_ASSERT_EQUAL_UINT32(0, agents.challenge_bits[0]);
 }
 

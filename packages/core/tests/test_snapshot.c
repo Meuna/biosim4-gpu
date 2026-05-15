@@ -306,9 +306,9 @@ void test_population_load_file_larger_than_sim(void) {
                 .size_y = 4,
                 .genome_max_len = 4U,
                 .max_neurons = 2U,
-                .long_probe_dist = 4U,
+                .los_range = 4U,
                 .steps_per_gen = 1U,
-                .population_sensor_radius = 1,
+                .sensor_radius = 1,
             }
         )
     );
@@ -377,9 +377,9 @@ void test_population_load_file_smaller_than_sim(void) {
                 .size_y = 4,
                 .genome_max_len = 4U,
                 .max_neurons = 2U,
-                .long_probe_dist = 4U,
+                .los_range = 4U,
                 .steps_per_gen = 1U,
-                .population_sensor_radius = 1,
+                .sensor_radius = 1,
             }
         )
     );
