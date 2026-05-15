@@ -147,17 +147,17 @@ static void k1_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
     (void)clSetKernelArg(kernel, 11U, sizeof(cl_mem), (const void *)&b->neuron_driven);
     (void)clSetKernelArg(kernel, 12U, sizeof(cl_mem), (const void *)&b->neuron_count);
     (void)clSetKernelArg(kernel, 13U, sizeof(cl_mem), (const void *)&b->signal);
-    (void)clSetKernelArg(kernel, 14U, sizeof(cl_int), (const void *)&size_x);
-    (void)clSetKernelArg(kernel, 15U, sizeof(cl_int), (const void *)&size_y);
-    (void)clSetKernelArg(kernel, 16U, sizeof(cl_uint), (const void *)&step);
-    (void)clSetKernelArg(kernel, 17U, sizeof(cl_uint), (const void *)&steps_gen);
-    (void)clSetKernelArg(kernel, 18U, sizeof(cl_uint), (const void *)&pop);
-    (void)clSetKernelArg(kernel, 19U, sizeof(cl_mem), (const void *)&b->rng_state);
-    (void)clSetKernelArg(kernel, 20U, sizeof(cl_mem), (const void *)&b->desired_x);
-    (void)clSetKernelArg(kernel, 21U, sizeof(cl_mem), (const void *)&b->desired_y);
-    (void)clSetKernelArg(kernel, 22U, sizeof(cl_mem), (const void *)&b->grid);
-    (void)clSetKernelArg(kernel, 23U, sizeof(cl_int), (const void *)&enable_kill_val);
-    (void)clSetKernelArg(kernel, 24U, sizeof(cl_mem), (const void *)&b->kill_marker);
+    (void)clSetKernelArg(kernel, 14U, sizeof(cl_mem), (const void *)&b->rng_state);
+    (void)clSetKernelArg(kernel, 15U, sizeof(cl_mem), (const void *)&b->desired_x);
+    (void)clSetKernelArg(kernel, 16U, sizeof(cl_mem), (const void *)&b->desired_y);
+    (void)clSetKernelArg(kernel, 17U, sizeof(cl_mem), (const void *)&b->grid);
+    (void)clSetKernelArg(kernel, 18U, sizeof(cl_mem), (const void *)&b->kill_marker);
+    (void)clSetKernelArg(kernel, 19U, sizeof(cl_int), (const void *)&size_x);
+    (void)clSetKernelArg(kernel, 20U, sizeof(cl_int), (const void *)&size_y);
+    (void)clSetKernelArg(kernel, 21U, sizeof(cl_uint), (const void *)&step);
+    (void)clSetKernelArg(kernel, 22U, sizeof(cl_uint), (const void *)&steps_gen);
+    (void)clSetKernelArg(kernel, 23U, sizeof(cl_uint), (const void *)&pop);
+    (void)clSetKernelArg(kernel, 24U, sizeof(cl_int), (const void *)&enable_kill_val);
     (void)clSetKernelArg(kernel, 25U, sizeof(cl_int), (const void *)&sensor_radius);
 }
 
@@ -209,13 +209,13 @@ static void k5_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
     (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&b->challenge_bits);
     (void)clSetKernelArg(kernel, 4U, sizeof(cl_mem), (const void *)&b->rng_state);
     (void)clSetKernelArg(kernel, 5U, sizeof(cl_mem), (const void *)&b->grid);
-    (void)clSetKernelArg(kernel, 6U, sizeof(cl_int), (const void *)&size_x);
-    (void)clSetKernelArg(kernel, 7U, sizeof(cl_int), (const void *)&size_y);
-    (void)clSetKernelArg(kernel, 8U, sizeof(cl_uint), (const void *)&step);
-    (void)clSetKernelArg(kernel, 9U, sizeof(cl_uint), (const void *)&steps_gen);
-    (void)clSetKernelArg(kernel, 10U, sizeof(cl_uint), (const void *)&kind);
-    (void)clSetKernelArg(kernel, 11U, sizeof(cl_float), (const void *)&radius);
-    (void)clSetKernelArg(kernel, 12U, sizeof(cl_mem), (const void *)&b->barrier_ctrs);
+    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&b->barrier_ctrs);
+    (void)clSetKernelArg(kernel, 7U, sizeof(cl_int), (const void *)&size_x);
+    (void)clSetKernelArg(kernel, 8U, sizeof(cl_int), (const void *)&size_y);
+    (void)clSetKernelArg(kernel, 9U, sizeof(cl_uint), (const void *)&step);
+    (void)clSetKernelArg(kernel, 10U, sizeof(cl_uint), (const void *)&steps_gen);
+    (void)clSetKernelArg(kernel, 11U, sizeof(cl_uint), (const void *)&kind);
+    (void)clSetKernelArg(kernel, 12U, sizeof(cl_float), (const void *)&radius);
     (void)clSetKernelArg(kernel, 13U, sizeof(cl_uint), (const void *)&n_ctrs);
 }
 
@@ -350,8 +350,8 @@ biosim_status_t biosim_gpu_pipeline_step(biosim_gpu_pipeline_t *p, const biosim_
 
     /* Only the per-step arg changes; all others were set in pipeline_create. */
     cl_uint step = (cl_uint)sim->step;
-    (void)clSetKernelArg(p->k1, 16U, sizeof(cl_uint), &step);
-    (void)clSetKernelArg(p->k5, 8U, sizeof(cl_uint), &step);
+    (void)clSetKernelArg(p->k1, 21U, sizeof(cl_uint), &step);
+    (void)clSetKernelArg(p->k5, 9U, sizeof(cl_uint), &step);
 
     CL_GOTO_EXIT_ON_ERROR(
         clEnqueueNDRangeKernel(q, p->k1, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)

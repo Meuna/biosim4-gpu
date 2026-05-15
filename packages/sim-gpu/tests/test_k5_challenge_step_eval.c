@@ -124,13 +124,13 @@ static int run_k5(const k5_scn_t *s) {
     (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&buf_challenge_bits);
     (void)clSetKernelArg(kernel, 4U, sizeof(cl_mem), (const void *)&buf_rng_state);
     (void)clSetKernelArg(kernel, 5U, sizeof(cl_mem), (const void *)&buf_grid);
-    (void)clSetKernelArg(kernel, 6U, sizeof(cl_int), (const void *)&size_x);
-    (void)clSetKernelArg(kernel, 7U, sizeof(cl_int), (const void *)&size_y);
-    (void)clSetKernelArg(kernel, 8U, sizeof(cl_uint), (const void *)&step);
-    (void)clSetKernelArg(kernel, 9U, sizeof(cl_uint), (const void *)&steps_gen);
-    (void)clSetKernelArg(kernel, 10U, sizeof(cl_uint), (const void *)&kind);
-    (void)clSetKernelArg(kernel, 11U, sizeof(cl_float), (const void *)&radius);
-    (void)clSetKernelArg(kernel, 12U, sizeof(cl_mem), (const void *)&buf_barrier_ctrs);
+    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&buf_barrier_ctrs);
+    (void)clSetKernelArg(kernel, 7U, sizeof(cl_int), (const void *)&size_x);
+    (void)clSetKernelArg(kernel, 8U, sizeof(cl_int), (const void *)&size_y);
+    (void)clSetKernelArg(kernel, 9U, sizeof(cl_uint), (const void *)&step);
+    (void)clSetKernelArg(kernel, 10U, sizeof(cl_uint), (const void *)&steps_gen);
+    (void)clSetKernelArg(kernel, 11U, sizeof(cl_uint), (const void *)&kind);
+    (void)clSetKernelArg(kernel, 12U, sizeof(cl_float), (const void *)&radius);
     (void)clSetKernelArg(kernel, 13U, sizeof(cl_uint), (const void *)&n_ctrs);
 
     cl_command_queue q = runner.queue;

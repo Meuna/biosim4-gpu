@@ -143,17 +143,17 @@ static void fixture_setup(void) {
     (void)clSetKernelArg(kernel, 11U, sizeof(cl_mem), (const void *)&buf_neuron_driven);
     (void)clSetKernelArg(kernel, 12U, sizeof(cl_mem), (const void *)&buf_neuron_count);
     (void)clSetKernelArg(kernel, 13U, sizeof(cl_mem), (const void *)&buf_signal);
-    (void)clSetKernelArg(kernel, 14U, sizeof(cl_int), &size_x);
-    (void)clSetKernelArg(kernel, 15U, sizeof(cl_int), &size_y);
-    (void)clSetKernelArg(kernel, 16U, sizeof(cl_uint), &step);
-    (void)clSetKernelArg(kernel, 17U, sizeof(cl_uint), &steps_gen);
-    (void)clSetKernelArg(kernel, 18U, sizeof(cl_uint), &pop_arg);
-    (void)clSetKernelArg(kernel, 19U, sizeof(cl_mem), (const void *)&buf_rng_state);
-    (void)clSetKernelArg(kernel, 20U, sizeof(cl_mem), (const void *)&buf_desired_x);
-    (void)clSetKernelArg(kernel, 21U, sizeof(cl_mem), (const void *)&buf_desired_y);
-    (void)clSetKernelArg(kernel, 22U, sizeof(cl_mem), (const void *)&buf_grid);
-    (void)clSetKernelArg(kernel, 23U, sizeof(cl_int), &enable_kill);
-    (void)clSetKernelArg(kernel, 24U, sizeof(cl_mem), (const void *)&buf_kill_marker);
+    (void)clSetKernelArg(kernel, 14U, sizeof(cl_mem), (const void *)&buf_rng_state);
+    (void)clSetKernelArg(kernel, 15U, sizeof(cl_mem), (const void *)&buf_desired_x);
+    (void)clSetKernelArg(kernel, 16U, sizeof(cl_mem), (const void *)&buf_desired_y);
+    (void)clSetKernelArg(kernel, 17U, sizeof(cl_mem), (const void *)&buf_grid);
+    (void)clSetKernelArg(kernel, 18U, sizeof(cl_mem), (const void *)&buf_kill_marker);
+    (void)clSetKernelArg(kernel, 19U, sizeof(cl_int), &size_x);
+    (void)clSetKernelArg(kernel, 20U, sizeof(cl_int), &size_y);
+    (void)clSetKernelArg(kernel, 21U, sizeof(cl_uint), &step);
+    (void)clSetKernelArg(kernel, 22U, sizeof(cl_uint), &steps_gen);
+    (void)clSetKernelArg(kernel, 23U, sizeof(cl_uint), &pop_arg);
+    (void)clSetKernelArg(kernel, 24U, sizeof(cl_int), &enable_kill);
     (void)clSetKernelArg(kernel, 25U, sizeof(cl_int), &sensor_radius);
 }
 

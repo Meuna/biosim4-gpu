@@ -37,6 +37,9 @@ static float rng_float_k(__global ulong *rng_state, uint idx) {
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static float eval_sensor(
+    __global ulong *rng_state,
+    __global const uint *signal,
+    __global const uint *grid,
     int sensor_id,
     uint idx,
     int x,
@@ -47,10 +50,7 @@ static float eval_sensor(
     uint steps_per_gen,
     int size_x,
     int size_y,
-    __global ulong *rng_state,
-    __global const uint *signal,
-    __global const uint *grid,
-    int pop_sensor_radius,
+    int sensor_radius,
     uchar los_range_val
 ) {
     switch (sensor_id) {
@@ -112,7 +112,7 @@ static float eval_sensor(
     }
 
     case BIOSIM_SENSOR_POPULATION: {
-        int r = pop_sensor_radius;
+        int r = sensor_radius;
         uint visited = 0u;
         uint occupied = 0u;
         for (int dy = -r; dy <= r; dy++) {
@@ -142,7 +142,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
-        int r = pop_sensor_radius;
+        int r = sensor_radius;
         uint visited = 0u;
         uint occupied = 0u;
         for (int dy = -r; dy <= r; dy++) {
@@ -175,7 +175,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
-        int r = pop_sensor_radius;
+        int r = sensor_radius;
         int l_occ = 0;
         int r_occ = 0;
         for (int dy = -r; dy <= r; dy++) {
@@ -212,7 +212,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
-        int r = pop_sensor_radius;
+        int r = sensor_radius;
         uint visited = 0u;
         uint n_bar = 0u;
         for (int dy = -r; dy <= r; dy++) {
@@ -244,7 +244,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
-        int r = pop_sensor_radius;
+        int r = sensor_radius;
         int l_bar = 0;
         int r_bar = 0;
         for (int dy = -r; dy <= r; dy++) {
@@ -363,7 +363,7 @@ static float eval_sensor(
         int dir = (int)(last_dir & 7u);
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
-        int r = pop_sensor_radius;
+        int r = sensor_radius;
         uint l_sum = 0u;
         uint r_sum = 0u;
         for (int dy = -r; dy <= r; dy++) {
@@ -420,18 +420,18 @@ __kernel void k_feedforward(
     __global const uchar *neuron_driven,
     __global const uchar *neuron_count,
     __global uint *signal,
+    __global ulong *rng_state,
+    __global int *desired_x,
+    __global int *desired_y,
+    __global const uint *grid,
+    __global uchar *kill_marker,
     int size_x,
     int size_y,
     uint step,
     uint steps_per_gen,
     uint pop,
-    __global ulong *rng_state,
-    __global int *desired_x,
-    __global int *desired_y,
-    __global const uint *grid,
     int enable_kill,
-    __global uchar *kill_marker,
-    int pop_sensor_radius
+    int sensor_radius
 ) {
     uint idx = get_global_id(0);
 
@@ -451,6 +451,9 @@ __kernel void k_feedforward(
     float sensor_vals[BIOSIM_NUM_SENSORS];
     for (int s = 0; s < BIOSIM_NUM_SENSORS; s++) {
         sensor_vals[s] = eval_sensor(
+            rng_state,
+            signal,
+            grid,
             s,
             idx,
             x,
@@ -461,10 +464,7 @@ __kernel void k_feedforward(
             steps_per_gen,
             size_x,
             size_y,
-            rng_state,
-            signal,
-            grid,
-            pop_sensor_radius,
+            sensor_radius,
             los_range_val
         );
     }

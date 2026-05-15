@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Kernel argument ordering** — `k_feedforward` (K1) and `k_challenge_step_eval` (K5)
+  now follow the convention of all `__global` pointer arguments before scalar arguments.
+  In K1, `rng_state`, `desired_x`, `desired_y`, `grid`, and `kill_marker` moved from
+  indices 19–24 to 14–18; scalars shifted to 19–25. In K5, `barrier_ctrs` moved from
+  index 12 to 6; scalars shifted to 7–13. Host-side `clSetKernelArg` calls and per-step
+  index updates in `pipeline.c` and both test files updated accordingly.
+
 ### Added
 - **`BIOSIM_SENSOR_SIGNAL0_FWD`** — forward signal-density probe implemented in
   both CPU reference (`core`) and GPU K1 kernel; walks up to `los_range`
