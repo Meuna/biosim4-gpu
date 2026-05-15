@@ -5,10 +5,13 @@
  * Do NOT add #include directives for those files here.
  *
  * Sensor implementation:
- *   Group A (0-9)         — fully implemented, including OSC1 (uses built-in cos)
- *   POPULATION (10)       — circular-disc neighbourhood scan (grid read-only)
- *   SIGNAL0 (17)          — reads signal buffer at agent position
- *   All others (11-16,    — stub returning 0.5
+ *   Group A (0-9)              — fully implemented, including OSC1 (uses built-in cos)
+ *   POPULATION (10)            — circular-disc neighbourhood scan (grid read-only)
+ *   POPULATION_FWD (11)        — forward half-disc density (strict dot-product filter)
+ *   POPULATION_LR (12)         — lateral signed ratio (L−R)/(L+R), in [−1,1]
+ *   LONGPROBE_POP_FWD (15)     — forward ray-cast, returns steps/dist to first agent
+ *   SIGNAL0 (17)               — reads signal buffer at agent position
+ *   All others (13-14, 16,     — stub returning 0.5
  *               18-20)
  *
  * Action implementation:
@@ -45,7 +48,8 @@ static float eval_sensor(
     __global ulong *rng_state,
     __global const uint *signal,
     __global const uint *grid,
-    int pop_sensor_radius
+    int pop_sensor_radius,
+    uchar long_probe
 ) {
     switch (sensor_id) {
     case BIOSIM_SENSOR_LOC_X:
@@ -140,6 +144,101 @@ static float eval_sensor(
         return (float)occupied / (float)visited;
     }
 
+    case BIOSIM_SENSOR_POPULATION_FWD: {
+        int dir = (int)(last_dir & 7u);
+        int fwd_x = BIOSIM_DIR_DX[dir];
+        int fwd_y = BIOSIM_DIR_DY[dir];
+        int r = pop_sensor_radius;
+        uint visited = 0u;
+        uint occupied = 0u;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                if (dx * fwd_x + dy * fwd_y <= 0) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                visited++;
+                uint cell = grid[ny * size_x + nx];
+                if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                    occupied++;
+                }
+            }
+        }
+        if (visited == 0u) {
+            return 0.0F;
+        }
+        return (float)occupied / (float)visited;
+    }
+
+    case BIOSIM_SENSOR_POPULATION_LR: {
+        int dir = (int)(last_dir & 7u);
+        int fwd_x = BIOSIM_DIR_DX[dir];
+        int fwd_y = BIOSIM_DIR_DY[dir];
+        int r = pop_sensor_radius;
+        int l_occ = 0;
+        int r_occ = 0;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                int lateral = dx * fwd_y - dy * fwd_x;
+                if (lateral == 0) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                uint cell = grid[ny * size_x + nx];
+                if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                    if (lateral > 0) {
+                        l_occ++;
+                    } else {
+                        r_occ++;
+                    }
+                }
+            }
+        }
+        if (l_occ == 0 && r_occ == 0) {
+            return 0.0F;
+        }
+        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ);
+    }
+
+    case BIOSIM_SENSOR_LONGPROBE_POP_FWD: {
+        int dir = (int)(last_dir & 7u);
+        int step_x = BIOSIM_DIR_DX[dir];
+        int step_y = BIOSIM_DIR_DY[dir];
+        uint dist = (uint)long_probe;
+        if (dist == 0u) {
+            return 0.0F;
+        }
+        for (uint i = 1u; i <= dist; i++) {
+            int nx = x + (int)i * step_x;
+            int ny = y + (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                break;
+            }
+            uint cell = grid[ny * size_x + nx];
+            if (cell == BIOSIM_GRID_BARRIER) {
+                break;
+            }
+            if (cell != BIOSIM_GRID_EMPTY) {
+                return (float)i / (float)dist;
+            }
+        }
+        return 0.0F;
+    }
+
     default:
         return 0.5F;
     }
@@ -187,6 +286,7 @@ __kernel void k_feedforward(
     uchar ldir = last_move_dir[idx];
     ushort osc_per = osc_period[idx];
     float resp = responsiveness[idx];
+    uchar long_probe = long_probe_dist[idx];
 
     /* ── Phase 1: evaluate sensors ───────────────────────────────────────── */
 
@@ -206,7 +306,8 @@ __kernel void k_feedforward(
             rng_state,
             signal,
             grid,
-            pop_sensor_radius
+            pop_sensor_radius,
+            long_probe
         );
     }
 

@@ -127,15 +127,104 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         return (float)pc.occupied / (float)pc.visited;
     }
 
-    case BIOSIM_SENSOR_POPULATION_FWD:
-    case BIOSIM_SENSOR_POPULATION_LR:
+    case BIOSIM_SENSOR_POPULATION_FWD: {
+        uint8_t dir = agents->last_move_dir[idx] & 7U;
+        int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
+        int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
+        int32_t r = sim->population_sensor_radius;
+        uint32_t visited = 0U;
+        uint32_t occupied = 0U;
+        for (int32_t dy = -r; dy <= r; dy++) {
+            for (int32_t dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                if (dx * fwd_x + dy * fwd_y <= 0) {
+                    continue;
+                }
+                biosim_coord_t c = {x + dx, y + dy};
+                if (!biosim_grid_in_bounds(grid, c)) {
+                    continue;
+                }
+                visited++;
+                uint32_t cell = biosim_grid_at(grid, c);
+                if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                    occupied++;
+                }
+            }
+        }
+        if (visited == 0U) {
+            return 0.0F;
+        }
+        return (float)occupied / (float)visited;
+    }
+
+    case BIOSIM_SENSOR_POPULATION_LR: {
+        uint8_t dir = agents->last_move_dir[idx] & 7U;
+        int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
+        int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
+        int32_t r = sim->population_sensor_radius;
+        uint32_t l_occ = 0U;
+        uint32_t r_occ = 0U;
+        for (int32_t dy = -r; dy <= r; dy++) {
+            for (int32_t dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                int32_t lateral = dx * fwd_y - dy * fwd_x;
+                if (lateral == 0) {
+                    continue;
+                }
+                biosim_coord_t c = {x + dx, y + dy};
+                if (!biosim_grid_in_bounds(grid, c)) {
+                    continue;
+                }
+                uint32_t cell = biosim_grid_at(grid, c);
+                if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                    if (lateral > 0) {
+                        l_occ++;
+                    } else {
+                        r_occ++;
+                    }
+                }
+            }
+        }
+        if (l_occ == 0U && r_occ == 0U) {
+            return 0.0F;
+        }
+        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ);
+    }
+
     case BIOSIM_SENSOR_BARRIER_FWD:
     case BIOSIM_SENSOR_BARRIER_LR:
-    case BIOSIM_SENSOR_LONGPROBE_POP_FWD:
     case BIOSIM_SENSOR_LONGPROBE_BAR_FWD:
     case BIOSIM_SENSOR_SIGNAL0_FWD:
     case BIOSIM_SENSOR_SIGNAL0_LR:
         return 0.5F;
+
+    case BIOSIM_SENSOR_LONGPROBE_POP_FWD: {
+        uint8_t dir = agents->last_move_dir[idx] & 7U;
+        int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
+        int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
+        uint8_t dist = agents->long_probe_dist[idx];
+        if (dist == 0U) {
+            return 0.0F;
+        }
+        for (uint8_t i = 1U; i <= dist; i++) {
+            biosim_coord_t c = {x + (int32_t)i * fwd_x, y + (int32_t)i * fwd_y};
+            if (!biosim_grid_in_bounds(grid, c)) {
+                break;
+            }
+            uint32_t cell = biosim_grid_at(grid, c);
+            if (cell == BIOSIM_GRID_BARRIER) {
+                break;
+            }
+            if (cell != BIOSIM_GRID_EMPTY) {
+                return (float)i / (float)dist;
+            }
+        }
+        return 0.0F;
+    }
 
     case BIOSIM_SENSOR_SIGNAL0: {
         assert(sim->signal != NULL);

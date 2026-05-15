@@ -271,14 +271,191 @@ void test_genetic_sim_fwd_all_bits_differ(void) {
     biosim_grid_set(&sim.grid, fwd, BIOSIM_GRID_EMPTY);
 }
 
+/* ── POPULATION_FWD ─────────────────────────────────────────────────────── */
+
+void test_population_fwd_empty(void) {
+    /* dir=0 (East), no agents in disc → visited=4, occupied=0 → 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_FWD, 0, &sim));
+}
+
+void test_population_fwd_all_occupied(void) {
+    /* dir=0: fwd cells are (9,7),(9,8),(9,9),(10,8) → occupied/visited=1.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y - 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y + 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_FWD, 0, &sim));
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_population_fwd_backward_only(void) {
+    /* dir=0: place agent behind at (6,8) — not in forward half → 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 2, y}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_FWD, 0, &sim));
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 2, y}, BIOSIM_GRID_EMPTY);
+}
+
+void test_population_fwd_partial(void) {
+    /* dir=0: 2 of 4 forward cells occupied → 0.5 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_FWD, 0, &sim));
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_EMPTY);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, BIOSIM_GRID_EMPTY);
+}
+
+/* ── LONGPROBE_POP_FWD ──────────────────────────────────────────────────── */
+
+void test_longprobe_pop_fwd_empty(void) {
+    /* dir=0 (East), clear path → 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim));
+}
+
+void test_longprobe_pop_fwd_hit_step1(void) {
+    /* agent at (9,8) — 1 step east → 1/16 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, 2U);
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-6F, 1.0F / 16.0F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim)
+    );
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_EMPTY);
+}
+
+void test_longprobe_pop_fwd_hit_step2(void) {
+    /* agent at (10,8) — 2 steps east → 2/16 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, 2U);
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-6F, 2.0F / 16.0F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim)
+    );
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, BIOSIM_GRID_EMPTY);
+}
+
+void test_longprobe_pop_fwd_barrier_stops(void) {
+    /* barrier at step 2, agent at step 3 → barrier terminates probe → 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, BIOSIM_GRID_BARRIER);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 3, y}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim));
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, BIOSIM_GRID_EMPTY);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 3, y}, BIOSIM_GRID_EMPTY);
+}
+
+void test_longprobe_pop_fwd_dist_zero(void) {
+    /* dist=0 → immediate 0.0 regardless of grid */
+    sim.agents.last_move_dir[0] = 0;
+    sim.agents.long_probe_dist[0] = 0U;
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim));
+    sim.agents.long_probe_dist[0] = 16U;
+}
+
+/* ── POPULATION_LR ──────────────────────────────────────────────────────── */
+
+void test_population_lr_empty(void) {
+    /* dir=0 (East), no agents in disc → L=0, R=0 → 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+}
+
+void test_population_lr_left_only(void) {
+    /* dir=0: lateral = -dy; left cells (dy<0): (7,7),(8,6),(8,7),(9,7) → L=4,R=0 → 1.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y - 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 2}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y - 1}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_population_lr_right_only(void) {
+    /* dir=0: right cells (dy>0): (7,9),(8,10),(8,9),(9,9) → L=0,R=4 → -1.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y + 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 2}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y + 1}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(-1.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_population_lr_balanced(void) {
+    /* 2 left, 2 right → (2-2)/(2+2) = 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y - 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y - 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y + 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y + 1}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_population_lr_asymmetric(void) {
+    /* 2 left, 1 right → (2-1)/(2+1) = 1/3 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y - 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 1}, 2U);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y + 1}, 2U);
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-6F, 1.0F / 3.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim)
+    );
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_population_lr_axis_only(void) {
+    /* axis cell (x+1,y) has lateral=0 → excluded; L=0,R=0 → 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, 2U);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_EMPTY);
+}
+
 /* ── placeholder sensors ────────────────────────────────────────────────── */
 
 void test_placeholder_sensors_return_half(void) {
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_FWD, 0, &sim));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
     TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
     TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
-    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_POP_FWD, 0, &sim));
     TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_LONGPROBE_BAR_FWD, 0, &sim));
     TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_FWD, 0, &sim));
     TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
@@ -635,6 +812,24 @@ int main(void) {
     RUN_TEST(test_genetic_sim_fwd_barrier_forward);
     RUN_TEST(test_genetic_sim_fwd_identical_fingerprint);
     RUN_TEST(test_genetic_sim_fwd_all_bits_differ);
+    /* POPULATION_FWD */
+    RUN_TEST(test_population_fwd_empty);
+    RUN_TEST(test_population_fwd_all_occupied);
+    RUN_TEST(test_population_fwd_backward_only);
+    RUN_TEST(test_population_fwd_partial);
+    /* LONGPROBE_POP_FWD */
+    RUN_TEST(test_longprobe_pop_fwd_empty);
+    RUN_TEST(test_longprobe_pop_fwd_hit_step1);
+    RUN_TEST(test_longprobe_pop_fwd_hit_step2);
+    RUN_TEST(test_longprobe_pop_fwd_barrier_stops);
+    RUN_TEST(test_longprobe_pop_fwd_dist_zero);
+    /* POPULATION_LR */
+    RUN_TEST(test_population_lr_empty);
+    RUN_TEST(test_population_lr_left_only);
+    RUN_TEST(test_population_lr_right_only);
+    RUN_TEST(test_population_lr_balanced);
+    RUN_TEST(test_population_lr_asymmetric);
+    RUN_TEST(test_population_lr_axis_only);
     /* placeholders */
     RUN_TEST(test_placeholder_sensors_return_half);
     /* SET_RESPONSIVENESS */

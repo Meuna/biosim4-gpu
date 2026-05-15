@@ -23,11 +23,11 @@ typedef enum {
     BIOSIM_SENSOR_RANDOM = 9,
     /* Group B — grid neighbourhood */
     BIOSIM_SENSOR_POPULATION = 10,
-    BIOSIM_SENSOR_POPULATION_FWD = 11,    /* placeholder */
-    BIOSIM_SENSOR_POPULATION_LR = 12,     /* placeholder */
-    BIOSIM_SENSOR_BARRIER_FWD = 13,       /* placeholder */
-    BIOSIM_SENSOR_BARRIER_LR = 14,        /* placeholder */
-    BIOSIM_SENSOR_LONGPROBE_POP_FWD = 15, /* placeholder */
+    BIOSIM_SENSOR_POPULATION_FWD = 11,
+    BIOSIM_SENSOR_POPULATION_LR = 12,
+    BIOSIM_SENSOR_BARRIER_FWD = 13, /* placeholder */
+    BIOSIM_SENSOR_BARRIER_LR = 14,  /* placeholder */
+    BIOSIM_SENSOR_LONGPROBE_POP_FWD = 15,
     BIOSIM_SENSOR_LONGPROBE_BAR_FWD = 16, /* placeholder */
     /* Group C — signal layer (directional variants are placeholders) */
     BIOSIM_SENSOR_SIGNAL0 = 17,

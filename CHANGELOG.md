@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`BIOSIM_SENSOR_POPULATION` on GPU** — K1 now computes the population-density
   sensor via a circular-disc neighbourhood scan (radius `population_sensor_radius`)
   instead of returning the 0.5 stub.
+- **`BIOSIM_SENSOR_POPULATION_FWD`** — forward half-disc population-density sensor
+  implemented in both CPU reference (`core`) and GPU K1 kernel; counts occupied
+  cells in the forward half of the disc (`dx·fwd_x + dy·fwd_y > 0`).
+- **`BIOSIM_SENSOR_LONGPROBE_POP_FWD`** — forward ray-cast population probe
+  implemented in both CPU reference (`core`) and GPU K1 kernel; returns
+  `steps_to_first_agent / long_probe_dist`, 0.0 if no agent found before a
+  barrier or grid boundary.
+- **`BIOSIM_SENSOR_POPULATION_LR`** — lateral signed-ratio population sensor
+  implemented in both CPU reference (`core`) and GPU K1 kernel; returns
+  `(L−R)/(L+R)` in [−1, 1] where L and R are occupied-cell counts in the
+  left and right half-discs (strict dot-product partition, axis cells excluded).
 - **Cross-package test utilities** — `core-sim-test-utils` now exposes its
   header at `biosim/core/test_utils.h` via a PUBLIC include directory, making
   `sim_test_create`, `sim_test_make_8x8`, `sim_test_make_32x32`, and the
