@@ -808,10 +808,14 @@ int main(void) {
     RUN_TEST(test_signal0_max);
     RUN_TEST(test_signal0_midrange);
     /* GENETIC_SIM_FWD */
-    RUN_TEST(test_genetic_sim_fwd_empty_forward);
-    RUN_TEST(test_genetic_sim_fwd_barrier_forward);
-    RUN_TEST(test_genetic_sim_fwd_identical_fingerprint);
-    RUN_TEST(test_genetic_sim_fwd_all_bits_differ);
+
+    /* Remove implementation pending redesign of the
+        genetic similarity sensor and its implementation on the GPU */
+    // RUN_TEST(test_genetic_sim_fwd_empty_forward);
+    // RUN_TEST(test_genetic_sim_fwd_barrier_forward);
+    // RUN_TEST(test_genetic_sim_fwd_identical_fingerprint);
+    // RUN_TEST(test_genetic_sim_fwd_all_bits_differ);
+
     /* POPULATION_FWD */
     RUN_TEST(test_population_fwd_empty);
     RUN_TEST(test_population_fwd_all_occupied);

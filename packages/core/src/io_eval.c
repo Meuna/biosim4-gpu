@@ -236,18 +236,23 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_GENETIC_SIM_FWD: {
-        uint8_t dir = agents->last_move_dir[idx] & 7U;
-        biosim_coord_t fwd = {x + BIOSIM_DIR_DX[dir], y + BIOSIM_DIR_DY[dir]};
-        if (!biosim_grid_in_bounds(grid, fwd)) {
-            return 0.0F;
-        }
-        uint32_t cell = biosim_grid_at(grid, fwd);
-        if (cell == BIOSIM_GRID_EMPTY || cell == BIOSIM_GRID_BARRIER) {
-            return 0.0F;
-        }
-        uint32_t nbr = (uint32_t)(cell - 1U);
-        uint64_t xored = agents->genome_fingerprint[idx] ^ agents->genome_fingerprint[nbr];
-        return 1.0F - (float)popcount64(xored) / 64.0F;
+        return 0.5F;
+
+        /* Remove implementation pending redesign of the
+           genetic similarity sensor and its implementation on the GPU */
+
+        // uint8_t dir = agents->last_move_dir[idx] & 7U;
+        // biosim_coord_t fwd = {x + BIOSIM_DIR_DX[dir], y + BIOSIM_DIR_DY[dir]};
+        // if (!biosim_grid_in_bounds(grid, fwd)) {
+        //     return 0.0F;
+        // }
+        // uint32_t cell = biosim_grid_at(grid, fwd);
+        // if (cell == BIOSIM_GRID_EMPTY || cell == BIOSIM_GRID_BARRIER) {
+        //     return 0.0F;
+        // }
+        // uint32_t nbr = (uint32_t)(cell - 1U);
+        // uint64_t xored = agents->genome_fingerprint[idx] ^ agents->genome_fingerprint[nbr];
+        // return 1.0F - (float)popcount64(xored) / 64.0F;
     }
 
     default:
