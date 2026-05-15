@@ -111,14 +111,6 @@ static float eval_sensor(
         return (float)(state >> 40) * (1.0F / 16777216.0F);
     }
 
-    case BIOSIM_SENSOR_SIGNAL0: {
-        uint val = signal[(int)y * size_x + (int)x];
-        if (val > 255u) {
-            val = 255u;
-        }
-        return (float)val / 255.0F;
-    }
-
     case BIOSIM_SENSOR_POPULATION: {
         int r = pop_sensor_radius;
         uint visited = 0u;
@@ -216,31 +208,6 @@ static float eval_sensor(
         return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ);
     }
 
-    case BIOSIM_SENSOR_LONGPROBE_POP_FWD: {
-        int dir = (int)(last_dir & 7u);
-        int step_x = BIOSIM_DIR_DX[dir];
-        int step_y = BIOSIM_DIR_DY[dir];
-        uint dist = (uint)long_probe;
-        if (dist == 0u) {
-            return 0.0F;
-        }
-        for (uint i = 1u; i <= dist; i++) {
-            int nx = x + (int)i * step_x;
-            int ny = y + (int)i * step_y;
-            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
-                break;
-            }
-            uint cell = grid[ny * size_x + nx];
-            if (cell == BIOSIM_GRID_BARRIER) {
-                break;
-            }
-            if (cell != BIOSIM_GRID_EMPTY) {
-                return (float)i / (float)dist;
-            }
-        }
-        return 0.0F;
-    }
-
     case BIOSIM_SENSOR_BARRIER_FWD: {
         int dir = (int)(last_dir & 7u);
         int fwd_x = BIOSIM_DIR_DX[dir];
@@ -309,6 +276,31 @@ static float eval_sensor(
         return ((float)l_bar - (float)r_bar) / (float)(l_bar + r_bar);
     }
 
+    case BIOSIM_SENSOR_LONGPROBE_POP_FWD: {
+        int dir = (int)(last_dir & 7u);
+        int step_x = BIOSIM_DIR_DX[dir];
+        int step_y = BIOSIM_DIR_DY[dir];
+        uint dist = (uint)long_probe;
+        if (dist == 0u) {
+            return 0.0F;
+        }
+        for (uint i = 1u; i <= dist; i++) {
+            int nx = x + (int)i * step_x;
+            int ny = y + (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                break;
+            }
+            uint cell = grid[ny * size_x + nx];
+            if (cell == BIOSIM_GRID_BARRIER) {
+                break;
+            }
+            if (cell != BIOSIM_GRID_EMPTY) {
+                return (float)i / (float)dist;
+            }
+        }
+        return 0.0F;
+    }
+
     case BIOSIM_SENSOR_LONGPROBE_BAR_FWD: {
         int dir = (int)(last_dir & 7u);
         int step_x = BIOSIM_DIR_DX[dir];
@@ -328,6 +320,81 @@ static float eval_sensor(
             }
         }
         return 0.0F;
+    }
+
+    case BIOSIM_SENSOR_SIGNAL0: {
+        uint val = signal[(int)y * size_x + (int)x];
+        if (val > 255u) {
+            val = 255u;
+        }
+        return (float)val / 255.0F;
+    }
+
+    case BIOSIM_SENSOR_SIGNAL0_FWD: {
+        int dir = (int)(last_dir & 7u);
+        int step_x = BIOSIM_DIR_DX[dir];
+        int step_y = BIOSIM_DIR_DY[dir];
+        uint dist = (uint)long_probe;
+        if (dist == 0u) {
+            return 0.0F;
+        }
+        uint total = 0u;
+        uint visited = 0u;
+        for (uint i = 1u; i <= dist; i++) {
+            int nx = x + (int)i * step_x;
+            int ny = y + (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                break;
+            }
+            visited++;
+            uint val = signal[ny * size_x + nx];
+            if (val > 255u) {
+                val = 255u;
+            }
+            total += val;
+        }
+        if (visited == 0u) {
+            return 0.0F;
+        }
+        return (float)total / (255.0F * (float)visited);
+    }
+
+    case BIOSIM_SENSOR_SIGNAL0_LR: {
+        int dir = (int)(last_dir & 7u);
+        int fwd_x = BIOSIM_DIR_DX[dir];
+        int fwd_y = BIOSIM_DIR_DY[dir];
+        int r = pop_sensor_radius;
+        uint l_sum = 0u;
+        uint r_sum = 0u;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                int lateral = dx * fwd_y - dy * fwd_x;
+                if (lateral == 0) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                uint val = signal[ny * size_x + nx];
+                if (val > 255u) {
+                    val = 255u;
+                }
+                if (lateral > 0) {
+                    l_sum += val;
+                } else {
+                    r_sum += val;
+                }
+            }
+        }
+        if (l_sum == 0u && r_sum == 0u) {
+            return 0.0F;
+        }
+        return ((float)l_sum - (float)r_sum) / ((float)l_sum + (float)r_sum);
     }
 
     default:

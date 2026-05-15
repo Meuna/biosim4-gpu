@@ -25,14 +25,14 @@ typedef enum {
     BIOSIM_SENSOR_POPULATION = 10,
     BIOSIM_SENSOR_POPULATION_FWD = 11,
     BIOSIM_SENSOR_POPULATION_LR = 12,
-    BIOSIM_SENSOR_BARRIER_FWD = 13, /* placeholder */
-    BIOSIM_SENSOR_BARRIER_LR = 14,  /* placeholder */
+    BIOSIM_SENSOR_BARRIER_FWD = 13,
+    BIOSIM_SENSOR_BARRIER_LR = 14,
     BIOSIM_SENSOR_LONGPROBE_POP_FWD = 15,
-    BIOSIM_SENSOR_LONGPROBE_BAR_FWD = 16, /* placeholder */
-    /* Group C — signal layer (directional variants are placeholders) */
+    BIOSIM_SENSOR_LONGPROBE_BAR_FWD = 16,
+    /* Group C — signal layer */
     BIOSIM_SENSOR_SIGNAL0 = 17,
-    BIOSIM_SENSOR_SIGNAL0_FWD = 18, /* placeholder */
-    BIOSIM_SENSOR_SIGNAL0_LR = 19,  /* placeholder */
+    BIOSIM_SENSOR_SIGNAL0_FWD = 18,
+    BIOSIM_SENSOR_SIGNAL0_LR = 19,
     /* Group D — cross-agent */
     BIOSIM_SENSOR_GENETIC_SIM_FWD = 20,
     /* Sentinel */

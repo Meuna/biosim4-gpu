@@ -294,14 +294,15 @@ void test_k1_compiles_and_runs(void) {
 void test_k1_matches_host_reference(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(BIOSIM_OK, fixture_status, "fixture setup failed");
 
+    /* Fill signal with a deterministic non-zero pattern so that SIGNAL0_FWD
+     * and SIGNAL0_LR sensors exercise real values on both GPU and host. */
+    for (size_t i = 0; i < sim.signal_len; i++) {
+        sim.signal[i] = (uint32_t)((i * 7U + 3U) % 200U) + 1U;
+    }
+
     TEST_ASSERT_TRUE_MESSAGE(run_k1(), "K1 kernel dispatch failed");
 
     uint32_t pop = sim.population;
-
-    /* Reset sim.signal to 0 before running host reference so that
-     * SIGNAL0 sensor reads 0.0F for all agents (same as GPU sees from the
-     * initial zero signal buffer). */
-    memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 
     uint32_t mismatches = 0U;
     for (uint32_t i = 0U; i < pop; i++) {

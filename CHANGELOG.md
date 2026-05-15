@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`BIOSIM_SENSOR_SIGNAL0_FWD`** — forward signal-density probe implemented in
+  both CPU reference (`core`) and GPU K1 kernel; walks up to `long_probe_dist`
+  cells in the agent's last-move direction, sums signal values (clamped to 255),
+  and returns the per-cell average normalised to [0, 1]
+  (`sum / (visited × 255)`), or 0.0 if no in-bounds cells are found.
+- **`BIOSIM_SENSOR_SIGNAL0_LR`** — lateral signed-ratio signal sensor implemented
+  in both CPU reference (`core`) and GPU K1 kernel; sums normalised signal
+  values across the left and right half-discs (radius `population_sensor_radius`)
+  and returns `(L−R)/(L+R)` in [−1, 1], or 0.0 when both sides are zero.
 - **`BIOSIM_SENSOR_BARRIER_FWD`** — forward half-disc barrier-density sensor
   implemented in both CPU reference (`core`) and GPU K1 kernel; uses
   `population_sensor_radius` as the disc radius, returns
