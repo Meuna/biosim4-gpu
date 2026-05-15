@@ -5,9 +5,11 @@
  * Do NOT add #include directives for those files here.
  *
  * Sensor implementation:
- *   Group A (0-9)   — fully implemented, including OSC1 (uses built-in cos)
- *   SIGNAL0 (17)    — reads signal buffer at agent position
- *   All others      — stub returning 0.5
+ *   Group A (0-9)         — fully implemented, including OSC1 (uses built-in cos)
+ *   POPULATION (10)       — circular-disc neighbourhood scan (grid read-only)
+ *   SIGNAL0 (17)          — reads signal buffer at agent position
+ *   All others (11-16,    — stub returning 0.5
+ *               18-20)
  *
  * Action implementation:
  *   Group A (0-2)   — SET_RESPONSIVENESS, SET_OSCILLATOR_PERIOD,
@@ -41,7 +43,9 @@ static float eval_sensor(
     int size_x,
     int size_y,
     __global ulong *rng_state,
-    __global const uint *signal
+    __global const uint *signal,
+    __global const uint *grid,
+    int pop_sensor_radius
 ) {
     switch (sensor_id) {
     case BIOSIM_SENSOR_LOC_X:
@@ -109,6 +113,33 @@ static float eval_sensor(
         return (float)val / 255.0F;
     }
 
+    case BIOSIM_SENSOR_POPULATION: {
+        int r = pop_sensor_radius;
+        uint visited = 0u;
+        uint occupied = 0u;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                visited++;
+                uint cell = grid[ny * size_x + nx];
+                if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                    occupied++;
+                }
+            }
+        }
+        if (visited == 0u) {
+            return 0.0F;
+        }
+        return (float)occupied / (float)visited;
+    }
+
     default:
         return 0.5F;
     }
@@ -142,7 +173,8 @@ __kernel void k_feedforward(
     __global int *desired_y,
     __global const uint *grid,
     int enable_kill,
-    __global uchar *kill_marker
+    __global uchar *kill_marker,
+    int pop_sensor_radius
 ) {
     uint idx = get_global_id(0);
 
@@ -161,7 +193,20 @@ __kernel void k_feedforward(
     float sensor_vals[BIOSIM_NUM_SENSORS];
     for (int s = 0; s < BIOSIM_NUM_SENSORS; s++) {
         sensor_vals[s] = eval_sensor(
-            s, idx, x, y, ldir, osc_per, step, steps_per_gen, size_x, size_y, rng_state, signal
+            s,
+            idx,
+            x,
+            y,
+            ldir,
+            osc_per,
+            step,
+            steps_per_gen,
+            size_x,
+            size_y,
+            rng_state,
+            signal,
+            grid,
+            pop_sensor_radius
         );
     }
 

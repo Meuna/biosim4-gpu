@@ -21,7 +21,7 @@ typedef enum {
     BIOSIM_SENSOR_OSC1 = 7,
     BIOSIM_SENSOR_AGE = 8,
     BIOSIM_SENSOR_RANDOM = 9,
-    /* Group B — grid neighbourhood (placeholder sensors return 0.5) */
+    /* Group B — grid neighbourhood */
     BIOSIM_SENSOR_POPULATION = 10,
     BIOSIM_SENSOR_POPULATION_FWD = 11,    /* placeholder */
     BIOSIM_SENSOR_POPULATION_LR = 12,     /* placeholder */

@@ -125,6 +125,7 @@ static void fixture_setup(void) {
     cl_uint steps_gen = (cl_uint)sim.steps_per_gen;
     cl_uint pop_arg = (cl_uint)sim.population;
     cl_int enable_kill = 0;
+    cl_int pop_sr = (cl_int)sim.population_sensor_radius;
 
     (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&buf_alive);
     (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&buf_loc_x);
@@ -151,6 +152,7 @@ static void fixture_setup(void) {
     (void)clSetKernelArg(kernel, 22U, sizeof(cl_mem), (const void *)&buf_grid);
     (void)clSetKernelArg(kernel, 23U, sizeof(cl_int), &enable_kill);
     (void)clSetKernelArg(kernel, 24U, sizeof(cl_mem), (const void *)&buf_kill_marker);
+    (void)clSetKernelArg(kernel, 25U, sizeof(cl_int), &pop_sr);
 }
 
 static void fixture_teardown(void) {
