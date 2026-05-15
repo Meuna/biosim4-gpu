@@ -148,8 +148,9 @@ void biosim_genome_mutate(biosim_genome_t *g, uint32_t idx, float rate, uint64_t
     }
 }
 
-void biosim_genome_crossover(biosim_genome_t *g, uint32_t child, uint32_t parent_a,
-                             uint32_t parent_b, uint64_t *rng) {
+void biosim_genome_crossover(
+    biosim_genome_t *g, uint32_t child, uint32_t parent_a, uint32_t parent_b, uint64_t *rng
+) {
     assert(g != NULL && rng != NULL);
     assert(child < g->population && parent_a < g->population && parent_b < g->population);
 

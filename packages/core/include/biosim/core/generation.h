@@ -36,7 +36,8 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim);
  * Precondition: n_survivors > 0.
  * Returns BIOSIM_ERR_NOMEM if any required allocation fails.
  */
-biosim_status_t biosim_generation_reproduce(biosim_sim_t *sim, uint32_t *survivors, float *scores,
-                                            uint32_t n_survivors);
+biosim_status_t biosim_generation_reproduce(
+    biosim_sim_t *sim, uint32_t *survivors, float *scores, uint32_t n_survivors
+);
 
 #endif /* BIOSIM_CORE_GENERATION_H */

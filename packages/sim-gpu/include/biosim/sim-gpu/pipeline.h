@@ -95,9 +95,12 @@ typedef struct {
  *
  * Returns BIOSIM_OK on success.  On failure, *out is fully cleaned up.
  */
-biosim_status_t biosim_gpu_pipeline_create(const biosim_sim_t *sim,
-                                           const biosim_gpu_runner_t *runner, const char *exec_dir,
-                                           biosim_gpu_pipeline_t *out);
+biosim_status_t biosim_gpu_pipeline_create(
+    const biosim_sim_t *sim,
+    const biosim_gpu_runner_t *runner,
+    const char *exec_dir,
+    biosim_gpu_pipeline_t *out
+);
 
 /*
  * Enqueue one complete step: K1 → K2 → K3 → K4 → K5.
@@ -122,8 +125,9 @@ biosim_status_t biosim_gpu_pipeline_sync_to_host(const biosim_gpu_pipeline_t *p,
  *   kill_marker, challenge_bits, grid.
  * barrier_ctrs is static and is never re-uploaded.
  */
-biosim_status_t biosim_gpu_pipeline_sync_from_host(biosim_gpu_pipeline_t *p,
-                                                   const biosim_sim_t *sim);
+biosim_status_t biosim_gpu_pipeline_sync_from_host(
+    biosim_gpu_pipeline_t *p, const biosim_sim_t *sim
+);
 
 /* Release all GPU resources.  Safe on a zero-initialised struct. */
 void biosim_gpu_pipeline_free(biosim_gpu_pipeline_t *p);

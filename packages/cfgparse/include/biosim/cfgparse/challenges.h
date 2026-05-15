@@ -16,7 +16,8 @@
  * Returns BIOSIM_ERR_INVALID  if the "kind" value is not a recognised kind.
  * Returns BIOSIM_OK on success, populating *out.
  */
-biosim_status_t biosim_challenge_spec_from_params(const biosim_params_t *p,
-                                                  biosim_challenge_spec_t *out);
+biosim_status_t biosim_challenge_spec_from_params(
+    const biosim_params_t *p, biosim_challenge_spec_t *out
+);
 
 #endif /* BIOSIM_CFGPARSE_CHALLENGES_H */

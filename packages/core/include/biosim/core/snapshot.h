@@ -55,8 +55,9 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
  * Returns BIOSIM_OK even on write failure (non-fatal); the error is logged to
  * stderr.
  */
-biosim_status_t biosim_snapshot_session_write(biosim_sim_t *sim, const uint32_t *survivors,
-                                              const float *scores, uint32_t n_survivors);
+biosim_status_t biosim_snapshot_session_write(
+    biosim_sim_t *sim, const uint32_t *survivors, const float *scores, uint32_t n_survivors
+);
 
 /*
  * Finalise (write generation_count) and close the session file.
@@ -82,9 +83,13 @@ biosim_status_t biosim_snapshot_write_header(FILE *f, const biosim_sim_t *sim);
  * Returns BIOSIM_ERR_IO on I/O failure.
  * Returns BIOSIM_ERR_NOMEM if a temporary buffer cannot be allocated.
  */
-biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
-                                             const uint32_t *survivors, const float *scores,
-                                             uint32_t n_survivors);
+biosim_status_t biosim_snapshot_write_genome(
+    FILE *f,
+    const biosim_sim_t *sim,
+    const uint32_t *survivors,
+    const float *scores,
+    uint32_t n_survivors
+);
 
 /*
  * Seek to offset 16 in f and write the final generation_count.
@@ -118,19 +123,30 @@ biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *heade
  * Returns BIOSIM_EOF on end-of-file.
  * Returns BIOSIM_ERR_NOMEM if a temporary buffer cannot be allocated.
  */
-biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_snap_header_t *header,
-                                     biosim_sim_t *sim, float *scores_out,
-                                     uint32_t *n_survivors_out, uint32_t *gen_idx_out,
-                                     uint64_t *gen_rng_out);
+biosim_status_t biosim_snapshot_load(
+    FILE *f,
+    uint32_t gen_idx,
+    const biosim_snap_header_t *header,
+    biosim_sim_t *sim,
+    float *scores_out,
+    uint32_t *n_survivors_out,
+    uint32_t *gen_idx_out,
+    uint64_t *gen_rng_out
+);
 
 /*
  * Convenience: load the last generation entry in the file.
  * Uses header->generation_count if non-zero; otherwise scans to EOF.
  * Same output and return conventions as biosim_snapshot_load.
  */
-biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *header,
-                                          biosim_sim_t *sim, float *scores_out,
-                                          uint32_t *n_survivors_out, uint32_t *gen_idx_out,
-                                          uint64_t *gen_rng_out);
+biosim_status_t biosim_snapshot_load_last(
+    FILE *f,
+    const biosim_snap_header_t *header,
+    biosim_sim_t *sim,
+    float *scores_out,
+    uint32_t *n_survivors_out,
+    uint32_t *gen_idx_out,
+    uint64_t *gen_rng_out
+);
 
 #endif /* BIOSIM_CORE_SNAPSHOT_H */

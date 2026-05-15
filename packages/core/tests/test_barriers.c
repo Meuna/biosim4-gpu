@@ -112,18 +112,26 @@ void test_circle_stays_in_bounds(void) {
 /* ── random placement ───────────────────────────────────────────────────── */
 
 void test_random_hbar_places_barriers(void) {
-    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_HBAR, BIOSIM_BARRIER_POS_UNSET,
-                                  BIOSIM_BARRIER_POS_UNSET, BIOSIM_BARRIER_DIM_UNSET,
-                                  BIOSIM_BARRIER_DIM_UNSET};
+    biosim_barrier_spec_t spec = {
+        BIOSIM_BARRIER_HBAR,
+        BIOSIM_BARRIER_POS_UNSET,
+        BIOSIM_BARRIER_POS_UNSET,
+        BIOSIM_BARRIER_DIM_UNSET,
+        BIOSIM_BARRIER_DIM_UNSET
+    };
     uint64_t rng = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng, NULL);
     TEST_ASSERT_GREATER_THAN(0, count_barriers(&g));
 }
 
 void test_random_deterministic(void) {
-    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_CIRCLE, BIOSIM_BARRIER_POS_UNSET,
-                                  BIOSIM_BARRIER_POS_UNSET, BIOSIM_BARRIER_DIM_UNSET,
-                                  BIOSIM_BARRIER_DIM_UNSET};
+    biosim_barrier_spec_t spec = {
+        BIOSIM_BARRIER_CIRCLE,
+        BIOSIM_BARRIER_POS_UNSET,
+        BIOSIM_BARRIER_POS_UNSET,
+        BIOSIM_BARRIER_DIM_UNSET,
+        BIOSIM_BARRIER_DIM_UNSET
+    };
 
     uint64_t rng1 = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng1, NULL);

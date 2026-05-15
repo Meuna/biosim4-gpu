@@ -331,8 +331,9 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
             break;
         }
         uint8_t dir = agents->last_move_dir[idx] & 7U;
-        biosim_coord_t fwd = {agents->loc_x[idx] + BIOSIM_DIR_DX[dir],
-                              agents->loc_y[idx] + BIOSIM_DIR_DY[dir]};
+        biosim_coord_t fwd = {
+            agents->loc_x[idx] + BIOSIM_DIR_DX[dir], agents->loc_y[idx] + BIOSIM_DIR_DY[dir]
+        };
         if (!biosim_grid_in_bounds(&sim->grid, fwd)) {
             break;
         }

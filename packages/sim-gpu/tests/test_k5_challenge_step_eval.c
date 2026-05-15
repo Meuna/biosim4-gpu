@@ -46,9 +46,9 @@ static void fixture_setup(void) {
     }
     sim.steps_per_gen = 100U;
 
-    fixture_status =
-        gpu_test_kernel_runtime_create(&runner, &program, &kernel, "k5_challenge_step_eval",
-                                       "k_challenge_step_eval");
+    fixture_status = gpu_test_kernel_runtime_create(
+        &runner, &program, &kernel, "k5_challenge_step_eval", "k_challenge_step_eval"
+    );
     if (fixture_status != BIOSIM_OK) {
         return;
     }
@@ -196,18 +196,20 @@ void test_k5_touch_any_wall_sets_bit(void) {
     loc_y[1] = 3;
     grid[(size_t)3 * (size_t)sim.size_x + 3U] = 2U;
 
-    k5_scn_t s = {alive,
-                  loc_x,
-                  loc_y,
-                  cbits,
-                  rng,
-                  grid,
-                  dummy_ctr,
-                  0U,
-                  0U,
-                  sim.steps_per_gen,
-                  BIOSIM_CHALLENGE_TOUCH_ANY_WALL,
-                  0.0F};
+    k5_scn_t s = {
+        alive,
+        loc_x,
+        loc_y,
+        cbits,
+        rng,
+        grid,
+        dummy_ctr,
+        0U,
+        0U,
+        sim.steps_per_gen,
+        BIOSIM_CHALLENGE_TOUCH_ANY_WALL,
+        0.0F
+    };
 
     TEST_ASSERT_TRUE_MESSAGE(run_k5(&s), "K5 kernel dispatch failed");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, result_cbits[0], "border agent must have bit set");
@@ -247,23 +249,28 @@ void test_k5_radioactive_walls_kills_at_wall(void) {
     rng[0] = 9999U;
     grid[(size_t)2 * (size_t)sim.size_x + 0U] = 1U;
 
-    k5_scn_t s = {alive,
-                  loc_x,
-                  loc_y,
-                  cbits,
-                  rng,
-                  grid,
-                  dummy_ctr,
-                  0U,
-                  0U,
-                  sim.steps_per_gen,
-                  BIOSIM_CHALLENGE_RADIOACTIVE_WALLS,
-                  0.0F};
+    k5_scn_t s = {
+        alive,
+        loc_x,
+        loc_y,
+        cbits,
+        rng,
+        grid,
+        dummy_ctr,
+        0U,
+        0U,
+        sim.steps_per_gen,
+        BIOSIM_CHALLENGE_RADIOACTIVE_WALLS,
+        0.0F
+    };
 
     TEST_ASSERT_TRUE_MESSAGE(run_k5(&s), "K5 kernel dispatch failed");
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(0U, result_alive[0], "agent at dist==0 must be killed");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0U, result_grid[(size_t)2 * (size_t)sim.size_x + 0U],
-                                     "grid cell of killed agent must be cleared");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        0U,
+        result_grid[(size_t)2 * (size_t)sim.size_x + 0U],
+        "grid cell of killed agent must be cleared"
+    );
 
     free(alive);
     free(loc_x);
@@ -294,22 +301,25 @@ void test_k5_location_sequence_sets_bit(void) {
     loc_y[0] = 4;
     grid[(size_t)4 * (size_t)sim.size_x + 4U] = 1U;
 
-    k5_scn_t s = {alive,
-                  loc_x,
-                  loc_y,
-                  cbits,
-                  rng,
-                  grid,
-                  barrier_ctr,
-                  1U,
-                  0U,
-                  sim.steps_per_gen,
-                  BIOSIM_CHALLENGE_LOCATION_SEQUENCE,
-                  1.0F};
+    k5_scn_t s = {
+        alive,
+        loc_x,
+        loc_y,
+        cbits,
+        rng,
+        grid,
+        barrier_ctr,
+        1U,
+        0U,
+        sim.steps_per_gen,
+        BIOSIM_CHALLENGE_LOCATION_SEQUENCE,
+        1.0F
+    };
 
     TEST_ASSERT_TRUE_MESSAGE(run_k5(&s), "K5 kernel dispatch failed");
-    TEST_ASSERT_TRUE_MESSAGE((result_cbits[0] & 1U) != 0U,
-                             "agent at barrier centre must acquire bit 0");
+    TEST_ASSERT_TRUE_MESSAGE(
+        (result_cbits[0] & 1U) != 0U, "agent at barrier centre must acquire bit 0"
+    );
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(1U, result_alive[0], "location_sequence must not kill agent");
 
     free(alive);

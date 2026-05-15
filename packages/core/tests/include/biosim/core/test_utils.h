@@ -49,8 +49,9 @@ void assert_grid_equal(const biosim_grid_t *a, const biosim_grid_t *b);
 
 /* Compares the first n_agents entries; uses each genome's own population as
  * the SoA stride, so works across mismatched population sizes. */
-void assert_genome_slice_equal(const biosim_genome_t *a, const biosim_genome_t *b,
-                               uint32_t n_agents);
+void assert_genome_slice_equal(
+    const biosim_genome_t *a, const biosim_genome_t *b, uint32_t n_agents
+);
 
 /* Asserts equal populations then delegates to assert_genome_slice_equal. */
 void assert_genome_equal(const biosim_genome_t *a, const biosim_genome_t *b);

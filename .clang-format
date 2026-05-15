@@ -1,47 +1,13 @@
-# Base style — LLVM is the most neutral, well-documented C baseline
+---
 BasedOnStyle: LLVM
-
-# Treat all files as C (not C++); disables C++-specific rules
 Language: Cpp
-
-# Hard column limit — 100 gives room for long identifiers (biosim_*_t) without wrapping
-ColumnLimit: 100
-
-# Indent width — 4 spaces, matching .editorconfig and project convention
 IndentWidth: 4
-
-# Tab width — must match IndentWidth so mixed-indent files display correctly
 TabWidth: 4
-
-# Never emit tab characters — spaces only
-UseTab: Never
-
-# Brace style — Attach (K&R): braces on the same line as the controlling statement
-BreakBeforeBraces: Attach
-
-# Place the * of a pointer next to the variable name, not the type (C idiom: int *p)
-PointerAlignment: Right
-
-# Do not collapse short functions to a single line (makes diffs harder to read)
+AlignAfterOpenBracket: BlockIndent
+AlignConsecutiveMacros:
+  Enabled: true
 AllowShortFunctionsOnASingleLine: None
-
-# Do not collapse short if-bodies to a single line (easy to miss the branch)
-AllowShortIfStatementsOnASingleLine: Never
-
-# Do not collapse short loop bodies to a single line
-AllowShortLoopsOnASingleLine: false
-
-# Sort #include directives alphabetically within each block
-SortIncludes: CaseSensitive
-
-# Maximum consecutive blank lines allowed between declarations
-MaxEmptyLinesToKeep: 1
-
-# Align consecutive macro definitions for readability
-AlignConsecutiveMacros: Consecutive
-
-# Align trailing line comments vertically within a block
-AlignTrailingComments: true
-
-# Penalty for breaking a function call across lines (higher = prefer to keep on one line)
-PenaltyBreakBeforeFirstCallParameter: 100
+BinPackArguments: false
+BinPackParameters: false
+ColumnLimit: 100
+PenaltyReturnTypeOnItsOwnLine: 1000

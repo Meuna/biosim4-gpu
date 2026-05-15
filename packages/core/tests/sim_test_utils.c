@@ -62,32 +62,38 @@ biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg) {
 }
 
 biosim_status_t sim_test_make_8x8(biosim_sim_t *sim) {
-    return sim_test_create(sim, &(sim_test_scn_t){
-                                    .population = 4U,
-                                    .size_x = 8,
-                                    .size_y = 8,
-                                    .genome_max_len = 4U,
-                                    .max_neurons = 2U,
-                                    .long_probe_dist = 4U,
-                                    .steps_per_gen = 1U,
-                                    .population_sensor_radius = 1,
-                                });
+    return sim_test_create(
+        sim,
+        &(sim_test_scn_t){
+            .population = 4U,
+            .size_x = 8,
+            .size_y = 8,
+            .genome_max_len = 4U,
+            .max_neurons = 2U,
+            .long_probe_dist = 4U,
+            .steps_per_gen = 1U,
+            .population_sensor_radius = 1,
+        }
+    );
 }
 
 biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
-    return sim_test_create(sim, &(sim_test_scn_t){
-                                    .population = 64U,
-                                    .size_x = 32,
-                                    .size_y = 32,
-                                    .genome_max_len = 24U,
-                                    .max_neurons = 3U,
-                                    .long_probe_dist = 8U,
-                                    .steps_per_gen = 16U,
-                                    .population_sensor_radius = 4,
-                                    .mutation_rate = 0.01F,
-                                    .sexual_reproduction = true,
-                                    .choose_parents_by_fitness = true,
-                                });
+    return sim_test_create(
+        sim,
+        &(sim_test_scn_t){
+            .population = 64U,
+            .size_x = 32,
+            .size_y = 32,
+            .genome_max_len = 24U,
+            .max_neurons = 3U,
+            .long_probe_dist = 8U,
+            .steps_per_gen = 16U,
+            .population_sensor_radius = 4,
+            .mutation_rate = 0.01F,
+            .sexual_reproduction = true,
+            .choose_parents_by_fitness = true,
+        }
+    );
 }
 
 void sim_test_run_one_gen(biosim_sim_t *sim) {
@@ -133,8 +139,9 @@ void assert_grid_equal(const biosim_grid_t *a, const biosim_grid_t *b) {
     }
 }
 
-void assert_genome_slice_equal(const biosim_genome_t *a, const biosim_genome_t *b,
-                               uint32_t n_agents) {
+void assert_genome_slice_equal(
+    const biosim_genome_t *a, const biosim_genome_t *b, uint32_t n_agents
+) {
     TEST_ASSERT_EQUAL_UINT16(a->max_len, b->max_len);
     const uint32_t pop_a = a->population;
     const uint32_t pop_b = b->population;
@@ -142,8 +149,9 @@ void assert_genome_slice_equal(const biosim_genome_t *a, const biosim_genome_t *
         TEST_ASSERT_EQUAL_UINT16(a->len[s], b->len[s]);
         const uint16_t len = a->len[s];
         for (uint16_t j = 0U; j < len; j++) {
-            TEST_ASSERT_EQUAL_UINT16(a->conn[(size_t)j * pop_a + s],
-                                     b->conn[(size_t)j * pop_b + s]);
+            TEST_ASSERT_EQUAL_UINT16(
+                a->conn[(size_t)j * pop_a + s], b->conn[(size_t)j * pop_b + s]
+            );
             TEST_ASSERT_EQUAL_INT16(a->wgt[(size_t)j * pop_a + s], b->wgt[(size_t)j * pop_b + s]);
         }
     }
@@ -164,17 +172,21 @@ void assert_nnet_equal(const biosim_nnet_t *a, const biosim_nnet_t *b) {
         TEST_ASSERT_EQUAL_UINT8(a->neuron_count[s], b->neuron_count[s]);
         uint16_t conn_length = a->conn_length[s];
         for (uint16_t c = 0U; c < conn_length; c++) {
-            TEST_ASSERT_EQUAL_UINT16(a->genome_conn[(size_t)c * pop + s],
-                                     b->genome_conn[(size_t)c * pop + s]);
-            TEST_ASSERT_EQUAL_INT16(a->genome_wgt[(size_t)c * pop + s],
-                                    b->genome_wgt[(size_t)c * pop + s]);
+            TEST_ASSERT_EQUAL_UINT16(
+                a->genome_conn[(size_t)c * pop + s], b->genome_conn[(size_t)c * pop + s]
+            );
+            TEST_ASSERT_EQUAL_INT16(
+                a->genome_wgt[(size_t)c * pop + s], b->genome_wgt[(size_t)c * pop + s]
+            );
         }
         uint8_t neuron_count = a->neuron_count[s];
         for (uint8_t n = 0U; n < neuron_count; n++) {
-            TEST_ASSERT_EQUAL_UINT8(a->neuron_driven[(size_t)n * pop + s],
-                                    b->neuron_driven[(size_t)n * pop + s]);
-            TEST_ASSERT_EQUAL_FLOAT(a->neuron_output[(size_t)n * pop + s],
-                                    b->neuron_output[(size_t)n * pop + s]);
+            TEST_ASSERT_EQUAL_UINT8(
+                a->neuron_driven[(size_t)n * pop + s], b->neuron_driven[(size_t)n * pop + s]
+            );
+            TEST_ASSERT_EQUAL_FLOAT(
+                a->neuron_output[(size_t)n * pop + s], b->neuron_output[(size_t)n * pop + s]
+            );
         }
     }
 }

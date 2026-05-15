@@ -35,8 +35,9 @@ static void kernel_buffers_release(kernel_buffers_t *b) {
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-static biosim_status_t kernel_buffers_create(const biosim_sim_t *sim, cl_context ctx,
-                                             kernel_buffers_t *out) {
+static biosim_status_t kernel_buffers_create(
+    const biosim_sim_t *sim, cl_context ctx, kernel_buffers_t *out
+) {
     memset(out, 0, sizeof(*out));
 
     const biosim_agents_t *a = &sim->agents;
@@ -49,14 +50,28 @@ static biosim_status_t kernel_buffers_create(const biosim_sim_t *sim, cl_context
     cl_int cl_err = CL_SUCCESS;
 
 #define MKBUF_RO(field, ptr, elem_size, count)                                                     \
-    CL_ASSIGN_OR_GOTO_EXIT(out->field,                                                             \
-                           clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,            \
-                                          (size_t)(count) * (elem_size), (void *)(ptr), &cl_err))
+    CL_ASSIGN_OR_GOTO_EXIT(                                                                        \
+        out->field,                                                                                \
+        clCreateBuffer(                                                                            \
+            ctx,                                                                                   \
+            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,                                               \
+            (size_t)(count) * (elem_size),                                                         \
+            (void *)(ptr),                                                                         \
+            &cl_err                                                                                \
+        )                                                                                          \
+    )
 
 #define MKBUF_RW(field, ptr, elem_size, count)                                                     \
-    CL_ASSIGN_OR_GOTO_EXIT(out->field,                                                             \
-                           clCreateBuffer(ctx, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,           \
-                                          (size_t)(count) * (elem_size), (void *)(ptr), &cl_err))
+    CL_ASSIGN_OR_GOTO_EXIT(                                                                        \
+        out->field,                                                                                \
+        clCreateBuffer(                                                                            \
+            ctx,                                                                                   \
+            CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,                                              \
+            (size_t)(count) * (elem_size),                                                         \
+            (void *)(ptr),                                                                         \
+            &cl_err                                                                                \
+        )                                                                                          \
+    )
 
     MKBUF_RW(alive, a->alive, sizeof(uint8_t), pop);
     MKBUF_RW(loc_x, a->loc_x, sizeof(int32_t), pop);
@@ -85,9 +100,16 @@ static biosim_status_t kernel_buffers_create(const biosim_sim_t *sim, cl_context
         size_t n_alloc = (n_ctrs == 0U) ? 1U : (size_t)n_ctrs;
         int32_t dummy[2] = {0, 0};
         void *host_ptr = (n_ctrs == 0U) ? (void *)dummy : (void *)sim->barrier_ctrs;
-        CL_ASSIGN_OR_GOTO_EXIT(out->barrier_ctrs,
-                               clCreateBuffer(ctx, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
-                                              n_alloc * 2U * sizeof(int32_t), host_ptr, &cl_err));
+        CL_ASSIGN_OR_GOTO_EXIT(
+            out->barrier_ctrs,
+            clCreateBuffer(
+                ctx,
+                CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                n_alloc * 2U * sizeof(int32_t),
+                host_ptr,
+                &cl_err
+            )
+        );
     }
 
 #undef MKBUF_RO
@@ -205,9 +227,14 @@ static void set_static_args(biosim_gpu_pipeline_t *p, const biosim_sim_t *sim) {
 
 /* ── build helper ───────────────────────────────────────────────────────── */
 
-static biosim_status_t build_one_kernel(const biosim_gpu_runner_t *runner, const char *name,
-                                        const char *exec_dir, const char *entry_point,
-                                        cl_program *program_out, cl_kernel *kernel_out) {
+static biosim_status_t build_one_kernel(
+    const biosim_gpu_runner_t *runner,
+    const char *name,
+    const char *exec_dir,
+    const char *entry_point,
+    cl_program *program_out,
+    cl_kernel *kernel_out
+) {
     biosim_gpu_kernel_sources_t sources;
     memset(&sources, 0, sizeof(sources));
 
@@ -234,9 +261,12 @@ static biosim_status_t build_one_kernel(const biosim_gpu_runner_t *runner, const
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_gpu_pipeline_create(const biosim_sim_t *sim,
-                                           const biosim_gpu_runner_t *runner, const char *exec_dir,
-                                           biosim_gpu_pipeline_t *out) {
+biosim_status_t biosim_gpu_pipeline_create(
+    const biosim_sim_t *sim,
+    const biosim_gpu_runner_t *runner,
+    const char *exec_dir,
+    biosim_gpu_pipeline_t *out
+) {
     memset(out, 0, sizeof(*out));
     out->runner = runner;
 
@@ -255,32 +285,47 @@ biosim_status_t biosim_gpu_pipeline_create(const biosim_sim_t *sim,
         goto exit;
     }
 
-    returncode = build_one_kernel(runner, "k1_feedforward", exec_dir, "k_feedforward",
-                                  &out->k1_program, &out->k1);
+    returncode = build_one_kernel(
+        runner, "k1_feedforward", exec_dir, "k_feedforward", &out->k1_program, &out->k1
+    );
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = build_one_kernel(runner, "k2_kill_marked", exec_dir, "k_kill_marked",
-                                  &out->k2_program, &out->k2);
+    returncode = build_one_kernel(
+        runner, "k2_kill_marked", exec_dir, "k_kill_marked", &out->k2_program, &out->k2
+    );
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = build_one_kernel(runner, "k3_movement_resolution", exec_dir,
-                                  "k_movement_resolution", &out->k3_program, &out->k3);
+    returncode = build_one_kernel(
+        runner,
+        "k3_movement_resolution",
+        exec_dir,
+        "k_movement_resolution",
+        &out->k3_program,
+        &out->k3
+    );
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = build_one_kernel(runner, "k4_signal_fade", exec_dir, "k_signal_fade",
-                                  &out->k4_program, &out->k4);
+    returncode = build_one_kernel(
+        runner, "k4_signal_fade", exec_dir, "k_signal_fade", &out->k4_program, &out->k4
+    );
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = build_one_kernel(runner, "k5_challenge_step_eval", exec_dir,
-                                  "k_challenge_step_eval", &out->k5_program, &out->k5);
+    returncode = build_one_kernel(
+        runner,
+        "k5_challenge_step_eval",
+        exec_dir,
+        "k_challenge_step_eval",
+        &out->k5_program,
+        &out->k5
+    );
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -307,15 +352,20 @@ biosim_status_t biosim_gpu_pipeline_step(biosim_gpu_pipeline_t *p, const biosim_
     (void)clSetKernelArg(p->k5, 8U, sizeof(cl_uint), &step);
 
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k1, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL));
+        clEnqueueNDRangeKernel(q, p->k1, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+    );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k2, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL));
+        clEnqueueNDRangeKernel(q, p->k2, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+    );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k3, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL));
+        clEnqueueNDRangeKernel(q, p->k3, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+    );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k4, 1U, NULL, &grid_size, NULL, 0U, NULL, NULL));
+        clEnqueueNDRangeKernel(q, p->k4, 1U, NULL, &grid_size, NULL, 0U, NULL, NULL)
+    );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k5, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL));
+        clEnqueueNDRangeKernel(q, p->k5, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+    );
 
 exit:
     if (returncode != BIOSIM_OK) {
@@ -324,30 +374,71 @@ exit:
     return returncode;
 }
 
-biosim_status_t biosim_gpu_pipeline_sync_to_host(const biosim_gpu_pipeline_t *p,
-                                                 biosim_sim_t *sim) {
+biosim_status_t biosim_gpu_pipeline_sync_to_host(
+    const biosim_gpu_pipeline_t *p, biosim_sim_t *sim
+) {
     biosim_status_t returncode = BIOSIM_OK;
     cl_command_queue q = p->runner->queue;
     uint32_t pop = p->population;
 
     CL_GOTO_EXIT_ON_ERROR(clFinish(q));
 
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(q, p->bufs.alive, CL_FALSE, 0U,
-                                              (size_t)pop * sizeof(uint8_t), sim->agents.alive, 0U,
-                                              NULL, NULL));
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(q, p->bufs.loc_x, CL_FALSE, 0U,
-                                              (size_t)pop * sizeof(int32_t), sim->agents.loc_x, 0U,
-                                              NULL, NULL));
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(q, p->bufs.loc_y, CL_FALSE, 0U,
-                                              (size_t)pop * sizeof(int32_t), sim->agents.loc_y, 0U,
-                                              NULL, NULL));
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(q, p->bufs.challenge_bits, CL_FALSE, 0U,
-                                              (size_t)pop * sizeof(uint32_t),
-                                              sim->agents.challenge_bits, 0U, NULL, NULL));
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
+        q,
+        p->bufs.alive,
+        CL_FALSE,
+        0U,
+        (size_t)pop * sizeof(uint8_t),
+        sim->agents.alive,
+        0U,
+        NULL,
+        NULL
+    ));
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
+        q,
+        p->bufs.loc_x,
+        CL_FALSE,
+        0U,
+        (size_t)pop * sizeof(int32_t),
+        sim->agents.loc_x,
+        0U,
+        NULL,
+        NULL
+    ));
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
+        q,
+        p->bufs.loc_y,
+        CL_FALSE,
+        0U,
+        (size_t)pop * sizeof(int32_t),
+        sim->agents.loc_y,
+        0U,
+        NULL,
+        NULL
+    ));
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
+        q,
+        p->bufs.challenge_bits,
+        CL_FALSE,
+        0U,
+        (size_t)pop * sizeof(uint32_t),
+        sim->agents.challenge_bits,
+        0U,
+        NULL,
+        NULL
+    ));
     /* Block on the last read to ensure all transfers are complete. */
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(q, p->bufs.signal, CL_TRUE, 0U,
-                                              p->signal_len * sizeof(uint32_t), sim->signal, 0U,
-                                              NULL, NULL));
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
+        q,
+        p->bufs.signal,
+        CL_TRUE,
+        0U,
+        p->signal_len * sizeof(uint32_t),
+        sim->signal,
+        0U,
+        NULL,
+        NULL
+    ));
 
 exit:
     if (returncode != BIOSIM_OK) {
@@ -357,8 +448,9 @@ exit:
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-biosim_status_t biosim_gpu_pipeline_sync_from_host(biosim_gpu_pipeline_t *p,
-                                                   const biosim_sim_t *sim) {
+biosim_status_t biosim_gpu_pipeline_sync_from_host(
+    biosim_gpu_pipeline_t *p, const biosim_sim_t *sim
+) {
     biosim_status_t returncode = BIOSIM_OK;
     cl_command_queue q = p->runner->queue;
     uint32_t pop = p->population;
@@ -366,9 +458,17 @@ biosim_status_t biosim_gpu_pipeline_sync_from_host(biosim_gpu_pipeline_t *p,
     const biosim_nnet_t *n = &sim->nnet;
 
 #define WRITE_BUF(buf_field, host_ptr, elem_sz, count)                                             \
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueWriteBuffer(q, p->bufs.buf_field, CL_FALSE, 0U,                 \
-                                               (size_t)(count) * (size_t)(elem_sz),                \
-                                               (const void *)(host_ptr), 0U, NULL, NULL))
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueWriteBuffer(                                                    \
+        q,                                                                                         \
+        p->bufs.buf_field,                                                                         \
+        CL_FALSE,                                                                                  \
+        0U,                                                                                        \
+        (size_t)(count) * (size_t)(elem_sz),                                                       \
+        (const void *)(host_ptr),                                                                  \
+        0U,                                                                                        \
+        NULL,                                                                                      \
+        NULL                                                                                       \
+    ))
 
     WRITE_BUF(alive, a->alive, sizeof(uint8_t), pop);
     WRITE_BUF(loc_x, a->loc_x, sizeof(int32_t), pop);
@@ -388,10 +488,17 @@ biosim_status_t biosim_gpu_pipeline_sync_from_host(biosim_gpu_pipeline_t *p,
     WRITE_BUF(kill_marker, a->kill_marker, sizeof(uint8_t), pop);
     WRITE_BUF(challenge_bits, a->challenge_bits, sizeof(uint32_t), pop);
     /* Block on the last write to ensure all transfers are complete. */
-    CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueWriteBuffer(q, p->bufs.grid, CL_TRUE, 0U,
-                             (size_t)p->size_x * (size_t)p->size_y * sizeof(uint32_t),
-                             (const void *)sim->grid.cells, 0U, NULL, NULL));
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueWriteBuffer(
+        q,
+        p->bufs.grid,
+        CL_TRUE,
+        0U,
+        (size_t)p->size_x * (size_t)p->size_y * sizeof(uint32_t),
+        (const void *)sim->grid.cells,
+        0U,
+        NULL,
+        NULL
+    ));
 
 #undef WRITE_BUF
 

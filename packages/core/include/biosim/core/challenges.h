@@ -13,8 +13,9 @@
  * end. The full sim state provides location, birth location, challenge_bits,
  * grid occupancy, and barrier centres.
  */
-biosim_challenge_result_t biosim_challenge_eval(const biosim_challenge_spec_t *spec,
-                                                uint32_t agent_idx, const biosim_sim_t *sim);
+biosim_challenge_result_t biosim_challenge_eval(
+    const biosim_challenge_spec_t *spec, uint32_t agent_idx, const biosim_sim_t *sim
+);
 
 /*
  * Per-simulation-step bookkeeping hook. Must be called once after all agents

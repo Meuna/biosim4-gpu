@@ -34,15 +34,30 @@ extern biosim_log_ctx_t biosim_log_default_ctx;
 
 void biosim_log_init(biosim_log_ctx_t *ctx);
 
-void biosim_log_emit(const biosim_log_ctx_t *ctx, biosim_log_level_t level, const char *file,
-                     int line, const char *func, const char *fmt, ...)
+void biosim_log_emit(
+    const biosim_log_ctx_t *ctx,
+    biosim_log_level_t level,
+    const char *file,
+    int line,
+    const char *func,
+    const char *fmt,
+    ...
+)
 #if defined(__GNUC__) || defined(__clang__)
     __attribute__((format(printf, 6, 7)))
 #endif
     ;
 
-_Noreturn void biosim_die(const biosim_log_ctx_t *ctx, biosim_status_t code, int saved_errno,
-                          const char *file, int line, const char *func, const char *fmt, ...)
+_Noreturn void biosim_die(
+    const biosim_log_ctx_t *ctx,
+    biosim_status_t code,
+    int saved_errno,
+    const char *file,
+    int line,
+    const char *func,
+    const char *fmt,
+    ...
+)
 #if defined(__GNUC__) || defined(__clang__)
     __attribute__((format(printf, 7, 8)))
 #endif

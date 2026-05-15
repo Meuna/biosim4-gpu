@@ -36,8 +36,9 @@ typedef struct {
  *   BIOSIM_ERR_NOTFOUND — no platform or device at the given index
  *   BIOSIM_ERR_INVALID  — OpenCL context or queue creation failed
  */
-biosim_status_t biosim_gpu_runner_create(uint32_t platform_idx, uint32_t device_idx,
-                                         biosim_gpu_runner_t *out);
+biosim_status_t biosim_gpu_runner_create(
+    uint32_t platform_idx, uint32_t device_idx, biosim_gpu_runner_t *out
+);
 
 /* Release all OpenCL objects. Safe to call on a zero-initialised struct. */
 void biosim_gpu_runner_free(biosim_gpu_runner_t *r);
@@ -53,7 +54,8 @@ void biosim_gpu_runner_free(biosim_gpu_runner_t *r);
  *   BIOSIM_ERR_NOMEM  — clCreateProgramWithSource reported CL_OUT_OF_HOST_MEMORY
  *   BIOSIM_ERR_INVALID — compilation failed
  */
-biosim_status_t biosim_gpu_program_build(const biosim_gpu_runner_t *r, const char **sources,
-                                         size_t n_sources, cl_program *out);
+biosim_status_t biosim_gpu_program_build(
+    const biosim_gpu_runner_t *r, const char **sources, size_t n_sources, cl_program *out
+);
 
 #endif /* BIOSIM_SIM_GPU_RUNNER_H */

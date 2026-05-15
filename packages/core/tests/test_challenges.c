@@ -9,16 +9,22 @@
 static biosim_sim_t sim;
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_scn_t){
-                                                               .population = 1U,
-                                                               .size_x = 128,
-                                                               .size_y = 128,
-                                                               .genome_max_len = 8U,
-                                                               .max_neurons = 3U,
-                                                               .long_probe_dist = 8U,
-                                                               .steps_per_gen = 300U,
-                                                               .population_sensor_radius = 1,
-                                                           }));
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK,
+        sim_test_create(
+            &sim,
+            &(sim_test_scn_t){
+                .population = 1U,
+                .size_x = 128,
+                .size_y = 128,
+                .genome_max_len = 8U,
+                .max_neurons = 3U,
+                .long_probe_dist = 8U,
+                .steps_per_gen = 300U,
+                .population_sensor_radius = 1,
+            }
+        )
+    );
     sim.agents.loc_x[0] = 64;
     sim.agents.loc_y[0] = 64;
     sim.agents.birth_x[0] = 64;

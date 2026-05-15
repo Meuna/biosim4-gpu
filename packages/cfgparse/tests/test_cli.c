@@ -42,8 +42,9 @@ void test_toml_file_sets_values(void) {
 /* ── pass 3: cli flags only ────────────────────────────────────────────── */
 
 void test_cli_sets_values(void) {
-    char *argv[] = {"test-prog", "--toplevel-param", "from-cli", "--test-table-table-param", "4444",
-                    NULL};
+    char *argv[] = {
+        "test-prog", "--toplevel-param", "from-cli", "--test-table-table-param", "4444", NULL
+    };
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_parse(&p, "test-prog", "test-version", 5, argv));
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "toplevel-param"));
     TEST_ASSERT_EQUAL_INT(4444, biosim_params_get_int(&p, "table-param"));
@@ -52,14 +53,16 @@ void test_cli_sets_values(void) {
 /* ── precedence: cli overrides TOML ────────────────────────────────────── */
 
 void test_cli_overrides_toml(void) {
-    char *argv[] = {"test-prog",
-                    "--config",
-                    TEST_FIXTURES_DIR "/basic.toml", // NOLINT(bugprone-suspicious-missing-comma)
-                    "--toplevel-param",
-                    "from-cli",
-                    "--test-table-table-param",
-                    "5555",
-                    NULL};
+    char *argv[] = {
+        "test-prog",
+        "--config",
+        TEST_FIXTURES_DIR "/basic.toml", // NOLINT(bugprone-suspicious-missing-comma)
+        "--toplevel-param",
+        "from-cli",
+        "--test-table-table-param",
+        "5555",
+        NULL
+    };
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_parse(&p, "test-prog", "test-version", 7, argv));
     TEST_ASSERT_EQUAL_STRING("from-cli", biosim_params_get_string(&p, "toplevel-param"));
     TEST_ASSERT_EQUAL_INT(5555, biosim_params_get_int(&p, "table-param"));

@@ -42,8 +42,9 @@ static void fixture_setup(void) {
         return;
     }
 
-    fixture_status = gpu_test_kernel_runtime_create(&runner, &program, &kernel, "k2_kill_marked",
-                                                    "k_kill_marked");
+    fixture_status = gpu_test_kernel_runtime_create(
+        &runner, &program, &kernel, "k2_kill_marked", "k_kill_marked"
+    );
     if (fixture_status != BIOSIM_OK) {
         return;
     }
@@ -162,8 +163,11 @@ void test_k2_kill_marked_clears_marked_cell(void) {
     k2_scn_t s = {km, lx, ly, grid};
     TEST_ASSERT_TRUE_MESSAGE(run_k2(&s), "K2 kill_marked dispatch failed");
 
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(BIOSIM_GRID_EMPTY, result_grid[(size_t)(3 * sx + 3)],
-                                     "kill-marked agent's cell must be cleared");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        BIOSIM_GRID_EMPTY,
+        result_grid[(size_t)(3 * sx + 3)],
+        "kill-marked agent's cell must be cleared"
+    );
 }
 
 /* An agent with kill_marker=0 must NOT have its grid cell modified.
@@ -184,8 +188,9 @@ void test_k2_kill_marked_skips_unmarked(void) {
     k2_scn_t s = {km, lx, ly, grid};
     TEST_ASSERT_TRUE_MESSAGE(run_k2(&s), "K2 kill_marked dispatch failed");
 
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, result_grid[(size_t)(2 * sx + 2)],
-                                     "unmarked agent's cell must be unchanged");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        1U, result_grid[(size_t)(2 * sx + 2)], "unmarked agent's cell must be unchanged"
+    );
 }
 
 /* ── main ───────────────────────────────────────────────────────────────── */

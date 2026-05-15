@@ -7,8 +7,9 @@
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_nnet_create(uint32_t population, uint16_t max_conn, uint8_t max_neurons,
-                                   biosim_nnet_t *out) {
+biosim_status_t biosim_nnet_create(
+    uint32_t population, uint16_t max_conn, uint8_t max_neurons, biosim_nnet_t *out
+) {
     assert(out != NULL);
     assert(population > 0 && max_conn > 0 && max_neurons > 0);
 
@@ -83,9 +84,15 @@ typedef struct {
     int16_t weight;
 } remapped_gene_t;
 
-static void parse_genes(const biosim_genome_t *genome, uint32_t idx, uint8_t num_sensors,
-                        uint8_t num_actions, uint8_t max_neurons, remapped_gene_t *genes,
-                        uint16_t gene_count) {
+static void parse_genes(
+    const biosim_genome_t *genome,
+    uint32_t idx,
+    uint8_t num_sensors,
+    uint8_t num_actions,
+    uint8_t max_neurons,
+    remapped_gene_t *genes,
+    uint16_t gene_count
+) {
     uint32_t pop = genome->population;
     for (uint16_t j = 0; j < gene_count; j++) {
         size_t slot = (size_t)j * pop + idx;
@@ -114,8 +121,9 @@ static void compute_has_nsi(const remapped_gene_t *genes, uint16_t gene_count, u
     }
 }
 
-static void propagate_output_paths(const remapped_gene_t *genes, uint16_t gene_count,
-                                   uint8_t *ota) {
+static void propagate_output_paths(
+    const remapped_gene_t *genes, uint16_t gene_count, uint8_t *ota
+) {
     for (uint16_t j = 0; j < gene_count; j++) {
         if (genes[j].src_type == BIOSIM_GENE_NEURON && genes[j].sink_type == BIOSIM_GENE_IO) {
             ota[genes[j].src_num] = 1;
@@ -138,9 +146,15 @@ static void propagate_output_paths(const remapped_gene_t *genes, uint16_t gene_c
     }
 }
 
-static uint16_t emit_neuron_sink(biosim_nnet_t *n, const remapped_gene_t *genes,
-                                 uint16_t gene_count, uint32_t idx, const uint8_t *alive,
-                                 const uint8_t *remap, uint16_t out_slot) {
+static uint16_t emit_neuron_sink(
+    biosim_nnet_t *n,
+    const remapped_gene_t *genes,
+    uint16_t gene_count,
+    uint32_t idx,
+    const uint8_t *alive,
+    const uint8_t *remap,
+    uint16_t out_slot
+) {
     uint32_t pop = n->population;
     for (uint16_t j = 0; j < gene_count && out_slot < n->max_conn; j++) {
         if (genes[j].sink_type != BIOSIM_GENE_NEURON) {
@@ -164,9 +178,15 @@ static uint16_t emit_neuron_sink(biosim_nnet_t *n, const remapped_gene_t *genes,
     return out_slot;
 }
 
-static uint16_t emit_action_sink(biosim_nnet_t *n, const remapped_gene_t *genes,
-                                 uint16_t gene_count, uint32_t idx, const uint8_t *alive,
-                                 const uint8_t *remap, uint16_t out_slot) {
+static uint16_t emit_action_sink(
+    biosim_nnet_t *n,
+    const remapped_gene_t *genes,
+    uint16_t gene_count,
+    uint32_t idx,
+    const uint8_t *alive,
+    const uint8_t *remap,
+    uint16_t out_slot
+) {
     uint32_t pop = n->population;
     for (uint16_t j = 0; j < gene_count && out_slot < n->max_conn; j++) {
         if (genes[j].sink_type != BIOSIM_GENE_IO) {
@@ -186,8 +206,13 @@ static uint16_t emit_action_sink(biosim_nnet_t *n, const remapped_gene_t *genes,
     return out_slot;
 }
 
-biosim_status_t biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome,
-                                         uint32_t idx, uint8_t num_sensors, uint8_t num_actions) {
+biosim_status_t biosim_nnet_compile_slot(
+    biosim_nnet_t *n,
+    const biosim_genome_t *genome,
+    uint32_t idx,
+    uint8_t num_sensors,
+    uint8_t num_actions
+) {
     assert(n != NULL && genome != NULL);
     assert(idx < n->population);
     assert(idx < genome->population);
@@ -273,8 +298,14 @@ uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx) {
 
 /* ── feedforward ────────────────────────────────────────────────────────── */
 
-void biosim_nnet_feedforward(biosim_nnet_t *n, uint32_t idx, const float *sensor_vals,
-                             uint8_t num_sensors, float *action_vals, uint8_t num_actions) {
+void biosim_nnet_feedforward(
+    biosim_nnet_t *n,
+    uint32_t idx,
+    const float *sensor_vals,
+    uint8_t num_sensors,
+    float *action_vals,
+    uint8_t num_actions
+) {
     assert(n != NULL);
     assert(idx < n->population);
     assert(sensor_vals != NULL && num_sensors > 0);

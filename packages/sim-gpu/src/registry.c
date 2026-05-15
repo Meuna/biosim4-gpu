@@ -41,8 +41,9 @@ static const biosim_kernel_entry_t KERNEL_TABLE[] = {
 
 /* ── filesystem override ─────────────────────────────────────────────────── */
 
-static biosim_status_t load_override(const char *exec_dir, const char *kernel_name,
-                                     char **buf_out) {
+static biosim_status_t load_override(
+    const char *exec_dir, const char *kernel_name, char **buf_out
+) {
     char path[4096];
     int written = snprintf(path, sizeof(path), "%s/%s.cl", exec_dir, kernel_name);
     if (written < 0 || (size_t)written >= sizeof(path)) {
@@ -87,8 +88,9 @@ static biosim_status_t load_override(const char *exec_dir, const char *kernel_na
 exit:
     if (returncode != BIOSIM_OK) {
         free(buf);
-        BIOSIM_ERRORF("registry: failed to load override %s (%s)", path,
-                      biosim_strerror(returncode));
+        BIOSIM_ERRORF(
+            "registry: failed to load override %s (%s)", path, biosim_strerror(returncode)
+        );
     }
     (void)fclose(f);
     return returncode;
@@ -104,8 +106,9 @@ void biosim_gpu_kernel_sources_free(biosim_gpu_kernel_sources_t *s) {
     memset(s, 0, sizeof(*s));
 }
 
-biosim_status_t biosim_gpu_registry_get(const char *kernel_name, const char *exec_dir,
-                                        biosim_gpu_kernel_sources_t *out) {
+biosim_status_t biosim_gpu_registry_get(
+    const char *kernel_name, const char *exec_dir, biosim_gpu_kernel_sources_t *out
+) {
     const biosim_kernel_entry_t *entry = NULL;
     for (size_t i = 0U; i < KERNEL_TABLE_COUNT; i++) {
         if (strcmp(KERNEL_TABLE[i].name, kernel_name) == 0) {

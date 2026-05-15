@@ -70,8 +70,9 @@ static void fixture_setup(void) {
         return;
     }
 
-    fixture_status = gpu_test_kernel_runtime_create(&runner, &program, &kernel, "k1_feedforward",
-                                                    "k_feedforward");
+    fixture_status = gpu_test_kernel_runtime_create(
+        &runner, &program, &kernel, "k1_feedforward", "k_feedforward"
+    );
     if (fixture_status != BIOSIM_OK) {
         return;
     }
@@ -247,8 +248,9 @@ static void run_host_step_agent(uint32_t idx) {
     }
 
     memset(action_vals, 0, sizeof(action_vals));
-    biosim_nnet_feedforward(n, idx, sensor_vals, BIOSIM_NUM_SENSORS, action_vals,
-                            BIOSIM_NUM_ACTIONS);
+    biosim_nnet_feedforward(
+        n, idx, sensor_vals, BIOSIM_NUM_SENSORS, action_vals, BIOSIM_NUM_ACTIONS
+    );
 
     a->dx_sum[idx] = 0.0F;
     a->dy_sum[idx] = 0.0F;
@@ -310,8 +312,9 @@ void test_k1_matches_host_reference(void) {
         }
     }
 
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0U, mismatches,
-                                     "desired_x/desired_y mismatch(es) between GPU and host");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        0U, mismatches, "desired_x/desired_y mismatch(es) between GPU and host"
+    );
 }
 
 /* ── main ───────────────────────────────────────────────────────────────── */

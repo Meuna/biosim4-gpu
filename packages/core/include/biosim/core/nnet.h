@@ -34,8 +34,9 @@ typedef struct {
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_nnet_create(uint32_t population, uint16_t max_conn, uint8_t max_neurons,
-                                   biosim_nnet_t *out);
+biosim_status_t biosim_nnet_create(
+    uint32_t population, uint16_t max_conn, uint8_t max_neurons, biosim_nnet_t *out
+);
 void biosim_nnet_free(biosim_nnet_t *n);
 
 /* ── compilation ────────────────────────────────────────────────────────── */
@@ -50,8 +51,13 @@ void biosim_nnet_free(biosim_nnet_t *n);
  * num_sensors / num_actions are used to remap the raw 7-bit gene fields.
  * max_neurons must be ≤ 128 (upper bound of the 7-bit gene field).
  * Returns BIOSIM_ERR_NOMEM if a temporary parse buffer cannot be allocated. */
-biosim_status_t biosim_nnet_compile_slot(biosim_nnet_t *n, const biosim_genome_t *genome,
-                                         uint32_t idx, uint8_t num_sensors, uint8_t num_actions);
+biosim_status_t biosim_nnet_compile_slot(
+    biosim_nnet_t *n,
+    const biosim_genome_t *genome,
+    uint32_t idx,
+    uint8_t num_sensors,
+    uint8_t num_actions
+);
 
 /* ── fingerprint ────────────────────────────────────────────────────────── */
 
@@ -73,7 +79,13 @@ uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx);
  *
  * Relies on the neuron-sink-before-action-sink ordering invariant established
  * by biosim_nnet_compile_slot. */
-void biosim_nnet_feedforward(biosim_nnet_t *n, uint32_t idx, const float *sensor_vals,
-                             uint8_t num_sensors, float *action_vals, uint8_t num_actions);
+void biosim_nnet_feedforward(
+    biosim_nnet_t *n,
+    uint32_t idx,
+    const float *sensor_vals,
+    uint8_t num_sensors,
+    float *action_vals,
+    uint8_t num_actions
+);
 
 #endif /* BIOSIM_CORE_NNET_H */

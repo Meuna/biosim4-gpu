@@ -79,8 +79,14 @@ int main(int argc, char **argv) {
     }
 
     char version_buf[256];
-    (void)snprintf(version_buf, sizeof(version_buf), "%s (%s, %s)", BIOSIM_GIT_VERSION,
-                   BIOSIM_BUILD_TYPE, BIOSIM_BUILD_TIMESTAMP);
+    (void)snprintf(
+        version_buf,
+        sizeof(version_buf),
+        "%s (%s, %s)",
+        BIOSIM_GIT_VERSION,
+        BIOSIM_BUILD_TYPE,
+        BIOSIM_BUILD_TIMESTAMP
+    );
 
     returncode = biosim_params_parse(&p, BIOSIM_PROGNAME, version_buf, argc, argv);
     if (returncode != BIOSIM_OK) {

@@ -52,8 +52,9 @@ static void barrier_visitor(biosim_coord_t coord, uint32_t cell, void *sim) {
 
 /* Each place_* function returns the resolved centre. */
 
-static biosim_coord_t place_hbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
-                                 uint64_t *rng) {
+static biosim_coord_t place_hbar(
+    biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng
+) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -78,8 +79,9 @@ static biosim_coord_t place_hbar(biosim_grid_t *grid, const biosim_barrier_spec_
     return centre;
 }
 
-static biosim_coord_t place_vbar(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
-                                 uint64_t *rng) {
+static biosim_coord_t place_vbar(
+    biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng
+) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -104,8 +106,9 @@ static biosim_coord_t place_vbar(biosim_grid_t *grid, const biosim_barrier_spec_
     return centre;
 }
 
-static biosim_coord_t place_square(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
-                                   uint64_t *rng) {
+static biosim_coord_t place_square(
+    biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng
+) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -129,8 +132,9 @@ static biosim_coord_t place_square(biosim_grid_t *grid, const biosim_barrier_spe
     return centre;
 }
 
-static biosim_coord_t place_circle(biosim_grid_t *grid, const biosim_barrier_spec_t *spec,
-                                   uint64_t *rng) {
+static biosim_coord_t place_circle(
+    biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng
+) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
     int margin_x = sx / 10;
@@ -154,8 +158,13 @@ static biosim_coord_t place_circle(biosim_grid_t *grid, const biosim_barrier_spe
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
-void biosim_barriers_place(biosim_grid_t *grid, const biosim_barrier_spec_t *specs, uint32_t n,
-                           uint64_t *rng_state, biosim_coord_t *centers_out) {
+void biosim_barriers_place(
+    biosim_grid_t *grid,
+    const biosim_barrier_spec_t *specs,
+    uint32_t n,
+    uint64_t *rng_state,
+    biosim_coord_t *centers_out
+) {
     for (uint32_t i = 0; i < n; i++) {
         const biosim_barrier_spec_t *s = &specs[i];
         biosim_coord_t centre;

@@ -46,7 +46,12 @@ typedef struct {
  * centers_out[i] receives the resolved centre of barrier i after random draws.
  * Returns BIOSIM_OK; placement is tolerant of out-of-bounds — cells are clipped silently.
  */
-void biosim_barriers_place(biosim_grid_t *grid, const biosim_barrier_spec_t *specs, uint32_t n,
-                           uint64_t *rng_state, biosim_coord_t *centers_out);
+void biosim_barriers_place(
+    biosim_grid_t *grid,
+    const biosim_barrier_spec_t *specs,
+    uint32_t n,
+    uint64_t *rng_state,
+    biosim_coord_t *centers_out
+);
 
 #endif /* BIOSIM_CORE_BARRIERS_H */

@@ -16,12 +16,22 @@
  */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-__kernel void k_challenge_step_eval(__global uchar *alive, __global const int *loc_x,
-                                    __global const int *loc_y, __global uint *challenge_bits,
-                                    __global ulong *rng_state, __global uint *grid, int size_x,
-                                    int size_y, uint step, uint steps_per_gen, uint challenge_kind,
-                                    float location_sequence_radius,
-                                    __global const int *barrier_ctrs, uint n_barrier_ctrs) {
+__kernel void k_challenge_step_eval(
+    __global uchar *alive,
+    __global const int *loc_x,
+    __global const int *loc_y,
+    __global uint *challenge_bits,
+    __global ulong *rng_state,
+    __global uint *grid,
+    int size_x,
+    int size_y,
+    uint step,
+    uint steps_per_gen,
+    uint challenge_kind,
+    float location_sequence_radius,
+    __global const int *barrier_ctrs,
+    uint n_barrier_ctrs
+) {
     uint gid = get_global_id(0);
     if (!alive[gid]) {
         return;

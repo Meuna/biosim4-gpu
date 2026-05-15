@@ -58,17 +58,20 @@ static biosim_status_t parse_kind(const char *s, biosim_challenge_kind_t *out) {
         *out = BIOSIM_CHALLENGE_ALTRUISM;
         return BIOSIM_OK;
     }
-    BIOSIM_ERRORF("invalid challenge kind '%s'. Accepted values are: x_band, disc, corners, "
-                  "neighbor_count, center_sparse, against_wall, migrate_distance, touch_any_wall, "
-                  "radioactive_walls, pairs, location_sequence, near_barrier, altruism",
-                  s);
+    BIOSIM_ERRORF(
+        "invalid challenge kind '%s'. Accepted values are: x_band, disc, corners, "
+        "neighbor_count, center_sparse, against_wall, migrate_distance, touch_any_wall, "
+        "radioactive_walls, pairs, location_sequence, near_barrier, altruism",
+        s
+    );
     return BIOSIM_ERR_INVALID;
 }
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_challenge_spec_from_params(const biosim_params_t *p,
-                                                  biosim_challenge_spec_t *out) {
+biosim_status_t biosim_challenge_spec_from_params(
+    const biosim_params_t *p, biosim_challenge_spec_t *out
+) {
     const biosim_param_entry_t *kind_entry = biosim_params_find(p, "kind");
     if (kind_entry == NULL) {
         return BIOSIM_ERR_NOTFOUND;

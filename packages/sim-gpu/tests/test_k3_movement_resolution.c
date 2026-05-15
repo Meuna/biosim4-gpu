@@ -47,9 +47,9 @@ static void fixture_setup(void) {
         return;
     }
 
-    fixture_status =
-        gpu_test_kernel_runtime_create(&runner, &program, &kernel, "k3_movement_resolution",
-                                       "k_movement_resolution");
+    fixture_status = gpu_test_kernel_runtime_create(
+        &runner, &program, &kernel, "k3_movement_resolution", "k_movement_resolution"
+    );
     if (fixture_status != BIOSIM_OK) {
         return;
     }
@@ -214,10 +214,12 @@ void test_k3_empty_cell_move(void) {
     TEST_ASSERT_EQUAL_INT32_MESSAGE(4, result_loc_x[0], "loc_x not updated after move");
     TEST_ASSERT_EQUAL_INT32_MESSAGE(3, result_loc_y[0], "loc_y changed unexpectedly");
     TEST_ASSERT_EQUAL_UINT8_MESSAGE(0U, result_last_move_dir[0], "last_move_dir should be EAST");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, result_grid[(size_t)(3 * sx + 4)],
-                                     "target cell should contain agent");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0U, result_grid[(size_t)(3 * sx + 3)],
-                                     "old cell should be empty");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        1U, result_grid[(size_t)(3 * sx + 4)], "target cell should contain agent"
+    );
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        0U, result_grid[(size_t)(3 * sx + 3)], "old cell should be empty"
+    );
 }
 
 /* An agent whose desired position equals its current position must not move and
@@ -242,10 +244,12 @@ void test_k3_no_move_when_at_desired(void) {
 
     TEST_ASSERT_EQUAL_INT32_MESSAGE(3, result_loc_x[0], "loc_x should be unchanged");
     TEST_ASSERT_EQUAL_INT32_MESSAGE(3, result_loc_y[0], "loc_y should be unchanged");
-    TEST_ASSERT_EQUAL_UINT8_MESSAGE(2U, result_last_move_dir[0],
-                                    "last_move_dir should be unchanged");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, result_grid[(size_t)(3 * sx + 3)],
-                                     "grid cell should still hold agent");
+    TEST_ASSERT_EQUAL_UINT8_MESSAGE(
+        2U, result_last_move_dir[0], "last_move_dir should be unchanged"
+    );
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        1U, result_grid[(size_t)(3 * sx + 3)], "grid cell should still hold agent"
+    );
 }
 
 /* An agent that desires a cell already occupied by another agent must stay.
@@ -272,10 +276,12 @@ void test_k3_occupied_cell_blocked(void) {
 
     TEST_ASSERT_EQUAL_INT32_MESSAGE(3, result_loc_x[0], "agent 0 should be blocked");
     TEST_ASSERT_EQUAL_INT32_MESSAGE(3, result_loc_y[0], "agent 0 should be blocked");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(2U, result_grid[(size_t)(3 * sx + 4)],
-                                     "occupied cell should still hold agent 1");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, result_grid[(size_t)(3 * sx + 3)],
-                                     "agent 0 old cell should still hold agent 0");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        2U, result_grid[(size_t)(3 * sx + 4)], "occupied cell should still hold agent 1"
+    );
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(
+        1U, result_grid[(size_t)(3 * sx + 3)], "agent 0 old cell should still hold agent 0"
+    );
 }
 
 /* ── main ───────────────────────────────────────────────────────────────── */

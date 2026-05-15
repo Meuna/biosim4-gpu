@@ -85,8 +85,9 @@ static biosim_status_t parse_barrier_table(toml_datum_t tab, biosim_barrier_spec
 
 /* ── public API ─────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_barrier_params_load(const char *toml_path, biosim_barrier_spec_t **specs_out,
-                                           uint32_t *n_out) {
+biosim_status_t biosim_barrier_params_load(
+    const char *toml_path, biosim_barrier_spec_t **specs_out, uint32_t *n_out
+) {
     *specs_out = NULL;
     *n_out = 0;
 
@@ -147,8 +148,11 @@ exit:
     free(specs);
     toml_free(result);
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF("failed to load barrier parameters from '%s' (%s)", toml_path,
-                      biosim_strerror(returncode));
+        BIOSIM_ERRORF(
+            "failed to load barrier parameters from '%s' (%s)",
+            toml_path,
+            biosim_strerror(returncode)
+        );
     }
     return returncode;
 }

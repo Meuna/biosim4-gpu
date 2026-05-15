@@ -45,8 +45,9 @@ static biosim_param_entry_t *find_mutable(biosim_params_t *p, const char *key) {
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_params_init(biosim_params_t *p, const biosim_param_entry_t *entries,
-                                   size_t count) {
+biosim_status_t biosim_params_init(
+    biosim_params_t *p, const biosim_param_entry_t *entries, size_t count
+) {
     p->entries = NULL;
     p->count = 0;
     p->capacity = 0;

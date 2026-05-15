@@ -16,8 +16,9 @@
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 /* Allocate the barrier-centre array and call the placer. */
-static biosim_status_t sim_place_barriers(biosim_sim_t *sim, const biosim_barrier_spec_t *barriers,
-                                          uint32_t n_barriers) {
+static biosim_status_t sim_place_barriers(
+    biosim_sim_t *sim, const biosim_barrier_spec_t *barriers, uint32_t n_barriers
+) {
     sim->barrier_ctrs = NULL;
     sim->n_barrier_ctrs = 0U;
     biosim_status_t returncode = BIOSIM_OK;
@@ -38,9 +39,13 @@ exit:
     return returncode;
 }
 
-biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_params_t *p,
-                                  const biosim_challenge_spec_t *challenge,
-                                  const biosim_barrier_spec_t *barriers, uint32_t n_barriers) {
+biosim_status_t biosim_sim_create(
+    biosim_sim_t *sim,
+    const biosim_params_t *p,
+    const biosim_challenge_spec_t *challenge,
+    const biosim_barrier_spec_t *barriers,
+    uint32_t n_barriers
+) {
     /* alloc start here, free on exit label */
     memset(sim, 0, sizeof(*sim));
 
@@ -158,8 +163,9 @@ void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i) {
     }
 
     memset(action_vals, 0, sizeof(action_vals));
-    biosim_nnet_feedforward(&sim->nnet, i, sensor_vals, BIOSIM_NUM_SENSORS, action_vals,
-                            BIOSIM_NUM_ACTIONS);
+    biosim_nnet_feedforward(
+        &sim->nnet, i, sensor_vals, BIOSIM_NUM_SENSORS, action_vals, BIOSIM_NUM_ACTIONS
+    );
 
     sim->agents.dx_sum[i] = 0.0F;
     sim->agents.dy_sum[i] = 0.0F;

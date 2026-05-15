@@ -50,7 +50,12 @@ void biosim_agents_free(biosim_agents_t *agents);
  * Initialise one slot ready for simulation: marks it alive, sets position,
  * applies biological defaults, and seeds its RNG from (idx, rng_seed).
  */
-void biosim_agents_init_slot(biosim_agents_t *agents, uint32_t idx, biosim_coord_t loc,
-                             uint8_t long_probe_dist, uint64_t rng_seed);
+void biosim_agents_init_slot(
+    biosim_agents_t *agents,
+    uint32_t idx,
+    biosim_coord_t loc,
+    uint8_t long_probe_dist,
+    uint64_t rng_seed
+);
 
 #endif /* BIOSIM_CORE_AGENTS_H */

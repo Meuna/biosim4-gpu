@@ -13,8 +13,14 @@
  * The host zeros all kill_marker slots at the generation boundary.
  */
 
-__kernel void k_kill_marked(__global const uchar *kill_marker, __global const int *loc_x,
-                            __global const int *loc_y, __global uint *grid, int size_x, uint pop) {
+__kernel void k_kill_marked(
+    __global const uchar *kill_marker,
+    __global const int *loc_x,
+    __global const int *loc_y,
+    __global uint *grid,
+    int size_x,
+    uint pop
+) {
     uint idx = get_global_id(0);
     if (idx >= pop || !kill_marker[idx]) {
         return;
@@ -23,6 +29,7 @@ __kernel void k_kill_marked(__global const uchar *kill_marker, __global const in
     int gx = loc_x[idx];
     int gy = loc_y[idx];
     uint expected = idx + 1u;
-    atomic_cmpxchg((__global volatile uint *)(grid + gy * size_x + gx), expected,
-                   BIOSIM_GRID_EMPTY);
+    atomic_cmpxchg(
+        (__global volatile uint *)(grid + gy * size_x + gx), expected, BIOSIM_GRID_EMPTY
+    );
 }

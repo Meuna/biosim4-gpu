@@ -58,15 +58,23 @@ void biosim_log_init(biosim_log_ctx_t *ctx) {
     ctx->use_color = BIOSIM_ISATTY(BIOSIM_FILENO(stderr));
 }
 
-void biosim_log_emit(const biosim_log_ctx_t *ctx, biosim_log_level_t level, const char *file,
-                     int line, const char *func, const char *fmt, ...) {
+void biosim_log_emit(
+    const biosim_log_ctx_t *ctx,
+    biosim_log_level_t level,
+    const char *file,
+    int line,
+    const char *func,
+    const char *fmt,
+    ...
+) {
     FILE *sink = (ctx->sink != NULL) ? ctx->sink : stderr;
     int lvl = ((int)level >= 1 && (int)level <= LEVEL_MAX) ? (int)level : 0;
     const char *label = level_labels[lvl];
 
     if (ctx->use_color) {
-        (void)fprintf(sink, "%s[%s]%s %s:%d %s: ", level_colors[lvl], label, COLOR_RESET, file,
-                      line, func);
+        (void)fprintf(
+            sink, "%s[%s]%s %s:%d %s: ", level_colors[lvl], label, COLOR_RESET, file, line, func
+        );
     } else {
         (void)fprintf(sink, "[%s] %s:%d %s: ", label, file, line, func);
     }
@@ -78,8 +86,16 @@ void biosim_log_emit(const biosim_log_ctx_t *ctx, biosim_log_level_t level, cons
     (void)fputc('\n', sink);
 }
 
-_Noreturn void biosim_die(const biosim_log_ctx_t *ctx, biosim_status_t code, int saved_errno,
-                          const char *file, int line, const char *func, const char *fmt, ...) {
+_Noreturn void biosim_die(
+    const biosim_log_ctx_t *ctx,
+    biosim_status_t code,
+    int saved_errno,
+    const char *file,
+    int line,
+    const char *func,
+    const char *fmt,
+    ...
+) {
     FILE *sink = (ctx != NULL && ctx->sink != NULL) ? ctx->sink : stderr;
 
     char msg[512];
@@ -92,11 +108,27 @@ _Noreturn void biosim_die(const biosim_log_ctx_t *ctx, biosim_status_t code, int
 #ifdef _WIN32
         char errbuf[128];
         (void)strerror_s(errbuf, sizeof errbuf, saved_errno);
-        (void)fprintf(sink, "[FATAL] %s:%d %s: %s [%s] (status=%d)\n", file, line, func, msg,
-                      errbuf, (int)code);
+        (void)fprintf(
+            sink,
+            "[FATAL] %s:%d %s: %s [%s] (status=%d)\n",
+            file,
+            line,
+            func,
+            msg,
+            errbuf,
+            (int)code
+        );
 #else
-        (void)fprintf(sink, "[FATAL] %s:%d %s: %s [%s] (status=%d)\n", file, line, func, msg,
-                      strerror(saved_errno), (int)code);
+        (void)fprintf(
+            sink,
+            "[FATAL] %s:%d %s: %s [%s] (status=%d)\n",
+            file,
+            line,
+            func,
+            msg,
+            strerror(saved_errno),
+            (int)code
+        );
 #endif
     } else {
         (void)fprintf(sink, "[FATAL] %s:%d %s: %s (status=%d)\n", file, line, func, msg, (int)code);

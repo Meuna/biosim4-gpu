@@ -30,8 +30,9 @@ void biosim_genome_copy_slot(biosim_genome_t *g, uint32_t dst, uint32_t src);
 
 /* Operators — called at the generation boundary on the host */
 void biosim_genome_mutate(biosim_genome_t *g, uint32_t idx, float rate, uint64_t *rng);
-void biosim_genome_crossover(biosim_genome_t *g, uint32_t child, uint32_t parent_a,
-                             uint32_t parent_b, uint64_t *rng);
+void biosim_genome_crossover(
+    biosim_genome_t *g, uint32_t child, uint32_t parent_a, uint32_t parent_b, uint64_t *rng
+);
 /* Warp-divergence mitigation: sort agents by descending genome length.
  * Reorders conn/wgt/length buffers in-place; writes perm_out[new_idx] = old_idx.
  * perm_out must point to a caller-allocated array of population uint32_t values.

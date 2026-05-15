@@ -8,16 +8,17 @@
 
 /* ── internal helpers ───────────────────────────────────────────────────── */
 
-static biosim_status_t log_build_info(const biosim_gpu_runner_t *r, cl_program program,
-                                      cl_program_build_info param_name) {
+static biosim_status_t log_build_info(
+    const biosim_gpu_runner_t *r, cl_program program, cl_program_build_info param_name
+) {
     /* alloc start here, free on exit label */
     char *log_buf = NULL;
     biosim_status_t returncode = BIOSIM_OK;
     cl_int cl_err = CL_SUCCESS;
     size_t log_size = 0U;
 
-    CL_GOTO_EXIT_ON_ERROR(
-        clGetProgramBuildInfo(program, r->device, param_name, 0U, NULL, &log_size));
+    CL_GOTO_EXIT_ON_ERROR(clGetProgramBuildInfo(program, r->device, param_name, 0U, NULL, &log_size)
+    );
     if (log_size == 0U) {
         BIOSIM_INFOF("clGetProgramBuildInfo: build info is empty");
         returncode = BIOSIM_ERR_INVALID;
@@ -31,7 +32,8 @@ static biosim_status_t log_build_info(const biosim_gpu_runner_t *r, cl_program p
     }
 
     CL_GOTO_EXIT_ON_ERROR(
-        clGetProgramBuildInfo(program, r->device, param_name, log_size, log_buf, NULL));
+        clGetProgramBuildInfo(program, r->device, param_name, log_size, log_buf, NULL)
+    );
 
     /* Log happen here */
     BIOSIM_INFOF("OpenCL build info:\n%s", log_buf);
@@ -43,8 +45,9 @@ exit:
 
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_gpu_runner_create(uint32_t platform_idx, uint32_t device_idx,
-                                         biosim_gpu_runner_t *out) {
+biosim_status_t biosim_gpu_runner_create(
+    uint32_t platform_idx, uint32_t device_idx, biosim_gpu_runner_t *out
+) {
     memset(out, 0, sizeof(*out));
 
     /* alloc start here, free on exit label */
@@ -95,14 +98,17 @@ biosim_status_t biosim_gpu_runner_create(uint32_t platform_idx, uint32_t device_
     }
 
     CL_GOTO_EXIT_ON_ERROR(
-        clGetDeviceIDs(out->platform, CL_DEVICE_TYPE_ALL, n_devices, devices, NULL));
+        clGetDeviceIDs(out->platform, CL_DEVICE_TYPE_ALL, n_devices, devices, NULL)
+    );
     out->device = devices[device_idx];
 
-    CL_ASSIGN_OR_GOTO_EXIT(out->context,
-                           clCreateContext(NULL, 1U, &out->device, NULL, NULL, &cl_err));
+    CL_ASSIGN_OR_GOTO_EXIT(
+        out->context, clCreateContext(NULL, 1U, &out->device, NULL, NULL, &cl_err)
+    );
 
-    CL_ASSIGN_OR_GOTO_EXIT(out->queue, clCreateCommandQueueWithProperties(out->context, out->device,
-                                                                          NULL, &cl_err));
+    CL_ASSIGN_OR_GOTO_EXIT(
+        out->queue, clCreateCommandQueueWithProperties(out->context, out->device, NULL, &cl_err)
+    );
 
 exit:
     free((void *)platforms);
@@ -125,8 +131,9 @@ void biosim_gpu_runner_free(biosim_gpu_runner_t *r) {
 
 /* ── program compilation ────────────────────────────────────────────────── */
 
-biosim_status_t biosim_gpu_program_build(const biosim_gpu_runner_t *r, const char **sources,
-                                         size_t n_sources, cl_program *out) {
+biosim_status_t biosim_gpu_program_build(
+    const biosim_gpu_runner_t *r, const char **sources, size_t n_sources, cl_program *out
+) {
     cl_int cl_err = CL_SUCCESS;
     cl_program program =
         clCreateProgramWithSource(r->context, (cl_uint)n_sources, sources, NULL, &cl_err);

@@ -71,8 +71,13 @@ void biosim_agents_free(biosim_agents_t *agents) {
 
 /* ── slot initialisation ────────────────────────────────────────────────── */
 
-void biosim_agents_init_slot(biosim_agents_t *agents, uint32_t idx, biosim_coord_t loc,
-                             uint8_t long_probe_dist, uint64_t rng_seed) {
+void biosim_agents_init_slot(
+    biosim_agents_t *agents,
+    uint32_t idx,
+    biosim_coord_t loc,
+    uint8_t long_probe_dist,
+    uint64_t rng_seed
+) {
     assert(agents != NULL);
     assert(idx < agents->population);
 

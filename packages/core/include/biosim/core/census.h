@@ -37,8 +37,9 @@ typedef struct biosim_census {
  *
  * Must be called before sim->kills is reset to 0.
  */
-void biosim_census_take(const biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_survivors,
-                        biosim_census_t *out);
+void biosim_census_take(
+    const biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_survivors, biosim_census_t *out
+);
 
 /* Print the census column header to stream. */
 void biosim_census_print_header(FILE *stream);

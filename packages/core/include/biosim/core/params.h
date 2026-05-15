@@ -39,15 +39,17 @@ typedef struct {
 } biosim_params_t;
 
 /* Lifecycle */
-biosim_status_t biosim_params_init(biosim_params_t *p, const biosim_param_entry_t *entries,
-                                   size_t count);
+biosim_status_t biosim_params_init(
+    biosim_params_t *p, const biosim_param_entry_t *entries, size_t count
+);
 void biosim_params_free(biosim_params_t *p);
 
 /* Three-pass parsing: defaults (already in entries) → TOML (--config) → CLI flags.
  * progname: argv[0] shown in --help / --version output.
  * version:  version string shown in --version output.                        */
-biosim_status_t biosim_params_parse(biosim_params_t *p, const char *progname, const char *version,
-                                    int argc, char **argv);
+biosim_status_t biosim_params_parse(
+    biosim_params_t *p, const char *progname, const char *version, int argc, char **argv
+);
 
 /* Setters — write value and set is_set = true */
 biosim_status_t biosim_params_set_int(biosim_params_t *p, const char *key, int val);

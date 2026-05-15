@@ -43,14 +43,20 @@ bool biosim_grid_is_occupied(const biosim_grid_t *grid, biosim_coord_t coord);
  * coordinate and current cell value; pass arbitrary context via `sim`.
  */
 typedef void (*biosim_grid_visitor_t)(biosim_coord_t coord, uint32_t cell, void *sim);
-void biosim_grid_visit_neighborhood(const biosim_grid_t *grid, biosim_coord_t center,
-                                    int32_t radius, biosim_grid_visitor_t visitor, void *sim);
+void biosim_grid_visit_neighborhood(
+    const biosim_grid_t *grid,
+    biosim_coord_t center,
+    int32_t radius,
+    biosim_grid_visitor_t visitor,
+    void *sim
+);
 
 /*
  * Find a random empty cell by random probing then linear scan fallback.
  * Advances *rng_state on each probe. Returns BIOSIM_ERR_NOTFOUND if full.
  */
-biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_state,
-                                       biosim_coord_t *out);
+biosim_status_t biosim_grid_find_empty(
+    const biosim_grid_t *grid, uint64_t *rng_state, biosim_coord_t *out
+);
 
 #endif /* BIOSIM_CORE_GRID_H */

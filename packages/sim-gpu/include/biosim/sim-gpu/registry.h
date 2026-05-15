@@ -50,7 +50,8 @@ void biosim_gpu_kernel_sources_free(biosim_gpu_kernel_sources_t *s);
  *   BIOSIM_ERR_IO       — filesystem override file found but could not be read
  *   BIOSIM_ERR_NOMEM    — filesystem override buffer allocation failed
  */
-biosim_status_t biosim_gpu_registry_get(const char *kernel_name, const char *exec_dir,
-                                        biosim_gpu_kernel_sources_t *out);
+biosim_status_t biosim_gpu_registry_get(
+    const char *kernel_name, const char *exec_dir, biosim_gpu_kernel_sources_t *out
+);
 
 #endif /* BIOSIM_SIM_GPU_REGISTRY_H */

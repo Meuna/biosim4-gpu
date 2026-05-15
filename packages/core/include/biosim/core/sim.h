@@ -84,9 +84,13 @@ typedef struct {
  * *challenge, allocate all heap resources, place barriers on the grid,
  * and spawn the initial population.  barriers/n_barriers may be NULL/0.
  */
-biosim_status_t biosim_sim_create(biosim_sim_t *sim, const biosim_params_t *p,
-                                  const biosim_challenge_spec_t *challenge,
-                                  const biosim_barrier_spec_t *barriers, uint32_t n_barriers);
+biosim_status_t biosim_sim_create(
+    biosim_sim_t *sim,
+    const biosim_params_t *p,
+    const biosim_challenge_spec_t *challenge,
+    const biosim_barrier_spec_t *barriers,
+    uint32_t n_barriers
+);
 
 void biosim_sim_free(biosim_sim_t *sim);
 

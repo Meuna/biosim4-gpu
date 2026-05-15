@@ -70,8 +70,9 @@ bool biosim_grid_is_occupied(const biosim_grid_t *grid, biosim_coord_t coord) {
 
 /* ── search ─────────────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_state,
-                                       biosim_coord_t *out) {
+biosim_status_t biosim_grid_find_empty(
+    const biosim_grid_t *grid, uint64_t *rng_state, biosim_coord_t *out
+) {
     assert(grid && rng_state && out);
     int32_t total = (int32_t)grid->size_x * (int32_t)grid->size_y;
 
@@ -100,8 +101,13 @@ biosim_status_t biosim_grid_find_empty(const biosim_grid_t *grid, uint64_t *rng_
 
 /* ── neighborhood ───────────────────────────────────────────────────────── */
 
-void biosim_grid_visit_neighborhood(const biosim_grid_t *grid, biosim_coord_t center,
-                                    int32_t radius, biosim_grid_visitor_t visitor, void *sim) {
+void biosim_grid_visit_neighborhood(
+    const biosim_grid_t *grid,
+    biosim_coord_t center,
+    int32_t radius,
+    biosim_grid_visitor_t visitor,
+    void *sim
+) {
     assert(grid && visitor);
 
     for (int32_t dy = -radius; dy <= radius; dy++) {

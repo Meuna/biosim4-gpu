@@ -29,9 +29,20 @@ static float rng_float_k(__global ulong *rng_state, uint idx) {
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-static float eval_sensor(int sensor_id, uint idx, int x, int y, uchar last_dir, ushort osc_per,
-                         uint step, uint steps_per_gen, int size_x, int size_y,
-                         __global ulong *rng_state, __global const uint *signal) {
+static float eval_sensor(
+    int sensor_id,
+    uint idx,
+    int x,
+    int y,
+    uchar last_dir,
+    ushort osc_per,
+    uint step,
+    uint steps_per_gen,
+    int size_x,
+    int size_y,
+    __global ulong *rng_state,
+    __global const uint *signal
+) {
     switch (sensor_id) {
     case BIOSIM_SENSOR_LOC_X:
         return (float)x / (float)(size_x - 1);
@@ -106,17 +117,33 @@ static float eval_sensor(int sensor_id, uint idx, int x, int y, uchar last_dir, 
 /* ── K1 kernel ──────────────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-__kernel void k_feedforward(__global uchar *alive, __global const int *loc_x,
-                            __global const int *loc_y, __global ushort *osc_period,
-                            __global const uchar *last_move_dir, __global float *responsiveness,
-                            __global uchar *long_probe_dist, __global const ushort *conn_packed,
-                            __global const short *conn_weight, __global const ushort *conn_length,
-                            __global float *neuron_output, __global const uchar *neuron_driven,
-                            __global const uchar *neuron_count, __global uint *signal, int size_x,
-                            int size_y, uint step, uint steps_per_gen, uint pop,
-                            __global ulong *rng_state, __global int *desired_x,
-                            __global int *desired_y, __global const uint *grid, int enable_kill,
-                            __global uchar *kill_marker) {
+__kernel void k_feedforward(
+    __global uchar *alive,
+    __global const int *loc_x,
+    __global const int *loc_y,
+    __global ushort *osc_period,
+    __global const uchar *last_move_dir,
+    __global float *responsiveness,
+    __global uchar *long_probe_dist,
+    __global const ushort *conn_packed,
+    __global const short *conn_weight,
+    __global const ushort *conn_length,
+    __global float *neuron_output,
+    __global const uchar *neuron_driven,
+    __global const uchar *neuron_count,
+    __global uint *signal,
+    int size_x,
+    int size_y,
+    uint step,
+    uint steps_per_gen,
+    uint pop,
+    __global ulong *rng_state,
+    __global int *desired_x,
+    __global int *desired_y,
+    __global const uint *grid,
+    int enable_kill,
+    __global uchar *kill_marker
+) {
     uint idx = get_global_id(0);
 
     if (!alive[idx]) {
@@ -133,8 +160,9 @@ __kernel void k_feedforward(__global uchar *alive, __global const int *loc_x,
 
     float sensor_vals[BIOSIM_NUM_SENSORS];
     for (int s = 0; s < BIOSIM_NUM_SENSORS; s++) {
-        sensor_vals[s] = eval_sensor(s, idx, x, y, ldir, osc_per, step, steps_per_gen, size_x,
-                                     size_y, rng_state, signal);
+        sensor_vals[s] = eval_sensor(
+            s, idx, x, y, ldir, osc_per, step, steps_per_gen, size_x, size_y, rng_state, signal
+        );
     }
 
     /* ── Phase 2: feedforward ────────────────────────────────────────────── */

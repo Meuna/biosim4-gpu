@@ -12,17 +12,21 @@
 #include "biosim/sim-gpu/runner.h"
 
 /* Creates a kernel and program for the given kernel name. */
-biosim_status_t gpu_test_kernel_runtime_create(biosim_gpu_runner_t *runner, cl_program *program,
-                                               cl_kernel *kernel, const char *registry_name,
-                                               const char *kernel_name);
+biosim_status_t gpu_test_kernel_runtime_create(
+    biosim_gpu_runner_t *runner,
+    cl_program *program,
+    cl_kernel *kernel,
+    const char *registry_name,
+    const char *kernel_name
+);
 
 /* Convenience function for allocating memory with error checking */
 void *calloc_test_assert(size_t count, size_t size);
 
 /* malloc one buffer; bail on failure, teardown will release everything */
 #define ALLOC(var, cnt, esz)                                                                       \
-    (var) = malloc((size_t)(cnt) * (esz));                                                           \
-    if (!(var)) {                                                                                    \
+    (var) = malloc((size_t)(cnt) * (esz));                                                         \
+    if (!(var)) {                                                                                  \
         fixture_status = BIOSIM_ERR_NOMEM;                                                         \
         return;                                                                                    \
     }
@@ -71,15 +75,17 @@ void *calloc_test_assert(size_t count, size_t size);
 
 /* Write data to an OpenCL buffer; bail on failure */
 #define READ(buf, ptr, cnt, esz)                                                                   \
-    if (clEnqueueReadBuffer(q, (buf), CL_FALSE, 0U, (size_t)(cnt) * (esz), (ptr), 0U, NULL,        \
-                            NULL) != CL_SUCCESS) {                                                 \
+    if (clEnqueueReadBuffer(                                                                       \
+            q, (buf), CL_FALSE, 0U, (size_t)(cnt) * (esz), (ptr), 0U, NULL, NULL                   \
+        ) != CL_SUCCESS) {                                                                         \
         return 0;                                                                                  \
     }
 
 /* Write data to an OpenCL buffer; bail on failure */
 #define WRITE(buf, ptr, cnt, esz)                                                                  \
-    if (clEnqueueWriteBuffer(q, (buf), CL_FALSE, 0U, (size_t)(cnt) * (esz), (ptr), 0U, NULL,       \
-                             NULL) != CL_SUCCESS) {                                                \
+    if (clEnqueueWriteBuffer(                                                                      \
+            q, (buf), CL_FALSE, 0U, (size_t)(cnt) * (esz), (ptr), 0U, NULL, NULL                   \
+        ) != CL_SUCCESS) {                                                                         \
         return 0;                                                                                  \
     }
 

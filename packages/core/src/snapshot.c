@@ -88,9 +88,13 @@ biosim_status_t biosim_snapshot_write_header(FILE *f, const biosim_sim_t *sim) {
     return BIOSIM_OK;
 }
 
-biosim_status_t biosim_snapshot_write_genome(FILE *f, const biosim_sim_t *sim,
-                                             const uint32_t *survivors, const float *scores,
-                                             uint32_t n_survivors) {
+biosim_status_t biosim_snapshot_write_genome(
+    FILE *f,
+    const biosim_sim_t *sim,
+    const uint32_t *survivors,
+    const float *scores,
+    uint32_t n_survivors
+) {
     const biosim_genome_t *genome = &sim->genome;
     const uint32_t pop = genome->population;
     const uint16_t genome_max_len = sim->genome.max_len;
@@ -234,9 +238,15 @@ biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *heade
  * discarding excess to advance the file position correctly.
  */
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-static biosim_status_t load_genome(FILE *f, const biosim_snap_header_t *header, biosim_sim_t *sim,
-                                   float *scores_out, uint32_t *n_survivors_out,
-                                   uint32_t *gen_idx_out, uint64_t *gen_rng_out) {
+static biosim_status_t load_genome(
+    FILE *f,
+    const biosim_snap_header_t *header,
+    biosim_sim_t *sim,
+    float *scores_out,
+    uint32_t *n_survivors_out,
+    uint32_t *gen_idx_out,
+    uint64_t *gen_rng_out
+) {
     uint64_t entry_size;
     uint32_t pop_file;
     uint32_t gen_idx;
@@ -335,10 +345,16 @@ exit:
     return returncode;
 }
 
-biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_snap_header_t *header,
-                                     biosim_sim_t *sim, float *scores_out,
-                                     uint32_t *n_survivors_out, uint32_t *gen_idx_out,
-                                     uint64_t *gen_rng_out) {
+biosim_status_t biosim_snapshot_load(
+    FILE *f,
+    uint32_t gen_idx,
+    const biosim_snap_header_t *header,
+    biosim_sim_t *sim,
+    float *scores_out,
+    uint32_t *n_survivors_out,
+    uint32_t *gen_idx_out,
+    uint64_t *gen_rng_out
+) {
     if (fseek(f, (long)snap_header_size, SEEK_SET) != 0) {
         return BIOSIM_ERR_IO;
     }
@@ -350,8 +366,10 @@ biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_sna
         }
         if (entry_size < snap_gen_fixed_bytes) {
             BIOSIM_ERRORF(
-                "corrupted file: generation %u entry size %llu too small for fixed header", i,
-                (unsigned long long)entry_size);
+                "corrupted file: generation %u entry size %llu too small for fixed header",
+                i,
+                (unsigned long long)entry_size
+            );
             return BIOSIM_ERR_INVALID;
         }
         /* skip remainder of this entry (we already read the 8-byte size field) */
@@ -363,13 +381,26 @@ biosim_status_t biosim_snapshot_load(FILE *f, uint32_t gen_idx, const biosim_sna
     return load_genome(f, header, sim, scores_out, n_survivors_out, gen_idx_out, gen_rng_out);
 }
 
-biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *header,
-                                          biosim_sim_t *sim, float *scores_out,
-                                          uint32_t *n_survivors_out, uint32_t *gen_idx_out,
-                                          uint64_t *gen_rng_out) {
+biosim_status_t biosim_snapshot_load_last(
+    FILE *f,
+    const biosim_snap_header_t *header,
+    biosim_sim_t *sim,
+    float *scores_out,
+    uint32_t *n_survivors_out,
+    uint32_t *gen_idx_out,
+    uint64_t *gen_rng_out
+) {
     if (header->generation_count > 0U) {
-        return biosim_snapshot_load(f, header->generation_count - 1U, header, sim, scores_out,
-                                    n_survivors_out, gen_idx_out, gen_rng_out);
+        return biosim_snapshot_load(
+            f,
+            header->generation_count - 1U,
+            header,
+            sim,
+            scores_out,
+            n_survivors_out,
+            gen_idx_out,
+            gen_rng_out
+        );
     }
 
     /* generation_count unknown — scan forward to find the last valid entry */
@@ -421,36 +452,52 @@ biosim_status_t biosim_snapshot_load_last(FILE *f, const biosim_snap_header_t *h
 
 static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosim_sim_t *sim) {
     if (hdr->format_version != BIOSIM_SNAP_FORMAT_VERSION) {
-        BIOSIM_ERRORF("format version %u in file, built with %u — incompatible",
-                      (unsigned)hdr->format_version, (unsigned)BIOSIM_SNAP_FORMAT_VERSION);
+        BIOSIM_ERRORF(
+            "format version %u in file, built with %u — incompatible",
+            (unsigned)hdr->format_version,
+            (unsigned)BIOSIM_SNAP_FORMAT_VERSION
+        );
         return BIOSIM_ERR_INVALID;
     }
     if (hdr->schema_version != BIOSIM_IO_SCHEMA_VERSION) {
-        BIOSIM_ERRORF("schema version %u in file, built with %u — incompatible",
-                      (unsigned)hdr->schema_version, (unsigned)BIOSIM_IO_SCHEMA_VERSION);
+        BIOSIM_ERRORF(
+            "schema version %u in file, built with %u — incompatible",
+            (unsigned)hdr->schema_version,
+            (unsigned)BIOSIM_IO_SCHEMA_VERSION
+        );
         return BIOSIM_ERR_INVALID;
     }
     if (hdr->num_sensors != (uint16_t)BIOSIM_NUM_SENSORS ||
         hdr->num_actions != (uint16_t)BIOSIM_NUM_ACTIONS) {
-        BIOSIM_ERRORF("I/O catalogue (%u sensors, %u actions) does not match built-in"
-                      " (%u sensors, %u actions) — corrupted file or implementation issue",
-                      (unsigned)hdr->num_sensors, (unsigned)hdr->num_actions,
-                      (unsigned)BIOSIM_NUM_SENSORS, (unsigned)BIOSIM_NUM_ACTIONS);
+        BIOSIM_ERRORF(
+            "I/O catalogue (%u sensors, %u actions) does not match built-in"
+            " (%u sensors, %u actions) — corrupted file or implementation issue",
+            (unsigned)hdr->num_sensors,
+            (unsigned)hdr->num_actions,
+            (unsigned)BIOSIM_NUM_SENSORS,
+            (unsigned)BIOSIM_NUM_ACTIONS
+        );
         return BIOSIM_ERR_INVALID;
     }
 
     if (sim->genome.max_len < hdr->genome_max_len) {
-        BIOSIM_ERRORF("file genome-max-len=%u exceeds current %u;"
-                      " use --max-genome-len %u or larger",
-                      (unsigned)hdr->genome_max_len, (unsigned)sim->genome.max_len,
-                      (unsigned)hdr->genome_max_len);
+        BIOSIM_ERRORF(
+            "file genome-max-len=%u exceeds current %u;"
+            " use --max-genome-len %u or larger",
+            (unsigned)hdr->genome_max_len,
+            (unsigned)sim->genome.max_len,
+            (unsigned)hdr->genome_max_len
+        );
         return BIOSIM_ERR_INVALID;
     }
     if (hdr->max_neurons != sim->nnet.max_neurons) {
-        BIOSIM_ERRORF("file max-neurons=%u but current is %u;"
-                      " use --max-neurons %u",
-                      (unsigned)hdr->max_neurons, (unsigned)sim->nnet.max_neurons,
-                      (unsigned)hdr->max_neurons);
+        BIOSIM_ERRORF(
+            "file max-neurons=%u but current is %u;"
+            " use --max-neurons %u",
+            (unsigned)hdr->max_neurons,
+            (unsigned)sim->nnet.max_neurons,
+            (unsigned)hdr->max_neurons
+        );
         return BIOSIM_ERR_INVALID;
     }
     return BIOSIM_OK;
@@ -461,8 +508,9 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
 /* Opens path, reads and validates the header, and runs all compat checks.
  * On success, sets *f_out to the open file positioned past the header and
  * *hdr_out to the parsed header. Caller must fclose *f_out. */
-static biosim_status_t restore_open(const char *path, biosim_sim_t *sim, FILE **f_out,
-                                    biosim_snap_header_t *hdr_out) {
+static biosim_status_t restore_open(
+    const char *path, biosim_sim_t *sim, FILE **f_out, biosim_snap_header_t *hdr_out
+) {
     FILE *f = fopen(path, "rb");
     if (f == NULL) {
         BIOSIM_ERRORF("cannot open '%s'", path);
@@ -546,8 +594,11 @@ exit:
     free(survivors);
     if (returncode == BIOSIM_EOF) {
         if (hdr.generation_count > 0U) {
-            BIOSIM_ERRORF("'%s': last generation (%u) is incomplete or corrupted", path,
-                          (unsigned)(hdr.generation_count - 1U));
+            BIOSIM_ERRORF(
+                "'%s': last generation (%u) is incomplete or corrupted",
+                path,
+                (unsigned)(hdr.generation_count - 1U)
+            );
         } else {
             BIOSIM_ERRORF("'%s': snapshot contains no complete generation", path);
         }
@@ -593,8 +644,9 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
     return BIOSIM_OK;
 }
 
-biosim_status_t biosim_snapshot_session_write(biosim_sim_t *sim, const uint32_t *survivors,
-                                              const float *scores, uint32_t n_survivors) {
+biosim_status_t biosim_snapshot_session_write(
+    biosim_sim_t *sim, const uint32_t *survivors, const float *scores, uint32_t n_survivors
+) {
     if (sim->snap_f == NULL || n_survivors == 0U) {
         return BIOSIM_OK;
     }

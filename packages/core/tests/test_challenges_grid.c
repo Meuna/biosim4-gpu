@@ -23,14 +23,20 @@ static void place_agent(uint32_t i, int32_t x, int32_t y) {
 }
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_scn_t){
-                                                               .population = 10U,
-                                                               .size_x = 64,
-                                                               .size_y = 64,
-                                                               .genome_max_len = 8U,
-                                                               .max_neurons = 3U,
-                                                               .long_probe_dist = 8U,
-                                                           }));
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK,
+        sim_test_create(
+            &sim,
+            &(sim_test_scn_t){
+                .population = 10U,
+                .size_x = 64,
+                .size_y = 64,
+                .genome_max_len = 8U,
+                .max_neurons = 3U,
+                .long_probe_dist = 8U,
+            }
+        )
+    );
     biosim_grid_zero_fill(&sim.grid);
     for (uint32_t i = 0; i < sim.agents.population; i++) {
         sim.agents.alive[i] = 0;

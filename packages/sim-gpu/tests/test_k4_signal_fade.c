@@ -30,22 +30,26 @@ void tearDown(void) {
 static void fixture_setup(void) {
     biosim_log_init(&biosim_log_default_ctx);
 
-    fixture_status = sim_test_create(&sim, &(sim_test_scn_t){
-                                               .population = 4U,
-                                               .size_x = 8,
-                                               .size_y = 8,
-                                               .genome_max_len = 2U,
-                                               .max_neurons = 1U,
-                                               .long_probe_dist = 4U,
-                                               .steps_per_gen = 100U,
-                                               .population_sensor_radius = 1,
-                                           });
+    fixture_status = sim_test_create(
+        &sim,
+        &(sim_test_scn_t){
+            .population = 4U,
+            .size_x = 8,
+            .size_y = 8,
+            .genome_max_len = 2U,
+            .max_neurons = 1U,
+            .long_probe_dist = 4U,
+            .steps_per_gen = 100U,
+            .population_sensor_radius = 1,
+        }
+    );
     if (fixture_status != BIOSIM_OK) {
         return;
     }
 
-    fixture_status = gpu_test_kernel_runtime_create(&runner, &program, &kernel, "k4_signal_fade",
-                                                    "k_signal_fade");
+    fixture_status = gpu_test_kernel_runtime_create(
+        &runner, &program, &kernel, "k4_signal_fade", "k_signal_fade"
+    );
     if (fixture_status != BIOSIM_OK) {
         return;
     }

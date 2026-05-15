@@ -4,9 +4,13 @@
 
 #include <string.h>
 
-biosim_status_t gpu_test_kernel_runtime_create(biosim_gpu_runner_t *runner, cl_program *program,
-                                               cl_kernel *kernel, const char *registry_name,
-                                               const char *kernel_name) {
+biosim_status_t gpu_test_kernel_runtime_create(
+    biosim_gpu_runner_t *runner,
+    cl_program *program,
+    cl_kernel *kernel,
+    const char *registry_name,
+    const char *kernel_name
+) {
 
     cl_uint n = 0U;
     if (clGetPlatformIDs(0U, NULL, &n) != CL_SUCCESS || n == 0U) {

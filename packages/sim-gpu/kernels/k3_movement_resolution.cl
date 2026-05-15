@@ -28,10 +28,18 @@ static uchar k3_get_dir(int dx, int dy) {
 
 /* ── K3 kernel ──────────────────────────────────────────────────────────── */
 
-__kernel void k_movement_resolution(__global const uchar *alive, __global const int *desired_x,
-                                    __global const int *desired_y, __global int *loc_x,
-                                    __global int *loc_y, __global uchar *last_move_dir,
-                                    __global uint *grid, int size_x, int size_y, uint pop) {
+__kernel void k_movement_resolution(
+    __global const uchar *alive,
+    __global const int *desired_x,
+    __global const int *desired_y,
+    __global int *loc_x,
+    __global int *loc_y,
+    __global uchar *last_move_dir,
+    __global uint *grid,
+    int size_x,
+    int size_y,
+    uint pop
+) {
     uint idx = get_global_id(0);
 
     if (idx >= pop || !alive[idx]) {
