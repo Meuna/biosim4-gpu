@@ -27,7 +27,7 @@ static int32_t *gpu_desired_y;
 static uint64_t *init_rng_state;
 static float *init_responsiveness;
 static uint16_t *init_osc_period;
-static uint8_t *init_long_probe_dist;
+static uint8_t *init_los_range;
 /* neuron_output and signal start at 0 (calloc in biosim_sim_create); no extra
  * snapshot needed — zeros are re-uploaded on each run. */
 
@@ -38,7 +38,7 @@ static cl_mem buf_loc_y;
 static cl_mem buf_osc_period;
 static cl_mem buf_last_move_dir;
 static cl_mem buf_responsiveness;
-static cl_mem buf_long_probe_dist;
+static cl_mem buf_los_range;
 static cl_mem buf_conn_packed;
 static cl_mem buf_conn_weight;
 static cl_mem buf_conn_length;
@@ -65,10 +65,12 @@ void tearDown(void) {
 static void fixture_setup(void) {
     biosim_log_init(&biosim_log_default_ctx);
 
-    fixture_status = sim_test_make_32x32(&sim);
+    fixture_status = sim_test_make_128x128(&sim);
     if (fixture_status != BIOSIM_OK) {
         return;
     }
+    sim.population_sensor_radius = 16;
+    sim.long_probe_dist = 16;
 
     fixture_status = gpu_test_kernel_runtime_create(
         &runner, &program, &kernel, "k1_feedforward", "k_feedforward"
@@ -86,13 +88,13 @@ static void fixture_setup(void) {
     ALLOC(init_rng_state, pop, sizeof(uint64_t));
     ALLOC(init_responsiveness, pop, sizeof(float));
     ALLOC(init_osc_period, pop, sizeof(uint16_t));
-    ALLOC(init_long_probe_dist, pop, sizeof(uint8_t));
+    ALLOC(init_los_range, pop, sizeof(uint8_t));
 
     /* Save initial mutable per-agent state. */
     memcpy(init_rng_state, a->rng_state, (size_t)pop * sizeof(uint64_t));
     memcpy(init_responsiveness, a->responsiveness, (size_t)pop * sizeof(float));
     memcpy(init_osc_period, a->osc_period, (size_t)pop * sizeof(uint16_t));
-    memcpy(init_long_probe_dist, a->long_probe_dist, (size_t)pop * sizeof(uint8_t));
+    memcpy(init_los_range, a->long_probe_dist, (size_t)pop * sizeof(uint8_t));
     const biosim_nnet_t *n = &sim.nnet;
     const uint16_t mc = n->max_conn;
     const uint8_t mn = n->max_neurons;
@@ -104,7 +106,7 @@ static void fixture_setup(void) {
     MKRW(buf_osc_period, a->osc_period, sizeof(uint16_t), pop);
     MKRO(buf_last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     MKRW(buf_responsiveness, a->responsiveness, sizeof(float), pop);
-    MKRW(buf_long_probe_dist, a->long_probe_dist, sizeof(uint8_t), pop);
+    MKRW(buf_los_range, a->long_probe_dist, sizeof(uint8_t), pop);
     MKRO(buf_conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)mc * pop);
     MKRO(buf_conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)mc * pop);
     MKRO(buf_conn_length, n->conn_length, sizeof(uint16_t), pop);
@@ -125,7 +127,7 @@ static void fixture_setup(void) {
     cl_uint steps_gen = (cl_uint)sim.steps_per_gen;
     cl_uint pop_arg = (cl_uint)sim.population;
     cl_int enable_kill = 0;
-    cl_int pop_sr = (cl_int)sim.population_sensor_radius;
+    cl_int sensor_radius = (cl_int)sim.population_sensor_radius;
 
     (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&buf_alive);
     (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&buf_loc_x);
@@ -133,7 +135,7 @@ static void fixture_setup(void) {
     (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&buf_osc_period);
     (void)clSetKernelArg(kernel, 4U, sizeof(cl_mem), (const void *)&buf_last_move_dir);
     (void)clSetKernelArg(kernel, 5U, sizeof(cl_mem), (const void *)&buf_responsiveness);
-    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&buf_long_probe_dist);
+    (void)clSetKernelArg(kernel, 6U, sizeof(cl_mem), (const void *)&buf_los_range);
     (void)clSetKernelArg(kernel, 7U, sizeof(cl_mem), (const void *)&buf_conn_packed);
     (void)clSetKernelArg(kernel, 8U, sizeof(cl_mem), (const void *)&buf_conn_weight);
     (void)clSetKernelArg(kernel, 9U, sizeof(cl_mem), (const void *)&buf_conn_length);
@@ -152,7 +154,7 @@ static void fixture_setup(void) {
     (void)clSetKernelArg(kernel, 22U, sizeof(cl_mem), (const void *)&buf_grid);
     (void)clSetKernelArg(kernel, 23U, sizeof(cl_int), &enable_kill);
     (void)clSetKernelArg(kernel, 24U, sizeof(cl_mem), (const void *)&buf_kill_marker);
-    (void)clSetKernelArg(kernel, 25U, sizeof(cl_int), &pop_sr);
+    (void)clSetKernelArg(kernel, 25U, sizeof(cl_int), &sensor_radius);
 }
 
 static void fixture_teardown(void) {
@@ -161,7 +163,7 @@ static void fixture_teardown(void) {
     free(init_rng_state);
     free(init_responsiveness);
     free(init_osc_period);
-    free(init_long_probe_dist);
+    free(init_los_range);
 
     SAFE_RELEASE(clReleaseMemObject, buf_kill_marker);
     SAFE_RELEASE(clReleaseMemObject, buf_grid);
@@ -175,7 +177,7 @@ static void fixture_teardown(void) {
     SAFE_RELEASE(clReleaseMemObject, buf_conn_length);
     SAFE_RELEASE(clReleaseMemObject, buf_conn_weight);
     SAFE_RELEASE(clReleaseMemObject, buf_conn_packed);
-    SAFE_RELEASE(clReleaseMemObject, buf_long_probe_dist);
+    SAFE_RELEASE(clReleaseMemObject, buf_los_range);
     SAFE_RELEASE(clReleaseMemObject, buf_responsiveness);
     SAFE_RELEASE(clReleaseMemObject, buf_last_move_dir);
     SAFE_RELEASE(clReleaseMemObject, buf_osc_period);
@@ -203,7 +205,7 @@ static int run_k1(void) {
     WRITE(buf_rng_state, init_rng_state, pop, sizeof(uint64_t));
     WRITE(buf_responsiveness, init_responsiveness, pop, sizeof(float));
     WRITE(buf_osc_period, init_osc_period, pop, sizeof(uint16_t));
-    WRITE(buf_long_probe_dist, init_long_probe_dist, pop, sizeof(uint8_t));
+    WRITE(buf_los_range, init_los_range, pop, sizeof(uint8_t));
     WRITE(buf_neuron_output, n->neuron_output, n_neuron, sizeof(float));
     WRITE(buf_signal, sim.signal, sim.signal_len, sizeof(uint32_t));
 
@@ -237,7 +239,7 @@ static void run_host_step_agent(uint32_t idx) {
     a->rng_state[idx] = init_rng_state[idx];
     a->responsiveness[idx] = init_responsiveness[idx];
     a->osc_period[idx] = init_osc_period[idx];
-    a->long_probe_dist[idx] = init_long_probe_dist[idx];
+    a->long_probe_dist[idx] = init_los_range[idx];
     for (uint8_t k = 0U; k < n->max_neurons; k++) {
         n->neuron_output[(size_t)k * pop + idx] = 0.0F;
     }

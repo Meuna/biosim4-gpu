@@ -9,10 +9,12 @@
  *   POPULATION (10)            — circular-disc neighbourhood scan (grid read-only)
  *   POPULATION_FWD (11)        — forward half-disc density (strict dot-product filter)
  *   POPULATION_LR (12)         — lateral signed ratio (L−R)/(L+R), in [−1,1]
+ *   BARRIER_FWD (13)           — forward half-disc barrier density
+ *   BARRIER_LR (14)            — lateral signed barrier ratio (L−R)/(L+R), in [−1,1]
+ *   LONGPROBE_BAR_FWD (16)     — forward ray-cast (skips agents), steps/dist to first barrier
  *   LONGPROBE_POP_FWD (15)     — forward ray-cast, returns steps/dist to first agent
  *   SIGNAL0 (17)               — reads signal buffer at agent position
- *   All others (13-14, 16,     — stub returning 0.5
- *               18-20)
+ *   All others (18-20)         — stub returning 0.5
  *
  * Action implementation:
  *   Group A (0-2)   — SET_RESPONSIVENESS, SET_OSCILLATOR_PERIOD,
@@ -233,6 +235,95 @@ static float eval_sensor(
                 break;
             }
             if (cell != BIOSIM_GRID_EMPTY) {
+                return (float)i / (float)dist;
+            }
+        }
+        return 0.0F;
+    }
+
+    case BIOSIM_SENSOR_BARRIER_FWD: {
+        int dir = (int)(last_dir & 7u);
+        int fwd_x = BIOSIM_DIR_DX[dir];
+        int fwd_y = BIOSIM_DIR_DY[dir];
+        int r = pop_sensor_radius;
+        uint visited = 0u;
+        uint n_bar = 0u;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                if (dx * fwd_x + dy * fwd_y <= 0) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                visited++;
+                if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
+                    n_bar++;
+                }
+            }
+        }
+        if (visited == 0u) {
+            return 0.0F;
+        }
+        return (float)n_bar / (float)visited;
+    }
+
+    case BIOSIM_SENSOR_BARRIER_LR: {
+        int dir = (int)(last_dir & 7u);
+        int fwd_x = BIOSIM_DIR_DX[dir];
+        int fwd_y = BIOSIM_DIR_DY[dir];
+        int r = pop_sensor_radius;
+        int l_bar = 0;
+        int r_bar = 0;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                int lateral = dx * fwd_y - dy * fwd_x;
+                if (lateral == 0) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
+                    if (lateral > 0) {
+                        l_bar++;
+                    } else {
+                        r_bar++;
+                    }
+                }
+            }
+        }
+        if (l_bar == 0 && r_bar == 0) {
+            return 0.0F;
+        }
+        return ((float)l_bar - (float)r_bar) / (float)(l_bar + r_bar);
+    }
+
+    case BIOSIM_SENSOR_LONGPROBE_BAR_FWD: {
+        int dir = (int)(last_dir & 7u);
+        int step_x = BIOSIM_DIR_DX[dir];
+        int step_y = BIOSIM_DIR_DY[dir];
+        uint dist = (uint)long_probe;
+        if (dist == 0u) {
+            return 0.0F;
+        }
+        for (uint i = 1u; i <= dist; i++) {
+            int nx = x + (int)i * step_x;
+            int ny = y + (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                break;
+            }
+            if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
                 return (float)i / (float)dist;
             }
         }

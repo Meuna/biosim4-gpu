@@ -131,7 +131,7 @@ static void k1_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
     cl_uint steps_gen = (cl_uint)sim->steps_per_gen;
     cl_uint pop = (cl_uint)sim->population;
     cl_int enable_kill_val = (cl_int)(sim->enable_kill ? 1 : 0);
-    cl_int pop_sr = (cl_int)sim->population_sensor_radius;
+    cl_int sensor_radius = (cl_int)sim->population_sensor_radius;
 
     (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&b->alive);
     (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&b->loc_x);
@@ -158,7 +158,7 @@ static void k1_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosi
     (void)clSetKernelArg(kernel, 22U, sizeof(cl_mem), (const void *)&b->grid);
     (void)clSetKernelArg(kernel, 23U, sizeof(cl_int), (const void *)&enable_kill_val);
     (void)clSetKernelArg(kernel, 24U, sizeof(cl_mem), (const void *)&b->kill_marker);
-    (void)clSetKernelArg(kernel, 25U, sizeof(cl_int), (const void *)&pop_sr);
+    (void)clSetKernelArg(kernel, 25U, sizeof(cl_int), (const void *)&sensor_radius);
 }
 
 static void k2_set_args(cl_kernel kernel, const kernel_buffers_t *b, const biosim_sim_t *sim) {

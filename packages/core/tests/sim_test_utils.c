@@ -56,7 +56,7 @@ biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg) {
     challenge.x_band.x_max = 1.0F;
     challenge.x_band.mirror = false;
 
-    rc = biosim_sim_create(sim, &p, &challenge, NULL, 0U);
+    rc = biosim_sim_create(sim, &p, &challenge, cfg->barrier_specs, cfg->n_barrier_specs);
     biosim_params_free(&p);
     return rc;
 }
@@ -78,6 +78,9 @@ biosim_status_t sim_test_make_8x8(biosim_sim_t *sim) {
 }
 
 biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
+    static const biosim_barrier_spec_t k_barriers[] = {
+        {BIOSIM_BARRIER_HBAR, 16, 16, 20.0F, 1.0F},
+    };
     return sim_test_create(
         sim,
         &(sim_test_scn_t){
@@ -92,6 +95,39 @@ biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
             .mutation_rate = 0.01F,
             .sexual_reproduction = true,
             .choose_parents_by_fitness = true,
+            .barrier_specs = k_barriers,
+            .n_barrier_specs = 1U,
+        }
+    );
+}
+
+biosim_status_t sim_test_make_128x128(biosim_sim_t *sim) {
+    static const biosim_barrier_spec_t k_barriers[] = {
+        {BIOSIM_BARRIER_HBAR, 21, 32, 32.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 21, 96, 32.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 42, 64, 64.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 64, 32, 32.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 64, 96, 32.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 85, 64, 64.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 106, 32, 32.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 106, 96, 32.0F, 4.0F},
+    };
+    return sim_test_create(
+        sim,
+        &(sim_test_scn_t){
+            .population = 3000U,
+            .size_x = 128,
+            .size_y = 128,
+            .genome_max_len = 24U,
+            .max_neurons = 5U,
+            .long_probe_dist = 8U,
+            .steps_per_gen = 16U,
+            .population_sensor_radius = 4,
+            .mutation_rate = 0.01F,
+            .sexual_reproduction = true,
+            .choose_parents_by_fitness = true,
+            .barrier_specs = k_barriers,
+            .n_barrier_specs = 8U,
         }
     );
 }

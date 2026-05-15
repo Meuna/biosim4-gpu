@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`BIOSIM_SENSOR_BARRIER_FWD`** — forward half-disc barrier-density sensor
+  implemented in both CPU reference (`core`) and GPU K1 kernel; uses
+  `population_sensor_radius` as the disc radius, returns
+  `barrier_cell_count / visited` in [0, 1].
+- **`BIOSIM_SENSOR_BARRIER_LR`** — lateral signed-ratio barrier sensor
+  implemented in both CPU reference (`core`) and GPU K1 kernel; returns
+  `(L−R)/(L+R)` in [−1, 1] where L and R are barrier-cell counts in the
+  left and right half-discs.
+- **`BIOSIM_SENSOR_LONGPROBE_BAR_FWD`** — forward ray-cast barrier probe
+  implemented in both CPU reference (`core`) and GPU K1 kernel; skips agents
+  (agents are transparent), returns `steps_to_first_barrier / long_probe_dist`,
+  0.0 if no barrier found before a grid boundary.
+- **Barriers in `sim_test_make_32x32`** — the 32×32 simulation fixture used by
+  GPU kernel tests now includes a fixed horizontal bar at centre (16, 16) with
+  length 20, exercising barrier sensors during the K1 GPU/host comparison test.
+  `sim_test_scn_t` gained optional `barrier_specs` / `n_barrier_specs` fields;
+  `sim_test_create` threads them through to `biosim_sim_create`.
 - **`BIOSIM_SENSOR_POPULATION` on GPU** — K1 now computes the population-density
   sensor via a circular-disc neighbourhood scan (radius `population_sensor_radius`)
   instead of returning the 0.5 stub.

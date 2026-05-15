@@ -2,6 +2,7 @@
 #define BIOSIM_CORE_TEST_UTILS_H
 
 #include "biosim/core/agents.h"
+#include "biosim/core/barriers.h"
 #include "biosim/core/genome.h"
 #include "biosim/core/grid.h"
 #include "biosim/core/nnet.h"
@@ -26,6 +27,8 @@ typedef struct {
     float mutation_rate;
     bool sexual_reproduction;
     bool choose_parents_by_fitness;
+    const biosim_barrier_spec_t *barrier_specs; /* NULL → no barriers */
+    uint32_t n_barrier_specs;
 } sim_test_scn_t;
 
 /* Build and allocate a sim from an explicit config.  The challenge is set to
@@ -34,10 +37,12 @@ typedef struct {
 biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg);
 
 /* ── named presets ──────────────────────────────────────────────────────────
- * Minimal sim: pop=4, 4x4 grid, genome_max_len=4, max_neurons=2.
- * Richer sim:  pop=64, 32x32 grid, 8 steps/gen, mutation enabled. */
+ * 4x4 grid: pop=4, genome_max_len=4, max_neurons=2.
+ * 32x32 grid: pop=64, 8 steps/gen, mutation enabled.
+ * 128x128 grid: pop=3000, 16 steps/gen, mutation enabled, barriers. */
 biosim_status_t sim_test_make_8x8(biosim_sim_t *sim);
 biosim_status_t sim_test_make_32x32(biosim_sim_t *sim);
+biosim_status_t sim_test_make_128x128(biosim_sim_t *sim);
 
 /* Run all steps of one full generation (does not call biosim_sim_next_generation). */
 void sim_test_run_one_gen(biosim_sim_t *sim);
