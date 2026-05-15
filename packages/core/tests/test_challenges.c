@@ -1,7 +1,7 @@
 #include "biosim/core/challenges.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
-#include "sim_test_utils.h"
+#include "biosim/core/test_utils.h"
 #include "unity.h"
 
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 static biosim_sim_t sim;
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_cfg_t){
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_scn_t){
                                                                .population = 1U,
                                                                .size_x = 128,
                                                                .size_y = 128,

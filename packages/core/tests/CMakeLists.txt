@@ -1,6 +1,7 @@
 add_library(core-sim-test-utils STATIC sim_test_utils.c)
 target_link_libraries(core-sim-test-utils PUBLIC core unity)
 target_compile_features(core-sim-test-utils PUBLIC c_std_11)
+target_include_directories(core-sim-test-utils PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_executable(core-grid-tests test_grid.c)
 target_link_libraries(core-grid-tests PRIVATE core unity)

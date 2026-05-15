@@ -1,4 +1,4 @@
-#include "sim_test_utils.h"
+#include "biosim/core/test_utils.h"
 
 #include "biosim/core/challenge_spec.h"
 #include "biosim/core/params.h"
@@ -13,24 +13,24 @@
 
 /* clang-format off */
 static const biosim_param_entry_t k_test_params[] = {
-    {"max-generations",           "simulation", {.i = 100},   PARAM_INT,   false, true, NULL, NULL},
-    {"population",                "simulation", {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"grid-size-x",               "simulation", {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"grid-size-y",               "simulation", {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"max-genome-len",            "genome",     {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"max-neurons",               "genome",     {.i = 2},     PARAM_INT,   false, true, NULL, NULL},
-    {"long-probe-dist",           "sensors",    {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"steps-per-gen",             "simulation", {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
-    {"population-sensor-radius",  "sensors",    {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
-    {"enable-kill",               "actions",    {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
-    {"point-mutation-rate",       "genome",     {.f = 0.0},   PARAM_FLOAT, false, true, NULL, NULL},
-    {"sexual-reproduction",       "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
-    {"choose-parents-by-fitness", "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"max-generations",           NULL,  {.i = 100},   PARAM_INT,   false, true, NULL, NULL},
+    {"population",                NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"grid-size-x",               NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"grid-size-y",               NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"max-genome-len",            NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"max-neurons",               NULL,  {.i = 2},     PARAM_INT,   false, true, NULL, NULL},
+    {"long-probe-dist",           NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"steps-per-gen",             NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
+    {"population-sensor-radius",  NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
+    {"enable-kill",               NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"point-mutation-rate",       NULL,  {.f = 0.0},   PARAM_FLOAT, false, true, NULL, NULL},
+    {"sexual-reproduction",       NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"choose-parents-by-fitness", NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
 };
 /* clang-format on */
 #define K_TEST_PARAMS_COUNT (sizeof(k_test_params) / sizeof(k_test_params[0]))
 
-biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_cfg_t *cfg) {
+biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg) {
     biosim_params_t p;
     biosim_status_t rc = biosim_params_init(&p, k_test_params, K_TEST_PARAMS_COUNT);
     if (rc != BIOSIM_OK) {
@@ -61,11 +61,11 @@ biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_cfg_t *cfg) {
     return rc;
 }
 
-biosim_status_t sim_test_make_light(biosim_sim_t *sim) {
-    return sim_test_create(sim, &(sim_test_cfg_t){
+biosim_status_t sim_test_make_8x8(biosim_sim_t *sim) {
+    return sim_test_create(sim, &(sim_test_scn_t){
                                     .population = 4U,
-                                    .size_x = 4,
-                                    .size_y = 4,
+                                    .size_x = 8,
+                                    .size_y = 8,
                                     .genome_max_len = 4U,
                                     .max_neurons = 2U,
                                     .long_probe_dist = 4U,
@@ -74,8 +74,8 @@ biosim_status_t sim_test_make_light(biosim_sim_t *sim) {
                                 });
 }
 
-biosim_status_t sim_test_make_medium(biosim_sim_t *sim) {
-    return sim_test_create(sim, &(sim_test_cfg_t){
+biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
+    return sim_test_create(sim, &(sim_test_scn_t){
                                     .population = 64U,
                                     .size_x = 32,
                                     .size_y = 32,

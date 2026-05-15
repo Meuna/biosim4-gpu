@@ -2,80 +2,28 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __APPLE__
-#include <OpenCL/opencl.h>
-#else
-#include <CL/opencl.h>
-#endif
-
-#include "biosim/core/challenge_spec.h"
 #include "biosim/core/grid_defs.h"
 #include "biosim/core/log.h"
-#include "biosim/core/params.h"
-#include "biosim/core/sim.h"
-#include "biosim/core/status.h"
 #include "biosim/sim-gpu/registry.h"
-#include "biosim/sim-gpu/runner.h"
+#include "gpu_test_utils.h"
 #include "unity.h"
 
 /* ── test fixture ───────────────────────────────────────────────────────── */
 
-static biosim_sim_t g_sim;
-static biosim_gpu_runner_t g_runner;
-static cl_program g_program;
-static cl_kernel g_kernel;
-static int g_opencl_ok;
+static biosim_status_t fixture_status;
+static biosim_sim_t sim;
+static biosim_gpu_runner_t runner;
+static cl_program program;
+static cl_kernel kernel;
 
 /* GPU buffers for K2 inputs/outputs. */
-static cl_mem g_buf_kill_marker;
-static cl_mem g_buf_loc_x;
-static cl_mem g_buf_loc_y;
-static cl_mem g_buf_grid;
+static cl_mem buf_kill_marker;
+static cl_mem buf_loc_x;
+static cl_mem buf_loc_y;
+static cl_mem buf_grid;
 
 /* Host readback. */
-static uint32_t *g_result_grid;
-
-/* clang-format off */
-static const biosim_param_entry_t k_sim_params[] = {
-    {"max-generations",           "simulation", {.i = 100},   PARAM_INT,   false, true, NULL, NULL},
-    {"population",                "simulation", {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"grid-size-x",               "simulation", {.i = 8},     PARAM_INT,   false, true, NULL, NULL},
-    {"grid-size-y",               "simulation", {.i = 8},     PARAM_INT,   false, true, NULL, NULL},
-    {"max-genome-len",            "genome",     {.i = 2},     PARAM_INT,   false, true, NULL, NULL},
-    {"max-neurons",               "genome",     {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
-    {"long-probe-dist",           "sensors",    {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"steps-per-gen",             "simulation", {.i = 100},   PARAM_INT,   false, true, NULL, NULL},
-    {"population-sensor-radius",  "sensors",    {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
-    {"enable-kill",               "actions",    {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
-    {"point-mutation-rate",       "genome",     {.f = 0.0},   PARAM_FLOAT, false, true, NULL, NULL},
-    {"sexual-reproduction",       "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
-    {"choose-parents-by-fitness", "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
-};
-/* clang-format on */
-
-static biosim_status_t make_test_sim(biosim_sim_t *sim) {
-    biosim_params_t p;
-    biosim_status_t rc =
-        biosim_params_init(&p, k_sim_params, sizeof(k_sim_params) / sizeof(k_sim_params[0]));
-    if (rc != BIOSIM_OK) {
-        return rc;
-    }
-    biosim_challenge_spec_t challenge;
-    memset(&challenge, 0, sizeof(challenge));
-    challenge.kind = BIOSIM_CHALLENGE_X_BAND;
-    challenge.x_band.x_min = 0.0F;
-    challenge.x_band.x_max = 1.0F;
-    rc = biosim_sim_create(sim, &p, &challenge, NULL, 0U);
-    biosim_params_free(&p);
-    return rc;
-}
-
-/* ── OpenCL availability probe ──────────────────────────────────────────── */
-
-static int opencl_available(void) {
-    cl_uint n = 0U;
-    return (clGetPlatformIDs(0U, NULL, &n) == CL_SUCCESS && n > 0U) ? 1 : 0;
-}
+static uint32_t *result_grid;
 
 /* ── Unity setUp / tearDown ─────────────────────────────────────────────── */
 
@@ -86,111 +34,56 @@ void tearDown(void) {
 
 /* ── global fixture setup / teardown ────────────────────────────────────── */
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static void fixture_setup(void) {
     biosim_log_init(&biosim_log_default_ctx);
 
-    g_opencl_ok = opencl_available();
-    if (!g_opencl_ok) {
+    fixture_status = sim_test_make_8x8(&sim);
+    if (fixture_status != BIOSIM_OK) {
         return;
     }
 
-    if (make_test_sim(&g_sim) != BIOSIM_OK) {
-        g_opencl_ok = 0;
+    fixture_status = gpu_test_kernel_runtime_create(&runner, &program, &kernel, "k2_kill_marked",
+                                                    "k_kill_marked");
+    if (fixture_status != BIOSIM_OK) {
         return;
     }
 
-    if (biosim_gpu_runner_create(0U, 0U, &g_runner) != BIOSIM_OK) {
-        g_opencl_ok = 0;
-        return;
-    }
+    uint32_t pop = sim.population;
+    size_t grid_size = (size_t)sim.size_x * (size_t)sim.size_y;
 
-    biosim_gpu_kernel_sources_t sources;
-    memset(&sources, 0, sizeof(sources));
-    if (biosim_gpu_registry_get("k2_kill_marked", NULL, &sources) != BIOSIM_OK) {
-        g_opencl_ok = 0;
-        return;
-    }
-    if (biosim_gpu_program_build(&g_runner, sources.sources, sources.count, &g_program) !=
-        BIOSIM_OK) {
-        biosim_gpu_kernel_sources_free(&sources);
-        g_opencl_ok = 0;
-        return;
-    }
-    biosim_gpu_kernel_sources_free(&sources);
+    /* Allocate host-side readback and snapshot buffers. */
+    ALLOC(result_grid, grid_size, sizeof(uint32_t));
 
-    cl_int cl_err = CL_SUCCESS;
-    g_kernel = clCreateKernel(g_program, "k_kill_marked", &cl_err);
-    if (cl_err != CL_SUCCESS || !g_kernel) {
-        g_opencl_ok = 0;
-        return;
-    }
-
-    uint32_t pop = g_sim.population;
-    size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
-
-    g_result_grid = malloc(grid_cells * sizeof(uint32_t));
-    if (!g_result_grid) {
-        g_opencl_ok = 0;
-        return;
-    }
-
-#define MKRW(var, esz, cnt)                                                                        \
-    do {                                                                                           \
-        (var) = clCreateBuffer(g_runner.context, CL_MEM_READ_WRITE, (size_t)(cnt) * (esz), NULL,   \
-                               &cl_err);                                                           \
-        if (cl_err != CL_SUCCESS || !(var)) {                                                      \
-            g_opencl_ok = 0;                                                                       \
-            return;                                                                                \
-        }                                                                                          \
-    } while (0)
-
-    MKRW(g_buf_kill_marker, sizeof(uint8_t), pop);
-    MKRW(g_buf_loc_x, sizeof(int32_t), pop);
-    MKRW(g_buf_loc_y, sizeof(int32_t), pop);
-    MKRW(g_buf_grid, sizeof(uint32_t), grid_cells);
-
-#undef MKRW
+    /* Allocate GPU buffers; content uploaded per-test. */
+    MKRW(buf_kill_marker, NULL, sizeof(uint8_t), pop);
+    MKRW(buf_loc_x, NULL, sizeof(int32_t), pop);
+    MKRW(buf_loc_y, NULL, sizeof(int32_t), pop);
+    MKRW(buf_grid, NULL, sizeof(uint32_t), grid_size);
 
     /* Set fixed kernel arguments (same across all tests). */
-    cl_int size_x = g_sim.size_x;
-    cl_uint pop_arg = (cl_uint)g_sim.population;
+    cl_int size_x = sim.size_x;
+    cl_uint pop_arg = (cl_uint)sim.population;
 
-    (void)clSetKernelArg(g_kernel, 0U, sizeof(cl_mem), (const void *)&g_buf_kill_marker);
-    (void)clSetKernelArg(g_kernel, 1U, sizeof(cl_mem), (const void *)&g_buf_loc_x);
-    (void)clSetKernelArg(g_kernel, 2U, sizeof(cl_mem), (const void *)&g_buf_loc_y);
-    (void)clSetKernelArg(g_kernel, 3U, sizeof(cl_mem), (const void *)&g_buf_grid);
-    (void)clSetKernelArg(g_kernel, 4U, sizeof(cl_int), &size_x);
-    (void)clSetKernelArg(g_kernel, 5U, sizeof(cl_uint), &pop_arg);
+    (void)clSetKernelArg(kernel, 0U, sizeof(cl_mem), (const void *)&buf_kill_marker);
+    (void)clSetKernelArg(kernel, 1U, sizeof(cl_mem), (const void *)&buf_loc_x);
+    (void)clSetKernelArg(kernel, 2U, sizeof(cl_mem), (const void *)&buf_loc_y);
+    (void)clSetKernelArg(kernel, 3U, sizeof(cl_mem), (const void *)&buf_grid);
+    (void)clSetKernelArg(kernel, 4U, sizeof(cl_int), &size_x);
+    (void)clSetKernelArg(kernel, 5U, sizeof(cl_uint), &pop_arg);
 }
 
 static void fixture_teardown(void) {
-    free(g_result_grid);
-    g_result_grid = NULL;
+    free(result_grid);
 
-#define REL(v)                                                                                     \
-    do {                                                                                           \
-        if (v) {                                                                                   \
-            clReleaseMemObject(v);                                                                 \
-            (v) = NULL;                                                                            \
-        }                                                                                          \
-    } while (0)
-    REL(g_buf_grid);
-    REL(g_buf_loc_y);
-    REL(g_buf_loc_x);
-    REL(g_buf_kill_marker);
-#undef REL
+    SAFE_RELEASE(clReleaseMemObject, buf_grid);
+    SAFE_RELEASE(clReleaseMemObject, buf_loc_y);
+    SAFE_RELEASE(clReleaseMemObject, buf_loc_x);
+    SAFE_RELEASE(clReleaseMemObject, buf_kill_marker);
+    SAFE_RELEASE(clReleaseKernel, kernel);
+    SAFE_RELEASE(clReleaseProgram, program);
 
-    if (g_kernel) {
-        clReleaseKernel(g_kernel);
-        g_kernel = NULL;
-    }
-    if (g_program) {
-        clReleaseProgram(g_program);
-        g_program = NULL;
-    }
-    biosim_gpu_runner_free(&g_runner);
-    biosim_sim_free(&g_sim);
+    biosim_gpu_runner_free(&runner);
+    biosim_sim_free(&sim);
 }
 
 /* ── scenario upload + dispatch + readback ──────────────────────────────── */
@@ -200,36 +93,31 @@ typedef struct {
     const int32_t *loc_x;
     const int32_t *loc_y;
     const uint32_t *grid;
-} k2_scenario_t;
+} k2_scn_t;
 
-static int run_k2(const k2_scenario_t *s) {
-    cl_command_queue q = g_runner.queue;
-    uint32_t pop = g_sim.population;
-    size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
+static int run_k2(const k2_scn_t *s) {
+    cl_command_queue q = runner.queue;
+    uint32_t pop = sim.population;
+    size_t grid_size = (size_t)sim.size_x * (size_t)sim.size_y;
 
-#define WR(buf, ptr, esz, cnt)                                                                     \
-    if (clEnqueueWriteBuffer(q, (buf), CL_FALSE, 0U, (size_t)(cnt) * (esz), (ptr), 0U, NULL,       \
-                             NULL) != CL_SUCCESS) {                                                \
-        return 0;                                                                                  \
-    }
-
-    WR(g_buf_kill_marker, s->kill_marker, sizeof(uint8_t), pop);
-    WR(g_buf_loc_x, s->loc_x, sizeof(int32_t), pop);
-    WR(g_buf_loc_y, s->loc_y, sizeof(int32_t), pop);
-    WR(g_buf_grid, s->grid, sizeof(uint32_t), grid_cells);
-
-#undef WR
+    WRITE(buf_kill_marker, s->kill_marker, pop, sizeof(uint8_t));
+    WRITE(buf_loc_x, s->loc_x, pop, sizeof(int32_t));
+    WRITE(buf_loc_y, s->loc_y, pop, sizeof(int32_t));
+    WRITE(buf_grid, s->grid, grid_size, sizeof(uint32_t));
 
     size_t global_size = (size_t)pop;
-    if (clEnqueueNDRangeKernel(q, g_kernel, 1U, NULL, &global_size, NULL, 0U, NULL, NULL) !=
+    if (clEnqueueNDRangeKernel(q, kernel, 1U, NULL, &global_size, NULL, 0U, NULL, NULL) !=
         CL_SUCCESS) {
         return 0;
     }
 
-    if (clEnqueueReadBuffer(q, g_buf_grid, CL_TRUE, 0U, grid_cells * sizeof(uint32_t),
-                            g_result_grid, 0U, NULL, NULL) != CL_SUCCESS) {
+    READ(buf_grid, result_grid, grid_size, sizeof(uint32_t));
+
+    /* Wait for the queue to complete */
+    if (clFinish(q) != CL_SUCCESS) {
         return 0;
     }
+
     return 1;
 }
 
@@ -237,25 +125,17 @@ static int run_k2(const k2_scenario_t *s) {
 
 /* Verify K2 kill_marked compiles and dispatches without error. */
 void test_k2_kill_marked_compiles_and_runs(void) {
-    if (!g_opencl_ok) {
-        TEST_IGNORE_MESSAGE("OpenCL not available");
-    }
-    TEST_ASSERT_NOT_NULL(g_kernel);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(BIOSIM_OK, fixture_status, "fixture setup failed");
 
-    uint32_t pop = g_sim.population;
-    size_t grid_cells = (size_t)g_sim.size_x * (size_t)g_sim.size_y;
+    uint32_t pop = sim.population;
+    size_t grid_size = (size_t)sim.size_x * (size_t)sim.size_y;
 
-    uint8_t *km = calloc(pop, sizeof(uint8_t));
-    int32_t *lx = calloc(pop, sizeof(int32_t));
-    int32_t *ly = calloc(pop, sizeof(int32_t));
-    uint32_t *grid = calloc(grid_cells, sizeof(uint32_t));
+    uint8_t *km = calloc_test_assert(pop, sizeof(uint8_t));
+    int32_t *lx = calloc_test_assert(pop, sizeof(int32_t));
+    int32_t *ly = calloc_test_assert(pop, sizeof(int32_t));
+    uint32_t *grid = calloc_test_assert(grid_size, sizeof(uint32_t));
 
-    TEST_ASSERT_NOT_NULL(km);
-    TEST_ASSERT_NOT_NULL(lx);
-    TEST_ASSERT_NOT_NULL(ly);
-    TEST_ASSERT_NOT_NULL(grid);
-
-    k2_scenario_t s = {km, lx, ly, grid};
+    k2_scn_t s = {km, lx, ly, grid};
     TEST_ASSERT_TRUE_MESSAGE(run_k2(&s), "K2 kill_marked dispatch failed");
 
     free(km);
@@ -268,11 +148,9 @@ void test_k2_kill_marked_compiles_and_runs(void) {
  * Agent 0 is at (3,3), grid[(3*8+3)] == 1 (agent 0, 1-based).
  * After K2: grid[(3*8+3)] == BIOSIM_GRID_EMPTY. */
 void test_k2_kill_marked_clears_marked_cell(void) {
-    if (!g_opencl_ok) {
-        TEST_IGNORE_MESSAGE("OpenCL not available");
-    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(BIOSIM_OK, fixture_status, "fixture setup failed");
 
-    int sx = (int)g_sim.size_x;
+    int sx = (int)sim.size_x;
 
     uint8_t km[4] = {1, 0, 0, 0}; /* agent 0 marked */
     int32_t lx[4] = {3, 0, 0, 0};
@@ -281,10 +159,10 @@ void test_k2_kill_marked_clears_marked_cell(void) {
     memset(grid, 0, sizeof(grid));
     grid[(size_t)(3 * sx + 3)] = 1U; /* agent 0 at (3,3) */
 
-    k2_scenario_t s = {km, lx, ly, grid};
+    k2_scn_t s = {km, lx, ly, grid};
     TEST_ASSERT_TRUE_MESSAGE(run_k2(&s), "K2 kill_marked dispatch failed");
 
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(BIOSIM_GRID_EMPTY, g_result_grid[(size_t)(3 * sx + 3)],
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(BIOSIM_GRID_EMPTY, result_grid[(size_t)(3 * sx + 3)],
                                      "kill-marked agent's cell must be cleared");
 }
 
@@ -292,11 +170,9 @@ void test_k2_kill_marked_clears_marked_cell(void) {
  * Agent 0 is at (2,2), grid[(2*8+2)] == 1.
  * After K2: cell unchanged. */
 void test_k2_kill_marked_skips_unmarked(void) {
-    if (!g_opencl_ok) {
-        TEST_IGNORE_MESSAGE("OpenCL not available");
-    }
+    TEST_ASSERT_EQUAL_INT_MESSAGE(BIOSIM_OK, fixture_status, "fixture setup failed");
 
-    int sx = (int)g_sim.size_x;
+    int sx = (int)sim.size_x;
 
     uint8_t km[4] = {0, 0, 0, 0}; /* no agent marked */
     int32_t lx[4] = {2, 0, 0, 0};
@@ -305,10 +181,10 @@ void test_k2_kill_marked_skips_unmarked(void) {
     memset(grid, 0, sizeof(grid));
     grid[(size_t)(2 * sx + 2)] = 1U; /* agent 0 at (2,2) */
 
-    k2_scenario_t s = {km, lx, ly, grid};
+    k2_scn_t s = {km, lx, ly, grid};
     TEST_ASSERT_TRUE_MESSAGE(run_k2(&s), "K2 kill_marked dispatch failed");
 
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, g_result_grid[(size_t)(2 * sx + 2)],
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1U, result_grid[(size_t)(2 * sx + 2)],
                                      "unmarked agent's cell must be unchanged");
 }
 

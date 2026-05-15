@@ -2,7 +2,7 @@
 #include "biosim/core/grid.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
-#include "sim_test_utils.h"
+#include "biosim/core/test_utils.h"
 #include "unity.h"
 
 #include <stdlib.h>
@@ -23,7 +23,7 @@ static void place_agent(uint32_t i, int32_t x, int32_t y) {
 }
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_cfg_t){
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_create(&sim, &(sim_test_scn_t){
                                                                .population = 10U,
                                                                .size_x = 64,
                                                                .size_y = 64,

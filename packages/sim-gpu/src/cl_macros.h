@@ -31,7 +31,7 @@
         (dst) = (expr);                                                                            \
         if (cl_err != CL_SUCCESS) {                                                                \
             BIOSIM_ERRORF("%s failed (OpenCL %d)", #expr, (int)cl_err);                            \
-            returncode = BIOSIM_ERR_INVALID;                                                       \
+            returncode = BIOSIM_ERR_OPENCL;                                                        \
             goto exit;                                                                             \
         }                                                                                          \
     } while (0)

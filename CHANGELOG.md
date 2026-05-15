@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Cross-package test utilities** — `core-sim-test-utils` now exposes its
+  header at `biosim/core/test_utils.h` via a PUBLIC include directory, making
+  `sim_test_create`, `sim_test_make_8x8`, `sim_test_make_32x32`, and the
+  `assert_*_equal` helpers available to any package that links it.  A new
+  `sim-gpu-test-utils` static library wraps `gpu_test_opencl_available`,
+  `gpu_test_runner_create`, and the `GPU_TEST_REL` macro, eliminating
+  duplicated boilerplate from all six `sim-gpu` kernel test files.
+
 ### Changed
 - **`sim-stepper` renamed to `sim-ref`** — the package is now named `sim-ref`
   and the binary `biosim-ref`, reflecting its permanent role as the
@@ -63,7 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   boilerplate is removed from `sim-ref/main.c`, `sim-gpu/main.c`, and
   `wasm-sim-ref/main.c`. All GPU test files gain a local `make_test_sim` helper
   that builds a `biosim_params_t` inline; core test files use the new
-  `sim_test_create` / `sim_test_make_light` / `sim_test_make_medium` helpers from
+  `sim_test_create` / `sim_test_make_8x8` / `sim_test_make_32x32` helpers from
   `sim_test_utils`.
 - **`params` module moved from `params` package into `core`** — `biosim_params_t`,
   `biosim_param_entry_t`, and all typed getters/setters now live in
