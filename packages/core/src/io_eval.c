@@ -21,21 +21,6 @@ static uint32_t popcount64(uint64_t x) {
     return (uint32_t)((x * 0x0101010101010101ULL) >> 56U);
 }
 
-/* Visitor state for the POPULATION sensor. */
-typedef struct {
-    uint32_t occupied;
-    uint32_t visited;
-} pop_ratio_t;
-
-static void pop_density_visitor(biosim_coord_t coord, uint32_t cell, void *sim) {
-    (void)coord;
-    pop_ratio_t *pc = (pop_ratio_t *)sim;
-    pc->visited++;
-    if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
-        pc->occupied++;
-    }
-}
-
 /* ── compute direction ──────────────────────────────────────────────────── */
 
 uint8_t biosim_get_dir(int dx, int dy) {
@@ -126,15 +111,29 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         return rng_float(&agents->rng_state[idx]);
 
     case BIOSIM_SENSOR_POPULATION: {
-        /* Population density around the agent */
-        biosim_coord_t center = {x, y};
         int32_t r = sim->sensor_radius;
-        pop_ratio_t pr = {0U, 0U};
-        biosim_grid_visit_neighborhood(grid, center, r, pop_density_visitor, &pr);
-        if (pr.visited == 0U) {
+        uint32_t visited = 0U;
+        uint32_t occupied = 0U;
+        for (int32_t dy = -r; dy <= r; dy++) {
+            for (int32_t dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                biosim_coord_t c = {x + dx, y + dy};
+                if (!biosim_grid_in_bounds(grid, c)) {
+                    continue;
+                }
+                visited++;
+                uint32_t cell = biosim_grid_at(grid, c);
+                if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                    occupied++;
+                }
+            }
+        }
+        if (visited == 0U) {
             return 0.0F;
         }
-        return (float)pr.occupied / (float)pr.visited;
+        return (float)occupied / (float)visited;
     }
 
     case BIOSIM_SENSOR_POPULATION_FWD: {
