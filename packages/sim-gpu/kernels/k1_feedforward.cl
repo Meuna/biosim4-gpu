@@ -517,14 +517,13 @@ __kernel void k_feedforward(
 
     /* Group A: self-field writers */
     {
-        float t = tanh(aval[BIOSIM_ACTION_SET_RESPONSIVENESS]);
-        responsiveness[idx] = t * 0.5F + 0.5F;
+        responsiveness[idx] = tanh(aval[BIOSIM_ACTION_SET_RESPONSIVENESS]) * 0.5F + 0.5F;
         resp = responsiveness[idx];
     }
 
     {
-        float t = tanh(aval[BIOSIM_ACTION_SET_OSCILLATOR_PERIOD]);
-        float f = 2.0F * pow(1024.0F, (t + 1.0F) * 0.5F);
+        float s = tanh(aval[BIOSIM_ACTION_SET_OSCILLATOR_PERIOD]) * 0.5F + 0.5F;
+        float f = 2.0F * pow(1024.0F, s);
         if (f < 2.0F) {
             f = 2.0F;
         }
@@ -535,8 +534,8 @@ __kernel void k_feedforward(
     }
 
     {
-        float t = tanh(aval[BIOSIM_ACTION_SET_LONGPROBE_DIST]);
-        float f = 1.0F + 31.0F * (t + 1.0F) * 0.5F;
+        float s = tanh(aval[BIOSIM_ACTION_SET_LONGPROBE_DIST]) * 0.5F + 0.5F;
+        float f = 1.0F + 31.0F * s;
         if (f < 1.0F) {
             f = 1.0F;
         }
@@ -577,8 +576,8 @@ __kernel void k_feedforward(
     {
         int ldir_l = (int)((ldir + 2u) & 7u);
         int rdir = (int)((ldir + 6u) & 7u);
-        float trl = tanh(aval[BIOSIM_ACTION_MOVE_RL]);
-        float rw = (trl + 1.0F) * 0.5F;
+        float s = tanh(aval[BIOSIM_ACTION_MOVE_RL]) * 0.5F + 0.5F;
+        float rw = s;
         float lw = 1.0F - rw;
         dx_sum += resp * ((float)BIOSIM_DIR_DX[rdir] * rw + (float)BIOSIM_DIR_DX[ldir_l] * lw);
         dy_sum += resp * ((float)BIOSIM_DIR_DY[rdir] * rw + (float)BIOSIM_DIR_DY[ldir_l] * lw);
