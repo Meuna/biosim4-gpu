@@ -896,24 +896,76 @@ void test_move_south_cardinal(void) {
 
 /* ── EMIT_SIGNAL0 ───────────────────────────────────────────────────────── */
 
-void test_emit_signal0_below_threshold(void) {
+void test_emit_signal0_zero_val_no_emit(void) {
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
     biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 0.0F, 0, &sim);
     size_t ci = (size_t)sim.agents.loc_y[0] * GRID_W + (size_t)sim.agents.loc_x[0];
     TEST_ASSERT_EQUAL_UINT32(0U, sim.signal[ci]);
 }
 
-void test_emit_signal0_center_plus_two(void) {
+void test_emit_signal0_negative_val_no_emit(void) {
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
-    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 1.0F, 0, &sim);
+    sim.agents.responsiveness[0] = 1.0F;
+    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, -1.0F, 0, &sim);
     size_t ci = (size_t)sim.agents.loc_y[0] * GRID_W + (size_t)sim.agents.loc_x[0];
+    TEST_ASSERT_EQUAL_UINT32(0U, sim.signal[ci]);
+}
+
+void test_emit_signal0_center_max_act(void) {
+    /* val=10 → tanhf(10)≈1, resp=1 → act≈1: r=5, center_mag=5 */
+    memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
+    sim.agents.responsiveness[0] = 1.0F;
+    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 10.0F, 0, &sim);
+    size_t ci = (size_t)sim.agents.loc_y[0] * GRID_W + (size_t)sim.agents.loc_x[0];
+    TEST_ASSERT_EQUAL_UINT32(5U, sim.signal[ci]);
+}
+
+void test_emit_signal0_linear_decay(void) {
+    /* act≈1: cardinal (floor_dist=1) gets 5-1=4; diagonal (floor_dist=1) gets 4 */
+    memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
+    sim.agents.responsiveness[0] = 1.0F;
+    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 10.0F, 0, &sim);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    size_t cardinal = (size_t)y * GRID_W + (size_t)(x + 1);
+    size_t diagonal = (size_t)(y + 1) * GRID_W + (size_t)(x + 1);
+    TEST_ASSERT_EQUAL_UINT32(4U, sim.signal[cardinal]);
+    TEST_ASSERT_EQUAL_UINT32(4U, sim.signal[diagonal]);
+}
+
+void test_emit_signal0_radius_clips(void) {
+    /* act≈1: r=5, so cell at dx=6 is outside the disc → 0 */
+    memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
+    sim.agents.responsiveness[0] = 1.0F;
+    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 10.0F, 0, &sim);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    size_t outside = (size_t)y * GRID_W + (size_t)(x + 6);
+    TEST_ASSERT_EQUAL_UINT32(0U, sim.signal[outside]);
+}
+
+void test_emit_signal0_min_act_radius_one(void) {
+    /* val=0.01 → act≈0.01: r=1, center_mag=2; cardinal gets 1, diagonal excluded */
+    memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
+    sim.agents.responsiveness[0] = 1.0F;
+    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 0.01F, 0, &sim);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    size_t ci = (size_t)y * GRID_W + (size_t)x;
+    size_t cardinal = (size_t)y * GRID_W + (size_t)(x + 1);
+    size_t diagonal = (size_t)(y + 1) * GRID_W + (size_t)(x + 1);
     TEST_ASSERT_EQUAL_UINT32(2U, sim.signal[ci]);
+    TEST_ASSERT_EQUAL_UINT32(1U, sim.signal[cardinal]);
+    TEST_ASSERT_EQUAL_UINT32(0U, sim.signal[diagonal]);
 }
 
 void test_emit_signal0_clamped_at_255(void) {
+    /* act≈1: center_mag=5; pre-fill with 251 → 251+5=256 clamps to 255 */
+    memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
+    sim.agents.responsiveness[0] = 1.0F;
     size_t ci = (size_t)sim.agents.loc_y[0] * GRID_W + (size_t)sim.agents.loc_x[0];
-    sim.signal[ci] = 254U;
-    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 1.0F, 0, &sim);
+    sim.signal[ci] = 251U;
+    biosim_action_apply(BIOSIM_ACTION_EMIT_SIGNAL0, 10.0F, 0, &sim);
     TEST_ASSERT_EQUAL_UINT32(255U, sim.signal[ci]);
 }
 
@@ -1152,8 +1204,12 @@ int main(void) {
     RUN_TEST(test_move_north_cardinal);
     RUN_TEST(test_move_south_cardinal);
     /* EMIT_SIGNAL0 */
-    RUN_TEST(test_emit_signal0_below_threshold);
-    RUN_TEST(test_emit_signal0_center_plus_two);
+    RUN_TEST(test_emit_signal0_zero_val_no_emit);
+    RUN_TEST(test_emit_signal0_negative_val_no_emit);
+    RUN_TEST(test_emit_signal0_center_max_act);
+    RUN_TEST(test_emit_signal0_linear_decay);
+    RUN_TEST(test_emit_signal0_radius_clips);
+    RUN_TEST(test_emit_signal0_min_act_radius_one);
     RUN_TEST(test_emit_signal0_clamped_at_255);
     /* KILL_FORWARD */
     RUN_TEST(test_kill_forward_below_threshold);

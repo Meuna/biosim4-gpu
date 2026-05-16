@@ -544,31 +544,31 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
 
     case BIOSIM_ACTION_EMIT_SIGNAL0: {
         assert(sim->signal != NULL);
-        if (val < 0.5F) {
+        float s = tanhf(val) * resp;
+        if (s <= 0.0F) {
             break;
         }
+        const int32_t r = 1 + (int32_t)roundf(s * 4.0F);
+        const int32_t center_mag = (int32_t)roundf(2.0F + s * 3.0F);
         const int32_t x = agents->loc_x[idx];
         const int32_t y = agents->loc_y[idx];
-        const int32_t size_x = sim->grid.size_x;
-        const int32_t size_y = sim->grid.size_y;
-        /* center cell: +2 */
-        size_t ci = (size_t)y * (size_t)size_x + (size_t)x;
-        uint32_t cv = sim->signal[ci] + 2U;
-        sim->signal[ci] = cv > 255U ? 255U : cv;
-        /* neighbours within radius 1.5: dx²+dy² ≤ 2 (all 8 immediate neighbours) */
-        for (int32_t dy = -1; dy <= 1; dy++) {
-            for (int32_t dx = -1; dx <= 1; dx++) {
-                if (dx == 0 && dy == 0) {
+        const int32_t sx = sim->grid.size_x;
+        for (int32_t dy = -r; dy <= r; dy++) {
+            for (int32_t dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
                     continue;
                 }
-                int32_t nx = x + dx;
-                int32_t ny = y + dy;
-                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                int32_t deposit = center_mag - (int32_t)sqrtf((float)(dx * dx + dy * dy));
+                if (deposit <= 0) {
                     continue;
                 }
-                size_t ni = (size_t)ny * (size_t)size_x + (size_t)nx;
-                uint32_t nv = sim->signal[ni] + 1U;
-                sim->signal[ni] = nv > 255U ? 255U : nv;
+                biosim_coord_t c = {x + dx, y + dy};
+                if (!biosim_grid_in_bounds(&sim->grid, c)) {
+                    continue;
+                }
+                size_t ns = (size_t)c.y * (size_t)sx + (size_t)c.x;
+                uint32_t sv = sim->signal[ns] + (uint32_t)deposit;
+                sim->signal[ns] = sv > 255U ? 255U : sv;
             }
         }
         break;
