@@ -5,16 +5,18 @@
  * Do NOT add #include directives for those files here.
  *
  * Sensor implementation:
- *   Group A (0-9)              — fully implemented, including OSC1 (uses built-in cos)
- *   POPULATION (10)            — circular-disc neighbourhood scan (grid read-only)
- *   POPULATION_FWD (11)        — forward half-disc density (strict dot-product filter)
- *   POPULATION_LR (12)         — lateral signed ratio (L−R)/(L+R), in [−1,1]
- *   BARRIER_FWD (13)           — forward half-disc barrier density
- *   BARRIER_LR (14)            — lateral signed barrier ratio (L−R)/(L+R), in [−1,1]
- *   LONGPROBE_BAR_FWD (16)     — forward ray-cast (skips agents), steps/dist to first barrier
- *   LONGPROBE_POP_FWD (15)     — forward ray-cast, returns steps/dist to first agent
- *   SIGNAL0 (17)               — reads signal buffer at agent position
- *   All others (18-20)         — stub returning 0.5
+ *   Group A (0-9)                 — fully implemented, including OSC1 (uses built-in cos)
+ *   POPULATION (10)               — circular-disc neighbourhood scan (grid read-only)
+ *   POPULATION_FWD (11)           — front/rear signed ratio (F−R)/(F+R), in [−1,1]
+ *   POPULATION_LR (12)            — lateral signed ratio (L−R)/(L+R), in [−1,1]
+ *   BARRIER_FWD (13)              — forward half-disc barrier density
+ *   BARRIER_LR (14)               — lateral signed barrier ratio (L−R)/(L+R), in [−1,1]
+ *   LONGPROBE_POP_FWD (15)        — forward ray-cast, returns steps/dist to first agent
+ *   LONGPROBE_BAR_FWD (16)        — forward ray-cast (skips agents), steps/dist to first barrier
+ *   SIGNAL0 (17)                  — reads signal buffer at agent position
+ *   SIGNAL0_FWD (18)              — signal front/rear signed ratio (F−R)/(F+R), in [−1,1]
+ *   BIOSIM_SENSOR_SIGNAL0_LR (19) — lateral signed signed ratio (L−R)/(L+R), in [−1,1]
+ *   All others (20)               — stub returning 0.5
  *
  * Action implementation:
  *   Group A (0-2)   — SET_RESPONSIVENESS, SET_OSCILLATOR_PERIOD,
@@ -143,14 +145,15 @@ static float eval_sensor(
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
         int r = sensor_radius;
-        uint visited = 0u;
-        uint occupied = 0u;
+        uint front = 0u;
+        uint rear = 0u;
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
                 if (dx * dx + dy * dy > r * r) {
                     continue;
                 }
-                if (dx * fwd_x + dy * fwd_y <= 0) {
+                int dot = dx * fwd_x + dy * fwd_y;
+                if (dot == 0) {
                     continue;
                 }
                 int nx = x + dx;
@@ -158,17 +161,20 @@ static float eval_sensor(
                 if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
                     continue;
                 }
-                visited++;
                 uint cell = grid[ny * size_x + nx];
                 if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
-                    occupied++;
+                    if (dot > 0) {
+                        front++;
+                    } else {
+                        rear++;
+                    }
                 }
             }
         }
-        if (visited == 0u) {
-            return 0.0F;
+        if (front == 0u && rear == 0u) {
+            return 0.5F;
         }
-        return (float)occupied / (float)visited;
+        return ((float)front - (float)rear) / (float)(front + rear) * 0.5F + 0.5F;
     }
 
     case BIOSIM_SENSOR_POPULATION_LR: {
@@ -332,31 +338,41 @@ static float eval_sensor(
 
     case BIOSIM_SENSOR_SIGNAL0_FWD: {
         int dir = (int)(last_dir & 7u);
-        int step_x = BIOSIM_DIR_DX[dir];
-        int step_y = BIOSIM_DIR_DY[dir];
-        uint dist = (uint)los_range_val;
-        if (dist == 0u) {
-            return 0.0F;
-        }
-        uint total = 0u;
-        uint visited = 0u;
-        for (uint i = 1u; i <= dist; i++) {
-            int nx = x + (int)i * step_x;
-            int ny = y + (int)i * step_y;
-            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
-                break;
+        int fwd_x = BIOSIM_DIR_DX[dir];
+        int fwd_y = BIOSIM_DIR_DY[dir];
+        int r = sensor_radius;
+        uint front_sum = 0u;
+        uint rear_sum = 0u;
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy > r * r) {
+                    continue;
+                }
+                int dot = dx * fwd_x + dy * fwd_y;
+                if (dot == 0) {
+                    continue;
+                }
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                    continue;
+                }
+                uint val = signal[ny * size_x + nx];
+                if (val > 255u) {
+                    val = 255u;
+                }
+                if (dot > 0) {
+                    front_sum += val;
+                } else {
+                    rear_sum += val;
+                }
             }
-            visited++;
-            uint val = signal[ny * size_x + nx];
-            if (val > 255u) {
-                val = 255u;
-            }
-            total += val;
         }
-        if (visited == 0u) {
-            return 0.0F;
+        if (front_sum == 0u && rear_sum == 0u) {
+            return 0.5F;
         }
-        return (float)total / (255.0F * (float)visited);
+        return ((float)front_sum - (float)rear_sum) / ((float)front_sum + (float)rear_sum) * 0.5F +
+               0.5F;
     }
 
     case BIOSIM_SENSOR_SIGNAL0_LR: {

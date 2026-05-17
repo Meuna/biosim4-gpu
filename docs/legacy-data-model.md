@@ -354,8 +354,8 @@ during the parallel phase, so no locking is needed, but they cause irregular
 | `LONGPROBE_POP_FWD` | Ray-cast forward up to `longProbeDist` cells; counts occupied cells |
 | `LONGPROBE_BAR_FWD` | Ray-cast forward up to `longProbeDist` cells; counts barriers |
 | `POPULATION` | `visitNeighborhood(loc, populationSensorRadius)` — circular area |
-| `POPULATION_FWD` | Half-plane density along forward axis |
-| `POPULATION_LR` | Half-plane density along left/right axis |
+| `POPULATION_FWD` | Weighted sum of cells along forward direction |
+| `POPULATION_LR` | Weighted sum of cells along left/right direction |
 | `BARRIER_FWD` | Short probe (up to `shortProbeBarrierDistance`) forward |
 | `BARRIER_LR` | Short probe left/right |
 
