@@ -610,21 +610,21 @@ __kernel void k_feedforward(
         ulong state = rng_state[idx];
         int rdir = (int)(biosim_rng_next(&state) % 8u);
         rng_state[idx] = state;
-        dx_sum += resp * (float)BIOSIM_DIR_DX[rdir];
-        dy_sum += resp * (float)BIOSIM_DIR_DY[rdir];
+        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_RANDOM] * (float)BIOSIM_DIR_DX[rdir];
+        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_RANDOM] * (float)BIOSIM_DIR_DY[rdir];
     }
 
-    dx_sum += resp * (float)BIOSIM_DIR_DX[0]; /* MOVE_EAST */
-    dy_sum += resp * (float)BIOSIM_DIR_DY[0];
+    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_EAST] * (float)BIOSIM_DIR_DX[0]; /* MOVE_EAST */
+    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_EAST] * (float)BIOSIM_DIR_DY[0];
 
-    dx_sum += resp * (float)BIOSIM_DIR_DX[4]; /* MOVE_WEST */
-    dy_sum += resp * (float)BIOSIM_DIR_DY[4];
+    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_WEST] * (float)BIOSIM_DIR_DX[4]; /* MOVE_WEST */
+    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_WEST] * (float)BIOSIM_DIR_DY[4];
 
-    dx_sum += resp * (float)BIOSIM_DIR_DX[2]; /* MOVE_NORTH */
-    dy_sum += resp * (float)BIOSIM_DIR_DY[2];
+    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_NORTH] * (float)BIOSIM_DIR_DX[2]; /* MOVE_NORTH */
+    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_NORTH] * (float)BIOSIM_DIR_DY[2];
 
-    dx_sum += resp * (float)BIOSIM_DIR_DX[6]; /* MOVE_SOUTH */
-    dy_sum += resp * (float)BIOSIM_DIR_DY[6];
+    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_SOUTH] * (float)BIOSIM_DIR_DX[6]; /* MOVE_SOUTH */
+    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_SOUTH] * (float)BIOSIM_DIR_DY[6];
 
     /* Group C: signal emission */
     {

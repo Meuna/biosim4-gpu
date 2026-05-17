@@ -886,7 +886,7 @@ void test_move_east_cardinal(void) {
     sim.agents.responsiveness[0] = 1.0F;
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_apply(BIOSIM_ACTION_MOVE_EAST, 0.0F, 0, &sim);
+    biosim_action_apply(BIOSIM_ACTION_MOVE_EAST, 1.0F, 0, &sim);
     TEST_ASSERT_TRUE(sim.agents.dx_sum[0] > 0.0F);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, sim.agents.dy_sum[0]);
 }
@@ -895,7 +895,7 @@ void test_move_west_cardinal(void) {
     sim.agents.responsiveness[0] = 1.0F;
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_apply(BIOSIM_ACTION_MOVE_WEST, 0.0F, 0, &sim);
+    biosim_action_apply(BIOSIM_ACTION_MOVE_WEST, 1.0F, 0, &sim);
     TEST_ASSERT_TRUE(sim.agents.dx_sum[0] < 0.0F);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, sim.agents.dy_sum[0]);
 }
@@ -904,7 +904,7 @@ void test_move_north_cardinal(void) {
     sim.agents.responsiveness[0] = 1.0F;
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_apply(BIOSIM_ACTION_MOVE_NORTH, 0.0F, 0, &sim);
+    biosim_action_apply(BIOSIM_ACTION_MOVE_NORTH, 1.0F, 0, &sim);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, sim.agents.dx_sum[0]);
     TEST_ASSERT_TRUE(sim.agents.dy_sum[0] < 0.0F);
 }
@@ -913,7 +913,7 @@ void test_move_south_cardinal(void) {
     sim.agents.responsiveness[0] = 1.0F;
     sim.agents.dx_sum[0] = 0.0F;
     sim.agents.dy_sum[0] = 0.0F;
-    biosim_action_apply(BIOSIM_ACTION_MOVE_SOUTH, 0.0F, 0, &sim);
+    biosim_action_apply(BIOSIM_ACTION_MOVE_SOUTH, 1.0F, 0, &sim);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, sim.agents.dx_sum[0]);
     TEST_ASSERT_TRUE(sim.agents.dy_sum[0] > 0.0F);
 }

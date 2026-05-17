@@ -534,29 +534,29 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
 
     case BIOSIM_ACTION_MOVE_RANDOM: {
         uint8_t dir = (uint8_t)(biosim_rng_next(&agents->rng_state[idx]) % 8U);
-        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[dir];
-        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[dir];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[dir];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[dir];
         break;
     }
 
     case BIOSIM_ACTION_MOVE_EAST:
-        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[0];
-        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[0];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[0];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[0];
         break;
 
     case BIOSIM_ACTION_MOVE_WEST:
-        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[4];
-        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[4];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[4];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[4];
         break;
 
     case BIOSIM_ACTION_MOVE_NORTH:
-        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[2];
-        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[2];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[2];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[2];
         break;
 
     case BIOSIM_ACTION_MOVE_SOUTH:
-        agents->dx_sum[idx] += resp * (float)BIOSIM_DIR_DX[6];
-        agents->dy_sum[idx] += resp * (float)BIOSIM_DIR_DY[6];
+        agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[6];
+        agents->dy_sum[idx] += resp * val * (float)BIOSIM_DIR_DY[6];
         break;
 
         /* ── group C: signal emission ─────────────────────────────────────── */
