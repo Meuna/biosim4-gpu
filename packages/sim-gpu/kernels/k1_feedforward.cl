@@ -9,8 +9,8 @@
  *   POPULATION (10)               — circular-disc neighbourhood scan (grid read-only)
  *   POPULATION_FWD (11)           — front/rear signed ratio (F−R)/(F+R), in [−1,1]
  *   POPULATION_LR (12)            — lateral signed ratio (L−R)/(L+R), in [−1,1]
- *   BARRIER_FWD (13)              — forward half-disc barrier density
- *   BARRIER_LR (14)               — lateral signed barrier ratio (L−R)/(L+R), in [−1,1]
+ *   BARRIER_FWD (13)              — bidirectional barrier probe along fwd/rev axis, in [0,1]
+ *   BARRIER_LR (14)               — bidirectional barrier probe along left/right axis, in [0,1]
  *   LONGPROBE_POP_FWD (15)        — forward ray-cast, returns steps/dist to first agent
  *   LONGPROBE_BAR_FWD (16)        — forward ray-cast (skips agents), steps/dist to first barrier
  *   SIGNAL0 (17)                  — reads signal buffer at agent position
@@ -178,7 +178,7 @@ static float eval_sensor(
     }
 
     case BIOSIM_SENSOR_POPULATION_LR: {
-        int dir = (int)((last_dir + 2) & 7u);  /* Note the +2 rotation */
+        int dir = (int)((last_dir + 2) & 7u); /* Note the +2 rotation */
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
         int r = sensor_radius;
@@ -216,70 +216,76 @@ static float eval_sensor(
 
     case BIOSIM_SENSOR_BARRIER_FWD: {
         int dir = (int)(last_dir & 7u);
-        int fwd_x = BIOSIM_DIR_DX[dir];
-        int fwd_y = BIOSIM_DIR_DY[dir];
-        int r = sensor_radius;
-        uint visited = 0u;
-        uint n_bar = 0u;
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                if (dx * dx + dy * dy > r * r) {
-                    continue;
-                }
-                if (dx * fwd_x + dy * fwd_y <= 0) {
-                    continue;
-                }
-                int nx = x + dx;
-                int ny = y + dy;
-                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
-                    continue;
-                }
-                visited++;
-                if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
-                    n_bar++;
-                }
+        int step_x = BIOSIM_DIR_DX[dir];
+        int step_y = BIOSIM_DIR_DY[dir];
+        uint probe = sensor_radius;
+        if (probe == 0u) {
+            return 0.5F;
+        }
+        uint count_fwd = 0u;
+        for (uint i = 1u; i <= probe; i++) {
+            int nx = x + (int)i * step_x;
+            int ny = y + (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                count_fwd = probe;
+                break;
             }
+            if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
+                break;
+            }
+            count_fwd++;
         }
-        if (visited == 0u) {
-            return 0.0F;
+        uint count_rev = 0u;
+        for (uint i = 1u; i <= probe; i++) {
+            int nx = x - (int)i * step_x;
+            int ny = y - (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                count_rev = probe;
+                break;
+            }
+            if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
+                break;
+            }
+            count_rev++;
         }
-        return (float)n_bar / (float)visited;
+        return ((float)count_fwd - (float)count_rev + (float)probe) / (2.0F * (float)probe);
     }
 
     case BIOSIM_SENSOR_BARRIER_LR: {
-        int dir = (int)(last_dir & 7u);
-        int fwd_x = BIOSIM_DIR_DX[dir];
-        int fwd_y = BIOSIM_DIR_DY[dir];
-        int r = sensor_radius;
-        int l_bar = 0;
-        int r_bar = 0;
-        for (int dy = -r; dy <= r; dy++) {
-            for (int dx = -r; dx <= r; dx++) {
-                if (dx * dx + dy * dy > r * r) {
-                    continue;
-                }
-                int lateral = dx * fwd_y - dy * fwd_x;
-                if (lateral == 0) {
-                    continue;
-                }
-                int nx = x + dx;
-                int ny = y + dy;
-                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
-                    continue;
-                }
-                if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
-                    if (lateral > 0) {
-                        l_bar++;
-                    } else {
-                        r_bar++;
-                    }
-                }
+        int dir = (int)((last_dir + 2u) & 7u); /* Note the +2 rotation */
+        int step_x = BIOSIM_DIR_DX[dir];
+        int step_y = BIOSIM_DIR_DY[dir];
+        uint probe = sensor_radius;
+        if (probe == 0u) {
+            return 0.5F;
+        }
+        uint count_fwd = 0u;
+        for (uint i = 1u; i <= probe; i++) {
+            int nx = x + (int)i * step_x;
+            int ny = y + (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                count_fwd = probe;
+                break;
             }
+            if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
+                break;
+            }
+            count_fwd++;
         }
-        if (l_bar == 0 && r_bar == 0) {
-            return 0.0F;
+        uint count_rev = 0u;
+        for (uint i = 1u; i <= probe; i++) {
+            int nx = x - (int)i * step_x;
+            int ny = y - (int)i * step_y;
+            if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                count_rev = probe;
+                break;
+            }
+            if (grid[ny * size_x + nx] == BIOSIM_GRID_BARRIER) {
+                break;
+            }
+            count_rev++;
         }
-        return ((float)l_bar - (float)r_bar) / (float)(l_bar + r_bar);
+        return ((float)count_fwd - (float)count_rev + (float)probe) / (2.0F * (float)probe);
     }
 
     case BIOSIM_SENSOR_LONGPROBE_POP_FWD: {
@@ -376,7 +382,7 @@ static float eval_sensor(
     }
 
     case BIOSIM_SENSOR_SIGNAL0_LR: {
-        int dir = (int)((last_dir + 2) & 7u);  /* Note the +2 rotation*/
+        int dir = (int)((last_dir + 2) & 7u); /* Note the +2 rotation*/
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
         int r = sensor_radius;

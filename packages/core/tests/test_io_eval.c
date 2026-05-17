@@ -19,8 +19,8 @@ void setUp(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_grid_create(GRID_W, GRID_H, &sim.grid));
     sim.signal_len = (size_t)GRID_W * (size_t)GRID_H;
     sim.signal = calloc(sim.signal_len, sizeof(uint32_t));
-    sim.steps_per_gen = 300;
-    sim.sensor_radius = 2;
+    sim.steps_per_gen = 300U;
+    sim.sensor_radius = 4U;
 
     /* place agent 0 at the centre of the grid */
     biosim_coord_t ctr = {GRID_W / 2, GRID_H / 2};
@@ -571,99 +571,125 @@ void test_population_lr_axis_only(void) {
 }
 
 /* ── BARRIER_FWD ─────────────────────────────────────────────────────────── */
+/* dir=0 (East): step_x=+1, step_y=0; los_range=4.
+ * Forward probe: (x+1,y)..(x+4,y); reverse probe: (x-1,y)..(x-4,y).
+ * result = (count_fwd - count_rev + probe) / (2 * probe). */
 
-void test_barrier_fwd_empty(void) {
-    /* dir=0 (East), no barriers in forward half-disc → 0.0 */
+void test_barrier_fwd_no_barrier(void) {
+    /* grid clear → count_fwd=4, count_rev=4 → (4-4+4)/8 = 0.5 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
+}
+
+void test_barrier_fwd_immediate_forward(void) {
+    /* barrier at x+1 → count_fwd=0, count_rev=4 → (0-4+4)/8 = 0.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_BARRIER);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
-}
-
-void test_barrier_fwd_one_forward(void) {
-    /* barrier at (x+1,y); forward half-disc r=2 dir=0 has 4 cells → 1/4 */
-    sim.agents.last_move_dir[0] = 0;
-    biosim_grid_zero_fill(&sim.grid);
-    int32_t x = sim.agents.loc_x[0];
-    int32_t y = sim.agents.loc_y[0];
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_BARRIER);
-    TEST_ASSERT_FLOAT_WITHIN(
-        1e-6F, 1.0F / 4.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim)
-    );
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_EMPTY);
-}
-
-void test_barrier_fwd_all_forward(void) {
-    /* all 4 forward cells are barriers → 1.0 */
-    sim.agents.last_move_dir[0] = 0;
-    biosim_grid_zero_fill(&sim.grid);
-    int32_t x = sim.agents.loc_x[0];
-    int32_t y = sim.agents.loc_y[0];
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y - 1}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y + 1}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, BIOSIM_GRID_BARRIER);
-    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
     biosim_grid_zero_fill(&sim.grid);
 }
 
-void test_barrier_fwd_backward_only(void) {
-    /* barrier at (x-1,y) is behind → filtered out → 0.0 */
+void test_barrier_fwd_immediate_backward(void) {
+    /* barrier at x-1 → count_fwd=4, count_rev=0 → (4-0+4)/8 = 1.0 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y}, BIOSIM_GRID_BARRIER);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y}, BIOSIM_GRID_EMPTY);
+    TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_barrier_fwd_step2_forward(void) {
+    /* barrier at x+2 → count_fwd=1, count_rev=4 → (1-4+4)/8 = 1/8 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, BIOSIM_GRID_BARRIER);
+    TEST_ASSERT_FLOAT_WITHIN(
+        1e-6F, 1.0F / 8.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim)
+    );
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_barrier_fwd_symmetric(void) {
+    /* barrier at x+2 and x-2 → count_fwd=1, count_rev=1 → (1-1+4)/8 = 0.5 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 2, y}, BIOSIM_GRID_BARRIER);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 2, y}, BIOSIM_GRID_BARRIER);
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_barrier_fwd_los_range_zero(void) {
+    /* probe=0 → immediate 0.5 */
+    sim.agents.last_move_dir[0] = 0;
+    sim.sensor_radius = 0U;
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_FWD, 0, &sim));
+    sim.sensor_radius = 4U;
 }
 
 /* ── BARRIER_LR ──────────────────────────────────────────────────────────── */
+/* dir=0+2=2 (North): step_x=0, step_y=-1; los_range=4.
+ * Forward probe (left/North): (x,y-1)..(x,y-4).
+ * Reverse probe (right/South): (x,y+1)..(x,y+4).
+ * result = (count_fwd - count_rev + probe) / (2 * probe). */
 
-void test_barrier_lr_empty(void) {
-    /* dir=0 (East), no barriers → L=0, R=0 → 0.0 */
+void test_barrier_lr_no_barrier(void) {
+    /* grid clear → count_fwd=4, count_rev=4 → 0.5 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
 }
 
-void test_barrier_lr_left_only(void) {
-    /* dir=0: lateral=-dy; left=dy<0 (North side): 4 cells → L=4,R=0 → 1.0 */
+void test_barrier_lr_immediate_left(void) {
+    /* barrier at y-1 (left) → count_fwd=0, count_rev=4 → 0.0 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 1}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 2}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y - 1}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y - 1}, BIOSIM_GRID_BARRIER);
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
+    biosim_grid_zero_fill(&sim.grid);
+}
+
+void test_barrier_lr_immediate_right(void) {
+    /* barrier at y+1 (right) → count_fwd=4, count_rev=0 → 1.0 */
+    sim.agents.last_move_dir[0] = 0;
+    biosim_grid_zero_fill(&sim.grid);
+    int32_t x = sim.agents.loc_x[0];
+    int32_t y = sim.agents.loc_y[0];
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 1}, BIOSIM_GRID_BARRIER);
     TEST_ASSERT_EQUAL_FLOAT(1.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
     biosim_grid_zero_fill(&sim.grid);
 }
 
-void test_barrier_lr_right_only(void) {
-    /* dir=0: right=dy>0 (South side): 4 cells → L=0,R=4 → -1.0 */
+void test_barrier_lr_symmetric(void) {
+    /* barrier at y-2 and y+2 → count_fwd=1, count_rev=1 → 0.5 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 1}, BIOSIM_GRID_BARRIER);
+    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 2}, BIOSIM_GRID_BARRIER);
     biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 2}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y + 1}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y + 1}, BIOSIM_GRID_BARRIER);
-    TEST_ASSERT_EQUAL_FLOAT(-1.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
     biosim_grid_zero_fill(&sim.grid);
 }
 
-void test_barrier_lr_balanced(void) {
-    /* 1 left + 1 right → (1-1)/(1+1) = 0.0 */
+void test_barrier_lr_los_range_zero(void) {
+    /* probe=0 → immediate 0.5 */
     sim.agents.last_move_dir[0] = 0;
-    biosim_grid_zero_fill(&sim.grid);
-    int32_t x = sim.agents.loc_x[0];
-    int32_t y = sim.agents.loc_y[0];
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 1}, BIOSIM_GRID_BARRIER);
-    biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 1}, BIOSIM_GRID_BARRIER);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
-    biosim_grid_zero_fill(&sim.grid);
+    sim.sensor_radius = 0U;
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_BARRIER_LR, 0, &sim));
+    sim.sensor_radius = 4U;
 }
 
 /* ── LONGPROBE_BAR_FWD ───────────────────────────────────────────────────── */
@@ -1162,15 +1188,18 @@ int main(void) {
     RUN_TEST(test_population_lr_asymmetric);
     RUN_TEST(test_population_lr_axis_only);
     /* BARRIER_FWD */
-    RUN_TEST(test_barrier_fwd_empty);
-    RUN_TEST(test_barrier_fwd_one_forward);
-    RUN_TEST(test_barrier_fwd_all_forward);
-    RUN_TEST(test_barrier_fwd_backward_only);
+    RUN_TEST(test_barrier_fwd_no_barrier);
+    RUN_TEST(test_barrier_fwd_immediate_forward);
+    RUN_TEST(test_barrier_fwd_immediate_backward);
+    RUN_TEST(test_barrier_fwd_step2_forward);
+    RUN_TEST(test_barrier_fwd_symmetric);
+    RUN_TEST(test_barrier_fwd_los_range_zero);
     /* BARRIER_LR */
-    RUN_TEST(test_barrier_lr_empty);
-    RUN_TEST(test_barrier_lr_left_only);
-    RUN_TEST(test_barrier_lr_right_only);
-    RUN_TEST(test_barrier_lr_balanced);
+    RUN_TEST(test_barrier_lr_no_barrier);
+    RUN_TEST(test_barrier_lr_immediate_left);
+    RUN_TEST(test_barrier_lr_immediate_right);
+    RUN_TEST(test_barrier_lr_symmetric);
+    RUN_TEST(test_barrier_lr_los_range_zero);
     /* LONGPROBE_BAR_FWD */
     RUN_TEST(test_longprobe_bar_fwd_empty);
     RUN_TEST(test_longprobe_bar_fwd_hit_step1);
