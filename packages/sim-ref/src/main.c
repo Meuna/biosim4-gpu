@@ -34,6 +34,7 @@ static const biosim_param_entry_t sim_params[] = {
     {"los-range",                 "sensors",    {.i = 16},        PARAM_INT,    false, true,  NULL,             NULL},
     {"sensor-radius",             "sensors",    {.i = 2},         PARAM_INT,    false, true,  NULL,             NULL},
     {"enable-kill",               "actions",    {.b = false},     PARAM_BOOL,   false, true,  "enable-kill",    NULL},
+    {"responsiveness-curve-k",    "actions",    {.f = 2.0F},      PARAM_FLOAT,  false, true,  NULL,             NULL},
     {"kind",                      "challenge",  {.s = "x_band"},  PARAM_STRING, false, true,  NULL,             NULL},
     {"x-min",                     "challenge",  {.f = 0.5},       PARAM_FLOAT,  false, true,  NULL,             NULL},
     {"x-max",                     "challenge",  {.f = 1.0},       PARAM_FLOAT,  false, true,  NULL,             NULL},

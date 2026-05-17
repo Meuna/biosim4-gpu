@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`responsiveness-curve-k` parameter** — non-linear response curve applied to each
+  agent's raw responsiveness value before it is used as an action multiplier, matching
+  the original biosim4 `responseCurve(r, k)` function:
+  `pow(2-r, -2k) - pow(2, -2k)*(1-r)`.  k=0 gives the identity (linear); k=2 (default)
+  gives the original sigmoidal-like boost in the upper range.  New `float
+  responsiveness_curve_k` field added to `biosim_sim_t`; applied at both the initial
+  `resp` capture and the post-`SET_RESPONSIVENESS` re-read in `io_eval.c` and
+  `k1_feedforward.cl`.  `resp_curve_k` added as arg 26 of `k_feedforward`.
+
+### Changed
+- **`KILL_FORWARD` action fidelity** — both CPU (`io_eval.c`) and GPU
+  (`k1_feedforward.cl`) now match the original biosim4 kill logic:
+  - Raw network output is tanh-normalised then scaled by agent responsiveness to
+    produce a `level` in [0, 1].
+  - A 0.5 floor gate is applied (`level ≤ 0.5` → no kill).
+  - Passing the gate, the kill is probabilistic: a 24-bit xorshift draw is compared
+    against an integer threshold derived from `level` (same 24-bit domain used by
+    `rng_float`), making the kill probability proportional to `level`.  The integer
+    comparison avoids the float-overflow hazard present when using `UINT32_MAX` as the
+    denominator.
+- **`BIOSIM_ACTION_MOVE_RL` removed** — the action was mathematically equivalent to
+  `MOVE_RIGHT` (right-weight and left-weight cancel to `tanh(val) · DX[rdir]`), and in
+  the original biosim4 its implementation was identical to `MOVE_RIGHT`.  The enum
+  entry is deleted; subsequent action values renumbered; `BIOSIM_IO_SCHEMA_VERSION`
+  bumped from 1 to 2.
+
 ### Changed
 - **Kernel argument ordering** — `k_feedforward` (K1) and `k_challenge_step_eval` (K5)
   now follow the convention of all `__global` pointer arguments before scalar arguments.

@@ -59,6 +59,7 @@ biosim_status_t biosim_sim_create(
     sim->steps_per_gen = (uint32_t)biosim_params_get_int(p, "steps-per-gen");
     sim->sensor_radius = biosim_params_get_int(p, "sensor-radius");
     sim->enable_kill = biosim_params_get_bool(p, "enable-kill");
+    sim->responsiveness_curve_k = (float)biosim_params_get_float(p, "responsiveness-curve-k");
     sim->mutation_rate = (float)biosim_params_get_float(p, "point-mutation-rate");
     sim->sexual_reproduction = biosim_params_get_bool(p, "sexual-reproduction");
     sim->choose_parents_by_fitness = biosim_params_get_bool(p, "choose-parents-by-fitness");

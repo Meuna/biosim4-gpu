@@ -23,6 +23,7 @@ static const biosim_param_entry_t k_test_params[] = {
     {"steps-per-gen",             NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
     {"sensor-radius",             NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
     {"enable-kill",               NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
+    {"responsiveness-curve-k",    NULL,  {.f = 2.0},   PARAM_FLOAT, false, true, NULL, NULL},
     {"point-mutation-rate",       NULL,  {.f = 0.0},   PARAM_FLOAT, false, true, NULL, NULL},
     {"sexual-reproduction",       NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
     {"choose-parents-by-fitness", NULL,  {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},

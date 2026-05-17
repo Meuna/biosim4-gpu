@@ -14,6 +14,10 @@ static float rng_float(uint64_t *rng) {
     return (float)(biosim_rng_next(rng) >> 40) * (1.0F / 16777216.0F);
 }
 
+static float response_curve(float r, float k) {
+    return powf(2.0F - r, -2.0F * k) - powf(2.0F, -2.0F * k) * (1.0F - r);
+}
+
 static uint32_t popcount64(uint64_t x) {
     x = x - ((x >> 1U) & 0x5555555555555555ULL);
     x = (x & 0x3333333333333333ULL) + ((x >> 2U) & 0x3333333333333333ULL);
@@ -443,7 +447,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
     assert(sim != NULL);
 
     biosim_agents_t *agents = &sim->agents;
-    const float resp = agents->responsiveness[idx];
+    const float resp = response_curve(agents->responsiveness[idx], sim->responsiveness_curve_k);
 
     switch (action) {
 

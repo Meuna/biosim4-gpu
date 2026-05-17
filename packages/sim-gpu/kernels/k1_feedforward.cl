@@ -35,6 +35,10 @@ static float rng_float_k(__global ulong *rng_state, uint idx) {
     return (float)(state >> 40) * (1.0F / 16777216.0F);
 }
 
+static float response_curve(float r, float k) {
+    return pow(2.0F - r, -2.0F * k) - pow(2.0F, -2.0F * k) * (1.0F - r);
+}
+
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -454,7 +458,8 @@ __kernel void k_feedforward(
     uint steps_per_gen,
     uint pop,
     int enable_kill,
-    int sensor_radius
+    int sensor_radius,
+    float resp_curve_k
 ) {
     uint idx = get_global_id(0);
 
@@ -466,7 +471,7 @@ __kernel void k_feedforward(
     int y = loc_y[idx];
     uchar ldir = last_move_dir[idx];
     ushort osc_per = osc_period[idx];
-    float resp = responsiveness[idx];
+    float resp = response_curve(responsiveness[idx], resp_curve_k);
     uchar los_range_val = los_range[idx];
 
     /* ── Phase 1: evaluate sensors ───────────────────────────────────────── */
@@ -541,7 +546,7 @@ __kernel void k_feedforward(
     /* Group A: self-field writers */
     {
         responsiveness[idx] = tanh(aval[BIOSIM_ACTION_SET_RESPONSIVENESS]) * 0.5F + 0.5F;
-        resp = responsiveness[idx];
+        resp = response_curve(responsiveness[idx], resp_curve_k);
     }
 
     {

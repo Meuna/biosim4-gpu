@@ -42,6 +42,7 @@ typedef struct {
     uint32_t steps_per_gen;
     int32_t sensor_radius;
     bool enable_kill;
+    float responsiveness_curve_k; /* response-curve shape; 0.0 = linear, 2.0 = default */
     biosim_challenge_spec_t challenge;
 
     /* ── generation state ───────────────────────────────────────────────────── */

@@ -109,6 +109,7 @@ file (`--config`) → CLI flags. Each layer overrides the previous.
 | CLI flag | TOML `[actions]` key | Default | Description |
 |----------|----------------------|---------|-------------|
 | `--enable-kill` | `enable-kill` | false | Enable `KILL_FORWARD` action |
+| `--resp-curve-k <k>` | `responsiveness-curve-k` | 2.0 | Shape factor for the responsiveness curve; 0.0 = linear (identity), 2.0 = original biosim4 sigmoidal shape |
 
 ### Snapshot
 
@@ -140,7 +141,8 @@ los-range     = 16
 sensor-radius = 2
 
 [actions]
-enable-kill = false
+enable-kill              = false
+responsiveness-curve-k   = 2.0
 
 [challenge]
 kind = "x_band"
