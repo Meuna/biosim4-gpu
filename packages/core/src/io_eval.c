@@ -203,9 +203,9 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
             }
         }
         if (l_occ == 0U && r_occ == 0U) {
-            return 0.0F;
+            return 0.5F;
         }
-        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ);
+        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ) * 0.5F + 0.5F;
     }
 
     case BIOSIM_SENSOR_BARRIER_FWD: {
@@ -400,9 +400,9 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
             }
         }
         if (l_sum == 0U && r_sum == 0U) {
-            return 0.0F;
+            return 0.5F;
         }
-        return ((float)l_sum - (float)r_sum) / ((float)l_sum + (float)r_sum);
+        return ((float)l_sum - (float)r_sum) / ((float)l_sum + (float)r_sum) * 0.5F + 0.5F;
     }
 
     case BIOSIM_SENSOR_GENETIC_SIM_FWD: {

@@ -295,10 +295,10 @@ void test_signal0_fwd_over_255(void) {
  * RIGHT (lateral<0): dy>0 cells — e.g. (8,9), (7,9), (9,9), (8,10). */
 
 void test_signal0_lr_empty(void) {
-    /* all zeros → L=0, R=0 → 0.0 */
+    /* all zeros → L=0, R=0 → 0.5 */
     sim.agents.last_move_dir[0] = 0;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
 }
 
 void test_signal0_lr_left_only(void) {
@@ -313,30 +313,30 @@ void test_signal0_lr_left_only(void) {
 }
 
 void test_signal0_lr_right_only(void) {
-    /* signal 255 at right cell (8,9) only → L=0, R=255 → -1.0 */
+    /* signal 255 at right cell (8,9) only → L=0, R=255 → 0.0 */
     sim.agents.last_move_dir[0] = 0;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     sim.signal[(size_t)(y + 1) * GRID_W + (size_t)x] = 255U;
-    TEST_ASSERT_EQUAL_FLOAT(-1.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 }
 
 void test_signal0_lr_balanced(void) {
-    /* equal signal on both sides → (L-R)/(L+R) = 0.0 */
+    /* equal signal on both sides → (L-R)/(L+R)*0.5+0.5 = 0.5 */
     sim.agents.last_move_dir[0] = 0;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     sim.signal[(size_t)(y - 1) * GRID_W + (size_t)x] = 100U;
     sim.signal[(size_t)(y + 1) * GRID_W + (size_t)x] = 100U;
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim));
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 }
 
 void test_signal0_lr_asymmetric(void) {
-    /* L=200, R=100 → (200-100)/(200+100) = 1/3 */
+    /* L=200, R=100 → (200-100)/(200+100)*0.5+0.5 = 2/3 */
     sim.agents.last_move_dir[0] = 0;
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
     int32_t x = sim.agents.loc_x[0];
@@ -344,7 +344,7 @@ void test_signal0_lr_asymmetric(void) {
     sim.signal[(size_t)(y - 1) * GRID_W + (size_t)x] = 200U;
     sim.signal[(size_t)(y + 1) * GRID_W + (size_t)x] = 100U;
     TEST_ASSERT_FLOAT_WITHIN(
-        1e-5F, 1.0F / 3.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim)
+        1e-5F, 2.0F / 3.0F, biosim_sensor_eval(BIOSIM_SENSOR_SIGNAL0_LR, 0, &sim)
     );
     memset(sim.signal, 0, sim.signal_len * sizeof(uint32_t));
 }
@@ -496,10 +496,10 @@ void test_longprobe_pop_fwd_dist_zero(void) {
 /* ── POPULATION_LR ──────────────────────────────────────────────────────── */
 
 void test_population_lr_empty(void) {
-    /* dir=0 (East), no agents in disc → L=0, R=0 → 0.0 */
+    /* dir=0 (East), no agents in disc → L=0, R=0 → 0.5 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
 }
 
 void test_population_lr_left_only(void) {
@@ -517,7 +517,7 @@ void test_population_lr_left_only(void) {
 }
 
 void test_population_lr_right_only(void) {
-    /* dir=0: right cells (dy>0): (7,9),(8,10),(8,9),(9,9) → L=0,R=4 → -1.0 */
+    /* dir=0: right cells (dy>0): (7,9),(8,10),(8,9),(9,9) → L=0,R=4 → 0.0 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
     int32_t x = sim.agents.loc_x[0];
@@ -526,12 +526,12 @@ void test_population_lr_right_only(void) {
     biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 2}, 2U);
     biosim_grid_set(&sim.grid, (biosim_coord_t){x, y + 1}, 2U);
     biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y + 1}, 2U);
-    TEST_ASSERT_EQUAL_FLOAT(-1.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
     biosim_grid_zero_fill(&sim.grid);
 }
 
 void test_population_lr_balanced(void) {
-    /* 2 left, 2 right → (2-2)/(2+2) = 0.0 */
+    /* 2 left, 2 right → (2-2)/(2+2)*0.5+0.5 = 0.5 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
     int32_t x = sim.agents.loc_x[0];
@@ -540,12 +540,12 @@ void test_population_lr_balanced(void) {
     biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y - 1}, 2U);
     biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y + 1}, 2U);
     biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y + 1}, 2U);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
     biosim_grid_zero_fill(&sim.grid);
 }
 
 void test_population_lr_asymmetric(void) {
-    /* 2 left, 1 right → (2-1)/(2+1) = 1/3 */
+    /* 2 left, 1 right → (2-1)/(2+1)*0.5+0.5 = 2/3 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
     int32_t x = sim.agents.loc_x[0];
@@ -554,19 +554,19 @@ void test_population_lr_asymmetric(void) {
     biosim_grid_set(&sim.grid, (biosim_coord_t){x, y - 1}, 2U);
     biosim_grid_set(&sim.grid, (biosim_coord_t){x - 1, y + 1}, 2U);
     TEST_ASSERT_FLOAT_WITHIN(
-        1e-6F, 1.0F / 3.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim)
+        1e-6F, 2.0F / 3.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim)
     );
     biosim_grid_zero_fill(&sim.grid);
 }
 
 void test_population_lr_axis_only(void) {
-    /* axis cell (x+1,y) has lateral=0 → excluded; L=0,R=0 → 0.0 */
+    /* axis cell (x+1,y) has lateral=0 → excluded; L=0,R=0 → 0.5 */
     sim.agents.last_move_dir[0] = 0;
     biosim_grid_zero_fill(&sim.grid);
     int32_t x = sim.agents.loc_x[0];
     int32_t y = sim.agents.loc_y[0];
     biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, 2U);
-    TEST_ASSERT_EQUAL_FLOAT(0.0F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, biosim_sensor_eval(BIOSIM_SENSOR_POPULATION_LR, 0, &sim));
     biosim_grid_set(&sim.grid, (biosim_coord_t){x + 1, y}, BIOSIM_GRID_EMPTY);
 }
 

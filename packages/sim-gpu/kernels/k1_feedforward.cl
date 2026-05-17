@@ -209,9 +209,9 @@ static float eval_sensor(
             }
         }
         if (l_occ == 0 && r_occ == 0) {
-            return 0.0F;
+            return 0.5F;
         }
-        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ);
+        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ) * 0.5F + 0.5F;
     }
 
     case BIOSIM_SENSOR_BARRIER_FWD: {
@@ -408,9 +408,9 @@ static float eval_sensor(
             }
         }
         if (l_sum == 0u && r_sum == 0u) {
-            return 0.0F;
+            return 0.5F;
         }
-        return ((float)l_sum - (float)r_sum) / ((float)l_sum + (float)r_sum);
+        return ((float)l_sum - (float)r_sum) / ((float)l_sum + (float)r_sum) * 0.5F + 0.5F;
     }
 
     default:
