@@ -178,19 +178,19 @@ static float eval_sensor(
     }
 
     case BIOSIM_SENSOR_POPULATION_LR: {
-        int dir = (int)(last_dir & 7u);
+        int dir = (int)((last_dir + 2) & 7u);  /* Note the +2 rotation */
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
         int r = sensor_radius;
-        int l_occ = 0;
-        int r_occ = 0;
+        uint front = 0u;
+        uint rear = 0u;
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
                 if (dx * dx + dy * dy > r * r) {
                     continue;
                 }
-                int lateral = dx * fwd_y - dy * fwd_x;
-                if (lateral == 0) {
+                int dot = dx * fwd_x + dy * fwd_y;
+                if (dot == 0) {
                     continue;
                 }
                 int nx = x + dx;
@@ -200,18 +200,18 @@ static float eval_sensor(
                 }
                 uint cell = grid[ny * size_x + nx];
                 if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
-                    if (lateral > 0) {
-                        l_occ++;
+                    if (dot > 0) {
+                        front++;
                     } else {
-                        r_occ++;
+                        rear++;
                     }
                 }
             }
         }
-        if (l_occ == 0 && r_occ == 0) {
+        if (front == 0u && rear == 0u) {
             return 0.5F;
         }
-        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ) * 0.5F + 0.5F;
+        return ((float)front - (float)rear) / (float)(front + rear) * 0.5F + 0.5F;
     }
 
     case BIOSIM_SENSOR_BARRIER_FWD: {
@@ -376,19 +376,19 @@ static float eval_sensor(
     }
 
     case BIOSIM_SENSOR_SIGNAL0_LR: {
-        int dir = (int)(last_dir & 7u);
+        int dir = (int)((last_dir + 2) & 7u);  /* Note the +2 rotation*/
         int fwd_x = BIOSIM_DIR_DX[dir];
         int fwd_y = BIOSIM_DIR_DY[dir];
         int r = sensor_radius;
-        uint l_sum = 0u;
-        uint r_sum = 0u;
+        uint front_sum = 0u;
+        uint rear_sum = 0u;
         for (int dy = -r; dy <= r; dy++) {
             for (int dx = -r; dx <= r; dx++) {
                 if (dx * dx + dy * dy > r * r) {
                     continue;
                 }
-                int lateral = dx * fwd_y - dy * fwd_x;
-                if (lateral == 0) {
+                int dot = dx * fwd_x + dy * fwd_y;
+                if (dot == 0) {
                     continue;
                 }
                 int nx = x + dx;
@@ -400,17 +400,18 @@ static float eval_sensor(
                 if (val > 255u) {
                     val = 255u;
                 }
-                if (lateral > 0) {
-                    l_sum += val;
+                if (dot > 0) {
+                    front_sum += val;
                 } else {
-                    r_sum += val;
+                    rear_sum += val;
                 }
             }
         }
-        if (l_sum == 0u && r_sum == 0u) {
+        if (front_sum == 0u && rear_sum == 0u) {
             return 0.5F;
         }
-        return ((float)l_sum - (float)r_sum) / ((float)l_sum + (float)r_sum) * 0.5F + 0.5F;
+        return ((float)front_sum - (float)rear_sum) / ((float)front_sum + (float)rear_sum) * 0.5F +
+               0.5F;
     }
 
     default:

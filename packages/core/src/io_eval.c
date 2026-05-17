@@ -173,19 +173,19 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_POPULATION_LR: {
-        uint8_t dir = agents->last_move_dir[idx] & 7U;
+        uint8_t dir = (agents->last_move_dir[idx] + 2) & 7U;  /* Note the +2 rotation */
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
         int32_t r = sim->sensor_radius;
-        uint32_t l_occ = 0U;
-        uint32_t r_occ = 0U;
+        uint32_t front = 0U;
+        uint32_t rear = 0U;
         for (int32_t dy = -r; dy <= r; dy++) {
             for (int32_t dx = -r; dx <= r; dx++) {
                 if (dx * dx + dy * dy > r * r) {
                     continue;
                 }
-                int32_t lateral = dx * fwd_y - dy * fwd_x;
-                if (lateral == 0) {
+                int32_t dot = dx * fwd_x + dy * fwd_y;
+                if (dot == 0) {
                     continue;
                 }
                 biosim_coord_t c = {x + dx, y + dy};
@@ -194,18 +194,18 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
                 }
                 uint32_t cell = biosim_grid_at(grid, c);
                 if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
-                    if (lateral > 0) {
-                        l_occ++;
+                    if (dot > 0) {
+                        front++;
                     } else {
-                        r_occ++;
+                        rear++;
                     }
                 }
             }
         }
-        if (l_occ == 0U && r_occ == 0U) {
+        if (front == 0U && rear == 0U) {
             return 0.5F;
         }
-        return ((float)l_occ - (float)r_occ) / (float)(l_occ + r_occ) * 0.5F + 0.5F;
+        return ((float)front - (float)rear) / (float)(front + rear) * 0.5F + 0.5F;
     }
 
     case BIOSIM_SENSOR_BARRIER_FWD: {
@@ -369,19 +369,19 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
 
     case BIOSIM_SENSOR_SIGNAL0_LR: {
         assert(sim->signal != NULL);
-        uint8_t dir = agents->last_move_dir[idx] & 7U;
+        uint8_t dir = (agents->last_move_dir[idx] + 2) & 7U;  /* Note the +2 rotation */
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
         int32_t r = sim->sensor_radius;
-        uint32_t l_sum = 0U;
-        uint32_t r_sum = 0U;
+        uint32_t front_sum = 0U;
+        uint32_t rear_sum = 0U;
         for (int32_t dy = -r; dy <= r; dy++) {
             for (int32_t dx = -r; dx <= r; dx++) {
                 if (dx * dx + dy * dy > r * r) {
                     continue;
                 }
-                int32_t lateral = dx * fwd_y - dy * fwd_x;
-                if (lateral == 0) {
+                int32_t dot = dx * fwd_x + dy * fwd_y;
+                if (dot == 0) {
                     continue;
                 }
                 biosim_coord_t c = {x + dx, y + dy};
@@ -392,17 +392,18 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
                 if (val > 255U) {
                     val = 255U;
                 }
-                if (lateral > 0) {
-                    l_sum += val;
+                if (dot > 0) {
+                    front_sum += val;
                 } else {
-                    r_sum += val;
+                    rear_sum += val;
                 }
             }
         }
-        if (l_sum == 0U && r_sum == 0U) {
+        if (front_sum == 0U && rear_sum == 0U) {
             return 0.5F;
         }
-        return ((float)l_sum - (float)r_sum) / ((float)l_sum + (float)r_sum) * 0.5F + 0.5F;
+        return ((float)front_sum - (float)rear_sum) / ((float)front_sum + (float)rear_sum) * 0.5F +
+               0.5F;
     }
 
     case BIOSIM_SENSOR_GENETIC_SIM_FWD: {
