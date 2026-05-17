@@ -581,7 +581,15 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         /* ── group D: kill ────────────────────────────────────────────────── */
 
     case BIOSIM_ACTION_KILL_FORWARD: {
-        if (!sim->enable_kill || val < 0.5F) {
+        if (!sim->enable_kill) {
+            break;
+        }
+        float s = (tanhf(val) + 1.0F) * 0.5F * resp;
+        if (s <= 0.5F) {
+            break;
+        }
+        uint32_t i = (uint32_t)(s * 16777216.0F);
+        if ((uint32_t)(biosim_rng_next(&agents->rng_state[idx]) >> 40) >= i) {
             break;
         }
         uint8_t dir = agents->last_move_dir[idx] & 7U;

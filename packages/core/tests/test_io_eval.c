@@ -1009,12 +1009,13 @@ void test_kill_forward_below_threshold(void) {
 
 void test_kill_forward_above_threshold(void) {
     sim.enable_kill = true;
+    sim.agents.responsiveness[0] = 1.0F;
     sim.agents.last_move_dir[0] = 0;
     biosim_coord_t fwd = {sim.agents.loc_x[0] + 1, sim.agents.loc_y[0]};
     biosim_grid_set(&sim.grid, fwd, 2U); /* agent 1 */
     biosim_agents_init_slot(&sim.agents, 1, fwd, 16, 99ULL);
 
-    biosim_action_apply(BIOSIM_ACTION_KILL_FORWARD, 1.0F, 0, &sim);
+    biosim_action_apply(BIOSIM_ACTION_KILL_FORWARD, 100.0F, 0, &sim);
     /* Kill is deferred: marker set, agent still alive, grid cell still occupied. */
     TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.kill_marker[1]);
     TEST_ASSERT_EQUAL_UINT8(1U, sim.agents.alive[1]);

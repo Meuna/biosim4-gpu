@@ -645,15 +645,24 @@ __kernel void k_feedforward(
     }
 
     /* Group D: KILL_FORWARD */
-    if (enable_kill && aval[BIOSIM_ACTION_KILL_FORWARD] >= 0.5F) {
-        int dir = (int)(ldir & 7u);
-        int fx = (int)x + BIOSIM_DIR_DX[dir];
-        int fy = (int)y + BIOSIM_DIR_DY[dir];
-        if (fx >= 0 && fx < size_x && fy >= 0 && fy < size_y) {
-            uint cell = grid[(int)fy * size_x + fx];
-            if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
-                alive[cell - 1u] = 0u;
-                kill_marker[cell - 1u] = 1u;
+    if (enable_kill) {
+        float s = (tanh(aval[BIOSIM_ACTION_KILL_FORWARD]) + 1.0F) * 0.5F * resp;
+        if (s > 0.5F) {
+            ulong kf_state = rng_state[idx];
+            uint i = (uint)(s * 16777216.0F);
+            uint rng = (uint)(biosim_rng_next(&kf_state) >> 40);
+            rng_state[idx] = kf_state;
+            if (rng < i) {
+                int dir = (int)(ldir & 7u);
+                int fx = (int)x + BIOSIM_DIR_DX[dir];
+                int fy = (int)y + BIOSIM_DIR_DY[dir];
+                if (fx >= 0 && fx < size_x && fy >= 0 && fy < size_y) {
+                    uint cell = grid[(int)fy * size_x + fx];
+                    if (cell != BIOSIM_GRID_EMPTY && cell != BIOSIM_GRID_BARRIER) {
+                        alive[cell - 1u] = 0u;
+                        kill_marker[cell - 1u] = 1u;
+                    }
+                }
             }
         }
     }
