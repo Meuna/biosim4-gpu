@@ -402,7 +402,7 @@ no direct state mutation of shared data).
 | `MOVE_REVERSE` | Direction = opposite `lastMoveDir` | `moveQueue` |
 | `MOVE_LEFT` | Direction = 90° left of `lastMoveDir` | `moveQueue` |
 | `MOVE_RIGHT` | Direction = 90° right of `lastMoveDir` | `moveQueue` |
-| `MOVE_RL` | Weighted combination of left + right | `moveQueue` |
+| `MOVE_RL` | Implemented exactly as `MOVE_RIGHT`, likely a bug | `moveQueue` |
 | `MOVE_RANDOM` | Random direction | `moveQueue` |
 | `MOVE_EAST/WEST/NORTH/SOUTH` | Fixed cardinal directions | `moveQueue` |
 | `EMIT_SIGNAL0` | `signals[0].increment(loc)` | `omp critical` write |

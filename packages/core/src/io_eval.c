@@ -517,21 +517,6 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         break;
     }
 
-    case BIOSIM_ACTION_MOVE_RL: {
-        /* val determines the left/right bias: positive → more right, negative → more left.
-         * tanhf maps to (-1,1) to bound the bias regardless of accumulated action magnitude. */
-        uint8_t ldir = (uint8_t)((agents->last_move_dir[idx] + 2U) & 7U);
-        uint8_t rdir = (uint8_t)((agents->last_move_dir[idx] + 6U) & 7U);
-        float s = tanhf(val) * 0.5F + 0.5F;
-        float rw = s;
-        float lw = 1.0F - rw;
-        agents->dx_sum[idx] +=
-            resp * ((float)BIOSIM_DIR_DX[rdir] * rw + (float)BIOSIM_DIR_DX[ldir] * lw);
-        agents->dy_sum[idx] +=
-            resp * ((float)BIOSIM_DIR_DY[rdir] * rw + (float)BIOSIM_DIR_DY[ldir] * lw);
-        break;
-    }
-
     case BIOSIM_ACTION_MOVE_RANDOM: {
         uint8_t dir = (uint8_t)(biosim_rng_next(&agents->rng_state[idx]) % 8U);
         agents->dx_sum[idx] += resp * val * (float)BIOSIM_DIR_DX[dir];

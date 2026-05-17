@@ -21,7 +21,7 @@
  * Action implementation:
  *   Group A (0-2)   — SET_RESPONSIVENESS, SET_OSCILLATOR_PERIOD,
  *                     SET_LONGPROBE_DIST (uses built-in tanh, pow)
- *   Group B (3-14)  — movement accumulators
+ *   Group B (3-13)  — movement accumulators
  *   EMIT_SIGNAL0    — atomic_add on signal buffer
  *   KILL_FORWARD    — marks forward agent dead and sets kill_marker (enable_kill gate)
  */
@@ -594,16 +594,6 @@ __kernel void k_feedforward(
         int dir = (int)((ldir + 6u) & 7u);
         dx_sum += resp * aval[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DX[dir];
         dy_sum += resp * aval[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DY[dir];
-    }
-
-    {
-        int ldir_l = (int)((ldir + 2u) & 7u);
-        int rdir = (int)((ldir + 6u) & 7u);
-        float s = tanh(aval[BIOSIM_ACTION_MOVE_RL]) * 0.5F + 0.5F;
-        float rw = s;
-        float lw = 1.0F - rw;
-        dx_sum += resp * ((float)BIOSIM_DIR_DX[rdir] * rw + (float)BIOSIM_DIR_DX[ldir_l] * lw);
-        dy_sum += resp * ((float)BIOSIM_DIR_DY[rdir] * rw + (float)BIOSIM_DIR_DY[ldir_l] * lw);
     }
 
     {

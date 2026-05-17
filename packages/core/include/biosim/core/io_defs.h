@@ -53,16 +53,15 @@ typedef enum {
     BIOSIM_ACTION_MOVE_REVERSE = 6,
     BIOSIM_ACTION_MOVE_LEFT = 7,
     BIOSIM_ACTION_MOVE_RIGHT = 8,
-    BIOSIM_ACTION_MOVE_RL = 9,
-    BIOSIM_ACTION_MOVE_RANDOM = 10,
-    BIOSIM_ACTION_MOVE_EAST = 11,
-    BIOSIM_ACTION_MOVE_WEST = 12,
-    BIOSIM_ACTION_MOVE_NORTH = 13,
-    BIOSIM_ACTION_MOVE_SOUTH = 14,
+    BIOSIM_ACTION_MOVE_RANDOM = 9,
+    BIOSIM_ACTION_MOVE_EAST = 10,
+    BIOSIM_ACTION_MOVE_WEST = 11,
+    BIOSIM_ACTION_MOVE_NORTH = 12,
+    BIOSIM_ACTION_MOVE_SOUTH = 13,
     /* Group C — signal emission */
-    BIOSIM_ACTION_EMIT_SIGNAL0 = 15,
+    BIOSIM_ACTION_EMIT_SIGNAL0 = 14,
     /* Group D — kill */
-    BIOSIM_ACTION_KILL_FORWARD = 16,
+    BIOSIM_ACTION_KILL_FORWARD = 15,
     /* Sentinel */
     BIOSIM_NUM_ACTIONS
 } biosim_action_t;
@@ -71,7 +70,7 @@ typedef enum {
 
 /* Bump when sensor/action indices or gene-encoding semantics change.
  * Snapshot files store this value; a mismatch means genomes are incompatible. */
-#define BIOSIM_IO_SCHEMA_VERSION 1U
+#define BIOSIM_IO_SCHEMA_VERSION 2U
 
 /* ── direction tables (0=E, CCW: E NE N NW W SW S SE) ─────────────────── */
 
