@@ -604,21 +604,29 @@ __kernel void k_feedforward(
     dy_sum += resp * (float)BIOSIM_DIR_DY[6];
 
     /* Group C: signal emission */
-    if (aval[BIOSIM_ACTION_EMIT_SIGNAL0] >= 0.5F) {
-        int ex = (int)x;
-        int ey = (int)y;
-        atomic_add(&signal[ey * size_x + ex], 2u);
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                if (dx == 0 && dy == 0) {
-                    continue;
+    {
+        float act = tanh(aval[BIOSIM_ACTION_EMIT_SIGNAL0]) * resp;
+        if (act > 0.0F) {
+            int r = 1 + (int)round(act * 4.0F);
+            int center_mag = (int)round(2.0F + act * 3.0F);
+            int ex = (int)x;
+            int ey = (int)y;
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dx = -r; dx <= r; dx++) {
+                    if (dx * dx + dy * dy > r * r) {
+                        continue;
+                    }
+                    int deposit = center_mag - (int)sqrt((float)(dx * dx + dy * dy));
+                    if (deposit <= 0) {
+                        continue;
+                    }
+                    int nx = ex + dx;
+                    int ny = ey + dy;
+                    if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
+                        continue;
+                    }
+                    atomic_add(&signal[ny * size_x + nx], (uint)deposit);
                 }
-                int nx = ex + dx;
-                int ny = ey + dy;
-                if (nx < 0 || nx >= size_x || ny < 0 || ny >= size_y) {
-                    continue;
-                }
-                atomic_add(&signal[ny * size_x + nx], 1u);
             }
         }
     }
