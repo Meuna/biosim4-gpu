@@ -115,6 +115,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
         return rng_float(&agents->rng_state[idx]);
 
     case BIOSIM_SENSOR_POPULATION: {
+        /* Fraction of occupied cells within the circular sensor radius */
         int32_t r = sim->sensor_radius;
         uint32_t visited = 0U;
         uint32_t occupied = 0U;
@@ -141,6 +142,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_POPULATION_FWD: {
+        /* >0.5 if more agents are ahead than behind, 0.5 when equal or empty */
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
@@ -177,6 +179,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_POPULATION_LR: {
+        /* >0.5 if more agents are to the left than right, 0.5 when equal or empty */
         uint8_t dir = (agents->last_move_dir[idx] + 2) & 7U; /* Note the +2 rotation */
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
@@ -213,6 +216,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_BARRIER_FWD: {
+        /* >0.5 if the barrier (or boundary) is farther ahead than behind */
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
@@ -248,6 +252,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_BARRIER_LR: {
+        /* >0.5 if the barrier (or boundary) is farther to the left than to the right */
         uint8_t dir = (uint8_t)((agents->last_move_dir[idx] + 2U) & 7U); /* Note the +2 rotation */
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
@@ -283,6 +288,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_LONGPROBE_POP_FWD: {
+        /* Normalized distance to the nearest agent in line-of-sight; 0 if none found */
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
@@ -307,6 +313,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_LONGPROBE_BAR_FWD: {
+        /* Normalized distance to the nearest barrier in line-of-sight; 0 if none found */
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
         int32_t fwd_y = (int32_t)BIOSIM_DIR_DY[dir];
@@ -337,6 +344,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_SIGNAL0_FWD: {
+        /* >0.5 if signal is stronger ahead than behind, 0.5 when equal or absent */
         assert(sim->signal != NULL);
         uint8_t dir = agents->last_move_dir[idx] & 7U;
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
@@ -376,6 +384,7 @@ float biosim_sensor_eval(biosim_sensor_t sensor, uint32_t idx, const biosim_sim_
     }
 
     case BIOSIM_SENSOR_SIGNAL0_LR: {
+        /* >0.5 if signal is stronger to the left than right, 0.5 when equal or absent */
         assert(sim->signal != NULL);
         uint8_t dir = (agents->last_move_dir[idx] + 2) & 7U; /* Note the +2 rotation */
         int32_t fwd_x = (int32_t)BIOSIM_DIR_DX[dir];
@@ -458,6 +467,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         break;
 
     case BIOSIM_ACTION_SET_OSCILLATOR_PERIOD: {
+        /* val maps exponentially to a period in [2, 2048] steps */
         float s = tanhf(val) * 0.5F + 0.5F;
         float f = 2.0F * powf(1024.0F, s);
         if (f < 2.0F) {
@@ -471,6 +481,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
     }
 
     case BIOSIM_ACTION_SET_LONGPROBE_DIST: {
+        /* val maps linearly to a LOS range in [1, 32] cells */
         float s = tanhf(val) * 0.5F + 0.5F;
         float f = 1.0F + 31.0F * s;
         if (f < 1.0F) {
@@ -551,6 +562,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         /* ── group C: signal emission ─────────────────────────────────────── */
 
     case BIOSIM_ACTION_EMIT_SIGNAL0: {
+        /* Deposits a signal blob with linear falloff; radius and peak intensity scale with val */
         assert(sim->signal != NULL);
         float s = tanhf(val) * resp;
         if (s <= 0.0F) {
@@ -585,6 +597,7 @@ void biosim_action_apply(biosim_action_t action, float val, uint32_t idx, biosim
         /* ── group D: kill ────────────────────────────────────────────────── */
 
     case BIOSIM_ACTION_KILL_FORWARD: {
+        /* Probabilistically kills the adjacent forward agent; requires s > 0.5 to fire */
         if (!sim->enable_kill) {
             break;
         }
