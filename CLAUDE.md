@@ -49,12 +49,12 @@ Miller) using OpenCL. Six packages are implemented: `core`, `cfgparse`,
 
   - **Code Quality — webapp (TypeScript/Svelte).** Every time you edit or
     create files in `packages/webapp/`, you MUST complete this sequence:
-    1. `cmake --build --preset debug --target webapp-lint` — ESLint and
+    1. `cmake --build --preset webapp --target lint` — ESLint and
        Prettier check must both pass with zero errors
-    2. `cmake --build --preset debug --target webapp-format` — apply
+    2. `cmake --build --preset webapp --target format` — apply
        Prettier formatting
     3. `bun run --cwd packages/webapp test` — all Vitest tests must pass
-    4. Re-run `cmake --build --preset debug --target webapp-lint` to
+    4. Re-run `cmake --build --preset webapp --target lint` to
        confirm formatting did not introduce lint errors
 
   - **readability-function-cognitive-complexity special case.** When facing

@@ -16,11 +16,6 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Disable compiler-specific GNU extensions — enforces strict ISO C portability
 set(CMAKE_C_EXTENSIONS OFF)
 
-# ── vcpkg integration ──────────────────────────────────────────────────────────
-
-# vcpkg toolchain file is injected by CMakePresets.json via CMAKE_TOOLCHAIN_FILE;
-# VCPKG_ROOT must be set in the environment before running cmake --preset <name>
-
 # ── Global options (user-facing knobs) ────────────────────────────────────────
 
 # Build unit test executables (requires Unity via FetchContent)
@@ -67,92 +62,34 @@ include(EmbedKernels)
 # Built in both the native and the webapp trees.
 add_subdirectory(packages/core)
 
-if(BIOSIM_BUILD_WEBAPP)
+if(NOT BIOSIM_BUILD_WEBAPP)
+  # CLI/TOML configuration parsing library (depends on core + argtable3 + tomlc17)
+  add_subdirectory(packages/cfgparse)
+  # Single-threaded CPU reference simulator executable
+  add_subdirectory(packages/sim-ref) # depends on core + cfgparse
+  # OpenCL GPU simulator (depends on core + cfgparse + OpenCL; optional at configure time)
+  if(BIOSIM_BUILD_GPU)
+    add_subdirectory(packages/sim-gpu)
+  endif()
+  # Developer workflow targets for the native tree (format, lint, benchmark)
+  include(DevWorkflow)
+else()
   if(EMSCRIPTEN)
     # WebAssembly PoC: hardcoded sim, generates standalone HTML
     add_subdirectory(packages/wasm-sim-stepper)
     # WASM bindings: ES6 module + Web Worker target
     add_subdirectory(packages/sim-wasm)
+    # Svelte SPA that loads sim-wasm inside a Web Worker
+    add_subdirectory(packages/webapp)
   else()
-    message(WARNING "EMSCRIPTEN environment not detected; skipping WASM targets sim-wasm")
+    message(FATAL_ERROR "webapp preset requires the Emscripten toolchain")
   endif()
-  # Svelte SPA that loads sim-wasm inside a Web Worker
-  add_subdirectory(packages/webapp)
-else()
-  # CLI/TOML configuration parsing library (depends on core + argtable3 + tomlc17)
-  add_subdirectory(packages/cfgparse)
-  # OpenCL GPU simulator (depends on core + cfgparse + OpenCL; optional at configure time)
-  if(BIOSIM_BUILD_GPU)
-    add_subdirectory(packages/sim-gpu)
-  endif()
-  # Single-threaded CPU reference simulator executable
-  add_subdirectory(packages/sim-ref) # depends on core + cfgparse
+  # Developer workflow targets for the webapp tree (format, lint)
+  include(WebappDevWorkflow)
 endif()
 
 # ── Benchmarks ────────────────────────────────────────────────────────────────
 
 if(BIOSIM_BUILD_BENCHMARKS)
   # add_subdirectory(benchmarks)         # uncomment once the directory is scaffolded
-endif()
-
-# ── Developer workflow custom targets ─────────────────────────────────────────
-
-# format: reformat every tracked C/H/CL file in place
-find_program(CLANG_FORMAT_EXECUTABLE clang-format)
-if(CLANG_FORMAT_EXECUTABLE)
-  add_custom_target(format
-    COMMAND ${CMAKE_COMMAND} -E echo "Running clang-format..."
-    COMMAND git ls-files -- "*.c" "*.h" "*.cl" ":(exclude)third_party/**"
-            | xargs ${CLANG_FORMAT_EXECUTABLE} -i
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Formatting source files with clang-format"
-    VERBATIM
-  )
-endif()
-
-# lint: run clang-tidy static analysis across all tracked C sources
-find_program(CLANG_TIDY_EXECUTABLE clang-tidy)
-if(CLANG_TIDY_EXECUTABLE)
-  add_custom_target(lint
-    COMMAND ${CMAKE_COMMAND} -E echo "Running clang-tidy..."
-    COMMAND git ls-files -- "*.c" ":(exclude)third_party/**" ":(exclude)packages/webapp/**"
-            | xargs ${CLANG_TIDY_EXECUTABLE}
-                    --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy
-                    -p ${CMAKE_BINARY_DIR}
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Running clang-tidy static analysis"
-    VERBATIM
-  )
-endif()
-
-# webapp-format / webapp-lint: Prettier + ESLint for the Svelte/TypeScript webapp
-find_program(BUN_EXECUTABLE bun)
-if(BUN_EXECUTABLE)
-  add_custom_target(webapp-format
-    COMMAND ${CMAKE_COMMAND} -E echo "Running Prettier..."
-    COMMAND ${BUN_EXECUTABLE} run format
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/packages/webapp
-    COMMENT "Formatting webapp source files with Prettier"
-    VERBATIM
-  )
-
-  add_custom_target(webapp-lint
-    COMMAND ${CMAKE_COMMAND} -E echo "Running ESLint..."
-    COMMAND ${BUN_EXECUTABLE} run lint
-    COMMAND ${CMAKE_COMMAND} -E echo "Checking Prettier formatting..."
-    COMMAND ${BUN_EXECUTABLE} run format:check
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/packages/webapp
-    COMMENT "Running ESLint and Prettier check on webapp"
-    VERBATIM
-  )
-endif()
-
-# benchmark: build and run all benchmarks; results go to stdout (no pass/fail)
-if(BIOSIM_BUILD_BENCHMARKS)
-  add_custom_target(benchmark
-    COMMAND ${CMAKE_COMMAND} -E echo "Running benchmarks..."
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Running benchmarks"
-    VERBATIM
-  )
 endif()

@@ -155,19 +155,23 @@ ctest --preset debug
 
 ## Format and lint
 
+Both build trees expose unified `lint` and `format` targets — use the same
+command regardless of which preset you are working in:
+
 ```sh
-# Apply clang-format to all source files
-cmake --build --preset debug --target format
+# Native tree
+cmake --build --preset debug --target format   # clang-format (C/H/CL files)
+cmake --build --preset debug --target lint     # clang-tidy (incremental)
 
-# Run clang-tidy static analysis
-cmake --build --preset debug --target lint
-
-# Apply Prettier to webapp TypeScript/Svelte files
-cmake --build --preset debug --target webapp-format
-
-# Run ESLint + Prettier check on webapp
-cmake --build --preset debug --target webapp-lint
+# Webapp tree
+cmake --build --preset webapp --target format  # Prettier
+cmake --build --preset webapp --target lint    # ESLint + Prettier check
 ```
+
+The native `lint` target is incremental: after the first full run, Ninja
+re-lints only the source files that changed since the last clean pass.  If you
+change compiler flags significantly, delete `build/<preset>/lint_stamps/` once
+to force a full re-lint.
 
 Lint is required to be clean before merging. See `CLAUDE.md` for the full
 quality sequence.

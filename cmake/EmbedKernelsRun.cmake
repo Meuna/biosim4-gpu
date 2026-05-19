@@ -4,8 +4,6 @@
 #   OUTPUT — path to the generated .c file
 #   VAR    — C identifier for the string constant
 
-cmake_minimum_required(VERSION 3.21)
-
 if(NOT DEFINED INPUT OR NOT DEFINED OUTPUT OR NOT DEFINED VAR)
     message(FATAL_ERROR "EmbedKernelsRun requires INPUT, OUTPUT, and VAR variables")
 endif()
