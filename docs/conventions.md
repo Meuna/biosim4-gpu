@@ -132,3 +132,16 @@ test.
 Shared test helpers live in
 `packages/core/tests/sim_test_utils.{c,h}` — add to this file when
 multiple test modules need the same setup logic.
+
+## TypeScript / Svelte (webapp)
+
+- **Files**: `camelCase.ts` for modules, `PascalCase.svelte` for components.
+- **No barrel files**: avoid `index.ts` re-exports unless a package boundary
+  genuinely requires one.
+- **Testing**: each `src/lib/foo.ts` module → `src/lib/foo.test.ts` using
+  [Vitest](https://vitest.dev/). Component tests use
+  `@testing-library/svelte`. Run with `bun run --cwd packages/webapp test`.
+- **Linting**: ESLint 9 flat config in `packages/webapp/eslint.config.js`.
+  Run via `cmake --build --preset debug --target webapp-lint`.
+- **Formatting**: Prettier with `prettier-plugin-svelte`. Run via
+  `cmake --build --preset debug --target webapp-format`.

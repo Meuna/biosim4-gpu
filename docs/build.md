@@ -161,10 +161,25 @@ cmake --build --preset debug --target format
 
 # Run clang-tidy static analysis
 cmake --build --preset debug --target lint
+
+# Apply Prettier to webapp TypeScript/Svelte files
+cmake --build --preset debug --target webapp-format
+
+# Run ESLint + Prettier check on webapp
+cmake --build --preset debug --target webapp-lint
 ```
 
 Lint is required to be clean before merging. See `CLAUDE.md` for the full
 quality sequence.
+
+## Webapp tests
+
+```sh
+bun run --cwd packages/webapp test
+```
+
+Runs Vitest in non-interactive mode. Individual watch mode:
+`bun run --cwd packages/webapp test:watch`.
 
 ## WebAssembly + Webapp build
 

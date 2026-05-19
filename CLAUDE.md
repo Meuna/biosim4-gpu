@@ -6,8 +6,8 @@ code in this repository.
 ## Project
 
 GPU port of [biosim4](https://github.com/davidrmiller/biosim4) (by David R.
-Miller) using OpenCL. Four packages are implemented: `core`, `cfgparse`,
-`sim-ref`, and `sim-gpu`.
+Miller) using OpenCL. Six packages are implemented: `core`, `cfgparse`,
+`sim-ref`, `sim-gpu`, `sim-wasm`, and `webapp`.
 
 ## Working with this repository
 
@@ -31,8 +31,9 @@ Miller) using OpenCL. Four packages are implemented: `core`, `cfgparse`,
   error handling, host/device portability, no global state in `core`) apply to
   every file written in this repository.
 
-  - **Code Quality.** Every time you edit or create files, you MUST
-    complete this sequence before considering the task done:
+  - **Code Quality — C/OpenCL packages.** Every time you edit or create
+    C/OpenCL files, you MUST complete this sequence before considering the
+    task done:
     1. `cmake --build --preset debug` — must compile with zero errors
     2. `ctest --preset debug` — all tests must pass
     3. `cmake --build --preset debug --target lint` — fix every error
@@ -46,11 +47,27 @@ Miller) using OpenCL. Four packages are implemented: `core`, `cfgparse`,
 
     A task is NOT complete while lint reports any error or warning.
 
+  - **Code Quality — webapp (TypeScript/Svelte).** Every time you edit or
+    create files in `packages/webapp/`, you MUST complete this sequence:
+    1. `cmake --build --preset debug --target webapp-lint` — ESLint and
+       Prettier check must both pass with zero errors
+    2. `cmake --build --preset debug --target webapp-format` — apply
+       Prettier formatting
+    3. `bun run --cwd packages/webapp test` — all Vitest tests must pass
+    4. Re-run `cmake --build --preset debug --target webapp-lint` to
+       confirm formatting did not introduce lint errors
+
   - **readability-function-cognitive-complexity special case.** When facing
     a cognitive-complexity error, do not fix blindly. Instead, ask the user
     to decide whether to fix or add a NOLINTNEXTLINE flag.
 
+## Browser Testing
+
+Will be completed later, with `@playwright/cli` and `chrome-devtools-mcp@latest`
+
 ## Build System
+
+### C/OpenCL packages
 
 The build uses **CMake + vcpkg** (`VCPKG_ROOT` must be set, see `docs/build.md`):
 
@@ -60,6 +77,19 @@ cmake --build --preset debug
 ctest --preset debug
 cmake --build --preset debug --target format
 cmake --build --preset debug --target lint
+```
+
+### Webapp (WASM/TypeScript/Svelte) package
+
+The build uses **CMake + Emscripten + Bun + Vite** (`VCPKG_ROOT` must be
+set, see `docs/build.md`):
+
+```sh
+cmake --preset webapp
+cmake --build --preset webapp
+bun run --cwd packages/webapp test
+cmake --build --preset webapp --target format
+cmake --build --preset webapp --target lint
 ```
 
 ## Portability Pitfalls
@@ -92,13 +122,21 @@ Windows or on OpenCL but compile cleanly on Linux host:
 
 ## Architecture
 
-Four packages, strict acyclic dependency graph:
+Six packages across two build trees:
 
+**Native tree** (CMake presets: `debug`, `release`, `asan`, `ci`):
 ```
 core (static lib, libc only)
   └── cfgparse (static lib — CLI/TOML parsing)
       ├── sim-ref (executable — single-threaded CPU reference)
-      └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
+      └── sim-gpu (static lib + executable — OpenCL GPU simulator)
+```
+
+**Webapp tree** (CMake presets: `wasm`, `webapp`; requires Emscripten + Bun):
+```
+core (static lib, compiled to WASM)
+  └── sim-wasm (Emscripten ES6 module — WASM bindings)
+        └── webapp (Svelte SPA — loads sim-wasm in a Web Worker)
 ```
 
 **`core`** — all shared simulation logic: genome operators, neural network
@@ -120,6 +158,15 @@ No shared defaults; no extension mechanism. The parameter data model lives in
 (two-level lookup: filesystem override → embedded fallback) and the OpenCL runner
 (platform/device/context/queue lifecycle). The `biosim-gpu` executable wires
 parameters to a simulation and dispatches kernels.
+
+**`sim-wasm`** — Emscripten WASM bindings (`packages/sim-wasm/src/bindings.c`).
+Compiled to `biosim.mjs` + `biosim.wasm` (ES6 module). Consumed by the webapp
+via a Web Worker.
+
+**`webapp`** — Svelte 5 SPA (`packages/webapp/`). Loads `sim-wasm` inside a
+Web Worker (`src/workers/sim.worker.ts`). Built with Vite 6. Tooling: ESLint
+(flat config), Prettier, Vitest. See `docs/build.md` for the dev server and
+build commands.
 
 ## Code Conventions (see `docs/conventions.md`)
 

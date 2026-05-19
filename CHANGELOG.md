@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Webapp tooling** — ESLint 9 flat config (TypeScript + Svelte rules), Prettier
+  with `prettier-plugin-svelte`, and Vitest 3 with `@testing-library/svelte` +
+  jsdom. Two new CMake custom targets: `webapp-lint` (ESLint + Prettier check)
+  and `webapp-format` (Prettier write). CLAUDE.md documents the webapp code-quality
+  workflow; `docs/conventions.md` and `docs/build.md` updated accordingly.
+  Playwright MCP browser-testing setup documented via `claude mcp add playwright`.
 - **`sim-wasm` package** — Emscripten WebAssembly target that compiles `core`
   to a self-contained ES6 module (`biosim.mjs` + `biosim.wasm`) with
   `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=worker`.  Exposes

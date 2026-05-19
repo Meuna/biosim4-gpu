@@ -125,6 +125,28 @@ if(CLANG_TIDY_EXECUTABLE)
   )
 endif()
 
+# webapp-format / webapp-lint: Prettier + ESLint for the Svelte/TypeScript webapp
+find_program(BUN_EXECUTABLE bun)
+if(BUN_EXECUTABLE)
+  add_custom_target(webapp-format
+    COMMAND ${CMAKE_COMMAND} -E echo "Running Prettier..."
+    COMMAND ${BUN_EXECUTABLE} run format
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/packages/webapp
+    COMMENT "Formatting webapp source files with Prettier"
+    VERBATIM
+  )
+
+  add_custom_target(webapp-lint
+    COMMAND ${CMAKE_COMMAND} -E echo "Running ESLint..."
+    COMMAND ${BUN_EXECUTABLE} run lint
+    COMMAND ${CMAKE_COMMAND} -E echo "Checking Prettier formatting..."
+    COMMAND ${BUN_EXECUTABLE} run format:check
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/packages/webapp
+    COMMENT "Running ESLint and Prettier check on webapp"
+    VERBATIM
+  )
+endif()
+
 # benchmark: build and run all benchmarks; results go to stdout (no pass/fail)
 if(BIOSIM_BUILD_BENCHMARKS)
   add_custom_target(benchmark
