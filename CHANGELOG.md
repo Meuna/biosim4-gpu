@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sim-wasm` package** — Emscripten WebAssembly target that compiles `core`
+  to a self-contained ES6 module (`biosim.mjs` + `biosim.wasm`) with
+  `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=worker`.  Exposes
+  `biosim_hello()` via `ccall`/`cwrap`; `EMSCRIPTEN_KEEPALIVE` / `emscripten_log`
+  confirm the C→JS bridge end-to-end.
+- **`webapp` package** — Svelte 5 SPA (Vite 6, Bun, TypeScript) that loads
+  `sim-wasm` inside a Web Worker and logs `[main] worker ready` to the browser
+  console.  CMake copies the WASM artifacts into `public/wasm/` before each
+  build; Vite serves them as static assets.  Build via `cmake --preset webapp`;
+  dev server via `cmake --build --preset webapp --target dev`.
+- **`webapp` CMake preset** — inherits `wasm-base`; sets `BIOSIM_BUILD_WEBAPP=ON`;
+  uses binary dir `build/webapp`.
+- **Sensor/action inline comments in `io_eval.c`** — 13 sensors and actions that
+  were not self-explanatory now carry a one-line comment describing the
+  neighbourhood geometry or probabilistic logic used.
+
+### Added
 - **`responsiveness-curve-k` parameter** — non-linear response curve applied to each
   agent's raw responsiveness value before it is used as an action multiplier, matching
   the original biosim4 `responseCurve(r, k)` function:

@@ -121,12 +121,13 @@ autocompletion and analysis.
 
 Available presets are defined in `CMakePresets.json`:
 
-| Preset | Purpose |
-|--------|---------|
-| `debug` | Debug info, no optimisation, assertions on |
-| `release` | `-O3`, LTO, assertions off |
-| `asan` | Debug + AddressSanitizer + UBSan |
-| `ci` | Release + tests enabled |
+| Preset | Tree | Purpose |
+|---|---|---|
+| `debug` | native | Debug info, no optimisation, assertions on |
+| `release` | native | `-O3`, LTO, assertions off |
+| `asan` | native | Debug + AddressSanitizer + UBSan |
+| `ci` | native | Release + tests enabled |
+| `webapp` | webapp | Emscripten + Bun/Vite/Svelte SPA |
 
 ## Build
 
@@ -164,6 +165,59 @@ cmake --build --preset debug --target lint
 
 Lint is required to be clean before merging. See `CLAUDE.md` for the full
 quality sequence.
+
+## WebAssembly + Webapp build
+
+The webapp tree uses a separate CMake binary dir (`build/webapp`) and the
+Emscripten toolchain. It does not share a build directory with the native tree.
+
+### Prerequisites
+
+**Emscripten (EMSDK):**
+
+```sh
+git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
+~/emsdk/emsdk install latest
+~/emsdk/emsdk activate latest
+source ~/emsdk/emsdk_env.sh      # sets EMSDK; add to ~/.bashrc
+```
+
+**Bun:**
+
+```sh
+curl -fsSL https://bun.sh/install | bash
+# adds ~/.bun/bin to PATH; re-open your shell or source ~/.bashrc
+```
+
+### Configure and build
+
+```sh
+cmake --preset webapp
+cmake --build --preset webapp
+```
+
+Output artifacts:
+- `build/webapp/packages/sim-wasm/biosim.mjs` — Emscripten ES6 loader
+- `build/webapp/packages/sim-wasm/biosim.wasm` — WebAssembly binary
+- `packages/webapp/dist/` — bundled Svelte SPA (served as static files)
+
+### Dev server
+
+```sh
+cmake --build --preset webapp --target dev
+```
+
+Opens a Vite dev server at `http://localhost:5173`. Check the browser
+JavaScript console for:
+
+```
+biosim wasm: hello from C
+biosim wasm: structured log
+[main] worker ready
+```
+
+The `dev` target is `EXCLUDE_FROM_ALL` — it does not run during
+`cmake --build --preset webapp`.
 
 ## CI
 

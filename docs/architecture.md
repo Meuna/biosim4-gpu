@@ -2,13 +2,25 @@
 
 ## Package structure
 
-Four packages are implemented, with a strict acyclic dependency graph:
+Two independent build trees share the `core` package but target different
+toolchains. The native tree targets the host CPU; the webapp tree targets
+WebAssembly via Emscripten.
+
+**Native tree** (`debug`, `release`, `asan`, `ci` presets):
 
 ```
 core (static lib — libc only)
   └── cfgparse (static lib — argtable3, tomlc17 PRIVATE)
       ├── sim-ref (executable — single-threaded CPU reference)
       └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
+```
+
+**Webapp tree** (`wasm`, `webapp` presets — Emscripten):
+
+```
+core (static lib — libc only)
+  └── sim-wasm (ES6 WASM module — biosim.mjs + biosim.wasm)
+        └── webapp (Svelte SPA — loads sim-wasm in a Web Worker)
 ```
 
 `viz` is designed but not yet implemented.
@@ -290,22 +302,50 @@ biosim_gpu_pipeline_sync_from_host(&pipeline, &sim);
 
 See [`docs/gpu-design.md`](gpu-design.md) for the full kernel pipeline design.
 
+## `sim-wasm`
+
+**Location:** `packages/sim-wasm/`  
+**Type:** Emscripten executable (output: `biosim.mjs` + `biosim.wasm`).
+Depends on `core`.
+
+Exposes a minimal C API (`biosim_hello`) as an ES6 WebAssembly module built
+with `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=worker`. The module is
+designed to run inside a Web Worker; `ccall`/`cwrap` are available at runtime.
+
+The public header `include/biosim_wasm.h` uses `BIOSIM_KEEPALIVE`
+(`EMSCRIPTEN_KEEPALIVE` when compiled under Emscripten, `/*empty*/` otherwise)
+so declarations remain valid in native builds.
+
+## `webapp`
+
+**Location:** `packages/webapp/`  
+**Type:** Svelte 5 SPA built with Vite 6 and Bun.
+
+Loads `biosim.mjs` + `biosim.wasm` (produced by `sim-wasm`) inside a Web
+Worker (`src/workers/sim.worker.ts`). CMake copies the WASM artifacts into
+`public/wasm/` before every build or `dev` invocation; Vite serves them as
+static assets at `/wasm/`. The worker uses a `/* @vite-ignore */` dynamic
+import so Vite does not attempt to rebundle the pre-built Emscripten output.
+
 ## Build
 
 **Toolchain:** CMake 3.28+ with vcpkg (`VCPKG_ROOT` must be set).  
-**Compilers:** GCC and Clang on Linux; MSVC on Windows.
+**Native compilers:** GCC and Clang on Linux; MSVC on Windows.  
+**Webapp toolchain:** Emscripten (`EMSDK` must be set) + Bun.
 
-| Preset | Purpose |
-|--------|---------|
-| `debug` | Debug info, assertions on, no optimisation |
-| `release` | `-O3`, LTO, assertions off |
-| `asan` | Debug + AddressSanitizer + UBSan |
-| `ci` | Release + tests enabled |
+| Preset | Tree | Purpose |
+|---|---|---|
+| `debug` | native | Debug info, assertions on, no optimisation |
+| `release` | native | `-O3`, LTO, assertions off |
+| `asan` | native | Debug + AddressSanitizer + UBSan |
+| `ci` | native | Release + tests enabled |
+| `webapp` | webapp | Emscripten + Bun/Vite — `sim-wasm` ES6 module + Svelte SPA |
 
 Key targets (all via `cmake --build --preset <preset> --target <target>`):
 
 - *(default)* — compile all packages
-- `lint` — clang-tidy static analysis; required clean before merge
-- `format` — clang-format all source files
+- `lint` — clang-tidy static analysis; required clean before merge (native only)
+- `format` — clang-format all source files (native only)
+- `dev` — start the Vite dev server (webapp preset only; `EXCLUDE_FROM_ALL`)
 
 See [`docs/build.md`](build.md) for the full setup guide.

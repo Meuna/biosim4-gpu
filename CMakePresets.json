@@ -79,11 +79,22 @@
 
     {
       "name": "wasm",
-      "displayName": "WebAssembly",
+      "displayName": "WebAssembly - to be removed",
       "description": "Emscripten release build — produces biosim-wasm-stepper.html",
       "inherits": "wasm-base",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+
+    {
+      "name": "webapp",
+      "displayName": "WebApp",
+      "description": "Emscripten + Bun/Vite/Svelte — builds sim-wasm (ES6 module) and the Svelte SPA",
+      "inherits": "wasm-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BIOSIM_BUILD_WEBAPP": "ON"
       }
     }
   ],
@@ -112,7 +123,12 @@
     {
       "name": "wasm",
       "configurePreset": "wasm",
-      "description": "Build biosim-wasm-stepper.html with Emscripten"
+      "description": "Build biosim-wasm-stepper.html with Emscripten - to be removed"
+    },
+    {
+      "name": "webapp",
+      "configurePreset": "webapp",
+      "description": "Build sim-wasm (Emscripten ES6 module) and webapp (Bun + Vite)"
     }
   ],
 

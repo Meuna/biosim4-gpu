@@ -35,6 +35,9 @@ option(BIOSIM_BUILD_GPU        "Build the OpenCL GPU simulator (sim-gpu)" ON)
 # Enable AddressSanitizer + UBSan (GCC/Clang only; MSVC supports ASan but not UBSan)
 option(BIOSIM_SANITIZE         "Enable address and undefined-behaviour sanitizers" OFF)
 
+# Build the Svelte webapp (requires Bun; only meaningful in the EMSCRIPTEN tree)
+option(BIOSIM_BUILD_WEBAPP     "Build the Svelte webapp" OFF)
+
 # ── Testing ────────────────────────────────────────────────────────────────────
 enable_testing()
 
@@ -61,21 +64,30 @@ include(EmbedKernels)
 # ── Packages ──────────────────────────────────────────────────────────────────
 
 # Shared simulation logic: genome, neural net, RNG, challenges (no deps)
+# Built in both the native and the webapp trees.
 add_subdirectory(packages/core)
 
-# CLI/TOML configuration parsing library (depends on core + argtable3 + tomlc17)
-add_subdirectory(packages/cfgparse)
-
-# OpenCL GPU simulator (depends on core + cfgparse + OpenCL; optional at configure time)
-if(BIOSIM_BUILD_GPU)
-  add_subdirectory(packages/sim-gpu)
+if(BIOSIM_BUILD_WEBAPP)
+  if(EMSCRIPTEN)
+    # WebAssembly PoC: hardcoded sim, generates standalone HTML
+    add_subdirectory(packages/wasm-sim-stepper)
+    # WASM bindings: ES6 module + Web Worker target
+    add_subdirectory(packages/sim-wasm)
+  else()
+    message(WARNING "EMSCRIPTEN environment not detected; skipping WASM targets sim-wasm")
+  endif()
+  # Svelte SPA that loads sim-wasm inside a Web Worker
+  add_subdirectory(packages/webapp)
+else()
+  # CLI/TOML configuration parsing library (depends on core + argtable3 + tomlc17)
+  add_subdirectory(packages/cfgparse)
+  # OpenCL GPU simulator (depends on core + cfgparse + OpenCL; optional at configure time)
+  if(BIOSIM_BUILD_GPU)
+    add_subdirectory(packages/sim-gpu)
+  endif()
+  # Single-threaded CPU reference simulator executable
+  add_subdirectory(packages/sim-ref) # depends on core + cfgparse
 endif()
-
-# Single-threaded CPU reference simulator executable
-add_subdirectory(packages/sim-ref) # depends on core + cfgparse
-
-# WebAssembly PoC: hardcoded sim, no params, generates standalone HTML
-add_subdirectory(packages/wasm-sim-stepper)
 
 # ── Benchmarks ────────────────────────────────────────────────────────────────
 
@@ -103,7 +115,7 @@ find_program(CLANG_TIDY_EXECUTABLE clang-tidy)
 if(CLANG_TIDY_EXECUTABLE)
   add_custom_target(lint
     COMMAND ${CMAKE_COMMAND} -E echo "Running clang-tidy..."
-    COMMAND git ls-files -- "*.c" ":(exclude)third_party/**"
+    COMMAND git ls-files -- "*.c" ":(exclude)third_party/**" ":(exclude)packages/webapp/**"
             | xargs ${CLANG_TIDY_EXECUTABLE}
                     --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy
                     -p ${CMAKE_BINARY_DIR}
