@@ -9,6 +9,49 @@ GPU port of [biosim4](https://github.com/davidrmiller/biosim4) (by David R.
 Miller) using OpenCL. Six packages are implemented: `core`, `cfgparse`,
 `sim-ref`, `sim-gpu`, `sim-wasm`, and `webapp`.
 
+## Two build branches
+
+This repo has two independent build trees. Every task belongs to one or both.
+**Identify your branch before starting work.**
+
+| Branch | Packages | CMake presets | When it applies |
+|---|---|---|---|
+| **Native** | `core`, `cfgparse`, `sim-ref`, `sim-gpu` | `debug` `release` `asan` `ci` | Any C/H/CL file outside `packages/sim-wasm/` and `packages/webapp/` |
+| **Webapp** | `sim-wasm`, `webapp` | `webapp` | Any file under `packages/sim-wasm/` or `packages/webapp/` |
+
+A change touching files from both branches requires the quality sequence to be
+run on **both** branches.
+
+> `sim-wasm` is C code, but its lint target lives in the webapp preset — treat
+> it as the webapp branch for all quality-check purposes.
+
+### Quality check sequence
+
+The sequence is the same for both branches:
+
+1. **build** — must compile with zero errors
+2. **test** — all tests must pass
+3. **lint** — fix every error/warning (see cognitive-complexity note below)
+4. **format** — apply formatting
+5. **build** — confirm format did not break compilation
+6. **test** — confirm format did not break tests
+
+A task is **NOT** complete while lint reports any error or warning.
+
+Branch-specific commands:
+
+| Step | Native (`--preset debug`) | Webapp (`--preset webapp`) |
+|---|---|---|
+| build | `cmake --build --preset debug` | `cmake --build --preset webapp` |
+| test | `ctest --preset debug` | `bun run --cwd packages/webapp test` |
+| lint | `cmake --build --preset debug --target lint` | `cmake --build --preset webapp --target lint` |
+| format | `cmake --build --preset debug --target format` | `cmake --build --preset webapp --target format` |
+
+### `readability-function-cognitive-complexity` special case
+
+When facing a cognitive-complexity lint error, do not fix blindly. Ask the user
+to decide whether to refactor or add a `NOLINTNEXTLINE` flag.
+
 ## Working with this repository
 
 - **Keep the changelog up-to-date.**
@@ -17,80 +60,26 @@ Miller) using OpenCL. Six packages are implemented: `core`, `cfgparse`,
   documentation so it describes the system as it exists after your change. Remove
   any outdated statements.
 
-- **Each new source module needs a test module.** When adding
-  `packages/core/src/foo.c`, also add `packages/core/tests/test_foo.c`
-  and register it in `packages/core/tests/CMakeLists.txt`. Use the
-  Unity framework (see `docs/conventions.md`).
+- **Each new source module needs a test module.**
+  - _Native branch:_ when adding `packages/core/src/foo.c`, also add
+    `packages/core/tests/test_foo.c` and register it in
+    `packages/core/tests/CMakeLists.txt`. Use the Unity framework
+    (see `docs/conventions.md`).
+  - _Webapp branch:_ when adding `packages/webapp/src/lib/foo.ts`, also add
+    `packages/webapp/src/lib/foo.test.ts`. Use Vitest; component tests use
+    `@testing-library/svelte`.
 
 - **Increment the snapshot schema version** when modifying `biosim_sensor_t` or
   `biosim_action_t` in `io_defs.h`.
 
 - **Increment the snapshot format version** when modifying the snapshot interface.
 
-- **Conventions are normative.** The rules in `docs/conventions.md` (naming,
-  error handling, host/device portability, no global state in `core`) apply to
+- **Conventions are normative.** The rules in `docs/conventions.md` apply to
   every file written in this repository.
-
-  - **Code Quality — C/OpenCL packages.** Every time you edit or create
-    C/OpenCL files, you MUST complete this sequence before considering the
-    task done:
-    1. `cmake --build --preset debug` — must compile with zero errors
-    2. `ctest --preset debug` — all tests must pass
-    3. `cmake --build --preset debug --target lint` — fix every error
-       reported EXCEPT readability-function-cognitive-complexity;
-       repeat until the output is clean
-    4. `cmake --build --preset debug --target format` — apply formatting
-    5. `cmake --build --preset debug` — re-compile to confirm formatting
-       did not break anything
-    6. `ctest --preset debug` — re-run tests to confirm formatting did not
-       break anything
-
-    A task is NOT complete while lint reports any error or warning.
-
-  - **Code Quality — webapp (TypeScript/Svelte).** Every time you edit or
-    create files in `packages/webapp/`, you MUST complete this sequence:
-    1. `cmake --build --preset webapp --target lint` — ESLint and
-       Prettier check must both pass with zero errors
-    2. `cmake --build --preset webapp --target format` — apply
-       Prettier formatting
-    3. `bun run --cwd packages/webapp test` — all Vitest tests must pass
-    4. Re-run `cmake --build --preset webapp --target lint` to
-       confirm formatting did not introduce lint errors
-
-  - **readability-function-cognitive-complexity special case.** When facing
-    a cognitive-complexity error, do not fix blindly. Instead, ask the user
-    to decide whether to fix or add a NOLINTNEXTLINE flag.
 
 ## Browser Testing
 
 Will be completed later, with `@playwright/cli` and `chrome-devtools-mcp@latest`
-
-## Build System
-
-### C/OpenCL packages
-
-The build uses **CMake + vcpkg** (`VCPKG_ROOT` must be set, see `docs/build.md`):
-
-```sh
-cmake --preset debug
-cmake --build --preset debug
-ctest --preset debug
-cmake --build --preset debug --target format
-cmake --build --preset debug --target lint
-```
-
-### Webapp (WASM/TypeScript/Svelte) package
-
-The build uses **CMake + Emscripten + Bun + Vite** (`VCPKG_ROOT` must be
-set, see `docs/build.md`):
-
-```sh
-cmake --preset webapp
-cmake --build --preset webapp
-bun run --cwd packages/webapp test
-cmake --build --preset webapp --target format
-cmake --build --preset webapp --target lint
-```
 
 ## Portability Pitfalls
 
@@ -170,6 +159,8 @@ build commands.
 
 ## Code Conventions (see `docs/conventions.md`)
 
+### C / OpenCL (native branch)
+
 - **Files:** `snake_case.c`, `snake_case.h`
 - **Section separators:** `.c` files with multiple logical groups must separate
   them with a titled 79-char banner using U+2500 (`─`)
@@ -187,7 +178,18 @@ build commands.
 - **CMake:** target-first only (`target_*` commands); no top-level
   `include_directories()` or `add_definitions()`
 
-## Alloc/goto/free discipline
+### TypeScript / Svelte (webapp branch)
+
+- **Files:** `camelCase.ts` for modules, `PascalCase.svelte` for components
+- **No barrel files:** avoid `index.ts` re-exports unless a package boundary
+  genuinely requires one
+- **Testing:** `src/lib/foo.ts` → `src/lib/foo.test.ts` (Vitest); component
+  tests use `@testing-library/svelte`
+- **No global mutable state:** use Svelte stores or passed props; no
+  module-level mutable variables
+- **Lint/format:** run via the `webapp` preset (`--target lint`, `--target format`)
+
+## Alloc/goto/free discipline (native branch)
 
 Functions that allocate multiple resources follow this pattern:
 
@@ -198,7 +200,7 @@ Functions that allocate multiple resources follow this pattern:
    (NULL-safe) then log the error.
 4. Free functions tolerate NULL on every member and NULL on the struct itself.
 
-## Error logging discipline
+## Error logging discipline (native branch)
 
 - Functions that exclusively return `BIOSIM_ERR_NOMEM` do **not** log. Callers
   with broader context are responsible.
@@ -214,10 +216,6 @@ Functions that allocate multiple resources follow this pattern:
 - `docs/gpu-design.md` — planned GPU data model and kernel pipeline
 - `docs/formats.md` — snapshot binary format, TOML parameter format
 - `docs/usage.md` — CLI reference, challenges, barriers
-
-## Build Files
-
-Do not read from `build/` — it is a derived artifact and may not exist.
 
 ## Third Party Files
 

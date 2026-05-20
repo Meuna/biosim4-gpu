@@ -26,6 +26,29 @@ core (static lib — libc only)
 `viz` is designed but not yet implemented.
 See [`STATUS.md`](../STATUS.md).
 
+## Build
+
+**Toolchain:** CMake 3.28+ with vcpkg (`VCPKG_ROOT` must be set).  
+**Native compilers:** GCC and Clang on Linux; MSVC on Windows.  
+**Webapp toolchain:** Emscripten (`EMSDK` must be set) + Bun.
+
+| Preset | Tree | Purpose |
+|---|---|---|
+| `debug` | native | Debug info, assertions on, no optimisation |
+| `release` | native | `-O3`, LTO, assertions off |
+| `asan` | native | Debug + AddressSanitizer + UBSan |
+| `ci` | native | Release + tests enabled |
+| `webapp` | webapp | Emscripten + Bun/Vite — `sim-wasm` ES6 module + Svelte SPA |
+
+Key targets (all via `cmake --build --preset <preset> --target <target>`):
+
+- *(default)* — compile all packages
+- `lint` — clang-tidy static analysis; required clean before merge (native only)
+- `format` — clang-format all source files (native only)
+- `dev` — start the Vite dev server (webapp preset only)
+
+See [`docs/build.md`](build.md) for the full setup guide.
+
 ## `core`
 
 **Location:** `packages/core/`  
@@ -326,26 +349,3 @@ Worker (`src/workers/sim.worker.ts`). CMake copies the WASM artifacts into
 `public/wasm/` before every build or `dev` invocation; Vite serves them as
 static assets at `/wasm/`. The worker uses a `/* @vite-ignore */` dynamic
 import so Vite does not attempt to rebundle the pre-built Emscripten output.
-
-## Build
-
-**Toolchain:** CMake 3.28+ with vcpkg (`VCPKG_ROOT` must be set).  
-**Native compilers:** GCC and Clang on Linux; MSVC on Windows.  
-**Webapp toolchain:** Emscripten (`EMSDK` must be set) + Bun.
-
-| Preset | Tree | Purpose |
-|---|---|---|
-| `debug` | native | Debug info, assertions on, no optimisation |
-| `release` | native | `-O3`, LTO, assertions off |
-| `asan` | native | Debug + AddressSanitizer + UBSan |
-| `ci` | native | Release + tests enabled |
-| `webapp` | webapp | Emscripten + Bun/Vite — `sim-wasm` ES6 module + Svelte SPA |
-
-Key targets (all via `cmake --build --preset <preset> --target <target>`):
-
-- *(default)* — compile all packages
-- `lint` — clang-tidy static analysis; required clean before merge (native only)
-- `format` — clang-format all source files (native only)
-- `dev` — start the Vite dev server (webapp preset only; `EXCLUDE_FROM_ALL`)
-
-See [`docs/build.md`](build.md) for the full setup guide.

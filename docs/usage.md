@@ -55,6 +55,31 @@ biosim-gpu   # loads k1_sensors.cl from the binary directory
 | `--platform <n>` | `platform-index` | 0 | OpenCL platform index |
 | `--device <n>` | `device-index` | 0 | OpenCL device index within the platform |
 
+## Webapp
+
+The webapp is a static Svelte SPA. After `cmake --build --preset webapp` the
+bundled output lives in `packages/webapp/dist/`.
+
+### Serving locally
+
+Any static file server works. The quickest option with no extra install:
+
+```sh
+python3 -m http.server 8080 --directory build/webapp/packages/webapp/dist
+```
+
+Then open `http://localhost:8080` in a browser.
+
+### Dev server
+
+For active development with hot-reload:
+
+```sh
+cmake --build --preset webapp --target dev
+```
+
+Opens a Vite dev server at `http://localhost:5173`.
+
 ## Parameters
 
 Parameters are resolved in three passes: compiled-in defaults → TOML

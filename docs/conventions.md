@@ -1,6 +1,11 @@
 # Code Conventions
 
-## Naming
+## C / OpenCL
+
+Applies to all C/H/CL files: packages `core`, `cfgparse`, `sim-ref`,
+`sim-gpu`, and `sim-wasm`.
+
+### Naming
 
 - **Files and directories**: `snake_case.c`, `snake_case.h`. Package
   directory names may use hyphens (`sim-gpu`, `sim-ref`) — they
@@ -12,7 +17,7 @@
   `k_movement`. No other scope prefix (`s_`, `g_`, etc.) anywhere in
   the codebase.
 
-## Section separators
+### Section separators
 
 `.c` files with multiple logical groups must separate them with a titled
 79-character banner using U+2500 (`─`):
@@ -21,7 +26,7 @@
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 ```
 
-## Error handling
+### Error handling
 
 - Functions that can fail return `biosim_status_t`.
 - `assert` is permitted only for invariants that indicate a programming
@@ -29,7 +34,7 @@
 - `biosim_strerror(code)` maps any `biosim_status_t` to a human-readable
   string; use it in error messages instead of printing the raw integer.
 
-## Alloc/goto/free discipline
+### Alloc/goto/free discipline
 
 Functions that allocate multiple resources follow this pattern:
 
@@ -44,7 +49,7 @@ Functions that allocate multiple resources follow this pattern:
 4. Free functions must tolerate NULL on every member and NULL on the
    struct itself.
 
-## Error logging discipline
+### Error logging discipline
 
 - Functions that exclusively return `BIOSIM_ERR_NOMEM` do **not** log
   — allocation failures are reported by the first caller that has
@@ -58,13 +63,13 @@ Functions that allocate multiple resources follow this pattern:
   return `BIOSIM_ERR_OPENCL`. Macros in `cl_macros.h` help reduce
   boilerplate.
 
-## Host/device portability
+### Host/device portability
 
 Five headers are shared with OpenCL kernel sources and prepended to every
 kernel program as a preamble: `core/grid_defs.h`, `core/rng.h`,
 `core/gene.h`, `core/io_defs.h`, `core/challenge_defs.h`.
 
-### Naming convention
+#### Naming convention
 
 - **`*_defs.h`** — device-portable header containing only enum/type/macro
   definitions (no functions, no stdlib, no host struct types with pointers).
@@ -78,7 +83,7 @@ Headers with inline functions that are also device-portable (`rng.h`,
 `gene.h`) follow their own domain naming — the `_defs` suffix specifically
 means "type/enum/constant definitions only, no functions."
 
-### Portability requirements
+#### Portability requirements
 
 Shared headers must compile as both C11 and OpenCL C:
 
@@ -104,20 +109,20 @@ Every `_defs.h` header carries a prologue comment:
 `/* HOST/DEVICE: this header is included by OpenCL kernel sources. ... */`.
 Host-only headers carry `/* HOST-ONLY: ... */`.
 
-## No mutable global state in `core`
+### No mutable global state in `core`
 
 All `core` functions take their state by parameter. No file-scope mutable
 variables, no singletons, no thread-local pseudo-globals. `core` is called
 from two execution contexts (single-threaded stepper and future GPU host
 thread) and must behave identically in both.
 
-## CMake
+### CMake
 
 Use target-first commands only: `target_include_directories`,
 `target_link_libraries`, `target_compile_definitions`. No
 `include_directories()` or `add_definitions()` at the top level.
 
-## Testing
+### Testing
 
 Each source module has a mirror test file. The convention:
 
@@ -133,15 +138,34 @@ Shared test helpers live in
 `packages/core/tests/sim_test_utils.{c,h}` — add to this file when
 multiple test modules need the same setup logic.
 
-## TypeScript / Svelte (webapp)
+## TypeScript / Svelte
 
-- **Files**: `camelCase.ts` for modules, `PascalCase.svelte` for components.
-- **No barrel files**: avoid `index.ts` re-exports unless a package boundary
-  genuinely requires one.
-- **Testing**: each `src/lib/foo.ts` module → `src/lib/foo.test.ts` using
-  [Vitest](https://vitest.dev/). Component tests use
-  `@testing-library/svelte`. Run with `bun run --cwd packages/webapp test`.
-- **Linting**: ESLint 9 flat config in `packages/webapp/eslint.config.js`.
-  Run via `cmake --build --preset debug --target webapp-lint`.
-- **Formatting**: Prettier with `prettier-plugin-svelte`. Run via
-  `cmake --build --preset debug --target webapp-format`.
+Applies to `packages/webapp/`.
+
+### Naming
+
+- **Modules**: `camelCase.ts`
+- **Svelte components**: `PascalCase.svelte`
+
+### Module organisation
+
+Avoid barrel files (`index.ts` re-exports) unless a genuine package
+boundary requires one.
+
+### Testing
+
+Each `src/lib/foo.ts` module has a mirror test file `src/lib/foo.test.ts`
+using [Vitest](https://vitest.dev/). Component tests use
+`@testing-library/svelte`.
+
+```sh
+bun run --cwd packages/webapp test          # non-interactive
+bun run --cwd packages/webapp test:watch    # watch mode
+```
+
+### Linting and formatting
+
+- **ESLint 9** flat config: `packages/webapp/eslint.config.js`. Run via
+  `cmake --build --preset webapp --target lint`.
+- **Prettier** with `prettier-plugin-svelte`. Run via
+  `cmake --build --preset webapp --target format`.

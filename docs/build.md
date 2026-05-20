@@ -15,184 +15,121 @@ to do anything extra for them.
 
 ## Prerequisites
 
-You need a C compiler, CMake 3.28+, Ninja (or make), pkg-config, and optionally
-clang-format and clang-tidy. Install them through your system package manager.
+Two build trees share some prerequisites and each adds its own. Install only
+what you need.
 
-On Ubuntu/Debian:
+> **Linux note:** only `apt` (Ubuntu/Debian) is tested. Commands for other
+> distributions will differ.
+
+### Core build tools
+
+Required for any build in this repo.
+
+**Linux (apt):**
 
 ```sh
-sudo apt install cmake ninja-build gcc pkg-config clang-format clang-tidy
+sudo apt install cmake ninja-build gcc pkg-config
 ```
 
-### OpenCL runtime (for `sim-gpu`)
+CMake 3.28 or newer is required. Check your version:
 
-The OpenCL GPU simulator (`sim-gpu`) links against the Khronos OpenCL ICD Loader
-supplied by vcpkg. To actually *run* the simulator or its tests you also need an
-OpenCL runtime registered with the ICD loader.
+```sh
+cmake --version
+```
 
-The ICD loader finds runtimes via `.icd` files registered under
-`/etc/OpenCL/vendors/` (Linux) or the Windows registry. Use `clinfo` to confirm
-at least one platform is visible after installation:
+If the system package is older than 3.28, install a newer one from
+[cmake.org](https://cmake.org/download/) or via `pip install cmake`.
+
+**Windows MSVC:**
+
+Install [Visual Studio](https://visualstudio.microsoft.com/) with the following workload:
+- "Desktop development with C++"
+- "MSVC Build Tools for x64/x86"
+- "C++ CMake tools for Windows"
+- "vcpkg package manager"
+- "MSVC v143 - VS 2022 C++ x64/x86 build tools"
+
+### vcpkg for Linux
+
+Both build trees use vcpkg for C/C++ dependencies.
+
+```sh
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh       # Linux/macOS
+# ~/vcpkg/bootstrap-vcpkg.bat    # Windows
+export VCPKG_ROOT=~/vcpkg          # add to ~/.bashrc or ~/.profile
+```
+
+The `VCPKG_ROOT` environment variable tells CMake where to find the vcpkg
+toolchain file. Without it, configure fails immediately with a
+missing-toolchain error.
+
+### Native build extras
+
+Required for the `lint` and `format` targets in the native tree.
+
+**Linux (apt):**
+
+```sh
+sudo apt install clang-format clang-tidy
+```
+
+**Windows:**
+
+Install the [LLVM toolchain](https://llvm.org/builds/) (includes
+`clang-format` and `clang-tidy`). Add the LLVM `bin/` directory to `PATH`.
+
+### OpenCL runtime
+
+Required to *run* `biosim-gpu` or its tests. The build itself does not need a
+runtime — the Khronos OpenCL ICD Loader is supplied by vcpkg and links at build
+time. Use `clinfo` to confirm at least one platform is visible:
 
 ```sh
 sudo apt install clinfo   # diagnostic tool
 clinfo
 ```
 
-#### GPU on Windows
+#### Linux (apt)
 
-Install the official NVIDIA or AMD GPU driver. The OpenCL ICD is bundled with the
-driver; no extra steps are needed.
+The GPU kernel driver and the userspace OpenCL ICD are separate packages on
+Linux.
 
-#### GPU on Linux
+- **NVIDIA** — the ICD (`nvidia.icd`) ships with the `libnvidia-compute`
+  package that comes with the driver. See the
+  [CUDA installation guide](https://developer.nvidia.com/cuda-downloads).
+- **AMD** — install the [ROCm OpenCL runtime](https://rocm.docs.amd.com/) or,
+  for integrated/older cards, Mesa's implementation:
+  `sudo apt install mesa-opencl-icd`
+- **Intel** — `sudo apt install intel-opencl-icd` (see the
+  [Intel Compute Runtime](https://github.com/intel/compute-runtime)).
 
-On Linux the GPU kernel driver is a separate package from the userspace OpenCL
-ICD. Whether the ICD is included in the driver package or must be installed
-separately depends on the vendor:
+**CPU fallback (no GPU required):**
 
-- **NVIDIA** — the ICD (`nvidia.icd`) is typically included in the
-  `libnvidia-compute` package that ships with the driver. See the
-  [CUDA installation guide](https://developer.nvidia.com/cuda-downloads) for your
-  distribution.
-- **AMD** — install the [ROCm OpenCL runtime](https://rocm.docs.amd.com/) or, for
-  integrated/older cards, Mesa's OpenCL implementation
-  (`mesa-opencl-icd` on Debian/Ubuntu).
-- **Intel** — see the
-  [Intel Compute Runtime](https://github.com/intel/compute-runtime) for integrated
-  and Arc graphics (`intel-opencl-icd` on Debian/Ubuntu).
-
-If `clinfo` lists platforms but the simulator fails with permission errors, add
-yourself to the `render` group and re-login:
-
-```sh
-sudo usermod -aG render $USER
-```
-
-#### CPU fallback on Linux (POCL)
-
-[POCL](http://portablecl.org/) provides an OpenCL 3.0 CPU driver; no GPU is
-required:
+[POCL](http://portablecl.org/) provides an OpenCL 3.0 CPU driver:
 
 ```sh
 sudo apt install pocl-opencl-icd
 ```
 
-The GPU tests gracefully `IGNORE` (not fail) when no OpenCL platform is found, so
-`ctest` passes in environments without a runtime.
+#### Windows
 
-To build without the GPU simulator entirely:
+Install the official NVIDIA or AMD GPU driver. The OpenCL ICD is bundled with
+the driver — no extra steps are needed.
+
+The GPU tests gracefully `IGNORE` (not fail) when no OpenCL platform is found,
+so `ctest` passes in environments without a runtime. To build without the GPU
+simulator entirely:
 
 ```sh
 cmake --preset debug -DBIOSIM_BUILD_GPU=OFF
 ```
 
-Check your CMake version with `cmake --version`. If the system package is older
-than 3.28, install a newer one from [cmake.org](https://cmake.org/download/) or
-via `uv install cmake`.
+### WebAssembly (Emscripten)
 
-## Set up vcpkg
+Required only for the webapp build tree.
 
-```sh
-git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
-~/vcpkg/bootstrap-vcpkg.sh
-export VCPKG_ROOT=~/vcpkg          # add to ~/.bashrc or ~/.profile
-```
-
-vcpkg is distributed as source rather than as a system package, so the
-canonical way to install it is a plain `git clone`. The bootstrap script
-compiles the `vcpkg` binary into that source tree.
-
-The `VCPKG_ROOT` environment variable tells CMake where to find the vcpkg
-toolchain file. CMake reads that file at the start of every configure run and
-uses it to locate the packages listed in `vcpkg.json`. Without this variable
-set, configure will fail immediately with a missing-toolchain error.
-
-## Configure
-
-```sh
-cmake --preset debug
-```
-
-The configure step reads all `CMakeLists.txt` files, resolves dependencies
-(vcpkg installs any missing packages; `FetchContent` downloads the rest), and
-writes the actual build files into `build/debug/`. It also generates
-`compile_commands.json` there, which editors and clang-tidy use for
-autocompletion and analysis.
-
-Available presets are defined in `CMakePresets.json`:
-
-| Preset | Tree | Purpose |
-|---|---|---|
-| `debug` | native | Debug info, no optimisation, assertions on |
-| `release` | native | `-O3`, LTO, assertions off |
-| `asan` | native | Debug + AddressSanitizer + UBSan |
-| `ci` | native | Release + tests enabled |
-| `webapp` | webapp | Emscripten + Bun/Vite/Svelte SPA |
-
-## Build
-
-```sh
-cmake --build --preset debug
-```
-
-## Run the simulators
-
-```sh
-# Single-threaded CPU reference simulator
-./build/debug/packages/sim-ref/biosim-ref
-
-# OpenCL GPU simulator (requires an OpenCL runtime — see prerequisites)
-./build/debug/packages/sim-gpu/biosim-gpu
-```
-
-See [`docs/usage.md`](usage.md) for the full parameter reference.
-
-## Run tests
-
-```sh
-ctest --preset debug
-```
-
-## Format and lint
-
-Both build trees expose unified `lint` and `format` targets — use the same
-command regardless of which preset you are working in:
-
-```sh
-# Native tree
-cmake --build --preset debug --target format   # clang-format (C/H/CL files)
-cmake --build --preset debug --target lint     # clang-tidy (incremental)
-
-# Webapp tree
-cmake --build --preset webapp --target format  # Prettier
-cmake --build --preset webapp --target lint    # ESLint + Prettier check
-```
-
-The native `lint` target is incremental: after the first full run, Ninja
-re-lints only the source files that changed since the last clean pass.  If you
-change compiler flags significantly, delete `build/<preset>/lint_stamps/` once
-to force a full re-lint.
-
-Lint is required to be clean before merging. See `CLAUDE.md` for the full
-quality sequence.
-
-## Webapp tests
-
-```sh
-bun run --cwd packages/webapp test
-```
-
-Runs Vitest in non-interactive mode. Individual watch mode:
-`bun run --cwd packages/webapp test:watch`.
-
-## WebAssembly + Webapp build
-
-The webapp tree uses a separate CMake binary dir (`build/webapp`) and the
-Emscripten toolchain. It does not share a build directory with the native tree.
-
-### Prerequisites
-
-**Emscripten (EMSDK):**
+**Linux:**
 
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
@@ -201,12 +138,87 @@ git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
 source ~/emsdk/emsdk_env.sh      # sets EMSDK; add to ~/.bashrc
 ```
 
-**Bun:**
+**Windows:**
+
+Follow the [Emscripten SDK guide](https://emscripten.org/docs/getting_started/downloads.html).
+Use the same `emsdk install` / `emsdk activate` steps; run `emsdk_env.bat`
+instead of the `source` command.
+
+### Webapp (Bun)
+
+Required only for the webapp build tree.
+
+**Linux:**
 
 ```sh
 curl -fsSL https://bun.sh/install | bash
 # adds ~/.bun/bin to PATH; re-open your shell or source ~/.bashrc
 ```
+
+**Windows:**
+
+```sh
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
+
+## Native build tree
+
+Presets: `debug`, `release`, `asan`, `ci`
+
+| Preset | Purpose |
+|---|---|
+| `debug` | Debug info, no optimisation, assertions on |
+| `release` | `-O3`, LTO, assertions off |
+| `asan` | Debug + AddressSanitizer + UBSan |
+| `ci` | Release + tests enabled |
+
+### Configure
+
+```sh
+cmake --preset debug
+```
+
+Resolves dependencies (vcpkg installs missing packages; `FetchContent`
+downloads the rest) and writes build files into `build/debug/`. Also generates
+`compile_commands.json` for editor tooling.
+
+### Build
+
+```sh
+cmake --build --preset debug
+```
+
+### Test
+
+```sh
+ctest --preset debug
+```
+
+### Format and lint
+
+```sh
+cmake --build --preset debug --target format   # clang-format (C/H/CL files)
+cmake --build --preset debug --target lint     # clang-tidy
+
+### Quick smoke tests
+
+```sh
+# CPU reference simulator (no extra runtime needed)
+./build/debug/packages/sim-ref/biosim-ref
+
+# OpenCL GPU simulator (install pocl-opencl-icd if no physical GPU)
+./build/debug/packages/sim-gpu/biosim-gpu
+```
+
+Both should exit cleanly with default parameters.
+
+## Webapp build tree
+
+Presets: `wasm`, `webapp`
+
+Packages: `sim-wasm` (Emscripten WASM module) and `webapp` (Svelte SPA).
+Uses a separate CMake binary dir (`build/webapp`) and the Emscripten toolchain
+— does not share a build directory with the native tree.
 
 ### Configure and build
 
@@ -218,7 +230,7 @@ cmake --build --preset webapp
 Output artifacts:
 - `build/webapp/packages/sim-wasm/biosim.mjs` — Emscripten ES6 loader
 - `build/webapp/packages/sim-wasm/biosim.wasm` — WebAssembly binary
-- `packages/webapp/dist/` — bundled Svelte SPA (served as static files)
+- `packages/webapp/dist/` — bundled Svelte SPA (static files)
 
 ### Dev server
 
@@ -226,17 +238,31 @@ Output artifacts:
 cmake --build --preset webapp --target dev
 ```
 
-Opens a Vite dev server at `http://localhost:5173`. Check the browser
-JavaScript console for:
+Opens a Vite dev server at `http://localhost:5173`.
 
-```
-biosim wasm: hello from C
-biosim wasm: structured log
-[main] worker ready
+### Test
+
+```sh
+bun run --cwd packages/webapp test
 ```
 
-The `dev` target is `EXCLUDE_FROM_ALL` — it does not run during
-`cmake --build --preset webapp`.
+Runs Vitest in non-interactive mode. Watch mode:
+`bun run --cwd packages/webapp test:watch`.
+
+### Format and lint
+
+```sh
+cmake --build --preset webapp --target format  # Prettier
+cmake --build --preset webapp --target lint    # ESLint + Prettier check
+```
+
+### Quick smoke test
+
+```sh
+python3 -m http.server 8080 --directory build/webapp/packages/webapp/dist
+```
+
+Open a browser at `http://localhost:8080`.
 
 ## CI
 
