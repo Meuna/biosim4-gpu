@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Canvas grid renderer** (gh-44) — the webapp now draws the simulation grid
+  and agents on an `OffscreenCanvas` rendered in the Web Worker alongside the
+  simulation. Alive agents appear as green squares; barrier cells as gray;
+  background is black. Seven new `biosim_wasm_get_*` bindings expose agent
+  positions and grid data via direct WASM memory access (`HEAP32`, `HEAPU8`,
+  `HEAPU32`).
+
 - **Simulation stepper in `sim-wasm` and `webapp`** (gh-43) — `sim-wasm` now
   exposes a full stepper C API (`biosim_wasm_init`, `biosim_wasm_do_step`,
   `biosim_wasm_do_step_agent`, `biosim_wasm_next_generation`, plus state-query

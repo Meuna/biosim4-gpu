@@ -3,6 +3,7 @@
 
     let status = $state("initializing...");
     let events = $state<string[]>([]);
+    let canvasEl = $state<HTMLCanvasElement | undefined>();
 
     const worker = new Worker(
         new URL("./workers/sim.worker.ts", import.meta.url),
@@ -13,6 +14,13 @@
         const msg = e.data;
         if (msg.type === "ready") {
             status = "ready";
+            if (canvasEl) {
+                const offscreen = canvasEl.transferControlToOffscreen();
+                worker.postMessage(
+                    { type: "canvas", canvas: offscreen } satisfies WorkerCmd,
+                    [offscreen],
+                );
+            }
         } else if (msg.type === "status") {
             status = msg.message;
         } else if (msg.type === "census") {
@@ -45,6 +53,8 @@
 <div>
     <p>Status: {status}</p>
 </div>
+
+<canvas bind:this={canvasEl}></canvas>
 
 <div>
     {#each events as event}

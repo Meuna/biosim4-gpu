@@ -11,6 +11,9 @@ interface EmscriptenModule {
         argTypes: string[],
         args: unknown[],
     ): number;
+    HEAP32: Int32Array;
+    HEAPU8: Uint8Array;
+    HEAPU32: Uint32Array;
 }
 
 interface EmscriptenOptions {
@@ -26,7 +29,8 @@ export type WorkerCmd =
     | { type: "stop" }
     | { type: "step" }
     | { type: "stepAgent" }
-    | { type: "nextGeneration" };
+    | { type: "nextGeneration" }
+    | { type: "canvas"; canvas: OffscreenCanvas };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -42,14 +46,60 @@ export type WorkerEvent =
 
 let biosim: EmscriptenModule | null = null;
 let playing = false;
+let ctx: OffscreenCanvasRenderingContext2D | null = null;
 
 function call(name: string): number {
     return biosim!.ccall(name, "number", [], []);
 }
 
+function drawFrame(): void {
+    if (!ctx || !biosim) return;
+
+    const pop = call("biosim_wasm_get_population");
+    const sizeX = call("biosim_wasm_get_size_x");
+    const sizeY = call("biosim_wasm_get_size_y");
+
+    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
+    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
+    const aliveOff = call("biosim_wasm_get_alive_ptr");
+    const gridOff = call("biosim_wasm_get_grid_cells_ptr") >>> 2;
+
+    const { HEAP32, HEAPU8, HEAPU32 } = biosim;
+
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+    const cellW = w / sizeX;
+    const cellH = h / sizeY;
+
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = "#808080";
+    for (let y = 0; y < sizeY; y++) {
+        for (let x = 0; x < sizeX; x++) {
+            if (HEAPU32[gridOff + y * sizeX + x] === 0xffffffff) {
+                ctx.fillRect(x * cellW, y * cellH, cellW, cellH);
+            }
+        }
+    }
+
+    ctx.fillStyle = "#00ff00";
+    for (let i = 0; i < pop; i++) {
+        if (HEAPU8[aliveOff + i]) {
+            ctx.fillRect(
+                HEAP32[locXOff + i] * cellW,
+                HEAP32[locYOff + i] * cellH,
+                cellW,
+                cellH,
+            );
+        }
+    }
+}
+
 function doStep(): void {
     call("biosim_wasm_do_step");
     const step = call("biosim_wasm_get_step");
+    drawFrame();
     postMessage({
         type: "status",
         message: `Run step ${step}`,
@@ -60,6 +110,7 @@ function doStepAgent(): void {
     call("biosim_wasm_do_step_agent");
     const agent = call("biosim_wasm_get_last_agent");
     const step = call("biosim_wasm_get_step");
+    drawFrame();
     postMessage({
         type: "status",
         message: `Run a agent ${agent} at step ${step}`,
@@ -93,6 +144,7 @@ function playTick(): void {
     }
     call("biosim_wasm_do_step");
     const step = call("biosim_wasm_get_step");
+    drawFrame();
     postMessage({
         type: "status",
         message: `Run step ${step}`,
@@ -135,6 +187,16 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         case "nextGeneration":
             doNextGeneration();
             break;
+        case "canvas": {
+            const offscreen = cmd.canvas;
+            if (biosim) {
+                offscreen.width = call("biosim_wasm_get_size_x") * 4;
+                offscreen.height = call("biosim_wasm_get_size_y") * 4;
+            }
+            ctx = offscreen.getContext("2d");
+            drawFrame();
+            break;
+        }
     }
 });
 

@@ -162,3 +162,33 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_census_survivors(void) {
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_census_kills(void) {
     return s_last_census.kills;
 }
+
+/* ── rendering queries ───────────────────────────────────────────────────── */
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_population(void) {
+    return s_sim.agents.population;
+}
+
+EMSCRIPTEN_KEEPALIVE int32_t biosim_wasm_get_size_x(void) {
+    return s_sim.size_x;
+}
+
+EMSCRIPTEN_KEEPALIVE int32_t biosim_wasm_get_size_y(void) {
+    return s_sim.size_y;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_loc_x_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.loc_x;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_loc_y_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.loc_y;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_alive_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.alive;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_grid_cells_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.grid.cells;
+}
