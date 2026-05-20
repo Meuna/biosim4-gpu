@@ -97,6 +97,8 @@ via chrome-devtools-mcp and confirm zero console errors and zero warnings.
 A webapp task is **NOT** complete if the browser console shows any error or
 warning introduced by your change.
 
+Terminate the dev server and mcp tab when you are done.
+
 ## Portability Pitfalls
 
 Three mistakes are easy to make and hard to spot. They break the build on

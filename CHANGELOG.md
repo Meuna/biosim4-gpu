@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Simulation stepper in `sim-wasm` and `webapp`** (gh-43) — `sim-wasm` now
+  exposes a full stepper C API (`biosim_wasm_init`, `biosim_wasm_do_step`,
+  `biosim_wasm_do_step_agent`, `biosim_wasm_next_generation`, plus state-query
+  and census functions).  Parameters match `sim-ref` defaults.  The webapp gains
+  five control buttons (Play, Stop, Step, Step Agent, New Generation) wired to the
+  worker via a typed `WorkerCmd`/`WorkerEvent` message protocol.  Play uses a
+  `setTimeout(0)` tick loop so Stop is honoured at step boundaries.  A live
+  status line and a census log (newest first) display button feedback and
+  per-generation survivor/kill data.
+
+### Removed
+- **`wasm-sim-stepper` PoC** (gh-41) — deleted `packages/wasm-sim-stepper/`;
+  removed stale `BIOSIM_BUILD_WASM_STEPPER` and `BIOSIM_BUILD_PARAMS` cache
+  variables from the `wasm-base` CMake preset.
+
+### Added
 - **Webapp tooling** — ESLint 9 flat config (TypeScript + Svelte rules), Prettier
   with `prettier-plugin-svelte`, and Vitest 3 with `@testing-library/svelte` +
   jsdom. Two new CMake custom targets: `webapp-lint` (ESLint + Prettier check)
