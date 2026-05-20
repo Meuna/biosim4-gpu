@@ -77,9 +77,25 @@ to decide whether to refactor or add a `NOLINTNEXTLINE` flag.
 - **Conventions are normative.** The rules in `docs/conventions.md` apply to
   every file written in this repository.
 
-## Browser Testing
+## Browser Testing (webapp branch)
 
-Will be completed later, with `@playwright/cli` and `chrome-devtools-mcp@latest`
+### Setup — install chrome-devtools-mcp
+
+```sh
+claude mcp add chrome-devtools --scope user bunx chrome-devtools-mcp@latest
+```
+
+Restart Claude Code after adding the server so it is available in the session.
+
+### Webapp dev check
+
+After completing the quality check sequence for a webapp change, verify the
+app works correctly in a real browser: run
+`cmake --build --preset webapp --target dev`, then load http://localhost:5173
+via chrome-devtools-mcp and confirm zero console errors and zero warnings.
+
+A webapp task is **NOT** complete if the browser console shows any error or
+warning introduced by your change.
 
 ## Portability Pitfalls
 
