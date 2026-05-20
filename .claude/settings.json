@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gcc --version)",
+      "Bash(clang --version)",
+      "Bash(ninja --version)",
+      "Bash(cmake *)",
+      "Bash(ctest *)",
+      "Bash(bun run --cwd packages/webapp *)",
+      "Bash(clang-tidy *)",
+      "Bash(clang-format *)",
+      "Bash(git *)",
+      "Bash(./build/debug/packages/sim-ref/biosim-ref *)",
+      "Bash(./build/debug/packages/sim-gpu/biosim-gpu *)"
+    ]
+  }
+}
