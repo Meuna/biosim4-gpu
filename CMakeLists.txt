@@ -75,8 +75,6 @@ if(NOT BIOSIM_BUILD_WEBAPP)
   include(DevWorkflow)
 else()
   if(EMSCRIPTEN)
-    # WebAssembly PoC: hardcoded sim, generates standalone HTML
-    add_subdirectory(packages/wasm-sim-stepper)
     # WASM bindings: ES6 module + Web Worker target
     add_subdirectory(packages/sim-wasm)
     # Svelte SPA that loads sim-wasm inside a Web Worker
