@@ -217,6 +217,12 @@ build commands.
   component styles.
 - Retheme the whole app by swapping `--_accent` (and the surface/text raw values
   if needed). Verify contrast remains high after any palette change.
+- Two-tier CSS framework: element defaults belong in `src/styles/base.css`;
+  shared, reusable component classes (`.button`, `.panel`, `.field-row`, etc.)
+  belong in `src/styles/primitives.css`, imported from `app.css` after `base.css`.
+  Only component-specific styles belong in a component's scoped `<style>` block.
+  **Any style pattern used by 2 or more components MUST live in `primitives.css`**
+  — never duplicated inline.
 
 ## Alloc/goto/free discipline (native branch)
 

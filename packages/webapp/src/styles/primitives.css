@@ -1,0 +1,173 @@
+/*
+ * primitives.css — shared reusable component classes
+ *
+ * CONVENTION:
+ *   Any style pattern used by 2 or more components MUST live here.
+ *   Never duplicate shared styles in component <style> blocks.
+ *   Component-specific layout and positioning stay in the component's <style> block.
+ */
+
+/* ── Buttons ── */
+
+.button {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    background: transparent;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-3);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition:
+        border-color 0.1s,
+        color 0.1s,
+        background 0.1s,
+        opacity 0.1s;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.button:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent-text);
+}
+
+.button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+}
+
+/* Pill variant — rounded, sans-serif, normal case */
+.button--pill {
+    border-radius: var(--radius-pill);
+    font-family: var(--font-sans);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+}
+
+/* Filled variant — solid background */
+.button--filled {
+    background: var(--color-text);
+    color: var(--color-surface);
+    border-color: var(--color-text);
+}
+
+.button--filled:hover {
+    opacity: 0.85;
+    color: var(--color-surface);
+    border-color: var(--color-text);
+}
+
+/* Ghost variant — subtle border and muted text */
+.button--ghost {
+    border-color: var(--color-border-subtle);
+    color: var(--color-text-muted);
+}
+
+.button--ghost:hover {
+    border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+/* Icon-only variant — square, centered */
+.button--icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    padding: 0;
+    justify-content: center;
+}
+
+/* ── Panels ── */
+
+.panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.panel__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.panel__index {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    letter-spacing: 0.1em;
+}
+
+.panel__title {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+/* ── Form controls ── */
+
+.field-row {
+    margin-bottom: var(--space-4);
+}
+
+.field-label {
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    margin-bottom: var(--space-1);
+    display: block;
+}
+
+.field-hint {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.control {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    background: var(--color-control-surface);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-1) var(--space-2);
+    width: 100%;
+    height: 2rem;
+    box-sizing: border-box;
+}
+
+/* ── Type utilities ── */
+
+.small-caps {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+}
+
+.section-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--color-border-subtle);
+    margin-bottom: var(--space-4);
+}
+
+/* ── Layout helpers ── */
+
+.hairline {
+    height: 1px;
+    background: var(--color-border-subtle);
+}
