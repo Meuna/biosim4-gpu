@@ -10,6 +10,7 @@
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
+    let workerReady = $state(false);
 
     const worker = new Worker(
         new URL("./workers/sim.worker.ts", import.meta.url),
@@ -25,6 +26,18 @@
                     { type: "canvas", canvas: offscreen } satisfies WorkerCmd,
                     [offscreen],
                 );
+                workerReady = true;
+                // Send initial layout so the worker sizes the canvas and knows
+                // where the grid region lives on the full-viewport surface.
+                send({
+                    type: "layout",
+                    canvasW: viewportW,
+                    canvasH: viewportH,
+                    gridX: gridGeom.x,
+                    gridY: gridGeom.y,
+                    gridSize: gridGeom.size,
+                    gridCells: GRID_SIZE,
+                } satisfies WorkerCmd);
             }
         } else if (msg.type === "status") {
             // Parse step count from "Run step N" status messages.
@@ -100,6 +113,21 @@
         return { x, y, size, cx: x + size / 2, cy: y + size / 2 };
     });
 
+    // Re-send layout whenever the grid geometry or viewport dims change so the
+    // worker can resize the canvas and reposition the grid region.
+    $effect(() => {
+        if (!workerReady) return;
+        send({
+            type: "layout",
+            canvasW: viewportW,
+            canvasH: viewportH,
+            gridX: gridGeom.x,
+            gridY: gridGeom.y,
+            gridSize: gridGeom.size,
+            gridCells: GRID_SIZE,
+        } satisfies WorkerCmd);
+    });
+
     // ── Play / pause / step / gen / reset ────────────────────────────────────
     function handleToggle(): void {
         if (isRunning) {
@@ -121,7 +149,9 @@
 
     function handleReset(): void {
         isRunning = false;
-        send({ type: "stop" });
+        // 'reset' returns the worker to idle (kinematic sculpture) and zeros
+        // playing state; 'stop' alone would only freeze agents at grid positions.
+        send({ type: "reset" });
         currentGen = 0;
         currentStep = 0;
         survivalHistory = [];
