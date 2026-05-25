@@ -59,3 +59,8 @@ cmake-build-*/
 
 # macOS Finder metadata
 .DS_Store
+
+# ── Claude Code ────────────────────────────────────────────────────────────────
+
+# Per-developer Claude Code settings (never committed; .claude/settings.json is)
+.claude/settings.local.json

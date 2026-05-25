@@ -207,6 +207,17 @@ build commands.
   module-level mutable variables
 - **Lint/format:** run via the `webapp` preset (`--target lint`, `--target format`)
 
+### Webapp Styling
+
+- Style with scoped CSS in `.svelte` `<style>` blocks. Do not add Tailwind or any
+  utility-class framework.
+- Reference semantic token aliases from `src/styles/tokens.css`. Do not hardcode
+  colors, spacings, or font names in component styles.
+- To change the theme, edit `src/styles/tokens.css` only. Never retheme by editing
+  component styles.
+- Retheme the whole app by swapping `--_accent` (and the surface/text raw values
+  if needed). Verify contrast remains high after any palette change.
+
 ## Alloc/goto/free discipline (native branch)
 
 Functions that allocate multiple resources follow this pattern:

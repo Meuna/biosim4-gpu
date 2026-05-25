@@ -13,6 +13,12 @@ add_custom_target(copy-wasm-into-public-dir
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
           "${WASM_BINARY_DIR}/biosim.wasm"
           "${PUBLIC_DIR}/wasm/"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${CMAKE_CURRENT_SOURCE_DIR}/public/favicon.ico"
+          "${CMAKE_CURRENT_SOURCE_DIR}/public/favicon.svg"
+          "${CMAKE_CURRENT_SOURCE_DIR}/public/apple-touch-icon.png"
+          "${CMAKE_CURRENT_SOURCE_DIR}/public/icon-32.png"
+          "${PUBLIC_DIR}/"
 )
 
 add_custom_target(webapp ALL
