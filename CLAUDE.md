@@ -120,6 +120,8 @@ trail so reviewers can track each change individually.
 
 ## Working with this repository
 
+- **Keep the status up-to-date.**
+
 - **Keep the changelog up-to-date.**
 
 - **Keep the documentation up-to-date.** When implementing a feature, update the
