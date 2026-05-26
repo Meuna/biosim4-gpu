@@ -57,7 +57,7 @@ cmake --build --preset debug
 | `docs/architecture.md` | Package structure, key types and functions |
 | `docs/build.md` | Prerequisites, build steps, lint/format targets |
 | `docs/usage.md` | CLI reference, TOML format, challenges, barriers |
-| `docs/conventions.md` | Naming, error handling, alloc/goto/free, portability |
+| `docs/conventions.md` | Commit/PR conventions; links to C and webapp sub-guides |
 | `docs/gpu-design.md` | Planned GPU architecture (not yet implemented) |
 | `docs/formats.md` | Snapshot binary format, TOML format overview |
 | `STATUS.md` | Implementation status, missing parts, open design questions |
