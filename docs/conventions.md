@@ -2,11 +2,11 @@
 
 ## Language-specific conventions
 
-- `docs/conventions-c.md` — C/OpenCL: naming, error handling, alloc/goto/free
+- [`docs/conventions-c.md`](conventions-c.md) — C/OpenCL: naming, error handling, alloc/goto/free
   discipline, error logging discipline, host/device portability, portability
   pitfalls, CMake, and testing. Applies to `core`, `cfgparse`, `sim-ref`,
   `sim-gpu`, and `sim-wasm`.
-- `docs/conventions-webapp.md` — TypeScript/Svelte: naming, module
+- [`docs/conventions-webapp.md`](conventions-webapp.md) — TypeScript/Svelte: naming, module
   organisation, no global mutable state, testing, linting, formatting, and
   webapp styling. Applies to `webapp`.
 
@@ -34,8 +34,8 @@ where `{N}` is the GitHub issue number. Examples:
 
 ### Review-response commits
 
-When addressing PR review comments, each commit addresses one comment
-atomically. Use the same format:
+When addressing PR review comments, group related changes into focused commits.
+Use the same format:
 
 ```
 gh-{N}: {description of what changed in response to review}

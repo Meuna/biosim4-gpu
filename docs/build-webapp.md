@@ -4,8 +4,8 @@ Covers the `webapp` package (Svelte 5 SPA).
 
 ## Prerequisites
 
-Requires Emscripten and Bun installed and on `PATH`. See `docs/build-wasm.md`
-for installation instructions. The WASM artifacts (`biosim.mjs`, `biosim.wasm`)
+Requires Emscripten and Bun installed and on `PATH`. See
+[`docs/build-wasm.md`](build-wasm.md) for installation instructions. The WASM artifacts (`biosim.mjs`, `biosim.wasm`)
 must be built before the dev server or production build.
 
 ## Configure and build
