@@ -20,12 +20,12 @@ to do anything extra for them.
 
 | Prerequisite | Applies to | Notes |
 |---|---|---|
-| cmake 3.28+, ninja, gcc, pkg-config | All builds | See `docs/build-native.md` for install commands |
+| cmake 3.28+, ninja, gcc, pkg-config | All builds | See [`docs/build-native.md`](build-native.md) for install commands |
 | vcpkg | All builds | Set `VCPKG_ROOT` env var after installing |
-| clang-format, clang-tidy | Native `lint`/`format` targets | See `docs/build-native.md` |
-| OpenCL runtime | Running `biosim-gpu` / its tests | See `docs/build-opencl.md` |
-| Emscripten SDK (`emsdk`) | Webapp tree | See `docs/build-wasm.md` |
-| Bun | Webapp tree | See `docs/build-wasm.md` |
+| clang-format, clang-tidy | Native `lint`/`format` targets | See [`docs/build-native.md`](build-native.md) |
+| OpenCL runtime | Running `biosim-gpu` / its tests | See [`docs/build-opencl.md`](build-opencl.md) |
+| Emscripten SDK (`emsdk`) | Webapp tree | See [`docs/build-webapp.md`](build-webapp.md) |
+| Bun | Webapp tree | See [`docs/build-webapp.md`](build-webapp.md) |
 
 ## Build trees
 
@@ -34,8 +34,8 @@ to do anything extra for them.
 Packages: `core`, `cfgparse`, `sim-ref`, `sim-gpu`. CMake presets:
 `debug`, `release`, `asan`, `ci`.
 
-- Build commands, presets, and smoke tests → `docs/build-native.md`
-- OpenCL runtime installation → `docs/build-opencl.md`
+- Build commands, presets, and smoke tests → [`docs/build-native.md`](build-native.md)
+- OpenCL runtime installation → [`docs/build-opencl.md`](build-opencl.md)
 
 ### Webapp tree
 
@@ -43,8 +43,8 @@ Packages: `sim-wasm` (Emscripten WASM module) and `webapp` (Svelte SPA).
 Uses a separate CMake binary dir (`build/webapp`) and the Emscripten
 toolchain — does not share a build directory with the native tree.
 
-- Emscripten SDK and Bun installation; `cmake --preset webapp` build → `docs/build-wasm.md`
-- Dev server, Vitest, Prettier, ESLint, smoke test → `docs/build-webapp.md`
+- Emscripten SDK and Bun installation; `cmake --preset webapp` build → [`docs/build-wasm.md`](build-wasm.md)
+- Dev server, Vitest, Prettier, ESLint, smoke test → [`docs/build-webapp.md`](build-webapp.md)
 
 ## CI
 
