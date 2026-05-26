@@ -25,7 +25,7 @@ sudo apt install pocl-opencl-icd
 ```
 
 POCL provides an OpenCL 3.0 CPU driver that does not require physical GPU hardware.
-See [`docs/build.md`](build.md#opencl-runtime-for-sim-gpu) for full details.
+See [`docs/build-opencl.md`](build-opencl.md) for full details.
 
 ### Running
 
