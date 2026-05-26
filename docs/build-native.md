@@ -36,16 +36,23 @@ workloads:
 
 Both build trees use vcpkg for C/C++ dependencies.
 
+**Linux** — manual setup required:
+
 ```sh
 git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
-~/vcpkg/bootstrap-vcpkg.sh       # Linux/macOS
-# ~/vcpkg/bootstrap-vcpkg.bat    # Windows
+~/vcpkg/bootstrap-vcpkg.sh
 export VCPKG_ROOT=~/vcpkg          # add to ~/.bashrc or ~/.profile
 ```
 
 The `VCPKG_ROOT` environment variable tells CMake where to find the vcpkg
 toolchain file. Without it, configure fails immediately with a
 missing-toolchain error.
+
+**Windows** — vcpkg is bundled with Visual Studio when the "vcpkg package
+manager" workload is selected. CMake picks it up automatically via the Visual
+Studio integration; no manual `VCPKG_ROOT` setup is needed. A standalone
+install is still possible using the commands above (`bootstrap-vcpkg.bat`)
+if you prefer an explicit location.
 
 ### Lint and format tools
 

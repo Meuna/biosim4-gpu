@@ -36,9 +36,8 @@ A task is **NOT** complete while lint reports any error or warning.
 
 ## Testing
 
-The `tests/` directory is currently empty. Any helper functions extracted from
-`main.c` get a mirror test in `packages/sim-ref/tests/test_foo.c` with a new
-`tests/CMakeLists.txt`.
+Any helper functions extracted from `main.c` get a mirror test in
+`packages/sim-ref/tests/test_foo.c` with a new `tests/CMakeLists.txt`.
 
 ## Further reading
 

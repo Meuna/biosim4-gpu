@@ -60,4 +60,4 @@ Output artifacts:
 ## Next steps
 
 For the webapp dev server, testing, and linting workflow, see
-`docs/build-webapp.md`.
+[`docs/build-webapp.md`](build-webapp.md).
