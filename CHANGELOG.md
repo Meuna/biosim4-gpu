@@ -25,6 +25,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   status line and a census log (newest first) display button feedback and
   per-generation survivor/kill data.
 
+### Changed
+- **Documentation restructured with progressive disclosure** (gh-52) — `CLAUDE.md`
+  is now a lean workflow guide. Language conventions are split into
+  `docs/conventions-c.md` (C/OpenCL, portability pitfalls, alloc/goto/free,
+  error logging) and `docs/conventions-webapp.md` (TypeScript/Svelte, styling).
+  Build instructions are split into `docs/build-native.md`, `docs/build-opencl.md`,
+  `docs/build-wasm.md`, and `docs/build-webapp.md`. Each package gains a
+  dedicated `CLAUDE.md` with only the rules relevant to that package.
+
 ### Removed
 - **`wasm-sim-stepper` PoC** (gh-41) — deleted `packages/wasm-sim-stepper/`;
   removed stale `BIOSIM_BUILD_WASM_STEPPER` and `BIOSIM_BUILD_PARAMS` cache

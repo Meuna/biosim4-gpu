@@ -127,7 +127,7 @@ typedef struct {
 ### Host/device portability
 
 Five headers are shared with OpenCL kernel sources and must compile as both
-C11 and OpenCL C (see [`docs/conventions.md`](conventions.md) for the
+C11 and OpenCL C (see [`docs/conventions-c.md`](conventions-c.md) for the
 `_defs.h` convention and portability rules):
 
 - `core/grid_defs.h` — `biosim_coord_t`, `BIOSIM_GRID_EMPTY`,
