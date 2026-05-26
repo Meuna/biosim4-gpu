@@ -10,6 +10,7 @@
       "Bash(clang-tidy *)",
       "Bash(clang-format *)",
       "Bash(git *)",
+      "Bash(gh *)",
       "Bash(./build/debug/packages/sim-ref/biosim-ref *)",
       "Bash(./build/debug/packages/sim-gpu/biosim-gpu *)",
       "mcp__chrome-devtools__*"

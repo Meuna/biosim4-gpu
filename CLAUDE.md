@@ -52,6 +52,72 @@ Branch-specific commands:
 When facing a cognitive-complexity lint error, do not fix blindly. Ask the user
 to decide whether to refactor or add a `NOLINTNEXTLINE` flag.
 
+## GH Issue PR Workflow
+
+When asked to implement a GitHub issue, follow this workflow exactly.
+
+### 1. Understand the issue
+
+Read the full specification before writing any code:
+
+```sh
+gh issue view {number}
+```
+
+### 2. Create a feature branch
+
+```sh
+git checkout -b gh-{number}
+```
+
+Branch names must follow the pattern `gh-{number}`.
+
+### 3. Implement and commit
+
+Commit incrementally as work progresses. Multiple commits per PR are allowed
+and encouraged for large changes. Use the commit format defined in
+`docs/conventions.md`:
+
+```
+gh-{N}: {imperative description}
+```
+
+Do **not** use `closes gh-{N}:` in commit messages — the issue is closed when
+the PR is merged, not by individual commits.
+
+### 4. Quality check
+
+Run the full quality check sequence (build → test → lint → format → build →
+test) for every affected build branch, exactly as defined in
+[Two build branches](#two-build-branches). Include the webapp dev check if any
+webapp files were changed.
+
+### 5. Push and open a PR
+
+```sh
+git push -u origin gh-{number}
+gh pr create \
+  --title "gh-{N}: {one-line summary}" \
+  --body "Closes #{N}
+
+{description of what was implemented and key decisions}"
+```
+
+The PR body **must** contain `Closes #{N}` so that GitHub closes the issue
+automatically when the PR is merged.
+
+### 6. Respond to review comments
+
+After receiving review feedback:
+
+1. Read the review: `gh pr view {pr-number} --comments`
+2. Address each comment as a separate atomic commit — one commit per comment
+   addressed, using the same commit format (`gh-{N}: {what changed}`).
+3. Push: `git push`
+
+Do not squash or amend commits during review response. Preserve the atomic
+trail so reviewers can track each change individually.
+
 ## Working with this repository
 
 - **Keep the changelog up-to-date.**

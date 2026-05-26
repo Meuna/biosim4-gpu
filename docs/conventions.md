@@ -169,3 +169,34 @@ bun run --cwd packages/webapp test:watch    # watch mode
   `cmake --build --preset webapp --target lint`.
 - **Prettier** with `prettier-plugin-svelte`. Run via
   `cmake --build --preset webapp --target format`.
+
+## Commit messages
+
+### Format
+
+```
+gh-{N}: {imperative description}
+```
+
+where `{N}` is the GitHub issue number. Examples:
+
+- `gh-51: add PR workflow section to CLAUDE.md`
+- `gh-48: design kinematic and grid canvas feature`
+
+### Rules
+
+- Use the imperative mood: "add", not "added" or "adds".
+- No period at the end of the description.
+- Every commit must reference an issue number.
+- Multiple commits per PR are allowed; each references the same issue number.
+- Do **not** put `closes` in commit messages — use `Closes #{N}` in the PR
+  body instead so that GitHub closes the issue on merge.
+
+### Review-response commits
+
+When addressing PR review comments, each commit addresses one comment
+atomically. Use the same format:
+
+```
+gh-{N}: {description of what changed in response to review}
+```
