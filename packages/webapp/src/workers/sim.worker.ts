@@ -87,7 +87,7 @@ export type WorkerCmd =
     | { type: "stepAgent" }
     | { type: "nextGeneration" }
     | { type: "configure"; params: SimParams }
-    | { type: "canvas"; canvas: OffscreenCanvas }
+    | { type: "canvas"; canvas: OffscreenCanvas; overlayColor: string }
     | {
           type: "layout";
           canvasW: number;
@@ -155,8 +155,9 @@ let currentChallenge: ChallengeSpec = {
     mirror: false,
 };
 
-// Matches --_accent-soft from tokens.css. Update only if the palette changes.
-const CHALLENGE_OVERLAY_COLOR = "rgba(21, 128, 61, 0.12)";
+// Overlay colour for challenge target zones. Initialised from the CSS token
+// --_border-subtle passed via the "canvas" command; fallback used in tests.
+let challengeOverlayColor = "rgba(0, 0, 0, 0.12)";
 
 interface Layout {
     canvasW: number;
@@ -324,15 +325,26 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
     const borderH = Math.max(2, (gridH / gridCellsY) * 2);
 
     ctx.save();
-    ctx.fillStyle = CHALLENGE_OVERLAY_COLOR;
+    ctx.fillStyle = challengeOverlayColor;
 
     switch (spec.kind) {
         case "x_band": {
-            const x = gridX + spec.xMin * gridW;
-            const w = (spec.xMax - spec.xMin) * gridW;
-            ctx.fillRect(x, gridY, w, gridH);
             if (spec.mirror) {
-                ctx.fillRect(gridX + (1 - spec.xMax) * gridW, gridY, w, gridH);
+                // Mirror inverts the safe zone: the two bands outside [xMin, xMax].
+                ctx.fillRect(gridX, gridY, spec.xMin * gridW, gridH);
+                ctx.fillRect(
+                    gridX + spec.xMax * gridW,
+                    gridY,
+                    (1 - spec.xMax) * gridW,
+                    gridH,
+                );
+            } else {
+                ctx.fillRect(
+                    gridX + spec.xMin * gridW,
+                    gridY,
+                    (spec.xMax - spec.xMin) * gridW,
+                    gridH,
+                );
             }
             break;
         }
@@ -687,6 +699,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         case "canvas": {
             const offscreen = cmd.canvas;
+            challengeOverlayColor = cmd.overlayColor;
             if (layout) {
                 offscreen.width = layout.canvasW;
                 offscreen.height = layout.canvasH;
