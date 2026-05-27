@@ -164,11 +164,11 @@
         }}
     />
 
-    <div class="field-row sim-config__toggle-row">
-        <label class="sim-config__toggle-label">
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
             <input
                 type="checkbox"
-                class="sim-config__checkbox"
+                class="toggle-checkbox"
                 checked={params.sexualReproduction}
                 onchange={(e) => {
                     params.sexualReproduction = (
@@ -182,11 +182,11 @@
         </label>
     </div>
 
-    <div class="field-row sim-config__toggle-row">
-        <label class="sim-config__toggle-label">
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
             <input
                 type="checkbox"
-                class="sim-config__checkbox"
+                class="toggle-checkbox"
                 checked={params.chooseParentsByFitness}
                 onchange={(e) => {
                     params.chooseParentsByFitness = (
@@ -234,11 +234,11 @@
         }}
     />
 
-    <div class="field-row sim-config__toggle-row">
-        <label class="sim-config__toggle-label">
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
             <input
                 type="checkbox"
-                class="sim-config__checkbox"
+                class="toggle-checkbox"
                 checked={params.enableKill}
                 onchange={(e) => {
                     params.enableKill = (e.target as HTMLInputElement).checked;
@@ -341,28 +341,6 @@
         font-family: var(--font-mono);
         font-size: 0.625rem;
         color: var(--color-text-muted);
-    }
-
-    .sim-config__toggle-row {
-        align-items: center;
-    }
-
-    .sim-config__toggle-label {
-        display: flex;
-        align-items: center;
-        gap: var(--space-3);
-        cursor: pointer;
-    }
-
-    .sim-config__toggle-label .field-label {
-        margin-bottom: 0;
-    }
-
-    .sim-config__checkbox {
-        accent-color: var(--color-accent);
-        width: 1rem;
-        height: 1rem;
-        flex-shrink: 0;
     }
 
     .sim-config__placeholder-note {

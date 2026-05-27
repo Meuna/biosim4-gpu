@@ -120,36 +120,18 @@
         format={(v) => v.toFixed(2)}
         onchange={(v) => emit({ xMax: v })}
     />
-    <div class="field-row challenge-control__bool-row">
-        <span class="field-label">Mirror</span>
-        <div
-            class="challenge-control__radio-group"
-            role="group"
-            aria-label="Mirror"
-        >
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="x-band-mirror"
-                    class="challenge-control__radio"
-                    checked={!value.mirror}
-                    onchange={() => emit({ mirror: false })}
-                    aria-label="No mirror"
-                />
-                <span>Off</span>
-            </label>
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="x-band-mirror"
-                    class="challenge-control__radio"
-                    checked={value.mirror}
-                    onchange={() => emit({ mirror: true })}
-                    aria-label="Mirror"
-                />
-                <span>On</span>
-            </label>
-        </div>
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
+            <input
+                type="checkbox"
+                class="toggle-checkbox"
+                checked={value.mirror}
+                onchange={(e) =>
+                    emit({ mirror: (e.target as HTMLInputElement).checked })}
+                aria-label="Mirror"
+            />
+            <span class="field-label">Mirror</span>
+        </label>
     </div>
 {/if}
 
@@ -184,36 +166,18 @@
         format={(v) => v.toFixed(2)}
         onchange={(v) => emit({ radius: v })}
     />
-    <div class="field-row challenge-control__bool-row">
-        <span class="field-label">Weighted</span>
-        <div
-            class="challenge-control__radio-group"
-            role="group"
-            aria-label="Weighted"
-        >
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="disc-weighted"
-                    class="challenge-control__radio"
-                    checked={!value.weighted}
-                    onchange={() => emit({ weighted: false })}
-                    aria-label="Not weighted"
-                />
-                <span>Off</span>
-            </label>
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="disc-weighted"
-                    class="challenge-control__radio"
-                    checked={value.weighted}
-                    onchange={() => emit({ weighted: true })}
-                    aria-label="Weighted"
-                />
-                <span>On</span>
-            </label>
-        </div>
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
+            <input
+                type="checkbox"
+                class="toggle-checkbox"
+                checked={value.weighted}
+                onchange={(e) =>
+                    emit({ weighted: (e.target as HTMLInputElement).checked })}
+                aria-label="Weighted"
+            />
+            <span class="field-label">Weighted</span>
+        </label>
     </div>
 {/if}
 
@@ -228,36 +192,18 @@
         format={(v) => v.toFixed(2)}
         onchange={(v) => emit({ radius: v })}
     />
-    <div class="field-row challenge-control__bool-row">
-        <span class="field-label">Weighted</span>
-        <div
-            class="challenge-control__radio-group"
-            role="group"
-            aria-label="Weighted"
-        >
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="corners-weighted"
-                    class="challenge-control__radio"
-                    checked={!value.weighted}
-                    onchange={() => emit({ weighted: false })}
-                    aria-label="Not weighted"
-                />
-                <span>Off</span>
-            </label>
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="corners-weighted"
-                    class="challenge-control__radio"
-                    checked={value.weighted}
-                    onchange={() => emit({ weighted: true })}
-                    aria-label="Weighted"
-                />
-                <span>On</span>
-            </label>
-        </div>
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
+            <input
+                type="checkbox"
+                class="toggle-checkbox"
+                checked={value.weighted}
+                onchange={(e) =>
+                    emit({ weighted: (e.target as HTMLInputElement).checked })}
+                aria-label="Weighted"
+            />
+            <span class="field-label">Weighted</span>
+        </label>
     </div>
 {/if}
 
@@ -290,36 +236,20 @@
         value={value.maxN}
         onchange={(v) => emit({ maxN: v })}
     />
-    <div class="field-row challenge-control__bool-row">
-        <span class="field-label">Exclude border</span>
-        <div
-            class="challenge-control__radio-group"
-            role="group"
-            aria-label="Exclude border"
-        >
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="nc-exclude-border"
-                    class="challenge-control__radio"
-                    checked={!value.excludeBorder}
-                    onchange={() => emit({ excludeBorder: false })}
-                    aria-label="Include border"
-                />
-                <span>Off</span>
-            </label>
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="nc-exclude-border"
-                    class="challenge-control__radio"
-                    checked={value.excludeBorder}
-                    onchange={() => emit({ excludeBorder: true })}
-                    aria-label="Exclude border"
-                />
-                <span>On</span>
-            </label>
-        </div>
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
+            <input
+                type="checkbox"
+                class="toggle-checkbox"
+                checked={value.excludeBorder}
+                onchange={(e) =>
+                    emit({
+                        excludeBorder: (e.target as HTMLInputElement).checked,
+                    })}
+                aria-label="Exclude border"
+            />
+            <span class="field-label">Exclude border</span>
+        </label>
     </div>
 {/if}
 
@@ -382,36 +312,18 @@
         value={value.maxN}
         onchange={(v) => emit({ maxN: v })}
     />
-    <div class="field-row challenge-control__bool-row">
-        <span class="field-label">Weighted</span>
-        <div
-            class="challenge-control__radio-group"
-            role="group"
-            aria-label="Weighted"
-        >
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="cs-weighted"
-                    class="challenge-control__radio"
-                    checked={!value.weighted}
-                    onchange={() => emit({ weighted: false })}
-                    aria-label="Not weighted"
-                />
-                <span>Off</span>
-            </label>
-            <label class="challenge-control__radio-label">
-                <input
-                    type="radio"
-                    name="cs-weighted"
-                    class="challenge-control__radio"
-                    checked={value.weighted}
-                    onchange={() => emit({ weighted: true })}
-                    aria-label="Weighted"
-                />
-                <span>On</span>
-            </label>
-        </div>
+    <div class="field-row toggle-row">
+        <label class="toggle-label">
+            <input
+                type="checkbox"
+                class="toggle-checkbox"
+                checked={value.weighted}
+                onchange={(e) =>
+                    emit({ weighted: (e.target as HTMLInputElement).checked })}
+                aria-label="Weighted"
+            />
+            <span class="field-label">Weighted</span>
+        </label>
     </div>
 {/if}
 
@@ -449,32 +361,5 @@
         padding: var(--space-1) var(--space-2);
         cursor: pointer;
         appearance: auto;
-    }
-
-    .challenge-control__bool-row {
-        align-items: center;
-        gap: var(--space-3);
-    }
-
-    .challenge-control__radio-group {
-        display: flex;
-        gap: var(--space-4);
-    }
-
-    .challenge-control__radio-label {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-        cursor: pointer;
-        font-family: var(--font-sans);
-        font-size: var(--text-sm);
-        color: var(--color-text);
-    }
-
-    .challenge-control__radio {
-        accent-color: var(--color-accent);
-        width: 1rem;
-        height: 1rem;
-        flex-shrink: 0;
     }
 </style>

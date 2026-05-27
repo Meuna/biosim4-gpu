@@ -90,14 +90,17 @@ describe("ChallengeControl", () => {
         }
     });
 
-    it("calls onchange when mirror radio is toggled on", async () => {
+    it("calls onchange when mirror checkbox is toggled on", async () => {
         const onchange = vi.fn<[ChallengeSpec], void>();
         render(ChallengeControl, {
             props: { value: defaultXBand, onchange },
         });
-        await fireEvent.change(screen.getByRole("radio", { name: "Mirror" }), {
-            target: { checked: true },
-        });
+        await fireEvent.change(
+            screen.getByRole("checkbox", { name: "Mirror" }),
+            {
+                target: { checked: true },
+            },
+        );
         expect(onchange).toHaveBeenCalledOnce();
         const spec = onchange.mock.calls[0][0];
         if (spec.kind === "x_band") {

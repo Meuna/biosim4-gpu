@@ -165,6 +165,32 @@
     margin-bottom: var(--space-4);
 }
 
+/* ── Checkbox toggle row ── */
+
+/* Modifier for .field-row: centres the label/checkbox pair vertically. */
+.toggle-row {
+    align-items: center;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+}
+
+/* Override .field-label's bottom margin when it sits inside a toggle row. */
+.toggle-label .field-label {
+    margin-bottom: 0;
+}
+
+.toggle-checkbox {
+    accent-color: var(--color-accent);
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
+}
+
 /* ── Layout helpers ── */
 
 .hairline {
