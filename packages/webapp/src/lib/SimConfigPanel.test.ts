@@ -6,40 +6,37 @@ import type { WorkerCmd } from "../workers/sim.worker";
 describe("SimConfigPanel", () => {
     it("renders the Simulation heading and Configuration eyebrow", () => {
         render(SimConfigPanel, { props: { send: vi.fn() } });
-        expect(screen.getByText("Simulation")).toBeTruthy();
+        expect(
+            screen.getByRole("heading", { name: "Simulation" }),
+        ).toBeTruthy();
         expect(screen.getByText("Configuration")).toBeTruthy();
     });
 
-    it("starts in Preset mode and shows preset buttons", () => {
+    it("shows section labels sim.h, genome.h, io.h directly (no global toggle)", () => {
         render(SimConfigPanel, { props: { send: vi.fn() } });
-        expect(screen.getByText("default")).toBeTruthy();
-        expect(screen.getByText("corners-128")).toBeTruthy();
-        expect(screen.getByText("predator-256")).toBeTruthy();
-        expect(screen.getByText("sparse")).toBeTruthy();
-    });
-
-    it('shows "Custom →" button in Preset mode', () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
-        expect(screen.getByRole("button", { name: "Custom →" })).toBeTruthy();
-    });
-
-    it("switches to Custom mode when Custom → is clicked", async () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
-        await fireEvent.click(screen.getByRole("button", { name: "Custom →" }));
-        expect(screen.getByLabelText("Population")).toBeTruthy();
-    });
-
-    it("shows section labels sim.h, genome.h, io.h in Custom mode", async () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
-        await fireEvent.click(screen.getByRole("button", { name: "Custom →" }));
         expect(screen.getByText("sim.h")).toBeTruthy();
         expect(screen.getByText("genome.h")).toBeTruthy();
         expect(screen.getByText("io.h")).toBeTruthy();
     });
 
-    it("shows challenge and barriers placeholder sections in Custom mode", async () => {
+    it("renders ParamSlider for Population", () => {
         render(SimConfigPanel, { props: { send: vi.fn() } });
-        await fireEvent.click(screen.getByRole("button", { name: "Custom →" }));
+        expect(screen.getByLabelText("Population")).toBeTruthy();
+    });
+
+    it("renders ParamSlider for Mutation rate", () => {
+        render(SimConfigPanel, { props: { send: vi.fn() } });
+        expect(screen.getByLabelText("Mutation rate")).toBeTruthy();
+    });
+
+    it("renders GridSizeControl with the Grid section label", () => {
+        render(SimConfigPanel, { props: { send: vi.fn() } });
+        expect(screen.getByText("Grid")).toBeTruthy();
+        expect(screen.getByText("grid.h")).toBeTruthy();
+    });
+
+    it("shows challenge and barriers placeholder sections", () => {
+        render(SimConfigPanel, { props: { send: vi.fn() } });
         expect(screen.getByText("Challenge")).toBeTruthy();
         expect(screen.getByText("Barriers")).toBeTruthy();
         const notes = screen.getAllByText(
@@ -53,9 +50,8 @@ describe("SimConfigPanel", () => {
         expect(screen.getByText("✓ in sync")).toBeTruthy();
     });
 
-    it("marks apply button as dirty after changing a parameter in Custom mode", async () => {
+    it("marks apply button as dirty after changing a parameter", async () => {
         render(SimConfigPanel, { props: { send: vi.fn() } });
-        await fireEvent.click(screen.getByRole("button", { name: "Custom →" }));
         await fireEvent.input(screen.getByLabelText("Population"), {
             target: { value: "500" },
         });
@@ -65,7 +61,6 @@ describe("SimConfigPanel", () => {
     it("calls send with configure command when apply is clicked", async () => {
         const send = vi.fn<[WorkerCmd], void>();
         render(SimConfigPanel, { props: { send } });
-        await fireEvent.click(screen.getByRole("button", { name: "Custom →" }));
         await fireEvent.input(screen.getByLabelText("Population"), {
             target: { value: "500" },
         });
@@ -85,7 +80,6 @@ describe("SimConfigPanel", () => {
     it("resets dirty flag after apply", async () => {
         const send = vi.fn();
         render(SimConfigPanel, { props: { send } });
-        await fireEvent.click(screen.getByRole("button", { name: "Custom →" }));
         await fireEvent.input(screen.getByLabelText("Population"), {
             target: { value: "500" },
         });
