@@ -35,8 +35,10 @@
                     canvasH: viewportH,
                     gridX: gridGeom.x,
                     gridY: gridGeom.y,
-                    gridSize: gridGeom.size,
-                    gridCells: gridSize,
+                    gridW: gridGeom.w,
+                    gridH: gridGeom.h,
+                    gridCellsX: gridSizeX,
+                    gridCellsY: gridSizeY,
                 } satisfies WorkerCmd);
             }
         } else if (msg.type === "status") {
@@ -59,7 +61,8 @@
             currentStep = 0;
             survivalHistory = [];
             currentPop = msg.population;
-            gridSize = msg.gridSizeX;
+            gridSizeX = msg.gridSizeX;
+            gridSizeY = msg.gridSizeY;
             stepsPerGen = msg.stepsPerGen;
         }
         // "error" type is silently ignored in this phase; no UI for it yet.
@@ -79,7 +82,8 @@
     // These reflect the active simulation parameters and are updated when the
     // config panel applies a new configuration.
     let stepsPerGen = $state(300);
-    let gridSize = $state(128);
+    let gridSizeX = $state(128);
+    let gridSizeY = $state(128);
 
     // ── UI state ─────────────────────────────────────────────────────────────
     let selectedAgentId = $state<number | null>(null);
@@ -117,10 +121,14 @@
         const railW = railOpen && viewportW > 760 ? RAIL_W : 0;
         const availW = viewportW - railW - PAD_SIDE * 2;
         const availH = viewportH - TOPBAR_H - PAD_TOP - PAD_BOTTOM;
-        const size = Math.max(140, Math.min(availW, availH, 760));
-        const x = PAD_SIDE + (availW - size) / 2;
-        const y = TOPBAR_H + PAD_TOP + (availH - size) / 2;
-        return { x, y, size, cx: x + size / 2, cy: y + size / 2 };
+        const maxCells = Math.max(gridSizeX, gridSizeY);
+        const maxDim = Math.max(140, Math.min(availW, availH, 760));
+        const ppc = maxDim / maxCells;
+        const w = gridSizeX * ppc;
+        const h = gridSizeY * ppc;
+        const x = PAD_SIDE + (availW - w) / 2;
+        const y = TOPBAR_H + PAD_TOP + (availH - h) / 2;
+        return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
     });
 
     // Re-send layout whenever the grid geometry or viewport dims change so the
@@ -133,8 +141,10 @@
             canvasH: viewportH,
             gridX: gridGeom.x,
             gridY: gridGeom.y,
-            gridSize: gridGeom.size,
-            gridCells: gridSize,
+            gridW: gridGeom.w,
+            gridH: gridGeom.h,
+            gridCellsX: gridSizeX,
+            gridCellsY: gridSizeY,
         } satisfies WorkerCmd);
     });
 
@@ -201,7 +211,7 @@
     />
 
     <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
-    <GridView geom={gridGeom} running={isRunning} {gridSize} />
+    <GridView geom={gridGeom} running={isRunning} {gridSizeX} {gridSizeY} />
 
     <!-- z-index: 15 — telemetry HUD, bottom-left -->
     <HUD

@@ -2,11 +2,20 @@
     let {
         geom,
         running,
-        gridSize = 128,
+        gridSizeX = 128,
+        gridSizeY = 128,
     }: {
-        geom: { x: number; y: number; size: number; cx: number; cy: number };
+        geom: {
+            x: number;
+            y: number;
+            w: number;
+            h: number;
+            cx: number;
+            cy: number;
+        };
         running: boolean;
-        gridSize?: number;
+        gridSizeX?: number;
+        gridSizeY?: number;
     } = $props();
 </script>
 
@@ -18,7 +27,7 @@
 -->
 <div
     class="grid-view"
-    style="left: {geom.x}px; top: {geom.y}px; width: {geom.size}px; height: {geom.size}px"
+    style="left: {geom.x}px; top: {geom.y}px; width: {geom.w}px; height: {geom.h}px"
     aria-label="Simulation grid zone"
 >
     <!-- Crop marks — 4 corners just outside the zone boundary -->
@@ -30,10 +39,10 @@
     <!-- Axis labels -->
     <span class="axis-label axis-label--origin" aria-hidden="true">0</span>
     <span class="axis-label axis-label--y-end" aria-hidden="true"
-        >{gridSize}</span
+        >{gridSizeY}</span
     >
     <span class="axis-label axis-label--x-end" aria-hidden="true"
-        >{gridSize}</span
+        >{gridSizeX}</span
     >
 
     <!-- Idle overlay — visible only when simulation is not running -->
@@ -44,7 +53,7 @@
                 press play<br /><em>to begin.</em>
             </p>
             <p class="idle-overlay__meta">
-                {gridSize} × {gridSize} · seed 0xA17C · 2 048 cells queued
+                {gridSizeX} × {gridSizeY} · seed 0xA17C · 2 048 cells queued
             </p>
         </div>
     {/if}

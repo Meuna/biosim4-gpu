@@ -28,20 +28,25 @@ export function kinematicPosition(
     };
 }
 
-/** Canvas-pixel centre + radius for a simulation grid cell (gx, gy). */
+/** Canvas-pixel centre + radius for a simulation grid cell (gx, gy).
+ *  Supports rectangular grids: gridW/gridH are the pixel dimensions of the
+ *  grid region on the canvas; gridCellsX/Y are the simulation cell counts. */
 export function gridPosition(
     gx: number,
     gy: number,
     gridX: number,
     gridY: number,
-    gridSize: number,
-    gridCells: number,
+    gridW: number,
+    gridH: number,
+    gridCellsX: number,
+    gridCellsY: number,
 ): { x: number; y: number; r: number } {
-    const cellPx = gridSize / gridCells;
+    const cellPxW = gridW / gridCellsX;
+    const cellPxH = gridH / gridCellsY;
     return {
-        x: gridX + (gx + 0.5) * cellPx,
-        y: gridY + (gy + 0.5) * cellPx,
-        r: Math.max(1.5, cellPx * 0.4),
+        x: gridX + (gx + 0.5) * cellPxW,
+        y: gridY + (gy + 0.5) * cellPxH,
+        r: Math.max(1.5, Math.min(cellPxW, cellPxH) * 0.4),
     };
 }
 

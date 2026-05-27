@@ -71,17 +71,36 @@ describe("kinematicPosition", () => {
 });
 
 describe("gridPosition", () => {
-    it("maps cell (0,0) to the top-left cell centre", () => {
+    it("maps cell (0,0) to the top-left cell centre for a square grid", () => {
+        // 400×400 canvas region, 128×128 cells
         const cellPx = 400 / 128;
-        const { x, y } = gridPosition(0, 0, 100, 100, 400, 128);
+        const { x, y } = gridPosition(0, 0, 100, 100, 400, 400, 128, 128);
         expect(x).toBeCloseTo(100 + cellPx * 0.5);
         expect(y).toBeCloseTo(100 + cellPx * 0.5);
     });
 
-    it("uses the correct radius formula", () => {
+    it("uses the correct radius formula for a square grid", () => {
         const cellPx = 400 / 128;
         const expected = Math.max(1.5, cellPx * 0.4);
-        const { r } = gridPosition(0, 0, 100, 100, 400, 128);
+        const { r } = gridPosition(0, 0, 100, 100, 400, 400, 128, 128);
         expect(r).toBeCloseTo(expected);
+    });
+
+    it("maps a rectangular grid correctly (wide: 256×128 cells in 400×200 px)", () => {
+        // cellPxW = 400/256 = 1.5625, cellPxH = 200/128 = 1.5625 (coincidence)
+        const cellPxW = 400 / 256;
+        const cellPxH = 200 / 128;
+        const { x, y } = gridPosition(0, 0, 50, 60, 400, 200, 256, 128);
+        expect(x).toBeCloseTo(50 + cellPxW * 0.5);
+        expect(y).toBeCloseTo(60 + cellPxH * 0.5);
+    });
+
+    it("uses the smaller cell dimension for radius in a non-square grid", () => {
+        // gridW=200, gridH=400, gridCellsX=64, gridCellsY=128
+        // cellPxW = 200/64 ≈ 3.125, cellPxH = 400/128 ≈ 3.125 — equal here
+        // Use a clearly asymmetric case: W=100, H=400, cells 100×100
+        // cellPxW=1, cellPxH=4 → min=1, r=max(1.5, 0.4)=1.5
+        const { r } = gridPosition(0, 0, 0, 0, 100, 400, 100, 100);
+        expect(r).toBeCloseTo(Math.max(1.5, 1 * 0.4));
     });
 });
