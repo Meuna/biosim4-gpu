@@ -1,8 +1,7 @@
 <script lang="ts">
     // SimConfigPanel — Simulation configuration panel.
     // All scalar knobs use ParamSlider; grid size uses GridSizeControl.
-    // No global Preset/Custom toggle — per-parameter toggles live inside each
-    // sub-component (currently only GridSizeControl has one).
+    // Presets and sliders for the grid are always visible simultaneously.
     import type { WorkerCmd, SimParams } from "../workers/sim.worker";
     import ParamSlider from "./ParamSlider.svelte";
     import GridSizeControl from "./GridSizeControl.svelte";
@@ -85,6 +84,11 @@
     <div class="sim-config__spacer"></div>
 
     <!-- grid.h ──────────────────────────────────────────────────────────── -->
+    <div class="section-label">
+        <span class="small-caps">Grid</span>
+        <span class="sim-config__hint">grid.h</span>
+    </div>
+
     <GridSizeControl
         gridSizeX={params.gridSizeX}
         gridSizeY={params.gridSizeY}
