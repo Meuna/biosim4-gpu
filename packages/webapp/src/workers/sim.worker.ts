@@ -63,8 +63,10 @@ export type WorkerCmd =
           canvasH: number;
           gridX: number;
           gridY: number;
-          gridSize: number;
-          gridCells: number;
+          gridW: number;
+          gridH: number;
+          gridCellsX: number;
+          gridCellsY: number;
       };
 
 export type WorkerEvent =
@@ -81,6 +83,7 @@ export type WorkerEvent =
           type: "configured";
           population: number;
           gridSizeX: number;
+          gridSizeY: number;
           stepsPerGen: number;
       }
     | { type: "error"; message: string };
@@ -100,8 +103,10 @@ interface Layout {
     canvasH: number;
     gridX: number;
     gridY: number;
-    gridSize: number;
-    gridCells: number;
+    gridW: number;
+    gridH: number;
+    gridCellsX: number;
+    gridCellsY: number;
 }
 
 let layout: Layout | null = null;
@@ -195,7 +200,7 @@ function drawGrid(): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
 
-    const { gridX, gridY, gridSize, gridCells } = layout;
+    const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
     const pop = call("biosim_wasm_get_population");
     const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
     const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
@@ -213,8 +218,10 @@ function drawGrid(): void {
                 gy,
                 gridX,
                 gridY,
-                gridSize,
-                gridCells,
+                gridW,
+                gridH,
+                gridCellsX,
+                gridCellsY,
             );
             ctx.moveTo(x + r, y);
             ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -227,7 +234,16 @@ function drawTransitionIn(frac: number): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
 
-    const { canvasW, canvasH, gridX, gridY, gridSize, gridCells } = layout;
+    const {
+        canvasW,
+        canvasH,
+        gridX,
+        gridY,
+        gridW,
+        gridH,
+        gridCellsX,
+        gridCellsY,
+    } = layout;
     const cx = canvasW / 2;
     const cy = canvasH / 2;
     const pop = call("biosim_wasm_get_population");
@@ -251,7 +267,16 @@ function drawTransitionIn(frac: number): void {
         if (HEAPU8[aliveOff + i]) {
             const gx = HEAP32[locXOff + i];
             const gy = HEAP32[locYOff + i];
-            const to = gridPosition(gx, gy, gridX, gridY, gridSize, gridCells);
+            const to = gridPosition(
+                gx,
+                gy,
+                gridX,
+                gridY,
+                gridW,
+                gridH,
+                gridCellsX,
+                gridCellsY,
+            );
             const { x, y } = lerpVec2(from, to, frac);
             const r = from.r + (to.r - from.r) * frac;
             ctx.moveTo(x + r, y);
@@ -418,6 +443,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
                 type: "configured",
                 population: p.population,
                 gridSizeX: p.gridSizeX,
+                gridSizeY: p.gridSizeY,
                 stepsPerGen: p.stepsPerGen,
             } satisfies WorkerEvent);
             break;
@@ -450,8 +476,10 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
                 canvasH: cmd.canvasH,
                 gridX: cmd.gridX,
                 gridY: cmd.gridY,
-                gridSize: cmd.gridSize,
-                gridCells: cmd.gridCells,
+                gridW: cmd.gridW,
+                gridH: cmd.gridH,
+                gridCellsX: cmd.gridCellsX,
+                gridCellsY: cmd.gridCellsY,
             };
             // Resizing the OffscreenCanvas clears its contents; animTick will
             // redraw on the next frame.
