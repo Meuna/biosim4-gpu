@@ -2,14 +2,26 @@
     // SimConfigPanel — Simulation configuration panel.
     // All scalar knobs use ParamSlider; grid size uses GridSizeControl.
     // Presets and sliders for the grid are always visible simultaneously.
-    import type { WorkerCmd, SimParams } from "../workers/sim.worker";
+    import type {
+        WorkerCmd,
+        SimParams,
+        ChallengeSpec,
+    } from "../workers/sim.worker";
     import ParamSlider from "./ParamSlider.svelte";
     import GridSizeControl from "./GridSizeControl.svelte";
+    import ChallengeControl from "./ChallengeControl.svelte";
 
     interface Props {
         send: (cmd: WorkerCmd) => void;
     }
     const { send }: Props = $props();
+
+    const DEFAULT_CHALLENGE: ChallengeSpec = {
+        kind: "x_band",
+        xMin: 0.5,
+        xMax: 1.0,
+        mirror: false,
+    };
 
     const DEFAULTS: SimParams = {
         population: 3000,
@@ -25,6 +37,7 @@
         sensorRadius: 2,
         enableKill: false,
         responsivenessCurveK: 2.0,
+        challenge: DEFAULT_CHALLENGE,
     };
 
     let params = $state<SimParams>({ ...DEFAULTS });
@@ -35,7 +48,12 @@
     }
 
     function applyConfig(): void {
-        send({ type: "configure", params: { ...params } });
+        // $state.snapshot() produces a plain (non-proxy) deep copy so that
+        // postMessage's structured-clone can serialise the nested challenge object.
+        send({
+            type: "configure",
+            params: $state.snapshot(params) as SimParams,
+        });
         dirty = false;
     }
 </script>
@@ -248,14 +266,19 @@
 
     <div class="sim-config__spacer"></div>
 
-    <!-- Challenge placeholder ────────────────────────────────────────────── -->
+    <!-- Challenge ──────────────────────────────────────────────────────────── -->
     <div class="section-label">
         <span class="small-caps">Challenge</span>
         <span class="sim-config__hint">challenge_spec.h</span>
     </div>
-    <p class="sim-config__placeholder-note">
-        Composite knobs not yet implemented.
-    </p>
+
+    <ChallengeControl
+        value={params.challenge}
+        onchange={(spec) => {
+            params.challenge = spec;
+            markDirty();
+        }}
+    />
 
     <div class="sim-config__spacer"></div>
 
