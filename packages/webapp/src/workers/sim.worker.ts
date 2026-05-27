@@ -36,7 +36,6 @@ export interface SimParams {
     gridSizeX: number;
     gridSizeY: number;
     stepsPerGen: number;
-    maxGenerations: number;
     maxGenomeLen: number;
     maxNeurons: number;
     pointMutationRate: number;
@@ -426,7 +425,6 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             setParamInt("grid-size-x", p.gridSizeX);
             setParamInt("grid-size-y", p.gridSizeY);
             setParamInt("steps-per-gen", p.stepsPerGen);
-            setParamInt("max-generations", p.maxGenerations);
             setParamInt("max-genome-len", p.maxGenomeLen);
             setParamInt("max-neurons", p.maxNeurons);
             setParamFloat("point-mutation-rate", p.pointMutationRate);
