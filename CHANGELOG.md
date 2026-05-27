@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Wired scalar-parameter configuration panel** (gh-56) — `SimConfigPanel` now
+  exposes all 14 simulation parameters grouped by C header (`sim.h`, `grid.h`,
+  `genome.h`, `io.h`, `generation.h`). A Preset / Custom mode toggle lets users
+  either pick a named preset (placeholder) or edit individual knobs. Clicking
+  "apply & restart →" sets the parameters in `sim-wasm` via three new
+  `biosim_wasm_set_param_int/float/bool` bindings and reinitialises the
+  simulation. Placeholder sections for challenge and barriers composite knobs
+  are also present. The HUD and grid display update to reflect the new
+  configuration immediately after apply.
+
 - **Canvas grid renderer** (gh-44) — the webapp now draws the simulation grid
   and agents on an `OffscreenCanvas` rendered in the Web Worker alongside the
   simulation. Alive agents appear as green squares; barrier cells as gray;

@@ -3,6 +3,7 @@
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
 #include "biosim/core/sim.h"
+#include "biosim/core/status.h"
 
 #include <emscripten.h>
 #include <stdint.h>
@@ -30,6 +31,20 @@ static const biosim_param_entry_t s_params[] = {
 /* clang-format on */
 #define S_PARAMS_COUNT (sizeof(s_params) / sizeof(s_params[0]))
 
+/* ── mutable parameter override table ───────────────────────────────────────
+ * Lazy copy of s_params. biosim_wasm_set_param_* writes here; biosim_wasm_init
+ * passes this table to biosim_params_init so overrides survive reinit.        */
+
+static biosim_param_entry_t s_params_mut[S_PARAMS_COUNT];
+static bool s_params_mut_ready = false;
+
+static void params_mut_ensure(void) {
+    if (!s_params_mut_ready) {
+        memcpy(s_params_mut, s_params, sizeof(s_params));
+        s_params_mut_ready = true;
+    }
+}
+
 /* ── module state ────────────────────────────────────────────────────────── */
 
 static biosim_sim_t s_sim;
@@ -52,8 +67,10 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_init(void) {
     s_last_agent = 0U;
     s_initialized = false;
 
+    params_mut_ensure();
+
     biosim_params_t p;
-    biosim_status_t rc = biosim_params_init(&p, s_params, S_PARAMS_COUNT);
+    biosim_status_t rc = biosim_params_init(&p, s_params_mut, S_PARAMS_COUNT);
     if (rc != BIOSIM_OK) {
         return (int)rc;
     }
@@ -80,6 +97,55 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
         biosim_sim_free(&s_sim);
         s_initialized = false;
     }
+}
+
+/* ── parameter setters ───────────────────────────────────────────────────── */
+
+/* Set a named integer parameter before the next biosim_wasm_init call.
+ * Returns BIOSIM_OK, BIOSIM_ERR_NOTFOUND, or BIOSIM_ERR_TYPE.             */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_int(const char *name, int val) {
+    params_mut_ensure();
+    for (size_t i = 0U; i < S_PARAMS_COUNT; i++) {
+        if (strcmp(s_params_mut[i].name, name) == 0) {
+            if (s_params_mut[i].type != PARAM_INT) {
+                return BIOSIM_ERR_TYPE;
+            }
+            s_params_mut[i].value.i = val;
+            return BIOSIM_OK;
+        }
+    }
+    return BIOSIM_ERR_NOTFOUND;
+}
+
+/* Set a named float parameter before the next biosim_wasm_init call.      */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_float(const char *name, double val) {
+    params_mut_ensure();
+    for (size_t i = 0U; i < S_PARAMS_COUNT; i++) {
+        if (strcmp(s_params_mut[i].name, name) == 0) {
+            if (s_params_mut[i].type != PARAM_FLOAT) {
+                return BIOSIM_ERR_TYPE;
+            }
+            s_params_mut[i].value.f = val;
+            return BIOSIM_OK;
+        }
+    }
+    return BIOSIM_ERR_NOTFOUND;
+}
+
+/* Set a named boolean parameter before the next biosim_wasm_init call.
+ * val: non-zero = true, 0 = false.                                        */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_bool(const char *name, int val) {
+    params_mut_ensure();
+    for (size_t i = 0U; i < S_PARAMS_COUNT; i++) {
+        if (strcmp(s_params_mut[i].name, name) == 0) {
+            if (s_params_mut[i].type != PARAM_BOOL) {
+                return BIOSIM_ERR_TYPE;
+            }
+            s_params_mut[i].value.b = (val != 0);
+            return BIOSIM_OK;
+        }
+    }
+    return BIOSIM_ERR_NOTFOUND;
 }
 
 /* ── step-level operations ───────────────────────────────────────────────── */

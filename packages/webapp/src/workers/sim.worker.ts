@@ -30,6 +30,24 @@ type EmscriptenFactory = (
     opts?: EmscriptenOptions,
 ) => Promise<EmscriptenModule>;
 
+/** Scalar parameters that can be configured before (re-)initialising the sim. */
+export interface SimParams {
+    population: number;
+    gridSizeX: number;
+    gridSizeY: number;
+    stepsPerGen: number;
+    maxGenerations: number;
+    maxGenomeLen: number;
+    maxNeurons: number;
+    pointMutationRate: number;
+    sexualReproduction: boolean;
+    chooseParentsByFitness: boolean;
+    losRange: number;
+    sensorRadius: number;
+    enableKill: boolean;
+    responsivenessCurveK: number;
+}
+
 export type WorkerCmd =
     | { type: "play" }
     | { type: "stop" }
@@ -37,6 +55,7 @@ export type WorkerCmd =
     | { type: "step" }
     | { type: "stepAgent" }
     | { type: "nextGeneration" }
+    | { type: "configure"; params: SimParams }
     | { type: "canvas"; canvas: OffscreenCanvas }
     | {
           type: "layout";
@@ -57,6 +76,12 @@ export type WorkerEvent =
           population: number;
           survivors: number;
           kills: number;
+      }
+    | {
+          type: "configured";
+          population: number;
+          gridSizeX: number;
+          stepsPerGen: number;
       }
     | { type: "error"; message: string };
 
@@ -91,6 +116,33 @@ let animInterval: ReturnType<typeof setInterval> | null = null;
 
 function call(name: string): number {
     return biosim!.ccall(name, "number", [], []);
+}
+
+function setParamInt(name: string, val: number): void {
+    biosim!.ccall(
+        "biosim_wasm_set_param_int",
+        "number",
+        ["string", "number"],
+        [name, val],
+    );
+}
+
+function setParamFloat(name: string, val: number): void {
+    biosim!.ccall(
+        "biosim_wasm_set_param_float",
+        "number",
+        ["string", "number"],
+        [name, val],
+    );
+}
+
+function setParamBool(name: string, val: boolean): void {
+    biosim!.ccall(
+        "biosim_wasm_set_param_bool",
+        "number",
+        ["string", "number"],
+        [name, val ? 1 : 0],
+    );
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
@@ -342,6 +394,34 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             mode = "idle";
             startTime = performance.now();
             break;
+        case "configure": {
+            playing = false;
+            const p = cmd.params;
+            setParamInt("population", p.population);
+            setParamInt("grid-size-x", p.gridSizeX);
+            setParamInt("grid-size-y", p.gridSizeY);
+            setParamInt("steps-per-gen", p.stepsPerGen);
+            setParamInt("max-generations", p.maxGenerations);
+            setParamInt("max-genome-len", p.maxGenomeLen);
+            setParamInt("max-neurons", p.maxNeurons);
+            setParamFloat("point-mutation-rate", p.pointMutationRate);
+            setParamBool("sexual-reproduction", p.sexualReproduction);
+            setParamBool("choose-parents-by-fitness", p.chooseParentsByFitness);
+            setParamInt("los-range", p.losRange);
+            setParamInt("sensor-radius", p.sensorRadius);
+            setParamBool("enable-kill", p.enableKill);
+            setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
+            call("biosim_wasm_init");
+            mode = "idle";
+            startTime = performance.now();
+            postMessage({
+                type: "configured",
+                population: p.population,
+                gridSizeX: p.gridSizeX,
+                stepsPerGen: p.stepsPerGen,
+            } satisfies WorkerEvent);
+            break;
+        }
         case "step":
             doStep();
             break;
