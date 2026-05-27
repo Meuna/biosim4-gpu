@@ -45,6 +45,17 @@ static void params_mut_ensure(void) {
     }
 }
 
+/* ── challenge state ─────────────────────────────────────────────────────── */
+
+/* Module-level challenge spec. biosim_wasm_set_challenge_kind resets and sets
+ * the kind; per-kind setters fill the union fields. biosim_wasm_init passes
+ * &s_challenge to biosim_sim_create, so any override applied before init
+ * takes effect on the next reinitialisation.                                */
+static biosim_challenge_spec_t s_challenge = {
+    .kind = BIOSIM_CHALLENGE_X_BAND,
+    .x_band = {.x_min = 0.5F, .x_max = 1.0F, .mirror = false},
+};
+
 /* ── module state ────────────────────────────────────────────────────────── */
 
 static biosim_sim_t s_sim;
@@ -75,14 +86,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_init(void) {
         return (int)rc;
     }
 
-    biosim_challenge_spec_t challenge;
-    memset(&challenge, 0, sizeof(challenge));
-    challenge.kind = BIOSIM_CHALLENGE_X_BAND;
-    challenge.x_band.x_min = 0.5F;
-    challenge.x_band.x_max = 1.0F;
-    challenge.x_band.mirror = false;
-
-    rc = biosim_sim_create(&s_sim, &p, &challenge, NULL, 0U);
+    rc = biosim_sim_create(&s_sim, &p, &s_challenge, NULL, 0U);
     biosim_params_free(&p);
     if (rc != BIOSIM_OK) {
         return (int)rc;
@@ -146,6 +150,66 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_bool(const char *name, int val) {
         }
     }
     return BIOSIM_ERR_NOTFOUND;
+}
+
+/* ── challenge setters ───────────────────────────────────────────────────── */
+
+/* Reset the challenge union and set the kind discriminant. Call this first
+ * before any per-kind setter; it zeroes all union fields.                  */
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_kind(int32_t kind) {
+    memset(&s_challenge, 0, sizeof(s_challenge));
+    s_challenge.kind = (biosim_challenge_kind_t)kind;
+}
+
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_x_band(float x_min, float x_max, int mirror) {
+    s_challenge.x_band.x_min = x_min;
+    s_challenge.x_band.x_max = x_max;
+    s_challenge.x_band.mirror = (mirror != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_disc(
+    float x, float y, float radius, int weighted
+) {
+    s_challenge.disc.x = x;
+    s_challenge.disc.y = y;
+    s_challenge.disc.radius = radius;
+    s_challenge.disc.weighted = (weighted != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_corners(float radius, int weighted) {
+    s_challenge.corners.radius = radius;
+    s_challenge.corners.weighted = (weighted != 0);
+}
+
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_neighbor_count(
+    float radius, float min_n, float max_n, int exclude_border
+) {
+    s_challenge.neighbor_count.radius = radius;
+    s_challenge.neighbor_count.min_n = min_n;
+    s_challenge.neighbor_count.max_n = max_n;
+    s_challenge.neighbor_count.exclude_border = (exclude_border != 0);
+}
+
+/* clang-format off */
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_center_sparse(
+    float x, float y, float outer_r, float inner_r,
+    float min_n, float max_n, int weighted) {
+    s_challenge.center_sparse.x       = x;
+    s_challenge.center_sparse.y       = y;
+    s_challenge.center_sparse.outer_r = outer_r;
+    s_challenge.center_sparse.inner_r = inner_r;
+    s_challenge.center_sparse.min_n   = min_n;
+    s_challenge.center_sparse.max_n   = max_n;
+    s_challenge.center_sparse.weighted = (weighted != 0);
+}
+/* clang-format on */
+
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_near_barrier(float radius) {
+    s_challenge.near_barrier.radius = radius;
+}
+
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_location_sequence(float radius) {
+    s_challenge.location_sequence.radius = radius;
 }
 
 /* ── step-level operations ───────────────────────────────────────────────── */
