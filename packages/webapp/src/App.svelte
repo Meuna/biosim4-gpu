@@ -36,7 +36,7 @@
                     gridX: gridGeom.x,
                     gridY: gridGeom.y,
                     gridSize: gridGeom.size,
-                    gridCells: GRID_SIZE,
+                    gridCells: gridSize,
                 } satisfies WorkerCmd);
             }
         } else if (msg.type === "status") {
@@ -53,6 +53,14 @@
             const rate =
                 msg.population > 0 ? msg.survivors / msg.population : 0;
             survivalHistory = [...survivalHistory.slice(-11), rate];
+        } else if (msg.type === "configured") {
+            isRunning = false;
+            currentGen = 0;
+            currentStep = 0;
+            survivalHistory = [];
+            currentPop = msg.population;
+            gridSize = msg.gridSizeX;
+            stepsPerGen = msg.stepsPerGen;
         }
         // "error" type is silently ignored in this phase; no UI for it yet.
     });
@@ -65,11 +73,13 @@
     let isRunning = $state(false);
     let currentGen = $state(0);
     let currentStep = $state(0);
-    let currentPop = $state(2048);
+    let currentPop = $state(3000);
     let survivalHistory = $state<number[]>([]);
 
-    const STEPS_PER_GEN = 300;
-    const GRID_SIZE = 128;
+    // These reflect the active simulation parameters and are updated when the
+    // config panel applies a new configuration.
+    let stepsPerGen = $state(300);
+    let gridSize = $state(128);
 
     // ── UI state ─────────────────────────────────────────────────────────────
     let selectedAgentId = $state<number | null>(null);
@@ -124,7 +134,7 @@
             gridX: gridGeom.x,
             gridY: gridGeom.y,
             gridSize: gridGeom.size,
-            gridCells: GRID_SIZE,
+            gridCells: gridSize,
         } satisfies WorkerCmd);
     });
 
@@ -177,7 +187,7 @@
         running={isRunning}
         gen={currentGen}
         step={currentStep}
-        stepsPerGen={STEPS_PER_GEN}
+        {stepsPerGen}
     />
 
     <!-- z-index: 25 — floating play controls, centered over the grid -->
@@ -191,14 +201,14 @@
     />
 
     <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
-    <GridView geom={gridGeom} running={isRunning} gridSize={GRID_SIZE} />
+    <GridView geom={gridGeom} running={isRunning} {gridSize} />
 
     <!-- z-index: 15 — telemetry HUD, bottom-left -->
     <HUD
         running={isRunning}
         gen={currentGen}
         step={currentStep}
-        stepsPerGen={STEPS_PER_GEN}
+        {stepsPerGen}
         pop={currentPop}
         {survivalHistory}
     />
@@ -233,7 +243,7 @@
         hasSelection={selectedAgentId !== null}
         onTabChange={(t) => (activeTab = t)}
     >
-        {#snippet sim()}<SimConfigPanel />{/snippet}
+        {#snippet sim()}<SimConfigPanel {send} />{/snippet}
         {#snippet cell()}
             <CellPanel agent={null} onClear={handleClearSelection} />
         {/snippet}

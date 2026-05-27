@@ -27,6 +27,47 @@ All functions are called via `biosim.ccall(name, returnType, [], [])`.
 | `biosim_wasm_census_survivors` | `number` | Survivors from the last census. |
 | `biosim_wasm_census_kills` | `number` | Kills from the last census. |
 
+## Configuration API
+
+Call parameter setters **before** `biosim_wasm_init`. They update a persistent
+mutable copy of the defaults; calling `biosim_wasm_init` applies whatever values
+are currently stored.
+
+| Function | Args | Return | Description |
+|---|---|---|---|
+| `biosim_wasm_set_param_int` | `name: string, val: number` | `number` (status) | Override an integer parameter by name. |
+| `biosim_wasm_set_param_float` | `name: string, val: number` | `number` (status) | Override a float parameter by name. |
+| `biosim_wasm_set_param_bool` | `name: string, val: number` | `number` (status) | Override a boolean parameter by name (`val`: non-zero = true). |
+
+Return codes: `0` = OK, `3` = name not found (`BIOSIM_ERR_NOTFOUND`), `2` = type
+mismatch (`BIOSIM_ERR_TYPE`).
+
+These are invoked via `ccall` with `argTypes: ['string', 'number']`:
+```js
+biosim.ccall('biosim_wasm_set_param_int', 'number', ['string', 'number'],
+             ['population', 2000]);
+biosim.ccall('biosim_wasm_init', 'number', [], []);
+```
+
+### Configurable parameters
+
+| Name | Type | Default |
+|---|---|---|
+| `population` | int | 3000 |
+| `grid-size-x` | int | 128 |
+| `grid-size-y` | int | 128 |
+| `steps-per-gen` | int | 300 |
+| `max-generations` | int | 1000 |
+| `max-genome-len` | int | 24 |
+| `max-neurons` | int | 5 |
+| `point-mutation-rate` | float | 0.001 |
+| `sexual-reproduction` | bool | false |
+| `choose-parents-by-fitness` | bool | false |
+| `los-range` | int | 16 |
+| `sensor-radius` | int | 2 |
+| `enable-kill` | bool | false |
+| `responsiveness-curve-k` | float | 2.0 |
+
 ## Default parameters
 
 Matches `sim-ref` defaults: population 3000, grid 128×128, 300 steps/generation,
