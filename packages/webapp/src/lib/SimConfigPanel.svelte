@@ -16,7 +16,6 @@
         gridSizeX: 128,
         gridSizeY: 128,
         stepsPerGen: 300,
-        maxGenerations: 1000,
         maxGenomeLen: 24,
         maxNeurons: 5,
         pointMutationRate: 0.001,
@@ -243,27 +242,6 @@
         format={(v) => v.toFixed(1)}
         onchange={(v) => {
             params.responsivenessCurveK = v;
-            markDirty();
-        }}
-    />
-
-    <div class="sim-config__spacer"></div>
-
-    <!-- generation.h ────────────────────────────────────────────────────── -->
-    <div class="section-label">
-        <span class="small-caps">Generations</span>
-        <span class="sim-config__hint">generation.h</span>
-    </div>
-
-    <ParamSlider
-        label="Max generations"
-        hint="stop after"
-        min={10}
-        max={10000}
-        step={100}
-        value={params.maxGenerations}
-        onchange={(v) => {
-            params.maxGenerations = v;
             markDirty();
         }}
     />
