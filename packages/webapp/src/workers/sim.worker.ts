@@ -30,6 +30,37 @@ type EmscriptenFactory = (
     opts?: EmscriptenOptions,
 ) => Promise<EmscriptenModule>;
 
+/** Challenge specification — mirrors biosim_challenge_spec_t in challenge_spec.h. */
+export type ChallengeSpec =
+    | { kind: "x_band"; xMin: number; xMax: number; mirror: boolean }
+    | { kind: "disc"; x: number; y: number; radius: number; weighted: boolean }
+    | { kind: "corners"; radius: number; weighted: boolean }
+    | {
+          kind: "neighbor_count";
+          radius: number;
+          minN: number;
+          maxN: number;
+          excludeBorder: boolean;
+      }
+    | {
+          kind: "center_sparse";
+          x: number;
+          y: number;
+          outerR: number;
+          innerR: number;
+          minN: number;
+          maxN: number;
+          weighted: boolean;
+      }
+    | { kind: "against_wall" }
+    | { kind: "migrate_distance" }
+    | { kind: "touch_any_wall" }
+    | { kind: "radioactive_walls" }
+    | { kind: "pairs" }
+    | { kind: "location_sequence"; radius: number }
+    | { kind: "near_barrier"; radius: number }
+    | { kind: "altruism" };
+
 /** Scalar parameters that can be configured before (re-)initialising the sim. */
 export interface SimParams {
     population: number;
@@ -45,6 +76,7 @@ export interface SimParams {
     sensorRadius: number;
     enableKill: boolean;
     responsivenessCurveK: number;
+    challenge: ChallengeSpec;
 }
 
 export type WorkerCmd =
@@ -96,6 +128,35 @@ type Mode = "idle" | "transitioning-in" | "running";
 let biosim: EmscriptenModule | null = null;
 let playing = false;
 let ctx: OffscreenCanvasRenderingContext2D | null = null;
+
+// Maps ChallengeSpec.kind strings to biosim_challenge_kind_t ordinals (challenge_defs.h).
+const CHALLENGE_KIND_INT: Record<string, number> = {
+    x_band: 0,
+    disc: 1,
+    corners: 2,
+    neighbor_count: 3,
+    center_sparse: 4,
+    against_wall: 5,
+    migrate_distance: 6,
+    touch_any_wall: 7,
+    radioactive_walls: 8,
+    pairs: 9,
+    location_sequence: 10,
+    near_barrier: 11,
+    altruism: 12,
+};
+
+// Current challenge spec; updated on every configure command.
+// Default matches the hardcoded s_challenge initialiser in bindings.c.
+let currentChallenge: ChallengeSpec = {
+    kind: "x_band",
+    xMin: 0.5,
+    xMax: 1.0,
+    mirror: false,
+};
+
+// Matches --_accent-soft from tokens.css. Update only if the palette changes.
+const CHALLENGE_OVERLAY_COLOR = "rgba(21, 128, 61, 0.12)";
 
 interface Layout {
     canvasW: number;
@@ -149,6 +210,93 @@ function setParamBool(name: string, val: boolean): void {
     );
 }
 
+function setChallengeSpec(spec: ChallengeSpec): void {
+    biosim!.ccall(
+        "biosim_wasm_set_challenge_kind",
+        null,
+        ["number"],
+        [CHALLENGE_KIND_INT[spec.kind]],
+    );
+    switch (spec.kind) {
+        case "x_band":
+            biosim!.ccall(
+                "biosim_wasm_set_challenge_x_band",
+                null,
+                ["number", "number", "number"],
+                [spec.xMin, spec.xMax, spec.mirror ? 1 : 0],
+            );
+            break;
+        case "disc":
+            biosim!.ccall(
+                "biosim_wasm_set_challenge_disc",
+                null,
+                ["number", "number", "number", "number"],
+                [spec.x, spec.y, spec.radius, spec.weighted ? 1 : 0],
+            );
+            break;
+        case "corners":
+            biosim!.ccall(
+                "biosim_wasm_set_challenge_corners",
+                null,
+                ["number", "number"],
+                [spec.radius, spec.weighted ? 1 : 0],
+            );
+            break;
+        case "neighbor_count":
+            biosim!.ccall(
+                "biosim_wasm_set_challenge_neighbor_count",
+                null,
+                ["number", "number", "number", "number"],
+                [spec.radius, spec.minN, spec.maxN, spec.excludeBorder ? 1 : 0],
+            );
+            break;
+        case "center_sparse":
+            biosim!.ccall(
+                "biosim_wasm_set_challenge_center_sparse",
+                null,
+                [
+                    "number",
+                    "number",
+                    "number",
+                    "number",
+                    "number",
+                    "number",
+                    "number",
+                ],
+                [
+                    spec.x,
+                    spec.y,
+                    spec.outerR,
+                    spec.innerR,
+                    spec.minN,
+                    spec.maxN,
+                    spec.weighted ? 1 : 0,
+                ],
+            );
+            break;
+        case "near_barrier":
+            biosim!.ccall(
+                "biosim_wasm_set_challenge_near_barrier",
+                null,
+                ["number"],
+                [spec.radius],
+            );
+            break;
+        case "location_sequence":
+            biosim!.ccall(
+                "biosim_wasm_set_challenge_location_sequence",
+                null,
+                ["number"],
+                [spec.radius],
+            );
+            break;
+        default:
+            // No-parameter kinds (against_wall, migrate_distance, touch_any_wall,
+            // radioactive_walls, pairs, altruism): kind already set above.
+            break;
+    }
+}
+
 // ── Rendering ─────────────────────────────────────────────────────────────────
 
 // Shared fill style for agents in all modes.
@@ -166,6 +314,84 @@ function clearCanvas(): void {
     if (!ctx || !layout) return;
     // Transparent clear — CSS dot-grid and GridView overlay show through.
     ctx.clearRect(0, 0, layout.canvasW, layout.canvasH);
+}
+
+function drawChallengeOverlay(spec: ChallengeSpec): void {
+    if (!ctx || !layout) return;
+    const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
+    // Border thickness: two cells wide, at least 2px.
+    const borderW = Math.max(2, (gridW / gridCellsX) * 2);
+    const borderH = Math.max(2, (gridH / gridCellsY) * 2);
+
+    ctx.save();
+    ctx.fillStyle = CHALLENGE_OVERLAY_COLOR;
+
+    switch (spec.kind) {
+        case "x_band": {
+            const x = gridX + spec.xMin * gridW;
+            const w = (spec.xMax - spec.xMin) * gridW;
+            ctx.fillRect(x, gridY, w, gridH);
+            if (spec.mirror) {
+                ctx.fillRect(gridX + (1 - spec.xMax) * gridW, gridY, w, gridH);
+            }
+            break;
+        }
+        case "disc": {
+            const cx = gridX + spec.x * gridW;
+            const cy = gridY + spec.y * gridH;
+            const r = spec.radius * Math.min(gridW, gridH);
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+        }
+        case "corners": {
+            const r = spec.radius * Math.min(gridW, gridH);
+            for (const [fx, fy] of [
+                [0, 0],
+                [1, 0],
+                [0, 1],
+                [1, 1],
+            ] as [number, number][]) {
+                ctx.beginPath();
+                ctx.arc(
+                    gridX + fx * gridW,
+                    gridY + fy * gridH,
+                    r,
+                    0,
+                    Math.PI * 2,
+                );
+                ctx.fill();
+            }
+            break;
+        }
+        case "against_wall":
+        case "radioactive_walls": {
+            ctx.fillRect(gridX, gridY, gridW, borderH);
+            ctx.fillRect(gridX, gridY + gridH - borderH, gridW, borderH);
+            ctx.fillRect(gridX, gridY, borderW, gridH);
+            ctx.fillRect(gridX + gridW - borderW, gridY, borderW, gridH);
+            break;
+        }
+        case "center_sparse": {
+            const cx = gridX + spec.x * gridW;
+            const cy = gridY + spec.y * gridH;
+            const s = Math.min(gridW, gridH);
+            const outerR = spec.outerR * s;
+            const innerR = spec.innerR * s;
+            ctx.beginPath();
+            ctx.arc(cx, cy, outerR, 0, Math.PI * 2, false);
+            ctx.arc(cx, cy, innerR, 0, Math.PI * 2, true);
+            ctx.fill("evenodd");
+            break;
+        }
+        default:
+            // No geometric overlay for: migrate_distance, touch_any_wall,
+            // neighbor_count, pairs, altruism, near_barrier, location_sequence.
+            break;
+    }
+
+    ctx.restore();
 }
 
 function drawKinematic(t: number): void {
@@ -198,6 +424,7 @@ function drawKinematic(t: number): void {
 function drawGrid(): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
+    drawChallengeOverlay(currentChallenge);
 
     const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
     const pop = call("biosim_wasm_get_population");
@@ -232,6 +459,7 @@ function drawGrid(): void {
 function drawTransitionIn(frac: number): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
+    drawChallengeOverlay(currentChallenge);
 
     const {
         canvasW,
@@ -434,6 +662,8 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             setParamInt("sensor-radius", p.sensorRadius);
             setParamBool("enable-kill", p.enableKill);
             setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
+            setChallengeSpec(p.challenge);
+            currentChallenge = p.challenge;
             call("biosim_wasm_init");
             mode = "idle";
             startTime = performance.now();
