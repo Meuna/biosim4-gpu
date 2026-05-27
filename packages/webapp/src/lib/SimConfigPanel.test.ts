@@ -35,14 +35,18 @@ describe("SimConfigPanel", () => {
         expect(screen.getByText("grid.h")).toBeTruthy();
     });
 
-    it("shows challenge and barriers placeholder sections", () => {
+    it("shows challenge section with kind dropdown", () => {
         render(SimConfigPanel, { props: { send: vi.fn() } });
         expect(screen.getByText("Challenge")).toBeTruthy();
+        expect(screen.getByLabelText("Challenge kind")).toBeTruthy();
+    });
+
+    it("shows barriers placeholder section", () => {
+        render(SimConfigPanel, { props: { send: vi.fn() } });
         expect(screen.getByText("Barriers")).toBeTruthy();
-        const notes = screen.getAllByText(
-            "Composite knobs not yet implemented.",
-        );
-        expect(notes.length).toBe(2);
+        expect(
+            screen.getByText("Composite knobs not yet implemented."),
+        ).toBeTruthy();
     });
 
     it('starts in sync and shows "✓ in sync"', () => {
@@ -74,6 +78,24 @@ describe("SimConfigPanel", () => {
         expect(cmd.type).toBe("configure");
         if (cmd.type === "configure") {
             expect(cmd.params.population).toBe(500);
+        }
+    });
+
+    it("configure command includes a challenge field", async () => {
+        const send = vi.fn<[WorkerCmd], void>();
+        render(SimConfigPanel, { props: { send } });
+        await fireEvent.input(screen.getByLabelText("Population"), {
+            target: { value: "500" },
+        });
+        await fireEvent.click(
+            screen.getByRole("button", {
+                name: "Apply configuration and restart simulation",
+            }),
+        );
+        const cmd = send.mock.calls[0][0];
+        if (cmd.type === "configure") {
+            expect(cmd.params.challenge).toBeDefined();
+            expect(cmd.params.challenge.kind).toBe("x_band");
         }
     });
 
