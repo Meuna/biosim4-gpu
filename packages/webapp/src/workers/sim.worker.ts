@@ -87,7 +87,12 @@ export type WorkerCmd =
     | { type: "stepAgent" }
     | { type: "nextGeneration" }
     | { type: "configure"; params: SimParams }
-    | { type: "canvas"; canvas: OffscreenCanvas; overlayColor: string }
+    | {
+          type: "canvas";
+          canvas: OffscreenCanvas;
+          overlayColor: string;
+          borderColor: string;
+      }
     | {
           type: "layout";
           canvasW: number;
@@ -155,9 +160,12 @@ let currentChallenge: ChallengeSpec = {
     mirror: false,
 };
 
-// Overlay colour for challenge target zones. Initialised from the CSS token
-// --_border-subtle passed via the "canvas" command; fallback used in tests.
+// Overlay colours for challenge target zones. Initialised from CSS tokens passed
+// via the "canvas" command; fallbacks used in tests.
 let challengeOverlayColor = "rgba(0, 0, 0, 0.12)";
+let challengeBorderColor = "rgba(0, 0, 0, 0.35)";
+// Tiled hatch pattern for the near-edge strip; created once after ctx is ready.
+let hatchPattern: CanvasPattern | null = null;
 
 interface Layout {
     canvasW: number;
@@ -317,34 +325,62 @@ function clearCanvas(): void {
     ctx.clearRect(0, 0, layout.canvasW, layout.canvasH);
 }
 
+// Builds an 8×8 tiled dot pattern on a scratch OffscreenCanvas.
+function createHatchPattern(): CanvasPattern | null {
+    if (!ctx) return null;
+    const size = 8;
+    const pc = new OffscreenCanvas(size, size);
+    const px = pc.getContext("2d");
+    if (!px) return null;
+    px.fillStyle = challengeOverlayColor;
+    px.beginPath();
+    px.arc(size / 2, size / 2, 1.5, 0, Math.PI * 2);
+    px.fill();
+    return ctx.createPattern(pc, "repeat");
+}
+
 function drawChallengeOverlay(spec: ChallengeSpec): void {
     if (!ctx || !layout) return;
     const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
-    // Border thickness: two cells wide, at least 2px.
-    const borderW = Math.max(2, (gridW / gridCellsX) * 2);
-    const borderH = Math.max(2, (gridH / gridCellsY) * 2);
+    const cellW = gridW / gridCellsX;
+    const cellH = gridH / gridCellsY;
+    // Strip width: two cells wide, at least 4px.
+    const stripW = Math.max(4, cellW * 2);
+    const stripH = Math.max(4, cellH * 2);
+    const stripR = Math.max(4, Math.min(cellW, cellH) * 2);
 
     ctx.save();
-    ctx.fillStyle = challengeOverlayColor;
+    ctx.strokeStyle = challengeBorderColor;
+    ctx.lineWidth = 1.5;
 
     switch (spec.kind) {
         case "x_band": {
-            if (spec.mirror) {
-                // Mirror inverts the safe zone: the two bands outside [xMin, xMax].
-                ctx.fillRect(gridX, gridY, spec.xMin * gridW, gridH);
-                ctx.fillRect(
-                    gridX + spec.xMax * gridW,
-                    gridY,
-                    (1 - spec.xMax) * gridW,
-                    gridH,
-                );
-            } else {
-                ctx.fillRect(
-                    gridX + spec.xMin * gridW,
-                    gridY,
-                    (spec.xMax - spec.xMin) * gridW,
-                    gridH,
-                );
+            const x0 = gridX + spec.xMin * gridW;
+            const x1 = gridX + spec.xMax * gridW;
+            // Border: vertical lines at the safe zone boundaries.
+            ctx.beginPath();
+            ctx.moveTo(x0, gridY);
+            ctx.lineTo(x0, gridY + gridH);
+            ctx.moveTo(x1, gridY);
+            ctx.lineTo(x1, gridY + gridH);
+            ctx.stroke();
+            if (hatchPattern) {
+                ctx.fillStyle = hatchPattern;
+                if (!spec.mirror) {
+                    // Safe zone is the band between xMin and xMax.
+                    // Near-edge strips inside the band, clamped to band width.
+                    const lw = Math.min(stripW, x1 - x0);
+                    ctx.fillRect(x0, gridY, lw, gridH);
+                    const rx = Math.max(x0, x1 - stripW);
+                    ctx.fillRect(rx, gridY, x1 - rx, gridH);
+                } else {
+                    // Safe zones are the two outer bands.
+                    // Near-edge strips at the inner boundary of each outer band.
+                    const lx = Math.max(gridX, x0 - stripW);
+                    ctx.fillRect(lx, gridY, x0 - lx, gridH);
+                    const rx2 = Math.min(gridX + gridW, x1 + stripW);
+                    ctx.fillRect(x1, gridY, rx2 - x1, gridH);
+                }
             }
             break;
         }
@@ -354,7 +390,17 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
             const r = spec.radius * Math.min(gridW, gridH);
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.stroke();
+            if (hatchPattern && r > stripR) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2, false);
+                ctx.arc(cx, cy, r - stripR, 0, Math.PI * 2, false);
+                ctx.clip("evenodd");
+                ctx.fillStyle = hatchPattern;
+                ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+                ctx.restore();
+            }
             break;
         }
         case "corners": {
@@ -365,24 +411,47 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
                 [0, 1],
                 [1, 1],
             ] as [number, number][]) {
+                const cx = gridX + fx * gridW;
+                const cy = gridY + fy * gridH;
                 ctx.beginPath();
-                ctx.arc(
-                    gridX + fx * gridW,
-                    gridY + fy * gridH,
-                    r,
-                    0,
-                    Math.PI * 2,
-                );
-                ctx.fill();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.stroke();
+                if (hatchPattern && r > stripR) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2, false);
+                    ctx.arc(cx, cy, r - stripR, 0, Math.PI * 2, false);
+                    ctx.clip("evenodd");
+                    ctx.fillStyle = hatchPattern;
+                    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+                    ctx.restore();
+                }
             }
             break;
         }
         case "against_wall":
         case "radioactive_walls": {
-            ctx.fillRect(gridX, gridY, gridW, borderH);
-            ctx.fillRect(gridX, gridY + gridH - borderH, gridW, borderH);
-            ctx.fillRect(gridX, gridY, borderW, gridH);
-            ctx.fillRect(gridX + gridW - borderW, gridY, borderW, gridH);
+            const bW = Math.max(2, cellW * 2);
+            const bH = Math.max(2, cellH * 2);
+            // Inner boundary lines of each wall band.
+            ctx.beginPath();
+            ctx.moveTo(gridX, gridY + bH);
+            ctx.lineTo(gridX + gridW, gridY + bH);
+            ctx.moveTo(gridX, gridY + gridH - bH);
+            ctx.lineTo(gridX + gridW, gridY + gridH - bH);
+            ctx.moveTo(gridX + bW, gridY);
+            ctx.lineTo(gridX + bW, gridY + gridH);
+            ctx.moveTo(gridX + gridW - bW, gridY);
+            ctx.lineTo(gridX + gridW - bW, gridY + gridH);
+            ctx.stroke();
+            // Near-edge strips inside each band, near the inner boundary.
+            if (hatchPattern) {
+                ctx.fillStyle = hatchPattern;
+                ctx.fillRect(gridX, gridY + bH - stripH, gridW, stripH);
+                ctx.fillRect(gridX, gridY + gridH - bH, gridW, stripH);
+                ctx.fillRect(gridX + bW - stripW, gridY, stripW, gridH);
+                ctx.fillRect(gridX + gridW - bW, gridY, stripW, gridH);
+            }
             break;
         }
         case "center_sparse": {
@@ -392,9 +461,39 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
             const outerR = spec.outerR * s;
             const innerR = spec.innerR * s;
             ctx.beginPath();
-            ctx.arc(cx, cy, outerR, 0, Math.PI * 2, false);
-            ctx.arc(cx, cy, innerR, 0, Math.PI * 2, true);
-            ctx.fill("evenodd");
+            ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+            ctx.stroke();
+            if (hatchPattern) {
+                if (outerR > stripR) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, outerR, 0, Math.PI * 2, false);
+                    ctx.arc(cx, cy, outerR - stripR, 0, Math.PI * 2, false);
+                    ctx.clip("evenodd");
+                    ctx.fillStyle = hatchPattern;
+                    ctx.fillRect(
+                        cx - outerR,
+                        cy - outerR,
+                        outerR * 2,
+                        outerR * 2,
+                    );
+                    ctx.restore();
+                }
+                if (innerR + stripR < outerR) {
+                    ctx.save();
+                    ctx.beginPath();
+                    const sr = innerR + stripR;
+                    ctx.arc(cx, cy, sr, 0, Math.PI * 2, false);
+                    ctx.arc(cx, cy, innerR, 0, Math.PI * 2, false);
+                    ctx.clip("evenodd");
+                    ctx.fillStyle = hatchPattern;
+                    ctx.fillRect(cx - sr, cy - sr, sr * 2, sr * 2);
+                    ctx.restore();
+                }
+            }
             break;
         }
         default:
@@ -700,6 +799,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         case "canvas": {
             const offscreen = cmd.canvas;
             challengeOverlayColor = cmd.overlayColor;
+            challengeBorderColor = cmd.borderColor;
             if (layout) {
                 offscreen.width = layout.canvasW;
                 offscreen.height = layout.canvasH;
@@ -708,6 +808,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
                 offscreen.height = call("biosim_wasm_get_size_y") * 4;
             }
             ctx = offscreen.getContext("2d");
+            hatchPattern = createHatchPattern();
             startAnimLoop();
             break;
         }

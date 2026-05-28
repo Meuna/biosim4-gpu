@@ -22,16 +22,21 @@
         if (msg.type === "ready") {
             if (canvasEl) {
                 const offscreen = canvasEl.transferControlToOffscreen();
-                // Read --_border-subtle directly (raw token, not a var() alias)
-                // so getPropertyValue resolves it to a usable color string.
-                const overlayColor = getComputedStyle(document.documentElement)
+                // Read raw tokens directly (not via var() aliases) so
+                // getPropertyValue resolves to usable color strings.
+                const styles = getComputedStyle(document.documentElement);
+                const overlayColor = styles
                     .getPropertyValue("--_border-subtle")
+                    .trim();
+                const borderColor = styles
+                    .getPropertyValue("--_challenge-border")
                     .trim();
                 worker.postMessage(
                     {
                         type: "canvas",
                         canvas: offscreen,
                         overlayColor,
+                        borderColor,
                     } satisfies WorkerCmd,
                     [offscreen],
                 );
