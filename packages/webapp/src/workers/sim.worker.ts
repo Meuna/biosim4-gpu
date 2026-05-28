@@ -413,6 +413,11 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
             ] as [number, number][]) {
                 const cx = gridX + fx * gridW;
                 const cy = gridY + fy * gridH;
+                ctx.save();
+                // Clip to the grid so arcs do not bleed outside the grid region.
+                ctx.beginPath();
+                ctx.rect(gridX, gridY, gridW, gridH);
+                ctx.clip();
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
                 ctx.stroke();
@@ -426,6 +431,7 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
                     ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
                     ctx.restore();
                 }
+                ctx.restore();
             }
             break;
         }
