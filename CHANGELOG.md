@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Barriers configuration** (gh-64) — the barriers section of `SimConfigPanel`
+  is now fully wired. Users can add up to 8 barriers per simulation, choosing
+  from four shapes (horizontal bar, vertical bar, square, circle) and setting
+  position and dimensions as grid fractions, with per-field "Random" toggles
+  that delegate placement to the engine. Three new WASM bindings
+  (`biosim_wasm_clear_barriers`, `biosim_wasm_add_barrier`,
+  `biosim_wasm_get_n_barriers`) pass the specs to `biosim_sim_create`. Barrier
+  cells are rendered on the canvas using a `///` diagonal-line hatch pattern
+  (distinct from the dot pattern used for challenge overlays). A warning note
+  appears when a barrier-dependent challenge (`near_barrier`,
+  `location_sequence`) is selected with no barriers configured.
+
 - **Wired scalar-parameter configuration panel** (gh-56) — `SimConfigPanel` now
   exposes all 14 simulation parameters grouped by C header (`sim.h`, `grid.h`,
   `genome.h`, `io.h`, `generation.h`). A Preset / Custom mode toggle lets users

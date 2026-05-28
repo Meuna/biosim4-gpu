@@ -8,8 +8,8 @@
 | `params` | Complete | CLI/TOML/parameter management |
 | `sim-ref` | Complete | Single-threaded CPU reference simulator |
 | `sim-gpu` | In progress | K1–K5 complete: feedforward (sensors, nnet, actions), kill-marked grid cleanup, movement resolution, signal fade, challenge eval. Generation loop pending. |
-| `sim-wasm` | Feature-complete (scalar params) | Stepper + 3 parameter-setter bindings. Challenge/barriers composite knobs pending. |
-| `webapp` | Partially wired | Config panel wired for all 14 scalar params (gh-56). Challenge/barriers composite knobs, preset loading, and TOML export pending. |
+| `sim-wasm` | Feature-complete (scalar params + challenge + barriers) | Stepper + parameter-setter bindings + challenge spec bindings + barrier list bindings (gh-56, gh-64). |
+| `webapp` | Partially wired | Config panel wired for all 14 scalar params, challenge spec, and barriers (gh-56, gh-64). Preset loading and TOML export pending. |
 | `viz` | Not started | Depends on stepper trace format (not yet defined) |
 
 ## Missing or incomplete
