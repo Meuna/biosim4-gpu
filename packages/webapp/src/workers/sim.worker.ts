@@ -340,7 +340,11 @@ function createHatchPattern(): CanvasPattern | null {
 }
 
 function drawChallengeOverlay(spec: ChallengeSpec): void {
-    if (!ctx || !layout) return;
+    // hatchPattern is always non-null when ctx is non-null (both set together in
+    // the "canvas" message handler), so a single combined guard is sufficient.
+    if (!ctx || !layout || !hatchPattern) return;
+    const pattern = hatchPattern;
+
     const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
     const cellW = gridW / gridCellsX;
     const cellH = gridH / gridCellsY;
@@ -364,23 +368,21 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
             ctx.moveTo(x1, gridY);
             ctx.lineTo(x1, gridY + gridH);
             ctx.stroke();
-            if (hatchPattern) {
-                ctx.fillStyle = hatchPattern;
-                if (!spec.mirror) {
-                    // Safe zone is the band between xMin and xMax.
-                    // Near-edge strips inside the band, clamped to band width.
-                    const lw = Math.min(stripW, x1 - x0);
-                    ctx.fillRect(x0, gridY, lw, gridH);
-                    const rx = Math.max(x0, x1 - stripW);
-                    ctx.fillRect(rx, gridY, x1 - rx, gridH);
-                } else {
-                    // Safe zones are the two outer bands.
-                    // Near-edge strips at the inner boundary of each outer band.
-                    const lx = Math.max(gridX, x0 - stripW);
-                    ctx.fillRect(lx, gridY, x0 - lx, gridH);
-                    const rx2 = Math.min(gridX + gridW, x1 + stripW);
-                    ctx.fillRect(x1, gridY, rx2 - x1, gridH);
-                }
+            ctx.fillStyle = pattern;
+            if (!spec.mirror) {
+                // Safe zone is the band between xMin and xMax.
+                // Near-edge strips inside the band, clamped to band width.
+                const lw = Math.min(stripW, x1 - x0);
+                ctx.fillRect(x0, gridY, lw, gridH);
+                const rx = Math.max(x0, x1 - stripW);
+                ctx.fillRect(rx, gridY, x1 - rx, gridH);
+            } else {
+                // Safe zones are the two outer bands.
+                // Near-edge strips at the inner boundary of each outer band.
+                const lx = Math.max(gridX, x0 - stripW);
+                ctx.fillRect(lx, gridY, x0 - lx, gridH);
+                const rx2 = Math.min(gridX + gridW, x1 + stripW);
+                ctx.fillRect(x1, gridY, rx2 - x1, gridH);
             }
             break;
         }
@@ -391,13 +393,13 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
             ctx.stroke();
-            if (hatchPattern && r > stripR) {
+            if (r > stripR) {
                 ctx.save();
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, Math.PI * 2, false);
                 ctx.arc(cx, cy, r - stripR, 0, Math.PI * 2, false);
                 ctx.clip("evenodd");
-                ctx.fillStyle = hatchPattern;
+                ctx.fillStyle = pattern;
                 ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
                 ctx.restore();
             }
@@ -421,13 +423,13 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
                 ctx.stroke();
-                if (hatchPattern && r > stripR) {
+                if (r > stripR) {
                     ctx.save();
                     ctx.beginPath();
                     ctx.arc(cx, cy, r, 0, Math.PI * 2, false);
                     ctx.arc(cx, cy, r - stripR, 0, Math.PI * 2, false);
                     ctx.clip("evenodd");
-                    ctx.fillStyle = hatchPattern;
+                    ctx.fillStyle = pattern;
                     ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
                     ctx.restore();
                 }
@@ -451,13 +453,11 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
             ctx.lineTo(gridX + gridW - bW, gridY + gridH);
             ctx.stroke();
             // Near-edge strips inside each band, near the inner boundary.
-            if (hatchPattern) {
-                ctx.fillStyle = hatchPattern;
-                ctx.fillRect(gridX, gridY + bH - stripH, gridW, stripH);
-                ctx.fillRect(gridX, gridY + gridH - bH, gridW, stripH);
-                ctx.fillRect(gridX + bW - stripW, gridY, stripW, gridH);
-                ctx.fillRect(gridX + gridW - bW, gridY, stripW, gridH);
-            }
+            ctx.fillStyle = pattern;
+            ctx.fillRect(gridX, gridY + bH - stripH, gridW, stripH);
+            ctx.fillRect(gridX, gridY + gridH - bH, gridW, stripH);
+            ctx.fillRect(gridX + bW - stripW, gridY, stripW, gridH);
+            ctx.fillRect(gridX + gridW - bW, gridY, stripW, gridH);
             break;
         }
         case "center_sparse": {
@@ -472,33 +472,26 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
             ctx.beginPath();
             ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
             ctx.stroke();
-            if (hatchPattern) {
-                if (outerR > stripR) {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, outerR, 0, Math.PI * 2, false);
-                    ctx.arc(cx, cy, outerR - stripR, 0, Math.PI * 2, false);
-                    ctx.clip("evenodd");
-                    ctx.fillStyle = hatchPattern;
-                    ctx.fillRect(
-                        cx - outerR,
-                        cy - outerR,
-                        outerR * 2,
-                        outerR * 2,
-                    );
-                    ctx.restore();
-                }
-                if (innerR + stripR < outerR) {
-                    ctx.save();
-                    ctx.beginPath();
-                    const sr = innerR + stripR;
-                    ctx.arc(cx, cy, sr, 0, Math.PI * 2, false);
-                    ctx.arc(cx, cy, innerR, 0, Math.PI * 2, false);
-                    ctx.clip("evenodd");
-                    ctx.fillStyle = hatchPattern;
-                    ctx.fillRect(cx - sr, cy - sr, sr * 2, sr * 2);
-                    ctx.restore();
-                }
+            if (outerR > stripR) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(cx, cy, outerR, 0, Math.PI * 2, false);
+                ctx.arc(cx, cy, outerR - stripR, 0, Math.PI * 2, false);
+                ctx.clip("evenodd");
+                ctx.fillStyle = pattern;
+                ctx.fillRect(cx - outerR, cy - outerR, outerR * 2, outerR * 2);
+                ctx.restore();
+            }
+            if (innerR + stripR < outerR) {
+                ctx.save();
+                ctx.beginPath();
+                const sr = innerR + stripR;
+                ctx.arc(cx, cy, sr, 0, Math.PI * 2, false);
+                ctx.arc(cx, cy, innerR, 0, Math.PI * 2, false);
+                ctx.clip("evenodd");
+                ctx.fillStyle = pattern;
+                ctx.fillRect(cx - sr, cy - sr, sr * 2, sr * 2);
+                ctx.restore();
             }
             break;
         }
