@@ -1,3 +1,4 @@
+#include "biosim/core/barriers.h"
 #include "biosim/core/census.h"
 #include "biosim/core/challenge_spec.h"
 #include "biosim/core/log.h"
@@ -56,6 +57,15 @@ static biosim_challenge_spec_t s_challenge = {
     .x_band = {.x_min = 0.5F, .x_max = 1.0F, .mirror = false},
 };
 
+/* ── barrier state ───────────────────────────────────────────────────────── */
+
+/* Module-level barrier list. biosim_wasm_clear_barriers resets the list;
+ * biosim_wasm_add_barrier appends one spec. biosim_wasm_init passes
+ * s_barriers/s_n_barriers to biosim_sim_create.                             */
+#define MAX_BARRIERS 8U
+static biosim_barrier_spec_t s_barriers[MAX_BARRIERS];
+static uint32_t s_n_barriers = 0U;
+
 /* ── module state ────────────────────────────────────────────────────────── */
 
 static biosim_sim_t s_sim;
@@ -86,7 +96,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_init(void) {
         return (int)rc;
     }
 
-    rc = biosim_sim_create(&s_sim, &p, &s_challenge, NULL, 0U);
+    rc = biosim_sim_create(&s_sim, &p, &s_challenge, s_barriers, s_n_barriers);
     biosim_params_free(&p);
     if (rc != BIOSIM_OK) {
         return (int)rc;
@@ -210,6 +220,39 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_near_barrier(float radius) {
 
 EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_location_sequence(float radius) {
     s_challenge.location_sequence.radius = radius;
+}
+
+/* ── barrier setters ─────────────────────────────────────────────────────── */
+
+/* Reset the barrier list. Call before adding a new set of barriers.        */
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_clear_barriers(void) {
+    memset(s_barriers, 0, sizeof(s_barriers));
+    s_n_barriers = 0U;
+}
+
+/* Append one barrier spec to the list. x and y are grid cell coordinates;
+ * pass -32768 (INT16_MIN = BIOSIM_BARRIER_POS_UNSET) for random placement.
+ * length and width are in cells; pass 0.0 (BIOSIM_BARRIER_DIM_UNSET) for a
+ * random dimension. Returns BIOSIM_OK or BIOSIM_ERR_INVALID when full.      */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
+    int kind, int x, int y, float length, float width
+) {
+    if (s_n_barriers >= MAX_BARRIERS) {
+        return BIOSIM_ERR_INVALID;
+    }
+    biosim_barrier_spec_t *b = &s_barriers[s_n_barriers];
+    b->kind = (biosim_barrier_kind_t)kind;
+    b->x = (int16_t)x;
+    b->y = (int16_t)y;
+    b->length = length;
+    b->width = width;
+    s_n_barriers++;
+    return BIOSIM_OK;
+}
+
+/* Number of barriers currently in the list.                                */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_n_barriers(void) {
+    return s_n_barriers;
 }
 
 /* ── step-level operations ───────────────────────────────────────────────── */

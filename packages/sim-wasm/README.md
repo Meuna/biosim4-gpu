@@ -68,7 +68,35 @@ biosim.ccall('biosim_wasm_init', 'number', [], []);
 | `enable-kill` | bool | false |
 | `responsiveness-curve-k` | float | 2.0 |
 
+## Barrier API
+
+Call `biosim_wasm_clear_barriers` and `biosim_wasm_add_barrier` **before**
+`biosim_wasm_init` to configure barrier shapes. The list is persistent across
+`init` calls; call `clear_barriers` before rebuilding it.
+
+| Function | Args | Return | Description |
+|---|---|---|---|
+| `biosim_wasm_clear_barriers` | — | `null` | Reset the barrier list to empty. |
+| `biosim_wasm_add_barrier` | `kind: number, x: number, y: number, length: number, width: number` | `number` (status) | Append one barrier. Up to 8 barriers supported. |
+| `biosim_wasm_get_n_barriers` | — | `number` | Number of barriers currently in the list. |
+
+**Sentinel values for `add_barrier`:**
+- `x` / `y`: pass `-32768` (`INT16_MIN`) for random placement.
+- `length` / `width`: pass `0.0` for a random dimension.
+
+**Kind integers** (match `biosim_barrier_kind_t`):
+
+| Kind | Integer | Shape |
+|---|---|---|
+| `hbar` | 0 | Horizontal bar |
+| `vbar` | 1 | Vertical bar |
+| `square` | 2 | Filled square |
+| `circle` | 3 | Filled circle |
+
+Return code for `add_barrier`: `0` = OK, `4` = list full (`BIOSIM_ERR_INVALID`).
+
 ## Default parameters
 
 Matches `sim-ref` defaults: population 3000, grid 128×128, 300 steps/generation,
-1000 max generations, genome length 24, 5 neurons, x-band challenge (x ∈ [0.5, 1.0]).
+1000 max generations, genome length 24, 5 neurons, x-band challenge (x ∈ [0.5, 1.0]),
+no barriers.

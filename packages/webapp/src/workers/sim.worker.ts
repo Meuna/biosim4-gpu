@@ -30,6 +30,20 @@ type EmscriptenFactory = (
     opts?: EmscriptenOptions,
 ) => Promise<EmscriptenModule>;
 
+/** Barrier kind — mirrors biosim_barrier_kind_t in barriers.h. */
+export type BarrierKind = "hbar" | "vbar" | "square" | "circle";
+
+/** One barrier shape — mirrors biosim_barrier_spec_t in barriers.h.
+ *  Positional fields are fractions of the grid dimension ([0, 1]);
+ *  null means "pick randomly" (maps to the BIOSIM_BARRIER_*_UNSET sentinel). */
+export interface BarrierSpec {
+    kind: BarrierKind;
+    x: number | null;
+    y: number | null;
+    length: number | null;
+    width: number | null;
+}
+
 /** Challenge specification — mirrors biosim_challenge_spec_t in challenge_spec.h. */
 export type ChallengeSpec =
     | { kind: "x_band"; xMin: number; xMax: number; mirror: boolean }
@@ -77,6 +91,7 @@ export interface SimParams {
     enableKill: boolean;
     responsivenessCurveK: number;
     challenge: ChallengeSpec;
+    barriers: BarrierSpec[];
 }
 
 export type WorkerCmd =
@@ -151,6 +166,14 @@ const CHALLENGE_KIND_INT: Record<string, number> = {
     altruism: 12,
 };
 
+// Maps BarrierSpec.kind strings to biosim_barrier_kind_t ordinals (barriers.h).
+const BARRIER_KIND_INT: Record<BarrierKind, number> = {
+    hbar: 0,
+    vbar: 1,
+    square: 2,
+    circle: 3,
+};
+
 // Current challenge spec; updated on every configure command.
 // Default matches the hardcoded s_challenge initialiser in bindings.c.
 let currentChallenge: ChallengeSpec = {
@@ -164,8 +187,13 @@ let currentChallenge: ChallengeSpec = {
 // via the "canvas" command; fallbacks used in tests.
 let challengeOverlayColor = "rgba(0, 0, 0, 0.12)";
 let challengeBorderColor = "rgba(0, 0, 0, 0.35)";
-// Tiled hatch pattern for the near-edge strip; created once after ctx is ready.
+// Tiled dot pattern for challenge near-edge strips; created once after ctx is ready.
 let hatchPattern: CanvasPattern | null = null;
+// Tiled diagonal-line (///) pattern for barrier cells; created once after ctx is ready.
+let barrierHatchPattern: CanvasPattern | null = null;
+// Cached barrier cell coordinates: flat [gx0,gy0, gx1,gy1, ...].
+// Populated after biosim_wasm_init so we read the authoritative grid once per configure.
+let barrierCells: Int32Array | null = null;
 
 interface Layout {
     canvasW: number;
@@ -337,6 +365,90 @@ function createHatchPattern(): CanvasPattern | null {
     px.arc(size / 2, size / 2, 1.5, 0, Math.PI * 2);
     px.fill();
     return ctx.createPattern(pc, "repeat");
+}
+
+// Builds an 8×8 tiled diagonal-line (///) pattern for rendering barrier cells.
+function createBarrierHatchPattern(): CanvasPattern | null {
+    if (!ctx) return null;
+    const size = 8;
+    const pc = new OffscreenCanvas(size, size);
+    const px = pc.getContext("2d");
+    if (!px) return null;
+    px.strokeStyle = challengeBorderColor;
+    px.lineWidth = 1;
+    px.beginPath();
+    for (let i = -size; i <= size * 2; i += 4) {
+        px.moveTo(i, 0);
+        px.lineTo(i + size, size);
+    }
+    px.stroke();
+    return ctx.createPattern(pc, "repeat");
+}
+
+// Passes barrier specs to WASM; converts fractions to cell coordinates.
+function setBarriers(
+    specs: BarrierSpec[],
+    gridSizeX: number,
+    gridSizeY: number,
+): void {
+    biosim!.ccall("biosim_wasm_clear_barriers", null, [], []);
+    const gridMin = Math.min(gridSizeX, gridSizeY);
+    for (const spec of specs) {
+        const x =
+            spec.x !== null ? Math.round(spec.x * (gridSizeX - 1)) : -32768;
+        const y =
+            spec.y !== null ? Math.round(spec.y * (gridSizeY - 1)) : -32768;
+        const len = spec.length !== null ? spec.length * gridMin : 0.0;
+        const w = spec.width !== null ? spec.width * gridMin : 0.0;
+        biosim!.ccall(
+            "biosim_wasm_add_barrier",
+            "number",
+            ["number", "number", "number", "number", "number"],
+            [BARRIER_KIND_INT[spec.kind], x, y, len, w],
+        );
+    }
+}
+
+// Scans the grid for BIOSIM_GRID_BARRIER cells (0xFFFFFFFF) and caches their
+// coordinates. Called once after biosim_wasm_init so rendering reuses the cache.
+function cacheBarrierCells(): void {
+    if (!biosim || !layout) {
+        barrierCells = null;
+        return;
+    }
+    const { gridCellsX: W, gridCellsY: H } = layout;
+    const cellsOff = call("biosim_wasm_get_grid_cells_ptr") >>> 2;
+    const { HEAPU32 } = biosim;
+    const tmp: number[] = [];
+    for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+            if (HEAPU32[cellsOff + y * W + x] === 0xffffffff) {
+                tmp.push(x, y);
+            }
+        }
+    }
+    barrierCells = new Int32Array(tmp);
+}
+
+// Draws all cached barrier cells using the diagonal-line hatch pattern.
+function drawBarriers(): void {
+    if (
+        !ctx ||
+        !layout ||
+        !barrierHatchPattern ||
+        !barrierCells ||
+        barrierCells.length === 0
+    )
+        return;
+    const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
+    const cellW = gridW / gridCellsX;
+    const cellH = gridH / gridCellsY;
+    ctx.fillStyle = barrierHatchPattern;
+    for (let i = 0; i < barrierCells.length; i += 2) {
+        const gx = barrierCells[i];
+        const gy = barrierCells[i + 1];
+        ctx.fillRect(gridX + gx * cellW, gridY + gy * cellH, cellW, cellH);
+    }
 }
 
 function drawChallengeOverlay(spec: ChallengeSpec): void {
@@ -535,6 +647,7 @@ function drawGrid(): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
     drawChallengeOverlay(currentChallenge);
+    drawBarriers();
 
     const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
     const pop = call("biosim_wasm_get_population");
@@ -570,6 +683,7 @@ function drawTransitionIn(frac: number): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
     drawChallengeOverlay(currentChallenge);
+    drawBarriers();
 
     const {
         canvasW,
@@ -772,9 +886,11 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             setParamInt("sensor-radius", p.sensorRadius);
             setParamBool("enable-kill", p.enableKill);
             setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
+            setBarriers(p.barriers, p.gridSizeX, p.gridSizeY);
             setChallengeSpec(p.challenge);
             currentChallenge = p.challenge;
             call("biosim_wasm_init");
+            cacheBarrierCells();
             mode = "idle";
             startTime = performance.now();
             postMessage({
@@ -808,6 +924,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             }
             ctx = offscreen.getContext("2d");
             hatchPattern = createHatchPattern();
+            barrierHatchPattern = createBarrierHatchPattern();
             startAnimLoop();
             break;
         }
