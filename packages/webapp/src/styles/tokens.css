@@ -23,6 +23,7 @@
     /* Translucent raw values */
     --_dot: rgba(10, 10, 10, 0.08);
     --_border-subtle: rgba(10, 10, 10, 0.12);
+    --_challenge-border: rgba(10, 10, 10, 0.35);
     --_accent-soft: rgba(21, 128, 61, 0.12);
     --_accent-border: rgba(21, 128, 61, 0.3);
     --_glass: rgba(250, 250, 250, 0.85);
@@ -42,6 +43,7 @@
     --color-accent-border: var(--_accent-border);
     --color-dot-grid: var(--_dot);
     --color-control-surface: var(--_control-bg);
+    --color-challenge-border: var(--_challenge-border);
 
     /* ── Spacing scale ── */
     --space-1: 0.25rem;
