@@ -20,6 +20,7 @@
     --_neutral-700: #2a2a2a;
     --_neutral-900: #131313;
     --_accent: #15803d;
+    --_warn: #b91c1c;
     /* Translucent raw values */
     --_dot: rgba(10, 10, 10, 0.08);
     --_border-subtle: rgba(10, 10, 10, 0.12);
@@ -44,6 +45,7 @@
     --color-dot-grid: var(--_dot);
     --color-control-surface: var(--_control-bg);
     --color-challenge-border: var(--_challenge-border);
+    --color-warn: var(--_warn);
 
     /* ── Spacing scale ── */
     --space-1: 0.25rem;
