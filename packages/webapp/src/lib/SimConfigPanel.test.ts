@@ -41,12 +41,10 @@ describe("SimConfigPanel", () => {
         expect(screen.getByLabelText("Challenge kind")).toBeTruthy();
     });
 
-    it("shows barriers placeholder section", () => {
+    it("shows barriers section with add button", () => {
         render(SimConfigPanel, { props: { send: vi.fn() } });
         expect(screen.getByText("Barriers")).toBeTruthy();
-        expect(
-            screen.getByText("Composite knobs not yet implemented."),
-        ).toBeTruthy();
+        expect(screen.getByLabelText("Add barrier")).toBeTruthy();
     });
 
     it('starts in sync and shows "✓ in sync"', () => {

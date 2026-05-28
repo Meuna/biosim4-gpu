@@ -10,6 +10,7 @@
     import ParamSlider from "./ParamSlider.svelte";
     import GridSizeControl from "./GridSizeControl.svelte";
     import ChallengeControl from "./ChallengeControl.svelte";
+    import BarrierControl from "./BarrierControl.svelte";
 
     interface Props {
         send: (cmd: WorkerCmd) => void;
@@ -38,6 +39,7 @@
         enableKill: false,
         responsivenessCurveK: 2.0,
         challenge: DEFAULT_CHALLENGE,
+        barriers: [],
     };
 
     let params = $state<SimParams>({ ...DEFAULTS });
@@ -280,16 +282,29 @@
         }}
     />
 
+    {#if (params.challenge.kind === "near_barrier" || params.challenge.kind === "location_sequence") && params.barriers.length === 0}
+        <p class="sim-config__barrier-warning">
+            This challenge requires at least one barrier — add one in the
+            Barriers section below.
+        </p>
+    {/if}
+
     <div class="sim-config__spacer"></div>
 
-    <!-- Barriers placeholder ─────────────────────────────────────────────── -->
+    <!-- Barriers ────────────────────────────────────────────────────────────── -->
     <div class="section-label">
         <span class="small-caps">Barriers</span>
         <span class="sim-config__hint">barriers.h</span>
     </div>
-    <p class="sim-config__placeholder-note">
-        Composite knobs not yet implemented.
-    </p>
+
+    <BarrierControl
+        value={params.barriers}
+        challengeKind={params.challenge.kind}
+        onchange={(b) => {
+            params.barriers = b;
+            markDirty();
+        }}
+    />
 
     <div class="sim-config__spacer sim-config__spacer--lg"></div>
 </div>
@@ -343,12 +358,11 @@
         color: var(--color-text-muted);
     }
 
-    .sim-config__placeholder-note {
+    .sim-config__barrier-warning {
         font-family: var(--font-sans);
         font-size: var(--text-sm);
-        color: var(--color-text-muted);
-        margin: var(--space-1) 0 0 0;
-        font-style: italic;
+        color: var(--color-warn);
+        margin: var(--space-2) 0 0 0;
     }
 
     .sim-config__spacer {
