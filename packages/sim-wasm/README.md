@@ -95,6 +95,38 @@ Call `biosim_wasm_clear_barriers` and `biosim_wasm_add_barrier` **before**
 
 Return code for `add_barrier`: `0` = OK, `4` = list full (`BIOSIM_ERR_INVALID`).
 
+## Rendering / inspection queries
+
+These functions return byte offsets into the Emscripten heap. Access the
+corresponding WASM arrays via the appropriate typed view on the JavaScript side.
+All indices are in `[0, population)`.
+
+**Scalar queries** (called via `ccall(name, 'number', [], [])`):
+
+| Function | Return | Description |
+|---|---|---|
+| `biosim_wasm_get_population` | `number` | Total agent slot count. |
+| `biosim_wasm_get_size_x` | `number` | Grid width in cells. |
+| `biosim_wasm_get_size_y` | `number` | Grid height in cells. |
+
+**Pointer queries** (each returns `uint32_t` byte offset; divide by element
+size for the typed-array index):
+
+| Function | HEAP view | Element type | Description |
+|---|---|---|---|
+| `biosim_wasm_get_loc_x_ptr` | `HEAP32` | `int32` | Agent x grid coordinate. |
+| `biosim_wasm_get_loc_y_ptr` | `HEAP32` | `int32` | Agent y grid coordinate. |
+| `biosim_wasm_get_alive_ptr` | `HEAPU8` | `uint8` | 1 = alive, 0 = dead. |
+| `biosim_wasm_get_birth_x_ptr` | `HEAP32` | `int32` | Spawn x coordinate. |
+| `biosim_wasm_get_birth_y_ptr` | `HEAP32` | `int32` | Spawn y coordinate. |
+| `biosim_wasm_get_last_move_dir_ptr` | `HEAPU8` | `uint8` | Last movement direction, 3-bit value: `0=E, CCW: E NE N NW W SW S SE`. |
+| `biosim_wasm_get_osc_period_ptr` | `HEAPU16` | `uint16` | Oscillator period in steps. |
+| `biosim_wasm_get_responsiveness_ptr` | `HEAPF32` | `float32` | Neural responsiveness scalar. |
+| `biosim_wasm_get_los_range_ptr` | `HEAPU8` | `uint8` | Line-of-sight range in cells. |
+| `biosim_wasm_get_challenge_bits_ptr` | `HEAPU32` | `uint32` | Per-step challenge-pass bitmask. |
+| `biosim_wasm_get_genome_fingerprint_ptr` | `HEAPU32` | `uint64` (2×uint32 LE) | Genome hash set in `generation.c`. Read as `lo = HEAPU32[off + id*2]`, `hi = HEAPU32[off + id*2 + 1]`. |
+| `biosim_wasm_get_grid_cells_ptr` | `HEAPU32` | `uint32` | Flat row-major grid: `cells[gy*W + gx]`. Encoding: `0` = empty, `0xFFFFFFFF` = barrier, else **1-based agent index** (`raw - 1` = agent id). |
+
 ## Default parameters
 
 Matches `sim-ref` defaults: population 3000, grid 128×128, 300 steps/generation,

@@ -377,3 +377,35 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_alive_ptr(void) {
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_grid_cells_ptr(void) {
     return (uint32_t)(uintptr_t)s_sim.grid.cells;
 }
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_birth_x_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.birth_x;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_birth_y_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.birth_y;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_last_move_dir_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.last_move_dir;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_osc_period_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.osc_period;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_responsiveness_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.responsiveness;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_los_range_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.los_range;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_challenge_bits_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.challenge_bits;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_genome_fingerprint_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.agents.genome_fingerprint;
+}
