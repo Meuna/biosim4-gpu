@@ -75,6 +75,22 @@ export type ChallengeSpec =
     | { kind: "near_barrier"; radius: number }
     | { kind: "altruism" };
 
+/** All per-agent state fields readable from the WASM heap. */
+export interface AgentInfo {
+    id: number;
+    alive: boolean;
+    gx: number;
+    gy: number;
+    birthX: number;
+    birthY: number;
+    heading: number;
+    oscPeriod: number;
+    responsiveness: number;
+    losRange: number;
+    challengeBits: number;
+    fingerprint: string;
+}
+
 /** Scalar parameters that can be configured before (re-)initialising the sim. */
 export interface SimParams {
     population: number;
@@ -118,7 +134,16 @@ export type WorkerCmd =
           gridH: number;
           gridCellsX: number;
           gridCellsY: number;
-      };
+      }
+    | {
+          type: "pickAgentAtCell";
+          gx: number;
+          gy: number;
+          reason: "click" | "hover";
+      }
+    | { type: "navigateAgent"; fromId: number; direction: -1 | 1 }
+    | { type: "randomAgent" }
+    | { type: "selectAgent"; id: number | null };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -137,7 +162,9 @@ export type WorkerEvent =
           gridSizeY: number;
           stepsPerGen: number;
       }
-    | { type: "error"; message: string };
+    | { type: "error"; message: string }
+    | { type: "agentPicked"; reason: "click" | "hover"; info: AgentInfo }
+    | { type: "agentMissed"; reason: "click" | "hover" };
 
 // ── Rendering mode ────────────────────────────────────────────────────────────
 
@@ -148,6 +175,7 @@ type Mode = "idle" | "transitioning-in" | "running";
 let biosim: EmscriptenModule | null = null;
 let playing = false;
 let ctx: OffscreenCanvasRenderingContext2D | null = null;
+let selectedAgentId: number | null = null;
 
 // Maps ChallengeSpec.kind strings to biosim_challenge_kind_t ordinals (challenge_defs.h).
 const CHALLENGE_KIND_INT: Record<string, number> = {
@@ -332,6 +360,42 @@ function setChallengeSpec(spec: ChallengeSpec): void {
             // radioactive_walls, pairs, altruism): kind already set above.
             break;
     }
+}
+
+// ── Agent inspection ──────────────────────────────────────────────────────────
+
+function readAgentInfo(id: number): AgentInfo {
+    const { HEAP32, HEAPU8, HEAPU32 } = biosim!;
+    const HEAPU16 = new Uint16Array(HEAPU8.buffer);
+    const HEAPF32 = new Float32Array(HEAPU8.buffer);
+    const aliveOff = call("biosim_wasm_get_alive_ptr");
+    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
+    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
+    const bxOff = call("biosim_wasm_get_birth_x_ptr") >>> 2;
+    const byOff = call("biosim_wasm_get_birth_y_ptr") >>> 2;
+    const dirOff = call("biosim_wasm_get_last_move_dir_ptr");
+    const oscOff = call("biosim_wasm_get_osc_period_ptr") >>> 1;
+    const respOff = call("biosim_wasm_get_responsiveness_ptr") >>> 2;
+    const losOff = call("biosim_wasm_get_los_range_ptr");
+    const cbOff = call("biosim_wasm_get_challenge_bits_ptr") >>> 2;
+    const fpOff = call("biosim_wasm_get_genome_fingerprint_ptr") >>> 2;
+    const lo = HEAPU32[fpOff + id * 2];
+    const hi = HEAPU32[fpOff + id * 2 + 1];
+    return {
+        id,
+        alive: HEAPU8[aliveOff + id] !== 0,
+        gx: HEAP32[locXOff + id],
+        gy: HEAP32[locYOff + id],
+        birthX: HEAP32[bxOff + id],
+        birthY: HEAP32[byOff + id],
+        heading: HEAPU8[dirOff + id] & 7,
+        oscPeriod: HEAPU16[oscOff + id],
+        responsiveness: HEAPF32[respOff + id],
+        losRange: HEAPU8[losOff + id],
+        challengeBits: HEAPU32[cbOff + id],
+        fingerprint:
+            hi.toString(16).padStart(8, "0") + lo.toString(16).padStart(8, "0"),
+    };
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
@@ -677,6 +741,26 @@ function drawGrid(): void {
         }
     }
     ctx.fill();
+
+    if (selectedAgentId !== null && HEAPU8[aliveOff + selectedAgentId]) {
+        const gx = HEAP32[locXOff + selectedAgentId];
+        const gy = HEAP32[locYOff + selectedAgentId];
+        const { x, y, r } = gridPosition(
+            gx,
+            gy,
+            gridX,
+            gridY,
+            gridW,
+            gridH,
+            gridCellsX,
+            gridCellsY,
+        );
+        ctx.beginPath();
+        ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+        ctx.strokeStyle = AGENT_COLOR;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    }
 }
 
 function drawTransitionIn(frac: number): void {
@@ -910,6 +994,56 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         case "nextGeneration":
             doNextGeneration();
+            break;
+        case "pickAgentAtCell": {
+            if (!biosim || !layout) break;
+            const W = layout.gridCellsX;
+            const cellsOff = call("biosim_wasm_get_grid_cells_ptr") >>> 2;
+            const raw = biosim.HEAPU32[cellsOff + cmd.gy * W + cmd.gx];
+            if (raw === 0 || raw === 0xffffffff) {
+                postMessage({
+                    type: "agentMissed",
+                    reason: cmd.reason,
+                } satisfies WorkerEvent);
+            } else {
+                postMessage({
+                    type: "agentPicked",
+                    reason: cmd.reason,
+                    info: readAgentInfo(raw - 1),
+                } satisfies WorkerEvent);
+            }
+            break;
+        }
+        case "navigateAgent": {
+            if (!biosim) break;
+            const pop = call("biosim_wasm_get_population");
+            const id = (((cmd.fromId + cmd.direction) % pop) + pop) % pop;
+            postMessage({
+                type: "agentPicked",
+                reason: "click",
+                info: readAgentInfo(id),
+            } satisfies WorkerEvent);
+            break;
+        }
+        case "randomAgent": {
+            if (!biosim) break;
+            const pop = call("biosim_wasm_get_population");
+            const aliveOff = call("biosim_wasm_get_alive_ptr");
+            const alive: number[] = [];
+            for (let i = 0; i < pop; i++) {
+                if (biosim.HEAPU8[aliveOff + i]) alive.push(i);
+            }
+            if (alive.length === 0) break;
+            const id = alive[Math.floor(Math.random() * alive.length)];
+            postMessage({
+                type: "agentPicked",
+                reason: "click",
+                info: readAgentInfo(id),
+            } satisfies WorkerEvent);
+            break;
+        }
+        case "selectAgent":
+            selectedAgentId = cmd.id;
             break;
         case "canvas": {
             const offscreen = cmd.canvas;
