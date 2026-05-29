@@ -77,7 +77,7 @@ Call `biosim_wasm_clear_barriers` and `biosim_wasm_add_barrier` **before**
 | Function | Args | Return | Description |
 |---|---|---|---|
 | `biosim_wasm_clear_barriers` | — | `null` | Reset the barrier list to empty. |
-| `biosim_wasm_add_barrier` | `kind: number, x: number, y: number, length: number, width: number` | `number` (status) | Append one barrier. Up to 8 barriers supported. |
+| `biosim_wasm_add_barrier` | `kind: number, x: number, y: number, length: number, width: number` | `number` (status) | Append one barrier. Returns `BIOSIM_ERR_NOMEM` if allocation fails. |
 | `biosim_wasm_get_n_barriers` | — | `number` | Number of barriers currently in the list. |
 
 **Sentinel values for `add_barrier`:**
