@@ -156,11 +156,7 @@ describe("BarrierControl", () => {
                 onchange: vi.fn(),
             },
         });
-        expect(
-            screen.getByText(
-                /near-barrier challenges require at least one barrier/i,
-            ),
-        ).toBeTruthy();
+        expect(screen.getByText(/add a barrier here/i)).toBeTruthy();
     });
 
     it("hides warning when near_barrier challenge has barriers", () => {
@@ -171,11 +167,7 @@ describe("BarrierControl", () => {
                 onchange: vi.fn(),
             },
         });
-        expect(
-            screen.queryByText(
-                /near-barrier challenges require at least one barrier/i,
-            ),
-        ).toBeNull();
+        expect(screen.queryByText(/add a barrier here/i)).toBeNull();
     });
 
     it("hides warning for other challenge kinds", () => {
@@ -186,10 +178,6 @@ describe("BarrierControl", () => {
                 onchange: vi.fn(),
             },
         });
-        expect(
-            screen.queryByText(
-                /near-barrier challenges require at least one barrier/i,
-            ),
-        ).toBeNull();
+        expect(screen.queryByText(/add a barrier here/i)).toBeNull();
     });
 });
