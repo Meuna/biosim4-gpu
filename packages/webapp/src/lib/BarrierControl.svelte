@@ -6,7 +6,7 @@
         ChallengeSpec,
     } from "../workers/sim.worker";
     import ParamSlider from "./ParamSlider.svelte";
-    import { Shuffle, CornerRightDown } from "lucide-svelte";
+    import { CornerRightDown, Shuffle, Trash2 } from "lucide-svelte";
 
     interface Props {
         value: BarrierSpec[];
@@ -136,22 +136,20 @@
                     {/each}
                 </select>
                 <button
-                    class="button button--ghost barrier-control__remove"
+                    class="button button--ghost barrier-control__small-button"
+                    onclick={() => shuffleBarrier(i)}
+                    aria-label={`Shuffle barrier ${i + 1}`}
+                >
+                    <Shuffle size={13} />
+                </button>
+                <button
+                    class="button button--ghost barrier-control__small-button"
                     onclick={() => removeBarrier(i)}
                     aria-label={`Remove barrier ${i + 1}`}
                 >
-                    ✕
+                    <Trash2 size={13} />
                 </button>
             </div>
-
-            <!-- Shuffle all fields -->
-            <button
-                class="button button--ghost barrier-control__shuffle"
-                onclick={() => shuffleBarrier(i)}
-                aria-label={`Shuffle barrier ${i + 1}`}
-            >
-                <Shuffle size={14} />
-            </button>
 
             <!-- Position X -->
             <ParamSlider
@@ -238,8 +236,8 @@
         position: absolute;
         left: 0;
         top: 0;
-        height: 1.75rem;
-        width: calc(var(--space-3) + 2px);
+        bottom: 0;
+        width: var(--space-2);
         background: none;
         border: none;
         cursor: pointer;
@@ -286,18 +284,10 @@
         appearance: auto;
     }
 
-    .barrier-control__remove {
+    .barrier-control__small-button {
         flex-shrink: 0;
         padding: var(--space-1) var(--space-2);
         font-size: var(--text-sm);
-    }
-
-    .barrier-control__shuffle {
-        display: flex;
-        align-items: center;
-        gap: var(--space-1);
-        font-size: var(--text-sm);
-        margin-bottom: var(--space-2);
     }
 
     .barrier-control__add {
