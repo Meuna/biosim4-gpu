@@ -91,7 +91,7 @@
 
 {#if needsBarriers && value.length === 0}
     <p class="barrier-control__warning">
-        Near-barrier challenges require at least one barrier.
+        <CornerRightDown size={14} /> Add a barrier here
     </p>
 {/if}
 
@@ -150,7 +150,7 @@
                 onclick={() => shuffleBarrier(i)}
                 aria-label={`Shuffle barrier ${i + 1}`}
             >
-                <Shuffle size={14} /> Randomise
+                <Shuffle size={14} />
             </button>
 
             <!-- Position X -->
@@ -212,12 +212,15 @@
         onclick={addBarrier}
         aria-label="Add barrier"
     >
-        <CornerRightDown size={14} /> Add a barrier here
+        + Add barrier
     </button>
 </div>
 
 <style>
     .barrier-control__warning {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
         font-family: var(--font-sans);
         font-size: var(--text-sm);
         color: var(--color-warn);
@@ -235,7 +238,7 @@
         position: absolute;
         left: 0;
         top: 0;
-        bottom: 0;
+        height: 1.75rem;
         width: calc(var(--space-3) + 2px);
         background: none;
         border: none;
@@ -300,8 +303,5 @@
     .barrier-control__add {
         width: 100%;
         justify-content: center;
-        display: flex;
-        align-items: center;
-        gap: var(--space-1);
     }
 </style>
