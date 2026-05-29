@@ -60,22 +60,22 @@ describe("BarrierControl", () => {
         expect(barriers[0].kind).toBe("circle");
     });
 
-    it("shows width field for hbar", () => {
+    it("shows width slider for hbar", () => {
         render(BarrierControl, {
             props: { value: [defaultHbar], onchange: vi.fn() },
         });
-        expect(screen.queryByLabelText("Barrier 1 width random")).toBeTruthy();
+        expect(screen.queryByLabelText("Width")).toBeTruthy();
     });
 
-    it("shows width field for vbar", () => {
+    it("shows width slider for vbar", () => {
         const vbar: BarrierSpec = { ...defaultHbar, kind: "vbar" };
         render(BarrierControl, {
             props: { value: [vbar], onchange: vi.fn() },
         });
-        expect(screen.queryByLabelText("Barrier 1 width random")).toBeTruthy();
+        expect(screen.queryByLabelText("Width")).toBeTruthy();
     });
 
-    it("hides width field for square", () => {
+    it("hides width slider for square", () => {
         const square: BarrierSpec = {
             ...defaultHbar,
             kind: "square",
@@ -84,10 +84,10 @@ describe("BarrierControl", () => {
         render(BarrierControl, {
             props: { value: [square], onchange: vi.fn() },
         });
-        expect(screen.queryByLabelText("Barrier 1 width random")).toBeNull();
+        expect(screen.queryByLabelText("Width")).toBeNull();
     });
 
-    it("hides width field for circle", () => {
+    it("hides width slider for circle", () => {
         const circle: BarrierSpec = {
             ...defaultHbar,
             kind: "circle",
@@ -96,28 +96,56 @@ describe("BarrierControl", () => {
         render(BarrierControl, {
             props: { value: [circle], onchange: vi.fn() },
         });
-        expect(screen.queryByLabelText("Barrier 1 width random")).toBeNull();
+        expect(screen.queryByLabelText("Width")).toBeNull();
     });
 
-    it("checking X random sets x to null in emitted spec", async () => {
+    it("shuffle button calls onchange with randomised values", async () => {
         const onchange = vi.fn<[BarrierSpec[]], void>();
         render(BarrierControl, {
             props: { value: [defaultHbar], onchange },
         });
-        await fireEvent.click(screen.getByLabelText("Barrier 1 X random"));
+        await fireEvent.click(screen.getByLabelText("Shuffle barrier 1"));
+        expect(onchange).toHaveBeenCalledOnce();
         const barriers = onchange.mock.calls[0][0];
-        expect(barriers[0].x).toBeNull();
+        expect(typeof barriers[0].x).toBe("number");
+        expect(typeof barriers[0].y).toBe("number");
+        expect(typeof barriers[0].length).toBe("number");
+        expect(typeof barriers[0].width).toBe("number");
     });
 
-    it("unchecking X random sets x to 0.5 in emitted spec", async () => {
+    it("shuffle button sets width to null for square", async () => {
         const onchange = vi.fn<[BarrierSpec[]], void>();
-        const randomX: BarrierSpec = { ...defaultHbar, x: null };
+        const square: BarrierSpec = {
+            ...defaultHbar,
+            kind: "square",
+            width: null,
+        };
         render(BarrierControl, {
-            props: { value: [randomX], onchange },
+            props: { value: [square], onchange },
         });
-        await fireEvent.click(screen.getByLabelText("Barrier 1 X random"));
+        await fireEvent.click(screen.getByLabelText("Shuffle barrier 1"));
         const barriers = onchange.mock.calls[0][0];
-        expect(barriers[0].x).toBe(0.5);
+        expect(barriers[0].width).toBeNull();
+    });
+
+    it("collapse toggle hides controls and shows summary", async () => {
+        render(BarrierControl, {
+            props: { value: [defaultHbar], onchange: vi.fn() },
+        });
+        expect(screen.queryByLabelText("Barrier 1 kind")).toBeTruthy();
+        await fireEvent.click(screen.getByLabelText("Toggle barrier 1"));
+        expect(screen.queryByLabelText("Barrier 1 kind")).toBeNull();
+        expect(screen.getByText(/hbar\(/)).toBeTruthy();
+    });
+
+    it("collapse toggle re-expands on second click", async () => {
+        render(BarrierControl, {
+            props: { value: [defaultHbar], onchange: vi.fn() },
+        });
+        const toggle = screen.getByLabelText("Toggle barrier 1");
+        await fireEvent.click(toggle);
+        await fireEvent.click(toggle);
+        expect(screen.queryByLabelText("Barrier 1 kind")).toBeTruthy();
     });
 
     it("shows warning when near_barrier challenge has no barriers", () => {
