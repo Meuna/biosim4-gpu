@@ -1,5 +1,9 @@
 <script lang="ts">
-    import type { WorkerCmd, WorkerEvent } from "./workers/sim.worker";
+    import type {
+        WorkerCmd,
+        WorkerEvent,
+        AgentInfo,
+    } from "./workers/sim.worker";
     import TopBar from "./lib/TopBar.svelte";
     import PlayDock from "./lib/PlayDock.svelte";
     import GridView from "./lib/GridView.svelte";
@@ -19,7 +23,21 @@
 
     worker.addEventListener("message", (e: MessageEvent<WorkerEvent>) => {
         const msg = e.data;
-        if (msg.type === "ready") {
+        if (msg.type === "agentPicked") {
+            if (msg.reason === "click") {
+                selectedAgent = msg.info;
+                send({ type: "selectAgent", id: msg.info.id });
+            } else {
+                hoveredAgent = msg.info;
+            }
+        } else if (msg.type === "agentMissed") {
+            if (msg.reason === "click") {
+                selectedAgent = null;
+                send({ type: "selectAgent", id: null });
+            } else {
+                hoveredAgent = null;
+            }
+        } else if (msg.type === "ready") {
             if (canvasEl) {
                 const offscreen = canvasEl.transferControlToOffscreen();
                 // Read raw tokens directly (not via var() aliases) so
@@ -100,16 +118,27 @@
     let gridSizeY = $state(128);
 
     // ── UI state ─────────────────────────────────────────────────────────────
-    let selectedAgentId = $state<number | null>(null);
+    let selectedAgent = $state<AgentInfo | null>(null);
+    let hoveredAgent = $state<AgentInfo | null>(null);
+    const displayAgent = $derived(hoveredAgent ?? selectedAgent);
     let railOpen = $state(false);
     let activeTab = $state<"sim" | "cell">("sim");
 
-    // Open Cell tab automatically when an agent is selected.
+    // Open Cell tab automatically when an agent is selected or hovered.
     $effect(() => {
-        if (selectedAgentId !== null) {
+        if (displayAgent !== null) {
             railOpen = true;
             activeTab = "cell";
         }
+    });
+
+    // Clear hover state when Ctrl key is released.
+    $effect(() => {
+        function onKeyUp(e: KeyboardEvent): void {
+            if (e.key === "Control") hoveredAgent = null;
+        }
+        window.addEventListener("keyup", onKeyUp);
+        return () => window.removeEventListener("keyup", onKeyUp);
     });
 
     // ── Viewport & grid geometry ─────────────────────────────────────────────
@@ -193,8 +222,60 @@
 
     // ── Agent selection ───────────────────────────────────────────────────────
     function handleClearSelection(): void {
-        selectedAgentId = null;
+        selectedAgent = null;
+        hoveredAgent = null;
+        send({ type: "selectAgent", id: null });
         activeTab = "sim";
+    }
+
+    function pixelToCell(
+        px: number,
+        py: number,
+    ): { gx: number; gy: number } | null {
+        if (px < gridGeom.x || px >= gridGeom.x + gridGeom.w) return null;
+        if (py < gridGeom.y || py >= gridGeom.y + gridGeom.h) return null;
+        return {
+            gx: Math.floor((px - gridGeom.x) / (gridGeom.w / gridSizeX)),
+            gy: Math.floor((py - gridGeom.y) / (gridGeom.h / gridSizeY)),
+        };
+    }
+
+    function handleCanvasClick(e: MouseEvent): void {
+        if (!workerReady) return;
+        const cell = pixelToCell(e.clientX, e.clientY);
+        if (cell) send({ type: "pickAgentAtCell", ...cell, reason: "click" });
+    }
+
+    let hoverRafPending = false;
+    function handleCanvasHover(e: MouseEvent): void {
+        if (!e.ctrlKey || !workerReady) {
+            if (hoveredAgent !== null) hoveredAgent = null;
+            return;
+        }
+        if (hoverRafPending) return;
+        hoverRafPending = true;
+        const px = e.clientX;
+        const py = e.clientY;
+        requestAnimationFrame(() => {
+            hoverRafPending = false;
+            const cell = pixelToCell(px, py);
+            if (cell)
+                send({ type: "pickAgentAtCell", ...cell, reason: "hover" });
+        });
+    }
+
+    function handleNavigate(dir: -1 | 1): void {
+        if (selectedAgent) {
+            send({
+                type: "navigateAgent",
+                fromId: selectedAgent.id,
+                direction: dir,
+            });
+        }
+    }
+
+    function handleShuffle(): void {
+        send({ type: "randomAgent" });
     }
 </script>
 
@@ -204,7 +285,22 @@
         The worker renders kinetic sculpture + agents + grid interior on this surface.
         The grid is a REGION of this canvas, not a separate element.
     -->
-    <canvas bind:this={canvasEl}></canvas>
+    <canvas
+        bind:this={canvasEl}
+        onclick={handleCanvasClick}
+        onmousemove={handleCanvasHover}
+        onmouseleave={() => (hoveredAgent = null)}
+    ></canvas>
+
+    {#if workerReady && displayAgent === null}
+        <div
+            class="grid-hint"
+            style="left: {gridGeom.x}px; top: {gridGeom.y - 24}px"
+            aria-hidden="true"
+        >
+            Click or Ctrl+hover an agent to inspect it
+        </div>
+    {/if}
 
     <!-- z-index: 20 — fixed top bar -->
     <TopBar
@@ -264,12 +360,18 @@
     <RightRail
         open={railOpen}
         {activeTab}
-        hasSelection={selectedAgentId !== null}
+        hasSelection={displayAgent !== null}
         onTabChange={(t) => (activeTab = t)}
     >
         {#snippet sim()}<SimConfigPanel {send} />{/snippet}
         {#snippet cell()}
-            <CellPanel agent={null} onClear={handleClearSelection} />
+            <CellPanel
+                agent={displayAgent}
+                isSelected={selectedAgent !== null && hoveredAgent === null}
+                onClear={handleClearSelection}
+                onNavigate={handleNavigate}
+                onShuffle={handleShuffle}
+            />
         {/snippet}
     </RightRail>
 </div>
@@ -294,6 +396,15 @@
         height: 100%;
         z-index: 0;
         display: block;
+    }
+
+    .grid-hint {
+        position: absolute;
+        z-index: 6;
+        pointer-events: none;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--color-text-muted);
     }
 
     .hamburger {
