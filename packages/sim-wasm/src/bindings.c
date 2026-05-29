@@ -8,6 +8,7 @@
 
 #include <emscripten.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* ── hardcoded simulation parameters (same defaults as sim-ref) ─────────── */
@@ -61,9 +62,10 @@ static biosim_challenge_spec_t s_challenge = {
 
 /* Module-level barrier list. biosim_wasm_clear_barriers resets the list;
  * biosim_wasm_add_barrier appends one spec. biosim_wasm_init passes
- * s_barriers/s_n_barriers to biosim_sim_create.                             */
-#define MAX_BARRIERS 8U
-static biosim_barrier_spec_t s_barriers[MAX_BARRIERS];
+ * s_barriers/s_n_barriers to biosim_sim_create. The array grows on demand
+ * via realloc; there is no hard upper limit.                                */
+static biosim_barrier_spec_t *s_barriers = NULL;
+static size_t s_barriers_cap = 0U;
 static uint32_t s_n_barriers = 0U;
 
 /* ── module state ────────────────────────────────────────────────────────── */
@@ -111,6 +113,10 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
         biosim_sim_free(&s_sim);
         s_initialized = false;
     }
+    free(s_barriers);
+    s_barriers = NULL;
+    s_barriers_cap = 0U;
+    s_n_barriers = 0U;
 }
 
 /* ── parameter setters ───────────────────────────────────────────────────── */
@@ -226,19 +232,25 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_location_sequence(float radi
 
 /* Reset the barrier list. Call before adding a new set of barriers.        */
 EMSCRIPTEN_KEEPALIVE void biosim_wasm_clear_barriers(void) {
-    memset(s_barriers, 0, sizeof(s_barriers));
     s_n_barriers = 0U;
 }
 
 /* Append one barrier spec to the list. x and y are grid cell coordinates;
  * pass -32768 (INT16_MIN = BIOSIM_BARRIER_POS_UNSET) for random placement.
  * length and width are in cells; pass 0.0 (BIOSIM_BARRIER_DIM_UNSET) for a
- * random dimension. Returns BIOSIM_OK or BIOSIM_ERR_INVALID when full.      */
+ * random dimension. Returns BIOSIM_OK or BIOSIM_ERR_NOMEM on allocation
+ * failure.                                                                  */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
     int kind, int x, int y, float length, float width
 ) {
-    if (s_n_barriers >= MAX_BARRIERS) {
-        return BIOSIM_ERR_INVALID;
+    if (s_n_barriers >= s_barriers_cap) {
+        size_t new_cap = s_barriers_cap == 0U ? 8U : s_barriers_cap * 2U;
+        biosim_barrier_spec_t *grown = realloc(s_barriers, new_cap * sizeof(biosim_barrier_spec_t));
+        if (grown == NULL) {
+            return BIOSIM_ERR_NOMEM;
+        }
+        s_barriers = grown;
+        s_barriers_cap = new_cap;
     }
     biosim_barrier_spec_t *b = &s_barriers[s_n_barriers];
     b->kind = (biosim_barrier_kind_t)kind;

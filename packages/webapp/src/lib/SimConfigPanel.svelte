@@ -11,6 +11,7 @@
     import GridSizeControl from "./GridSizeControl.svelte";
     import ChallengeControl from "./ChallengeControl.svelte";
     import BarrierControl from "./BarrierControl.svelte";
+    import { TriangleAlert } from "lucide-svelte";
 
     interface Props {
         send: (cmd: WorkerCmd) => void;
@@ -284,8 +285,9 @@
 
     {#if (params.challenge.kind === "near_barrier" || params.challenge.kind === "location_sequence") && params.barriers.length === 0}
         <p class="sim-config__barrier-warning">
-            This challenge requires at least one barrier — add one in the
-            Barriers section below.
+            <TriangleAlert size={14} />
+            This challenge requires at least one barrier — add one in the Barriers
+            section below.
         </p>
     {/if}
 
