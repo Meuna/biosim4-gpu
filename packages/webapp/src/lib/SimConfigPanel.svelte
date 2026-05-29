@@ -285,7 +285,7 @@
 
     {#if (params.challenge.kind === "near_barrier" || params.challenge.kind === "location_sequence") && params.barriers.length === 0}
         <p class="sim-config__barrier-warning">
-            <TriangleAlert size={14} />
+            <TriangleAlert size={14} style="display: inline-block;" />
             This challenge requires at least one barrier — add one in the Barriers
             section below.
         </p>
