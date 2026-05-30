@@ -1,16 +1,6 @@
 <script lang="ts">
     import type { AgentInfo } from "../workers/sim.worker";
-
-    const HEADINGS = [
-        "→ E",
-        "↗ NE",
-        "↑ N",
-        "↖ NW",
-        "← W",
-        "↙ SW",
-        "↓ S",
-        "↘ SE",
-    ] as const;
+    import { HEADINGS } from "./agentFormat";
 
     let {
         agent,
