@@ -95,6 +95,8 @@
             const rate =
                 msg.population > 0 ? msg.survivors / msg.population : 0;
             survivalHistory = [...survivalHistory.slice(-11), rate];
+        } else if (msg.type === "agentUpdated") {
+            selectedAgent = msg.info;
         } else if (msg.type === "configured") {
             isRunning = false;
             currentGen = 0;
