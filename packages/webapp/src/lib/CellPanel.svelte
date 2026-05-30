@@ -2,6 +2,9 @@
     import { SearchX, Shuffle, Skull } from "lucide-svelte";
     import type { AgentInfo } from "../workers/sim.worker";
     import { HEADINGS } from "./agentFormat";
+    import BrainSignature from "./BrainSignature.svelte";
+    import { brainCounts } from "./brainModel";
+    import { brainForAgent } from "./brain/fixture";
 
     let {
         agent,
@@ -10,6 +13,7 @@
         onNavigate,
         onShuffle,
         onSelectById,
+        onExpandBrain,
     }: {
         agent: AgentInfo | null;
         isSelected: boolean;
@@ -17,7 +21,12 @@
         onNavigate: (dir: -1 | 1) => void;
         onShuffle: () => void;
         onSelectById: (id: number) => void;
+        onExpandBrain: () => void;
     } = $props();
+
+    // Fixture-driven until the worker exposes real brain data; see brainForAgent.
+    const brainModel = $derived(brainForAgent(agent?.id ?? 0));
+    const brainGenes = $derived(brainCounts(brainModel).connections);
 
     function padId(id: number): string {
         return id.toString().padStart(4, "0");
@@ -51,24 +60,6 @@
     function cancelIdEdit() {
         editingId = false;
     }
-
-    /** Brain placeholder — simulated connection coords */
-    const CONNECTIONS = [
-        [40, 40, 160, 60],
-        [40, 40, 160, 100],
-        [40, 70, 160, 100],
-        [40, 100, 160, 100],
-        [40, 100, 160, 140],
-        [40, 130, 160, 140],
-        [40, 160, 160, 180],
-        [40, 190, 160, 180],
-        [160, 60, 280, 80],
-        [160, 100, 280, 80],
-        [160, 100, 280, 120],
-        [160, 140, 280, 120],
-        [160, 140, 280, 160],
-        [160, 180, 280, 160],
-    ] as const;
 </script>
 
 {#if !agent}
@@ -213,81 +204,14 @@
             <span class="stat-val">{agent.losRange}</span>
         </div>
 
-        <!-- Brain / genome placeholder -->
+        <!-- Brain / genome -->
         <div class="section-label" style="margin-top: var(--space-6)">
             <span class="small-caps">Genome / brain</span>
-            <span class="cell-panel__hint">reserved</span>
+            <span class="cell-panel__hint">fixture</span>
         </div>
-        <!-- TODO: replace with actual brain-graph SVG rendering -->
-        <div class="brain-placeholder" aria-label="Brain graph placeholder">
-            <svg
-                width="100%"
-                height="220"
-                viewBox="0 0 320 220"
-                preserveAspectRatio="xMidYMid meet"
-                class="brain-svg"
-            >
-                <!-- Input neurons -->
-                {#each [40, 70, 100, 130, 160, 190] as y, i}
-                    <circle
-                        cx="40"
-                        cy={y}
-                        r="5"
-                        fill="none"
-                        stroke="var(--color-text)"
-                        stroke-width="1"
-                    />
-                    <text
-                        x="22"
-                        y={y + 3}
-                        font-size="8"
-                        font-family="var(--font-mono)"
-                        fill="var(--color-text-muted)"
-                        text-anchor="end">I{i}</text
-                    >
-                {/each}
-                <!-- Hidden neurons -->
-                {#each [60, 100, 140, 180] as y}
-                    <circle
-                        cx="160"
-                        cy={y}
-                        r="6"
-                        fill="var(--color-surface)"
-                        stroke="var(--color-text)"
-                        stroke-width="1"
-                    />
-                {/each}
-                <!-- Output neurons -->
-                {#each [80, 120, 160] as y, i}
-                    <circle cx="280" cy={y} r="5" fill="var(--color-text)" />
-                    <text
-                        x="296"
-                        y={y + 3}
-                        font-size="8"
-                        font-family="var(--font-mono)"
-                        fill="var(--color-text-muted)">O{i}</text
-                    >
-                {/each}
-                <!-- Connections -->
-                {#each CONNECTIONS as c, i}
-                    <line
-                        x1={c[0]}
-                        y1={c[1]}
-                        x2={c[2]}
-                        y2={c[3]}
-                        stroke="var(--color-text)"
-                        stroke-opacity={0.35 + (i % 4) * 0.12}
-                        stroke-width="0.8"
-                    />
-                {/each}
-            </svg>
-            <p class="brain-placeholder__label small-caps">
-                brain · 6 in → 4 hidden → 3 out · 14 conn
-            </p>
-            <p class="brain-placeholder__expand">⊞ expand</p>
-        </div>
+        <BrainSignature model={brainModel} onExpand={onExpandBrain} />
         <div class="cell-panel__genome-row">
-            <span>genome · 16 genes</span>
+            <span>genome · {brainGenes} genes</span>
             <a href="#genome" class="cell-panel__hex-link">view as hex →</a>
         </div>
     </div>
@@ -434,47 +358,6 @@
         font-family: var(--font-mono);
         font-size: 0.75rem;
         color: var(--color-text);
-    }
-
-    /* ── Brain placeholder ── */
-    .brain-placeholder {
-        position: relative;
-        width: 100%;
-        height: 220px;
-        border: 1px solid var(--color-border-subtle);
-        border-radius: var(--radius-md);
-        overflow: hidden;
-        background:
-            linear-gradient(var(--color-border-subtle) 1px, transparent 1px) 0
-                0 / 12px 12px,
-            linear-gradient(
-                    90deg,
-                    var(--color-border-subtle) 1px,
-                    transparent 1px
-                )
-                0 0 / 12px 12px;
-    }
-
-    .brain-svg {
-        position: absolute;
-        inset: 0;
-    }
-
-    .brain-placeholder__label {
-        position: absolute;
-        left: var(--space-2);
-        top: var(--space-2);
-        margin: 0;
-    }
-
-    .brain-placeholder__expand {
-        position: absolute;
-        right: var(--space-2);
-        bottom: var(--space-2);
-        font-family: var(--font-mono);
-        font-size: 9px;
-        color: var(--color-text-muted);
-        margin: 0;
     }
 
     .cell-panel__genome-row {

@@ -24,6 +24,7 @@ const defaultProps = {
     onNavigate: () => {},
     onShuffle: () => {},
     onSelectById: () => {},
+    onExpandBrain: () => {},
 };
 
 describe("CellPanel", () => {
@@ -149,9 +150,26 @@ describe("CellPanel", () => {
         expect(cleared).toBe(true);
     });
 
-    it("renders brain placeholder", () => {
+    it("renders the brain signature with an expand affordance", () => {
         render(CellPanel, { ...defaultProps, agent: mockAgent });
-        expect(screen.getByLabelText("Brain graph placeholder")).toBeTruthy();
+        // agent id 42 → tiny fixture (6 × 4 × 3, 14 conn) in diagram mode.
+        expect(
+            screen.getByText("BRAIN · 6 IN → 4 HIDDEN → 3 OUT · 14 CONN"),
+        ).toBeTruthy();
+        expect(screen.getByLabelText(/expand brain/i)).toBeTruthy();
+    });
+
+    it("fires onExpandBrain when the signature expand is clicked", async () => {
+        let expanded = false;
+        render(CellPanel, {
+            ...defaultProps,
+            agent: mockAgent,
+            onExpandBrain: () => {
+                expanded = true;
+            },
+        });
+        await fireEvent.click(screen.getByLabelText(/expand brain/i));
+        expect(expanded).toBe(true);
     });
 
     it("shows skull icon for dead agent", () => {

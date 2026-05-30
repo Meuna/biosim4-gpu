@@ -12,6 +12,8 @@
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
     import CellPanel from "./lib/CellPanel.svelte";
     import HoverCard from "./lib/HoverCard.svelte";
+    import BrainExplorer from "./lib/BrainExplorer.svelte";
+    import { brainForAgent } from "./lib/brain/fixture";
     import { MousePointerClick } from "lucide-svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
@@ -138,6 +140,7 @@
     );
     let railOpen = $state(false);
     let activeTab = $state<"sim" | "cell">("sim");
+    let explorerOpen = $state(false);
 
     // Open Cell tab automatically when an agent is selected or hovered.
     $effect(() => {
@@ -416,9 +419,18 @@
                 onNavigate={handleNavigate}
                 onShuffle={handleShuffle}
                 onSelectById={handleSelectById}
+                onExpandBrain={() => (explorerOpen = true)}
             />
         {/snippet}
     </RightRail>
+
+    <!-- z-index: 40 — full-screen brain explorer overlay -->
+    {#if explorerOpen && displayAgent}
+        <BrainExplorer
+            model={brainForAgent(displayAgent.id)}
+            onClose={() => (explorerOpen = false)}
+        />
+    {/if}
 </div>
 
 <style>
