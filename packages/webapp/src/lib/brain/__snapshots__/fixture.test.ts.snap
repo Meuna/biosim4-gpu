@@ -1,0 +1,21 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`brain fixtures > is byte-stable across imports (deterministic generation) 1`] = `
+[
+  {
+    "sink": 6,
+    "source": 6,
+    "weight": 3.578,
+  },
+  {
+    "sink": 7,
+    "source": 7,
+    "weight": -0.333,
+  },
+  {
+    "sink": 8,
+    "source": 8,
+    "weight": 0.5,
+  },
+]
+`;
