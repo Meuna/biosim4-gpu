@@ -349,3 +349,39 @@ Worker (`src/workers/sim.worker.ts`). CMake copies the WASM artifacts into
 `public/wasm/` before every build or `dev` invocation; Vite serves them as
 static assets at `/wasm/`. The worker uses a `/* @vite-ignore */` dynamic
 import so Vite does not attempt to rebundle the pre-built Emscripten output.
+
+### Brain network visualization
+
+The agent brain (neural network) is rendered through a framework-agnostic core
+consumed by two Svelte renderers, mirroring the project's logic/rendering
+separation:
+
+- `src/lib/brainModel.ts` — DOM-free types (`Neuron`, `Connection`,
+  `BrainModel`) and helpers (`brainCounts`, `connectionKind`, `isSelfLoop`,
+  `buildBrainModel`). The topology is recurrent (internal→internal incl.
+  self-loops), not feed-forward.
+- `src/lib/brainLayout.ts` — pure, deterministic layout (`layoutBrain`). Sense
+  neurons are pinned to a left column, actions to a right column, and internal
+  neurons are placed in a central 2D cluster by a seeded barycentric relaxation
+  (fixed seed + fixed iteration count via `src/lib/prng.ts`). Same input →
+  identical positions every run. Edges are classified `forward` / `recurrent` /
+  `self` with bow metadata for the renderers.
+- `src/lib/brain/fixture.ts` — deterministic fixtures (`tinyBrain` 6×4×3,
+  `mediumBrain` 10×20×5, `maxBrain` 20×128×15) and `brainForAgent(id)`, the
+  single seam that currently maps an agent to a fixture. **TODO:** replace with
+  the agent's decoded brain once the worker exposes per-neuron / per-connection
+  data on `AgentInfo`.
+- `src/lib/BrainSignature.svelte` — docked SVG renderer in the cell panel.
+  Auto-switches between a legible **diagram** mode (small brains) and an
+  abstract **fingerprint** mode (larger brains) by a complexity threshold.
+- `src/lib/BrainExplorer.svelte` — full-screen Canvas2D overlay (z-index 40)
+  for interactive exploration: pan/zoom, click-to-focus (emerald highlight of a
+  neuron's edges), weight-threshold slider, type/recurrent filters, and
+  jump-to-neuron search. Dense brains (>200 connections) open with the weakest
+  edges hidden (anti-hairball default). Canvas stroke/fill colors are read from
+  raw `--_*` tokens via `getComputedStyle` (canvas needs concrete color
+  strings); the values live in `tokens.css`.
+
+A phase-2 seam for live per-neuron activation is left on `Neuron.bias`; editing
+connections is deferred to a later ticket (the model is kept structured so an
+edit layer can be added without reshaping it).

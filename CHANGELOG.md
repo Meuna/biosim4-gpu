@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Brain network visualization** (gh-72) — the agent brain placeholder in the
+  cell panel is replaced by a real graph rendered at two scales. A
+  framework-agnostic core (`brainModel.ts` types/builder + a pure, deterministic
+  `brainLayout.ts` that pins sense/action columns and relaxes internal neurons
+  into a central cluster via a seeded PRNG) feeds two renderers: a docked SVG
+  **Signature** (`BrainSignature.svelte`) that auto-switches between a legible
+  diagram mode and an abstract fingerprint mode by complexity, and a full-screen
+  Canvas2D **Explorer** (`BrainExplorer.svelte`) with pan/zoom, click-to-focus
+  (emerald), weight-threshold slider, type/recurrent filters, and jump-to-neuron
+  search. Dense brains (>200 connections) open anti-hairballed. The components
+  are driven by deterministic fixtures (tiny 6×4×3, medium 10×20×5, max
+  20×128×15) via `brainForAgent`, marked with a `// TODO` seam for real
+  per-neuron/connection data once the worker exposes it. New `--_canvas-edge` /
+  `--_canvas-dim` tokens back the canvas strokes.
+
 - **Barriers configuration** (gh-64) — the barriers section of `SimConfigPanel`
   is now fully wired. Users can add up to 8 barriers per simulation, choosing
   from four shapes (horizontal bar, vertical bar, square, circle) and setting
