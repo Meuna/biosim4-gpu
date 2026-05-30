@@ -11,6 +11,7 @@
     import RightRail from "./lib/RightRail.svelte";
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
     import CellPanel from "./lib/CellPanel.svelte";
+    import { MousePointerClick } from "lucide-svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -298,6 +299,7 @@
             style="left: {gridGeom.x}px; top: {gridGeom.y - 24}px"
             aria-hidden="true"
         >
+            <MousePointerClick size={13} style="display: inline-block; " />
             Click or Ctrl+hover an agent to inspect it
         </div>
     {/if}
