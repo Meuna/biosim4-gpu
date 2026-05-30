@@ -23,6 +23,7 @@ const defaultProps = {
     onClear: () => {},
     onNavigate: () => {},
     onShuffle: () => {},
+    onSelectById: () => {},
 };
 
 describe("CellPanel", () => {
@@ -166,5 +167,58 @@ describe("CellPanel", () => {
             agent: deadAgent,
         });
         expect(container.querySelector(".cell-panel--dead")).toBeTruthy();
+    });
+
+    it("shows clickable id button when isSelected", () => {
+        render(CellPanel, {
+            ...defaultProps,
+            agent: mockAgent,
+            isSelected: true,
+        });
+        expect(screen.getByTitle("Click to jump to agent by ID")).toBeTruthy();
+    });
+
+    it("does not show id button when not isSelected", () => {
+        render(CellPanel, {
+            ...defaultProps,
+            agent: mockAgent,
+            isSelected: false,
+        });
+        expect(screen.queryByTitle("Click to jump to agent by ID")).toBeNull();
+    });
+
+    it("entering id and pressing Enter calls onSelectById", async () => {
+        let received: number | null = null;
+        render(CellPanel, {
+            ...defaultProps,
+            agent: mockAgent,
+            isSelected: true,
+            onSelectById: (id) => {
+                received = id;
+            },
+        });
+        fireEvent.click(screen.getByTitle("Click to jump to agent by ID"));
+        const input = screen.getByLabelText("Jump to agent ID");
+        fireEvent.input(input, { target: { value: "7" } });
+        fireEvent.keyDown(input, { key: "Enter" });
+        expect(received).toBe(7);
+        expect(screen.queryByLabelText("Jump to agent ID")).toBeNull();
+    });
+
+    it("pressing Escape cancels without calling onSelectById", async () => {
+        let called = false;
+        render(CellPanel, {
+            ...defaultProps,
+            agent: mockAgent,
+            isSelected: true,
+            onSelectById: () => {
+                called = true;
+            },
+        });
+        fireEvent.click(screen.getByTitle("Click to jump to agent by ID"));
+        const input = screen.getByLabelText("Jump to agent ID");
+        fireEvent.keyDown(input, { key: "Escape" });
+        expect(called).toBe(false);
+        expect(screen.queryByLabelText("Jump to agent ID")).toBeNull();
     });
 });
