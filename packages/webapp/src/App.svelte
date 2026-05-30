@@ -309,6 +309,10 @@
     function handleShuffle(): void {
         send({ type: "randomAgent" });
     }
+
+    function handleSelectById(id: number): void {
+        send({ type: "selectAgentById", id });
+    }
 </script>
 
 <div class="app-shell">
@@ -411,6 +415,7 @@
                 onClear={handleClearSelection}
                 onNavigate={handleNavigate}
                 onShuffle={handleShuffle}
+                onSelectById={handleSelectById}
             />
         {/snippet}
     </RightRail>
