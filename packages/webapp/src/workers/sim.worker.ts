@@ -144,6 +144,7 @@ export type WorkerCmd =
       }
     | { type: "navigateAgent"; fromId: number; direction: -1 | 1 }
     | { type: "randomAgent" }
+    | { type: "selectAgentById"; id: number }
     | { type: "selectAgent"; id: number | null }
     | { type: "hoverAgent"; id: number | null };
 
@@ -1073,6 +1074,17 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             }
             if (alive.length === 0) break;
             const id = alive[Math.floor(Math.random() * alive.length)];
+            postMessage({
+                type: "agentPicked",
+                reason: "click",
+                info: readAgentInfo(id),
+            } satisfies WorkerEvent);
+            break;
+        }
+        case "selectAgentById": {
+            if (!biosim) break;
+            const pop = call("biosim_wasm_get_population");
+            const id = ((cmd.id % pop) + pop) % pop;
             postMessage({
                 type: "agentPicked",
                 reason: "click",

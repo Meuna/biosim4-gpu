@@ -19,16 +19,47 @@
         onClear,
         onNavigate,
         onShuffle,
+        onSelectById,
     }: {
         agent: AgentInfo | null;
         isSelected: boolean;
         onClear: () => void;
         onNavigate: (dir: -1 | 1) => void;
         onShuffle: () => void;
+        onSelectById: (id: number) => void;
     } = $props();
 
     function padId(id: number): string {
         return id.toString().padStart(4, "0");
+    }
+
+    let editingId = $state(false);
+    let editIdVal = $state("");
+    let editIdInput = $state<HTMLInputElement | undefined>();
+
+    $effect(() => {
+        if (editingId && editIdInput) editIdInput.select();
+    });
+
+    $effect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+        agent?.id;
+        editingId = false;
+    });
+
+    function startIdEdit() {
+        editIdVal = agent!.id.toString();
+        editingId = true;
+    }
+
+    function commitIdEdit() {
+        const n = parseInt(editIdVal, 10);
+        if (!isNaN(n) && n >= 0) onSelectById(n);
+        editingId = false;
+    }
+
+    function cancelIdEdit() {
+        editingId = false;
     }
 
     /** Brain placeholder — simulated connection coords */
@@ -72,7 +103,32 @@
         {#if isSelected}
             <div class="cell-panel__nav-row">
                 <h2 class="cell-panel__title">
-                    Agent <em>#{padId(agent.id)}</em>
+                    Agent
+                    {#if editingId}
+                        <input
+                            type="number"
+                            min="0"
+                            bind:value={editIdVal}
+                            bind:this={editIdInput}
+                            onblur={commitIdEdit}
+                            onkeydown={(e) => {
+                                if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    commitIdEdit();
+                                }
+                                if (e.key === "Escape") cancelIdEdit();
+                            }}
+                            class="cell-panel__id-input"
+                            aria-label="Jump to agent ID"
+                        />
+                    {:else}
+                        <button
+                            class="cell-panel__id-btn"
+                            onclick={startIdEdit}
+                            title="Click to jump to agent by ID"
+                            ><em>#{padId(agent.id)}</em></button
+                        >
+                    {/if}
                     {#if !agent.alive}
                         <Skull size={20} aria-label="Agent deceased" />
                     {/if}
@@ -448,5 +504,41 @@
 
     .cell-panel__hex-link:hover {
         color: var(--color-text);
+    }
+
+    /* ── Agent ID click-to-edit ── */
+    .cell-panel__id-btn {
+        border: 0;
+        background: transparent;
+        cursor: text;
+        font: inherit;
+        color: inherit;
+        padding: 0;
+    }
+
+    .cell-panel__id-btn em {
+        font-style: italic;
+    }
+
+    .cell-panel__id-btn:hover em {
+        text-decoration: underline dotted;
+    }
+
+    .cell-panel__id-input {
+        font-family: var(--font-mono);
+        font-size: var(--text-2xl);
+        font-weight: 700;
+        width: 5ch;
+        border: 0;
+        border-bottom: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text);
+        padding: 0;
+        appearance: textfield;
+    }
+
+    .cell-panel__id-input::-webkit-inner-spin-button,
+    .cell-panel__id-input::-webkit-outer-spin-button {
+        display: none;
     }
 </style>
