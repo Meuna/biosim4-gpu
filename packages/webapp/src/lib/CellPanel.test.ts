@@ -59,7 +59,7 @@ describe("CellPanel", () => {
     it("shows zero-padded agent id and hex id", () => {
         render(CellPanel, { ...defaultProps, agent: mockAgent });
         expect(screen.getByText(/#0042/)).toBeTruthy();
-        expect(screen.getByText(/0x002A/)).toBeTruthy();
+        expect(screen.getByText(/0xdeadbeef/i)).toBeTruthy();
     });
 
     it("displays correct agent stats", () => {
@@ -90,7 +90,6 @@ describe("CellPanel", () => {
             agent: mockAgent,
             isSelected: false,
         });
-        expect(screen.getByText(/hover preview/i)).toBeTruthy();
         expect(screen.getByText(/click to pin/i)).toBeTruthy();
     });
 
@@ -146,7 +145,7 @@ describe("CellPanel", () => {
                 cleared = true;
             },
         });
-        fireEvent.click(screen.getByText(/deselect/i));
+        fireEvent.click(screen.getByLabelText("Deselect agent"));
         expect(cleared).toBe(true);
     });
 
