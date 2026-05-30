@@ -166,7 +166,8 @@ export type WorkerEvent =
       }
     | { type: "error"; message: string }
     | { type: "agentPicked"; reason: "click" | "hover"; info: AgentInfo }
-    | { type: "agentMissed"; reason: "click" | "hover" };
+    | { type: "agentMissed"; reason: "click" | "hover" }
+    | { type: "agentUpdated"; info: AgentInfo };
 
 // ── Rendering mode ────────────────────────────────────────────────────────────
 
@@ -401,6 +402,14 @@ function readAgentInfo(id: number): AgentInfo {
         fingerprint:
             hi.toString(16).padStart(8, "0") + lo.toString(16).padStart(8, "0"),
     };
+}
+
+function notifySelectionUpdate(): void {
+    if (selectedAgentId === null || !biosim) return;
+    postMessage({
+        type: "agentUpdated",
+        info: readAgentInfo(selectedAgentId),
+    } satisfies WorkerEvent);
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
@@ -896,6 +905,7 @@ function doStep(): void {
         type: "status",
         message: `Run step ${step}`,
     } satisfies WorkerEvent);
+    notifySelectionUpdate();
 }
 
 function doStepAgent(): void {
@@ -907,6 +917,7 @@ function doStepAgent(): void {
         type: "status",
         message: `Run a agent ${agent} at step ${step}`,
     } satisfies WorkerEvent);
+    notifySelectionUpdate();
 }
 
 function doNextGeneration(): void {
@@ -941,6 +952,7 @@ function playTick(): void {
         type: "status",
         message: `Run step ${step}`,
     } satisfies WorkerEvent);
+    notifySelectionUpdate();
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
         postMessage({
