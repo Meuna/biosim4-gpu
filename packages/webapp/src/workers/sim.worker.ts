@@ -123,6 +123,7 @@ export type WorkerCmd =
           canvas: OffscreenCanvas;
           overlayColor: string;
           borderColor: string;
+          accentColor: string;
       }
     | {
           type: "layout";
@@ -143,7 +144,8 @@ export type WorkerCmd =
       }
     | { type: "navigateAgent"; fromId: number; direction: -1 | 1 }
     | { type: "randomAgent" }
-    | { type: "selectAgent"; id: number | null };
+    | { type: "selectAgent"; id: number | null }
+    | { type: "hoverAgent"; id: number | null };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -176,6 +178,9 @@ let biosim: EmscriptenModule | null = null;
 let playing = false;
 let ctx: OffscreenCanvasRenderingContext2D | null = null;
 let selectedAgentId: number | null = null;
+let hoveredAgentId: number | null = null;
+// Matches --_accent; updated from the main thread on canvas init.
+let accentColor = "#15803d";
 
 // Maps ChallengeSpec.kind strings to biosim_challenge_kind_t ordinals (challenge_defs.h).
 const CHALLENGE_KIND_INT: Record<string, number> = {
@@ -742,6 +747,27 @@ function drawGrid(): void {
     }
     ctx.fill();
 
+    ctx.fillStyle = accentColor;
+    for (const id of [hoveredAgentId, selectedAgentId]) {
+        if (id !== null && HEAPU8[aliveOff + id]) {
+            const gx = HEAP32[locXOff + id];
+            const gy = HEAP32[locYOff + id];
+            const { x, y, r } = gridPosition(
+                gx,
+                gy,
+                gridX,
+                gridY,
+                gridW,
+                gridH,
+                gridCellsX,
+                gridCellsY,
+            );
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     if (selectedAgentId !== null && HEAPU8[aliveOff + selectedAgentId]) {
         const gx = HEAP32[locXOff + selectedAgentId];
         const gy = HEAP32[locYOff + selectedAgentId];
@@ -758,7 +784,7 @@ function drawGrid(): void {
         ctx.beginPath();
         ctx.arc(x, y, r + 3, 0, Math.PI * 2);
         ctx.strokeStyle = AGENT_COLOR;
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 1;
         ctx.stroke();
     }
 }
@@ -1045,10 +1071,14 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         case "selectAgent":
             selectedAgentId = cmd.id;
             break;
+        case "hoverAgent":
+            hoveredAgentId = cmd.id;
+            break;
         case "canvas": {
             const offscreen = cmd.canvas;
             challengeOverlayColor = cmd.overlayColor;
             challengeBorderColor = cmd.borderColor;
+            accentColor = cmd.accentColor;
             if (layout) {
                 offscreen.width = layout.canvasW;
                 offscreen.height = layout.canvasH;
