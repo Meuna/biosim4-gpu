@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Skull } from "lucide-svelte";
+    import { SearchX, Shuffle, Skull } from "lucide-svelte";
     import type { AgentInfo } from "../workers/sim.worker";
 
     const HEADINGS = [
@@ -26,10 +26,6 @@
         onNavigate: (dir: -1 | 1) => void;
         onShuffle: () => void;
     } = $props();
-
-    function hexId(id: number): string {
-        return id.toString(16).toUpperCase().padStart(4, "0");
-    }
 
     function padId(id: number): string {
         return id.toString().padStart(4, "0");
@@ -66,7 +62,7 @@
             Click to pin; Ctrl+hover to preview.
         </p>
         <button class="cell-panel__shuffle-btn" onclick={onShuffle}>
-            ↺ random agent
+            random agent
         </button>
     </div>
 {:else}
@@ -75,25 +71,18 @@
         <!-- Header -->
         {#if isSelected}
             <div class="cell-panel__nav-row">
+                <h2 class="cell-panel__title">
+                    Agent <em>#{padId(agent.id)}</em>
+                    {#if !agent.alive}
+                        <Skull size={20} aria-label="Agent deceased" />
+                    {/if}
+                </h2>
                 <button
                     class="cell-panel__nav-btn"
                     onclick={() => onNavigate(-1)}
                     aria-label="Previous agent"
                 >
                     ←
-                </button>
-                <h2 class="cell-panel__title">
-                    {#if !agent.alive}
-                        <Skull size={14} aria-label="Agent deceased" />
-                    {/if}
-                    Agent <em>#{padId(agent.id)}</em>
-                </h2>
-                <button
-                    class="cell-panel__nav-btn"
-                    onclick={onShuffle}
-                    aria-label="Random agent"
-                >
-                    ↺
                 </button>
                 <button
                     class="cell-panel__nav-btn"
@@ -102,24 +91,31 @@
                 >
                     →
                 </button>
+                <button
+                    class="cell-panel__nav-btn"
+                    onclick={onShuffle}
+                    aria-label="Random agent"
+                >
+                    <Shuffle size={13} />
+                </button>
+                <button
+                    class="cell-panel__nav-btn"
+                    onclick={onClear}
+                    aria-label="Deselect agent"
+                >
+                    <SearchX size={13} />
+                </button>
             </div>
-            <p class="cell-panel__sub">0x{hexId(agent.id)}</p>
-            <button class="cell-panel__deselect" onclick={onClear}>
-                ← deselect
-            </button>
         {:else}
-            <div class="cell-panel__header-row">
-                <p class="small-caps cell-panel__eyebrow">hover preview</p>
-            </div>
             <div class="cell-panel__title-row">
                 <h2 class="cell-panel__title">
-                    {#if !agent.alive}
-                        <Skull size={14} aria-label="Agent deceased" />
-                    {/if}
                     Agent <em>#{padId(agent.id)}</em>
+                    {#if !agent.alive}
+                        <Skull size={20} aria-label="Agent deceased" />
+                    {/if}
                 </h2>
+                <span class="cell-panel__sub">click to pin</span>
             </div>
-            <p class="cell-panel__sub">0x{hexId(agent.id)} · click to pin</p>
         {/if}
 
         <!-- Identity section -->
@@ -336,21 +332,6 @@
         color: var(--color-text);
     }
 
-    /* ── Hover-preview header ── */
-    .cell-panel__header-row {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-        margin-bottom: var(--space-2);
-    }
-
-    .cell-panel__eyebrow {
-        display: flex;
-        align-items: center;
-        gap: var(--space-2);
-        margin: 0;
-    }
-
     .cell-panel__title-row {
         display: flex;
         align-items: baseline;
@@ -374,24 +355,6 @@
 
     .cell-panel__title em {
         font-style: italic;
-    }
-
-    .cell-panel__deselect {
-        border: 0;
-        background: transparent;
-        cursor: pointer;
-        font-family: var(--font-mono);
-        font-size: 0.625rem;
-        letter-spacing: 0.18em;
-        color: var(--color-text-muted);
-        text-transform: uppercase;
-        padding: var(--space-1) 0;
-        display: block;
-        transition: color 0.1s;
-    }
-
-    .cell-panel__deselect:hover {
-        color: var(--color-text);
     }
 
     .cell-panel__sub {
