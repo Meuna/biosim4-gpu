@@ -11,6 +11,7 @@
     import RightRail from "./lib/RightRail.svelte";
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
     import CellPanel from "./lib/CellPanel.svelte";
+    import HoverCard from "./lib/HoverCard.svelte";
     import { MousePointerClick } from "lucide-svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
@@ -27,9 +28,12 @@
         if (msg.type === "agentPicked") {
             if (msg.reason === "click") {
                 selectedAgent = msg.info;
+                lastHoveredAgent = null;
                 send({ type: "selectAgent", id: msg.info.id });
             } else {
                 hoveredAgent = msg.info;
+                lastHoveredAgent = msg.info;
+                send({ type: "hoverAgent", id: msg.info.id });
             }
         } else if (msg.type === "agentMissed") {
             if (msg.reason === "click") {
@@ -37,6 +41,7 @@
                 send({ type: "selectAgent", id: null });
             } else {
                 hoveredAgent = null;
+                send({ type: "hoverAgent", id: null });
             }
         } else if (msg.type === "ready") {
             if (canvasEl) {
@@ -50,12 +55,14 @@
                 const borderColor = styles
                     .getPropertyValue("--_challenge-border")
                     .trim();
+                const accentColor = styles.getPropertyValue("--_accent").trim();
                 worker.postMessage(
                     {
                         type: "canvas",
                         canvas: offscreen,
                         overlayColor,
                         borderColor,
+                        accentColor,
                     } satisfies WorkerCmd,
                     [offscreen],
                 );
@@ -121,7 +128,12 @@
     // ── UI state ─────────────────────────────────────────────────────────────
     let selectedAgent = $state<AgentInfo | null>(null);
     let hoveredAgent = $state<AgentInfo | null>(null);
-    const displayAgent = $derived(hoveredAgent ?? selectedAgent);
+    let lastHoveredAgent = $state<AgentInfo | null>(null);
+    let mouseX = $state(0);
+    let mouseY = $state(0);
+    const displayAgent = $derived(
+        hoveredAgent ?? lastHoveredAgent ?? selectedAgent,
+    );
     let railOpen = $state(false);
     let activeTab = $state<"sim" | "cell">("sim");
 
@@ -136,7 +148,11 @@
     // Clear hover state when Ctrl key is released.
     $effect(() => {
         function onKeyUp(e: KeyboardEvent): void {
-            if (e.key === "Control") hoveredAgent = null;
+            if (e.key === "Control") {
+                hoveredAgent = null;
+                lastHoveredAgent = null;
+                send({ type: "hoverAgent", id: null });
+            }
         }
         window.addEventListener("keyup", onKeyUp);
         return () => window.removeEventListener("keyup", onKeyUp);
@@ -225,7 +241,9 @@
     function handleClearSelection(): void {
         selectedAgent = null;
         hoveredAgent = null;
+        lastHoveredAgent = null;
         send({ type: "selectAgent", id: null });
+        send({ type: "hoverAgent", id: null });
         activeTab = "sim";
     }
 
@@ -243,14 +261,25 @@
 
     function handleCanvasClick(e: MouseEvent): void {
         if (!workerReady) return;
+        if (e.ctrlKey && lastHoveredAgent !== null && hoveredAgent === null) {
+            selectedAgent = lastHoveredAgent;
+            lastHoveredAgent = null;
+            send({ type: "selectAgent", id: selectedAgent.id });
+            return;
+        }
         const cell = pixelToCell(e.clientX, e.clientY);
         if (cell) send({ type: "pickAgentAtCell", ...cell, reason: "click" });
     }
 
     let hoverRafPending = false;
     function handleCanvasHover(e: MouseEvent): void {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
         if (!e.ctrlKey || !workerReady) {
-            if (hoveredAgent !== null) hoveredAgent = null;
+            if (hoveredAgent !== null) {
+                hoveredAgent = null;
+                send({ type: "hoverAgent", id: null });
+            }
             return;
         }
         if (hoverRafPending) return;
@@ -290,10 +319,15 @@
         bind:this={canvasEl}
         onclick={handleCanvasClick}
         onmousemove={handleCanvasHover}
-        onmouseleave={() => (hoveredAgent = null)}
+        onmouseleave={() => {
+            if (hoveredAgent !== null) send({ type: "hoverAgent", id: null });
+            hoveredAgent = null;
+        }}
     ></canvas>
 
-    {#if workerReady && displayAgent === null}
+    <HoverCard agent={hoveredAgent} x={mouseX} y={mouseY} />
+
+    {#if workerReady}
         <div
             class="grid-hint"
             style="left: {gridGeom.x}px; top: {gridGeom.y - 24}px"
@@ -369,7 +403,9 @@
         {#snippet cell()}
             <CellPanel
                 agent={displayAgent}
-                isSelected={selectedAgent !== null && hoveredAgent === null}
+                isSelected={selectedAgent !== null &&
+                    hoveredAgent === null &&
+                    lastHoveredAgent === null}
                 onClear={handleClearSelection}
                 onNavigate={handleNavigate}
                 onShuffle={handleShuffle}
