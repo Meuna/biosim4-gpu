@@ -116,6 +116,11 @@
 
     .param-slider__range {
         flex: 1;
+        accent-color: var(--color-text);
+    }
+
+    .param-slider__range:active,
+    .param-slider__range:focus-visible {
         accent-color: var(--color-accent);
     }
 
