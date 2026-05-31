@@ -67,17 +67,17 @@ describe("label tables", () => {
     });
 
     it("maps known ordinals to issue-specified labels", () => {
-        expect(SENSOR_LABELS[0]).toBe("X"); // LOC_X
-        expect(SENSOR_LABELS[5]).toBe("lmX"); // LAST_MOVE_DIR_X
-        expect(ACTION_LABELS[8]).toBe("↱"); // MOVE_RIGHT
+        expect(SENSOR_LABELS[0]).toBe("X"); // LOC_X (text)
+        expect(SENSOR_LABELS[5]).toBe("lmX"); // LAST_MOVE_DIR_X (text)
+        expect(ACTION_LABELS[8]).toBe("glyph:corner-up-right"); // MOVE_RIGHT
         expect(SENSOR_NAMES[0]).toBe("Location X");
         expect(ACTION_NAMES[15]).toBe("Kill forward");
     });
 
-    it("encodes glyph actions as a glyph: token (no text fallback)", () => {
+    it("distinguishes glyph tokens from plain-text labels", () => {
         expect(ACTION_LABELS[15]).toBe("glyph:skull"); // KILL_FORWARD
         expect(glyphName(ACTION_LABELS[15])).toBe("skull");
-        expect(glyphName(ACTION_LABELS[8])).toBeNull(); // "↱" is plain text
+        expect(glyphName(SENSOR_LABELS[0])).toBeNull(); // "X" is plain text
     });
 });
 
