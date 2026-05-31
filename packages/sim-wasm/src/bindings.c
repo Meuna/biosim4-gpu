@@ -409,3 +409,19 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_challenge_bits_ptr(void) {
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_genome_fingerprint_ptr(void) {
     return (uint32_t)(uintptr_t)s_sim.agents.genome_fingerprint;
 }
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_genome_conn_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.nnet.genome_conn;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_genome_wgt_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.nnet.genome_wgt;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_conn_length_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.nnet.conn_length;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_neuron_count_ptr(void) {
+    return (uint32_t)(uintptr_t)s_sim.nnet.neuron_count;
+}
