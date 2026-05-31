@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Maximize2, SearchX, Shuffle, Skull } from "lucide-svelte";
+    import { SearchX, Shuffle, Skull } from "lucide-svelte";
     import type { AgentInfo } from "../workers/sim.worker";
     import type { BrainConn } from "./brain";
     import { HEADINGS } from "./agentFormat";
@@ -204,22 +204,13 @@
         <!-- Brain network -->
         <div class="section-label" style="margin-top: var(--space-6)">
             <span class="small-caps">Genome / brain</span>
-            {#if brain}
-                <button
-                    class="cell-panel__expand-btn"
-                    onclick={onExpandBrain}
-                    aria-label="Expand brain explorer"
-                    title="Expand brain explorer"
-                >
-                    <Maximize2 size={13} />
-                </button>
-            {/if}
         </div>
         {#if brain}
             <BrainExplorer
                 conns={brain.conns}
                 neuronCount={brain.neuronCount}
                 variant="preview"
+                onExpand={onExpandBrain}
             />
         {:else}
             <p class="cell-panel__no-brain">
@@ -367,20 +358,6 @@
     }
 
     /* ── Brain network ── */
-    .cell-panel__expand-btn {
-        border: 0;
-        background: transparent;
-        cursor: pointer;
-        color: var(--color-text-muted);
-        padding: var(--space-1);
-        display: inline-flex;
-        transition: color 0.1s;
-    }
-
-    .cell-panel__expand-btn:hover {
-        color: var(--color-text);
-    }
-
     .cell-panel__no-brain {
         font-family: var(--font-mono);
         font-size: 0.75rem;
