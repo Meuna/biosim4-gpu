@@ -157,16 +157,22 @@
         neuronCount: number;
     } | null>(null);
     let brainFullscreen = $state(false);
+    // Last agent id we asked the worker for, so we request once per selection —
+    // not on every reactive change of `displayAgent` (it is reassigned each step
+    // by the live-update feed, but the brain topology is fixed for the agent).
+    let requestedBrainId: number | null = null;
 
-    // Request the brain for the currently displayed agent. Clears stale data
-    // immediately so the panel never shows another agent's network.
+    // Request the brain for the currently displayed agent. Does NOT read `brain`
+    // (writing it from the brainData handler would otherwise re-trigger this
+    // effect into a request loop); `displayBrain` gates stale data instead.
     $effect(() => {
         const id = displayAgent?.id ?? null;
         if (id === null || !workerReady) {
-            brain = null;
+            requestedBrainId = null;
             return;
         }
-        if (brain?.id !== id) brain = null;
+        if (id === requestedBrainId) return;
+        requestedBrainId = id;
         send({ type: "requestBrain", id });
     });
 
