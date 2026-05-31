@@ -54,10 +54,28 @@ describe("BrainExplorer", () => {
             neuronCount: 1,
             variant: "preview",
         });
-        expect(container.querySelectorAll(".brain__edge--dim").length).toBe(0);
-        // Focus the sense node — the neuron→action edge is no longer incident.
+        const lines = () =>
+            [...container.querySelectorAll(".brain__links line")].map((l) =>
+                l.getAttribute("opacity"),
+            );
+        // Default: every edge at half opacity.
+        expect(lines()).toEqual(["0.5", "0.5"]);
+        // Focus the sense node — the neuron→action edge is no longer incident
+        // (0.05), while the sense→neuron edge is highlighted to full opacity.
         await fireEvent.click(screen.getByLabelText("sense X"));
-        expect(container.querySelectorAll(".brain__edge--dim").length).toBe(1);
+        expect(lines().toSorted()).toEqual(["0.05", "1"]);
+    });
+
+    it("shows the expand button only in preview with onExpand", async () => {
+        let expanded = false;
+        render(BrainExplorer, {
+            conns,
+            neuronCount: 1,
+            variant: "preview",
+            onExpand: () => (expanded = true),
+        });
+        await fireEvent.click(screen.getByLabelText("Expand brain explorer"));
+        expect(expanded).toBe(true);
     });
 
     it("renders without throwing for an empty brain", () => {
