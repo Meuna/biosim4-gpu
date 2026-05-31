@@ -349,3 +349,29 @@ Worker (`src/workers/sim.worker.ts`). CMake copies the WASM artifacts into
 `public/wasm/` before every build or `dev` invocation; Vite serves them as
 static assets at `/wasm/`. The worker uses a `/* @vite-ignore */` dynamic
 import so Vite does not attempt to rebundle the pre-built Emscripten output.
+
+### Brain explorer
+
+`src/lib/BrainExplorer.svelte` renders an agent's neural network as a
+force-directed graph (d3-force): sensors pinned on the left column, actions on
+the right, internal neurons relaxing as a cloud between them. Connections are
+directed (arrowheads) and signed (accent = excitatory, warn = inhibitory, width
+∝ |weight|); clicking a node highlights its incident edges. The same component
+serves a docked `"preview"` (inside `CellPanel.svelte`) and a full-screen
+`"full"` overlay (hosted by `App.svelte`) with charge / link-distance sliders, a
+reheat button, the brain-synthesis line and a legend. d3's internal timer is
+stopped; ticks are driven by a self-cancelling `requestAnimationFrame` loop.
+
+`src/lib/brain.ts` is the DOM-free decode layer: `unpackConn` mirrors the
+`gene.h` bit-layout (`[srcType:1][srcNum:7][sinkType:1][sinkNum:7]`, weight ÷
+`WEIGHT_SCALE`), `SENSOR_LABELS` / `ACTION_LABELS` / `ACTION_ICONS` map ordinals
+to short labels, and `brainSynthesis` counts the wired senses/actions. Per the
+gh-74 trade-off the connection genes are unpacked in the worker (TS), not in
+WASM, so the wasm/worker interface stays four plain pointer getters.
+
+The worker exposes the network over the message protocol: the UI sends
+`{ type: "requestBrain", id }`; the worker reads the `s_sim.nnet` heap buffers
+(`genome_conn`, `genome_wgt`, `conn_length`, `neuron_count`) with the
+`slot * pop + id` stride and replies `{ type: "brainData", id, conns,
+neuronCount }`. `App.svelte` requests the brain whenever the displayed agent
+changes and discards payloads whose `id` no longer matches.

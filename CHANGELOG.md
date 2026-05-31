@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Brain explorer** (gh-74) — the Cell panel's hard-coded brain placeholder is
+  replaced by a real force-directed visualization of the selected agent's neural
+  network (`BrainExplorer.svelte`, d3-force). Sensors are pinned on the left,
+  actions on the right, and internal neurons relax as a cloud between them;
+  connections are directed (arrowheads) and signed (colour, width ∝ |weight|),
+  and clicking a node highlights its incident edges. A docked preview lives in
+  the Cell panel with a full-screen overlay (charge / link-distance sliders,
+  reheat, brain-synthesis line, legend). Four new WASM pointer getters
+  (`biosim_wasm_get_genome_conn_ptr`, `…_genome_wgt_ptr`, `…_conn_length_ptr`,
+  `…_neuron_count_ptr`) expose the `s_sim.nnet` buffers; the worker unpacks the
+  connection genes (mirroring `gene.h`) in `brain.ts` and serves them over a new
+  `requestBrain` / `brainData` message pair.
+
 - **Barriers configuration** (gh-64) — the barriers section of `SimConfigPanel`
   is now fully wired. Users can add up to 8 barriers per simulation, choosing
   from four shapes (horizontal bar, vertical bar, square, circle) and setting
