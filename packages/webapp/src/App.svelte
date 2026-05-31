@@ -12,7 +12,9 @@
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
     import CellPanel from "./lib/CellPanel.svelte";
     import HoverCard from "./lib/HoverCard.svelte";
-    import { MousePointerClick } from "lucide-svelte";
+    import BrainExplorer from "./lib/BrainExplorer.svelte";
+    import type { BrainConn } from "./lib/brain";
+    import { MousePointerClick, Minimize2 } from "lucide-svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -97,6 +99,15 @@
             survivalHistory = [...survivalHistory.slice(-11), rate];
         } else if (msg.type === "agentUpdated") {
             selectedAgent = msg.info;
+        } else if (msg.type === "brainData") {
+            // Ignore brain payloads for an agent that is no longer displayed.
+            if (msg.id === displayAgent?.id) {
+                brain = {
+                    id: msg.id,
+                    conns: msg.conns,
+                    neuronCount: msg.neuronCount,
+                };
+            }
         } else if (msg.type === "configured") {
             isRunning = false;
             currentGen = 0;
@@ -138,6 +149,40 @@
     );
     let railOpen = $state(false);
     let activeTab = $state<"sim" | "cell">("sim");
+
+    // ── Brain explorer ───────────────────────────────────────────────────────
+    let brain = $state<{
+        id: number;
+        conns: BrainConn[];
+        neuronCount: number;
+    } | null>(null);
+    let brainFullscreen = $state(false);
+
+    // Request the brain for the currently displayed agent. Clears stale data
+    // immediately so the panel never shows another agent's network.
+    $effect(() => {
+        const id = displayAgent?.id ?? null;
+        if (id === null || !workerReady) {
+            brain = null;
+            return;
+        }
+        if (brain?.id !== id) brain = null;
+        send({ type: "requestBrain", id });
+    });
+
+    // Close the full-screen explorer on Escape.
+    $effect(() => {
+        function onKey(e: KeyboardEvent): void {
+            if (e.key === "Escape" && brainFullscreen) brainFullscreen = false;
+        }
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    });
+
+    // The brain payload aligned with the currently displayed agent (or null).
+    const displayBrain = $derived(
+        brain && brain.id === displayAgent?.id ? brain : null,
+    );
 
     // Open Cell tab automatically when an agent is selected or hovered.
     $effect(() => {
@@ -409,6 +454,7 @@
         {#snippet cell()}
             <CellPanel
                 agent={displayAgent}
+                brain={displayBrain}
                 isSelected={selectedAgent !== null &&
                     hoveredAgent === null &&
                     lastHoveredAgent === null}
@@ -416,9 +462,34 @@
                 onNavigate={handleNavigate}
                 onShuffle={handleShuffle}
                 onSelectById={handleSelectById}
+                onExpandBrain={() => (brainFullscreen = true)}
             />
         {/snippet}
     </RightRail>
+
+    <!-- z-index: 40 — full-screen brain explorer overlay -->
+    {#if brainFullscreen && displayBrain}
+        <div class="brain-overlay" role="dialog" aria-label="Brain explorer">
+            <div class="brain-overlay__header">
+                <h2 class="brain-overlay__title">
+                    Brain · Agent #{displayBrain.id.toString().padStart(4, "0")}
+                </h2>
+                <button
+                    class="brain-overlay__close"
+                    onclick={() => (brainFullscreen = false)}
+                    aria-label="Close brain explorer"
+                    title="Close (Esc)"
+                >
+                    <Minimize2 size={16} />
+                </button>
+            </div>
+            <BrainExplorer
+                conns={displayBrain.conns}
+                neuronCount={displayBrain.neuronCount}
+                variant="full"
+            />
+        </div>
+    {/if}
 </div>
 
 <style>
@@ -480,5 +551,54 @@
     .hamburger:focus-visible {
         outline: 2px solid var(--color-accent);
         outline-offset: 2px;
+    }
+
+    /* ── Full-screen brain explorer overlay ── */
+    .brain-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: flex;
+        flex-direction: column;
+        padding: var(--space-6);
+        gap: var(--space-3);
+        background: var(--color-surface-glass);
+        backdrop-filter: blur(8px);
+    }
+
+    .brain-overlay__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+
+    .brain-overlay__title {
+        font-family: var(--font-sans);
+        font-size: var(--text-lg);
+        font-weight: 700;
+        color: var(--color-text);
+        margin: 0;
+    }
+
+    .brain-overlay__close {
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        color: var(--color-text);
+        transition:
+            border-color 0.1s,
+            color 0.1s;
+    }
+
+    .brain-overlay__close:hover {
+        border-color: var(--color-accent);
+        color: var(--color-accent-text);
     }
 </style>
