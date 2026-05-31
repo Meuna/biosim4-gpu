@@ -41,14 +41,14 @@ export function unpackConn(packed: number, rawWgt: number): BrainConn {
 export const SENSOR_LABELS: readonly string[] = [
     "X", // LOC_X
     "Y", // LOC_Y
-    "bdX", // BOUNDARY_DIST_X
-    "bdY", // BOUNDARY_DIST_Y
-    "bd", // BOUNDARY_DIST
+    "glyph:unfold-horizontal", // BOUNDARY_DIST_X
+    "glyph:unfold-vertical", // BOUNDARY_DIST_Y
+    "glyph:expand", // BOUNDARY_DIST
     "lmX", // LAST_MOVE_DIR_X
     "lmY", // LAST_MOVE_DIR_Y
-    "osc", // OSC1
+    "glyph:refresh-ccw", // OSC1
     "age", // AGE
-    "rnd", // RANDOM
+    "glyph:dices", // RANDOM
     "pop", // POPULATION
     "ppF", // POPULATION_FWD
     "ppLR", // POPULATION_LR
@@ -56,30 +56,30 @@ export const SENSOR_LABELS: readonly string[] = [
     "brLR", // BARRIER_LR
     "lpP", // LONGPROBE_POP_FWD
     "lpB", // LONGPROBE_BAR_FWD
-    "sg0", // SIGNAL0
-    "sg0F", // SIGNAL0_FWD
-    "sg0LR", // SIGNAL0_LR
-    "gen", // GENETIC_SIM_FWD
+    "glyph:wifi", // SIGNAL0
+    "glyph:house-wifi", // SIGNAL0_FWD
+    "glyph:radio", // SIGNAL0_LR
+    "glyph:dna", // GENETIC_SIM_FWD
 ];
 
 /** Short node labels for actions, indexed by `biosim_action_t` (io_defs.h).
  *  A `"glyph:<name>"` entry is rendered as that icon; any other entry is text. */
 export const ACTION_LABELS: readonly string[] = [
-    "Rsp", // SET_RESPONSIVENESS
-    "Osc", // SET_OSCILLATOR_PERIOD
-    "Lpd", // SET_LONGPROBE_DIST
-    "mX", // MOVE_X
-    "mY", // MOVE_Y
-    "↑", // MOVE_FORWARD
-    "↓", // MOVE_REVERSE
-    "↰", // MOVE_LEFT
-    "↱", // MOVE_RIGHT
-    "rnd", // MOVE_RANDOM
-    "E", // MOVE_EAST
-    "W", // MOVE_WEST
-    "N", // MOVE_NORTH
-    "S", // MOVE_SOUTH
-    "sg0", // EMIT_SIGNAL0
+    "glyph:loader-pinwheel", // SET_RESPONSIVENESS
+    "glyph:refresh-ccw", // SET_OSCILLATOR_PERIOD
+    "glyph:radar", // SET_LONGPROBE_DIST
+    "glyph:move-horizontal", // MOVE_X
+    "glyph:move-vertical", // MOVE_Y
+    "glyph:arrow-big-up-dash", // MOVE_FORWARD
+    "glyph:arrow-big-down-dash", // MOVE_REVERSE
+    "glyph:corner-up-left", // MOVE_LEFT
+    "glyph:corner-up-right", // MOVE_RIGHT
+    "glyph:dices", // MOVE_RANDOM
+    "glyph:move-right", // MOVE_EAST
+    "glyph:move-left", // MOVE_WEST
+    "glyph:move-up", // MOVE_NORTH
+    "glyph:move-down", // MOVE_SOUTH
+    "glyph:radio-tower", // EMIT_SIGNAL0
     "glyph:skull", // KILL_FORWARD
 ];
 
