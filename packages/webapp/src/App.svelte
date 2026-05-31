@@ -156,7 +156,7 @@
         conns: BrainConn[];
         neuronCount: number;
     } | null>(null);
-    let brainFullscreen = $state(false);
+    let brainExpanded = $state(false);
     // Last agent id we asked the worker for, so we request once per selection —
     // not on every reactive change of `displayAgent` (it is reassigned each step
     // by the live-update feed, but the brain topology is fixed for the agent).
@@ -179,7 +179,7 @@
     // Close the full-screen explorer on Escape.
     $effect(() => {
         function onKey(e: KeyboardEvent): void {
-            if (e.key === "Escape" && brainFullscreen) brainFullscreen = false;
+            if (e.key === "Escape" && brainExpanded) brainExpanded = false;
         }
         window.addEventListener("keydown", onKey);
         return () => window.removeEventListener("keydown", onKey);
@@ -372,8 +372,12 @@
         The worker renders kinetic sculpture + agents + grid interior on this surface.
         The grid is a REGION of this canvas, not a separate element.
     -->
+    <!-- Hidden (not unmounted) while the brain is expanded: the OffscreenCanvas
+         is transferred once, so the element must persist to keep the worker
+         rendering target valid. -->
     <canvas
         bind:this={canvasEl}
+        class:brain-hidden={brainExpanded}
         onclick={handleCanvasClick}
         onmousemove={handleCanvasHover}
         onmouseleave={() => {
@@ -384,7 +388,7 @@
 
     <HoverCard agent={hoveredAgent} x={mouseX} y={mouseY} />
 
-    {#if workerReady}
+    {#if workerReady && !brainExpanded}
         <div
             class="grid-hint"
             style="left: {gridGeom.x}px; top: {gridGeom.y - 24}px"
@@ -403,28 +407,32 @@
         {stepsPerGen}
     />
 
-    <!-- z-index: 25 — floating play controls, centered over the grid -->
-    <PlayDock
-        running={isRunning}
-        centerX={gridGeom.cx}
-        onToggle={handleToggle}
-        onStep={handleStep}
-        onGen={handleGen}
-        onReset={handleReset}
-    />
+    <!-- Grid stack — hidden while the brain explorer is expanded (it takes over
+         the main area). -->
+    {#if !brainExpanded}
+        <!-- z-index: 25 — floating play controls, centered over the grid -->
+        <PlayDock
+            running={isRunning}
+            centerX={gridGeom.cx}
+            onToggle={handleToggle}
+            onStep={handleStep}
+            onGen={handleGen}
+            onReset={handleReset}
+        />
 
-    <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
-    <GridView geom={gridGeom} running={isRunning} {gridSizeX} {gridSizeY} />
+        <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
+        <GridView geom={gridGeom} running={isRunning} {gridSizeX} {gridSizeY} />
 
-    <!-- z-index: 15 — telemetry HUD, bottom-left -->
-    <HUD
-        running={isRunning}
-        gen={currentGen}
-        step={currentStep}
-        {stepsPerGen}
-        pop={currentPop}
-        {survivalHistory}
-    />
+        <!-- z-index: 15 — telemetry HUD, bottom-left -->
+        <HUD
+            running={isRunning}
+            gen={currentGen}
+            step={currentStep}
+            {stepsPerGen}
+            pop={currentPop}
+            {survivalHistory}
+        />
+    {/if}
 
     <!-- Hamburger toggle — top-right, z-index: 30 -->
     <button
@@ -468,42 +476,39 @@
                 onNavigate={handleNavigate}
                 onShuffle={handleShuffle}
                 onSelectById={handleSelectById}
-                onExpandBrain={() => (brainFullscreen = true)}
+                onExpandBrain={() => (brainExpanded = true)}
             />
         {/snippet}
     </RightRail>
 
-    <!-- z-index: 40 — brain explorer card (floats over the app; no scrim, so
-         the topbar, dotted background and sidebar stay visible and live) -->
-    {#if brainFullscreen && displayBrain}
-        <div class="brain-overlay">
-            <div
-                class="brain-overlay__card"
-                role="dialog"
-                aria-label="Brain explorer"
-            >
-                <div class="brain-overlay__header">
-                    <h2 class="brain-overlay__title">
-                        Brain · Agent #{displayBrain.id
-                            .toString()
-                            .padStart(4, "0")}
-                    </h2>
-                    <button
-                        class="brain-overlay__close"
-                        onclick={() => (brainFullscreen = false)}
-                        aria-label="Close brain explorer"
-                        title="Close (Esc)"
-                    >
-                        <Minimize2 size={16} />
-                    </button>
-                </div>
-                <BrainExplorer
-                    conns={displayBrain.conns}
-                    neuronCount={displayBrain.neuronCount}
-                    variant="full"
-                />
+    <!-- Expanded brain explorer — replaces the grid stack in the main area.
+         Sits below the topbar and left of the rail; no card chrome, so the
+         title/knobs/synthesis float on the dotted background. -->
+    {#if brainExpanded && displayBrain}
+        <section
+            class="brain-region"
+            class:brain-region--rail={railOpen && viewportW > 760}
+            aria-label="Brain explorer"
+        >
+            <div class="brain-region__head">
+                <h2 class="brain-region__title">
+                    Brain · Agent #{displayBrain.id.toString().padStart(4, "0")}
+                </h2>
+                <button
+                    class="brain-region__close"
+                    onclick={() => (brainExpanded = false)}
+                    aria-label="Close brain explorer"
+                    title="Close (Esc)"
+                >
+                    <Minimize2 size={15} />
+                </button>
             </div>
-        </div>
+            <BrainExplorer
+                conns={displayBrain.conns}
+                neuronCount={displayBrain.neuronCount}
+                variant="full"
+            />
+        </section>
     {/if}
 </div>
 
@@ -568,47 +573,38 @@
         outline-offset: 2px;
     }
 
-    /* ── Brain explorer card ── */
-    /* The container spans the area below the topbar but is click-through
-       (pointer-events: none) and has no scrim, so the dotted background, topbar
-       and sidebar stay visible and interactive. Only the card captures events. */
-    .brain-overlay {
+    .brain-hidden {
+        display: none;
+    }
+
+    /* ── Expanded brain explorer region ── */
+    /* Replaces the grid stack: spans below the topbar, left of the rail. No
+       card chrome — the title/knobs/synthesis float on the dotted background. */
+    .brain-region {
         position: fixed;
         top: 3.5rem;
-        inset-inline: 0;
+        left: 0;
+        right: 0;
         bottom: 0;
-        z-index: 40;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: var(--space-6);
-        pointer-events: none;
-    }
-
-    .brain-overlay__card {
-        pointer-events: auto;
-        width: 100%;
-        max-width: 1060px;
-        height: 100%;
-        max-height: 680px;
+        z-index: 10;
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
-        padding: var(--space-5);
-        background: var(--color-surface);
-        border: 1px solid var(--color-border-subtle);
-        border-radius: var(--radius-md);
-        box-shadow: var(--shadow-floating);
+        gap: var(--space-2);
+        padding: var(--space-5) var(--space-8) var(--space-6);
     }
 
-    .brain-overlay__header {
+    .brain-region--rail {
+        right: 23.75rem;
+    }
+
+    .brain-region__head {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: var(--space-3);
         flex-shrink: 0;
     }
 
-    .brain-overlay__title {
+    .brain-region__title {
         font-family: var(--font-sans);
         font-size: var(--text-lg);
         font-weight: 700;
@@ -616,24 +612,24 @@
         margin: 0;
     }
 
-    .brain-overlay__close {
-        width: 2.5rem;
-        height: 2.5rem;
+    .brain-region__close {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: var(--radius-sm);
+        padding: var(--space-1);
+        background: transparent;
+        border: 0;
         cursor: pointer;
-        color: var(--color-text);
-        transition:
-            border-color 0.1s,
-            color 0.1s;
+        color: var(--color-text-muted);
+        transition: color 0.1s;
     }
 
-    .brain-overlay__close:hover {
-        border-color: var(--color-accent);
-        color: var(--color-accent-text);
+    .brain-region__close:hover {
+        color: var(--color-text);
+    }
+
+    /* BrainExplorer fills the remaining height below the floating header. */
+    .brain-region :global(.brain--full) {
+        height: auto;
+        flex: 1;
+        min-height: 0;
     }
 </style>
