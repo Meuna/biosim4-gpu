@@ -167,7 +167,7 @@
     }
 
     // Self-loop drawn as a curved arrow above the node (local coords, node at
-    // origin), mirroring the PoC. Gets the shared arrowhead via marker-end.
+    // origin). Gets the shared arrowhead via marker-end.
     function selfLoopPath(r: number): string {
         const sx = -r * 0.5;
         const sy = -r * 0.87;
@@ -409,6 +409,11 @@
         return linkIncident(l) ? 1 : 0.05;
     }
 
+    function selfLinkOpacity(n: GNode): number {
+        if (!focusedId) return 0.5;
+        return focusedId === n.id ? 1 : 0.05;
+    }
+
     function nodeDimmed(n: GNode): boolean {
         return neighbors !== null && !neighbors.has(n.id);
     }
@@ -598,12 +603,13 @@
                                     class="brain__selfloop"
                                     d={selfLoopPath(radius(n.kind))}
                                     fill="none"
-                                    stroke={(n.selfWeight ?? 0) >= 0
+                                    stroke={n.selfWeight >= 0
                                         ? "var(--color-link-pos)"
                                         : "var(--color-link-neg)"}
                                     stroke-width={strokeWidth(
                                         n.selfWeight ?? 0,
                                     )}
+                                    opacity={selfLinkOpacity(n)}
                                     marker-end="url(#{arrowId})"
                                 />
                             {/if}
