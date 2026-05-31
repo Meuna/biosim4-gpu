@@ -583,6 +583,8 @@
        card chrome — the title/knobs/synthesis float on the dotted background. */
     .brain-region {
         position: fixed;
+        max-width: 1060px;
+        margin-inline: auto;
         top: 3.5rem;
         left: 0;
         right: 0;
@@ -607,7 +609,7 @@
 
     .brain-region__title {
         font-family: var(--font-sans);
-        font-size: var(--text-lg);
+        font-size: var(--text-base);
         font-weight: 700;
         color: var(--color-text);
         margin: 0;

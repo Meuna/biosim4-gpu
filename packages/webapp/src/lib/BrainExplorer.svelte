@@ -750,7 +750,6 @@
     .brain__svg {
         display: block;
         width: 100%;
-        height: 100%;
         border: 1px solid var(--color-border-subtle);
         border-radius: var(--radius-md);
         background: var(--color-surface);
