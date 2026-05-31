@@ -473,27 +473,36 @@
         {/snippet}
     </RightRail>
 
-    <!-- z-index: 40 — full-screen brain explorer overlay -->
+    <!-- z-index: 40 — brain explorer card (floats over the app; no scrim, so
+         the topbar, dotted background and sidebar stay visible and live) -->
     {#if brainFullscreen && displayBrain}
-        <div class="brain-overlay" role="dialog" aria-label="Brain explorer">
-            <div class="brain-overlay__header">
-                <h2 class="brain-overlay__title">
-                    Brain · Agent #{displayBrain.id.toString().padStart(4, "0")}
-                </h2>
-                <button
-                    class="brain-overlay__close"
-                    onclick={() => (brainFullscreen = false)}
-                    aria-label="Close brain explorer"
-                    title="Close (Esc)"
-                >
-                    <Minimize2 size={16} />
-                </button>
+        <div class="brain-overlay">
+            <div
+                class="brain-overlay__card"
+                role="dialog"
+                aria-label="Brain explorer"
+            >
+                <div class="brain-overlay__header">
+                    <h2 class="brain-overlay__title">
+                        Brain · Agent #{displayBrain.id
+                            .toString()
+                            .padStart(4, "0")}
+                    </h2>
+                    <button
+                        class="brain-overlay__close"
+                        onclick={() => (brainFullscreen = false)}
+                        aria-label="Close brain explorer"
+                        title="Close (Esc)"
+                    >
+                        <Minimize2 size={16} />
+                    </button>
+                </div>
+                <BrainExplorer
+                    conns={displayBrain.conns}
+                    neuronCount={displayBrain.neuronCount}
+                    variant="full"
+                />
             </div>
-            <BrainExplorer
-                conns={displayBrain.conns}
-                neuronCount={displayBrain.neuronCount}
-                variant="full"
-            />
         </div>
     {/if}
 </div>
@@ -559,17 +568,37 @@
         outline-offset: 2px;
     }
 
-    /* ── Full-screen brain explorer overlay ── */
+    /* ── Brain explorer card ── */
+    /* The container spans the area below the topbar but is click-through
+       (pointer-events: none) and has no scrim, so the dotted background, topbar
+       and sidebar stay visible and interactive. Only the card captures events. */
     .brain-overlay {
         position: fixed;
-        inset: 0;
+        top: 3.5rem;
+        inset-inline: 0;
+        bottom: 0;
         z-index: 40;
         display: flex;
-        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         padding: var(--space-6);
+        pointer-events: none;
+    }
+
+    .brain-overlay__card {
+        pointer-events: auto;
+        width: 100%;
+        max-width: 1060px;
+        height: 100%;
+        max-height: 680px;
+        display: flex;
+        flex-direction: column;
         gap: var(--space-3);
-        background: var(--color-surface-glass);
-        backdrop-filter: blur(8px);
+        padding: var(--space-5);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-floating);
     }
 
     .brain-overlay__header {
