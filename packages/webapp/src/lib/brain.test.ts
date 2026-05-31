@@ -4,8 +4,11 @@ import {
     WEIGHT_SCALE,
     unpackConn,
     brainSynthesis,
+    glyphName,
     SENSOR_LABELS,
     ACTION_LABELS,
+    SENSOR_NAMES,
+    ACTION_NAMES,
 } from "./brain";
 
 // Mirror of BIOSIM_GENE_PACK from gene.h, for building test fixtures.
@@ -56,15 +59,25 @@ describe("unpackConn", () => {
 });
 
 describe("label tables", () => {
-    it("has 21 sensor labels and 16 action labels", () => {
+    it("has matching short labels and full names per ordinal", () => {
         expect(SENSOR_LABELS.length).toBe(21);
         expect(ACTION_LABELS.length).toBe(16);
+        expect(SENSOR_NAMES.length).toBe(21);
+        expect(ACTION_NAMES.length).toBe(16);
     });
 
     it("maps known ordinals to issue-specified labels", () => {
         expect(SENSOR_LABELS[0]).toBe("X"); // LOC_X
         expect(SENSOR_LABELS[5]).toBe("lmX"); // LAST_MOVE_DIR_X
         expect(ACTION_LABELS[8]).toBe("↱"); // MOVE_RIGHT
+        expect(SENSOR_NAMES[0]).toBe("Location X");
+        expect(ACTION_NAMES[15]).toBe("Kill forward");
+    });
+
+    it("encodes glyph actions as a glyph: token (no text fallback)", () => {
+        expect(ACTION_LABELS[15]).toBe("glyph:skull"); // KILL_FORWARD
+        expect(glyphName(ACTION_LABELS[15])).toBe("skull");
+        expect(glyphName(ACTION_LABELS[8])).toBeNull(); // "↱" is plain text
     });
 });
 

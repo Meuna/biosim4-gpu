@@ -62,7 +62,8 @@ export const SENSOR_LABELS: readonly string[] = [
     "gen", // GENETIC_SIM_FWD
 ];
 
-/** Short labels for actions, indexed by `biosim_action_t` (io_defs.h). */
+/** Short node labels for actions, indexed by `biosim_action_t` (io_defs.h).
+ *  A `"glyph:<name>"` entry is rendered as that icon; any other entry is text. */
 export const ACTION_LABELS: readonly string[] = [
     "Rsp", // SET_RESPONSIVENESS
     "Osc", // SET_OSCILLATOR_PERIOD
@@ -79,15 +80,59 @@ export const ACTION_LABELS: readonly string[] = [
     "N", // MOVE_NORTH
     "S", // MOVE_SOUTH
     "sg0", // EMIT_SIGNAL0
-    "kill", // KILL_FORWARD
+    "glyph:skull", // KILL_FORWARD
 ];
 
-/** Icon names (resolved to lucide components by the renderer) for actions that
- *  read better as a glyph. The text label remains the fallback. */
-export type ActionIconName = "skull";
-export const ACTION_ICONS: Readonly<Record<number, ActionIconName>> = {
-    15: "skull", // KILL_FORWARD
-};
+/** If `label` is a `"glyph:<name>"` token, return `<name>`; otherwise `null`
+ *  (the label is plain text). The renderer resolves the name to an icon. */
+export function glyphName(label: string): string | null {
+    return label.startsWith("glyph:") ? label.slice("glyph:".length) : null;
+}
+
+/** Full sensor names for the node info card, indexed by `biosim_sensor_t`. */
+export const SENSOR_NAMES: readonly string[] = [
+    "Location X",
+    "Location Y",
+    "Boundary distance X",
+    "Boundary distance Y",
+    "Boundary distance",
+    "Last move dir X",
+    "Last move dir Y",
+    "Oscillator",
+    "Age",
+    "Random",
+    "Population density",
+    "Population forward",
+    "Population left/right",
+    "Barrier forward",
+    "Barrier left/right",
+    "Long-probe population fwd",
+    "Long-probe barrier fwd",
+    "Signal density",
+    "Signal forward",
+    "Signal left/right",
+    "Genetic similarity fwd",
+];
+
+/** Full action names for the node info card, indexed by `biosim_action_t`. */
+export const ACTION_NAMES: readonly string[] = [
+    "Set responsiveness",
+    "Set oscillator period",
+    "Set long-probe distance",
+    "Move X",
+    "Move Y",
+    "Move forward",
+    "Move reverse",
+    "Move left",
+    "Move right",
+    "Move random",
+    "Move east",
+    "Move west",
+    "Move north",
+    "Move south",
+    "Emit signal",
+    "Kill forward",
+];
 
 export interface BrainSynthesis {
     senses: number;
