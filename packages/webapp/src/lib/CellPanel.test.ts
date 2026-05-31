@@ -19,11 +19,16 @@ const mockAgent: AgentInfo = {
 
 const defaultProps = {
     agent: null as AgentInfo | null,
+    brain: null as {
+        conns: import("./brain").BrainConn[];
+        neuronCount: number;
+    } | null,
     isSelected: false,
     onClear: () => {},
     onNavigate: () => {},
     onShuffle: () => {},
     onSelectById: () => {},
+    onExpandBrain: () => {},
 };
 
 describe("CellPanel", () => {
@@ -148,9 +153,42 @@ describe("CellPanel", () => {
         expect(cleared).toBe(true);
     });
 
-    it("renders brain placeholder", () => {
-        render(CellPanel, { ...defaultProps, agent: mockAgent });
-        expect(screen.getByLabelText("Brain graph placeholder")).toBeTruthy();
+    it("shows the no-brain note when brain is null", () => {
+        render(CellPanel, { ...defaultProps, agent: mockAgent, brain: null });
+        expect(screen.getByText(/brain unavailable/i)).toBeTruthy();
+        expect(screen.queryByLabelText("Expand brain explorer")).toBeNull();
+    });
+
+    it("renders the brain preview and expand button when brain present", () => {
+        const brain = {
+            conns: [
+                {
+                    srcType: 1 as const,
+                    srcNum: 0,
+                    sinkType: 0 as const,
+                    sinkNum: 0,
+                    weight: 1,
+                },
+            ],
+            neuronCount: 1,
+        };
+        render(CellPanel, { ...defaultProps, agent: mockAgent, brain });
+        expect(screen.getByLabelText("Expand brain explorer")).toBeTruthy();
+    });
+
+    it("calls onExpandBrain when expand clicked", () => {
+        let called = false;
+        const brain = { conns: [], neuronCount: 0 };
+        render(CellPanel, {
+            ...defaultProps,
+            agent: mockAgent,
+            brain,
+            onExpandBrain: () => {
+                called = true;
+            },
+        });
+        fireEvent.click(screen.getByLabelText("Expand brain explorer"));
+        expect(called).toBe(true);
     });
 
     it("shows skull icon for dead agent", () => {
