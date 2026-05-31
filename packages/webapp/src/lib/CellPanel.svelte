@@ -1,5 +1,11 @@
 <script lang="ts">
-    import { SearchX, Shuffle, Skull } from "lucide-svelte";
+    import {
+        ArrowLeft,
+        ArrowRight,
+        SearchX,
+        Shuffle,
+        Skull,
+    } from "lucide-svelte";
     import type { AgentInfo } from "../workers/sim.worker";
     import type { BrainConn } from "./brain";
     import { HEADINGS } from "./agentFormat";
@@ -116,14 +122,14 @@
                     onclick={() => onNavigate(-1)}
                     aria-label="Previous agent"
                 >
-                    ←
+                    <ArrowLeft size={13} />
                 </button>
                 <button
                     class="cell-panel__nav-btn"
                     onclick={() => onNavigate(1)}
                     aria-label="Next agent"
                 >
-                    →
+                    <ArrowRight size={13} />
                 </button>
                 <button
                     class="cell-panel__nav-btn"
