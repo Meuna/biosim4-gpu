@@ -355,15 +355,19 @@ import so Vite does not attempt to rebundle the pre-built Emscripten output.
 `src/lib/BrainExplorer.svelte` renders an agent's neural network as a
 force-directed graph (d3-force): sensors pinned on the left column, actions on
 the right, internal neurons relaxing as a cloud between them. Connections are
-directed (arrowheads trimmed to the node circumference) and signed (blue =
-excitatory, red = inhibitory, width ∝ |weight|); clicking a node highlights its
-incident edges (others fade to 0.05 opacity), turns its ring emerald, and shows
-a floating card with the node's full sensor/action name. The same component
-serves a docked `"preview"` (inside `CellPanel.svelte`, with an in-canvas expand
-button) and a `"full"` variant shown in a centered, non-fullscreen card
-(`App.svelte`) with compact charge / link-distance sliders and the
-brain-synthesis line. d3's internal timer is stopped; ticks are driven by a
-self-cancelling `requestAnimationFrame` loop, and the knob reads are `untrack`ed
+directed (arrowheads trimmed to the node circumference, recurrent self-loops
+drawn as a curved arrow) and signed (blue = excitatory, red = inhibitory, width
+∝ |weight|); clicking a sense/action highlights its incident edges (others fade
+to 0.05 opacity), turns its ring emerald, and shows its full name as muted text
+(under the node in the expanded view, top-centre in the preview; neurons show
+nothing). The same component serves a docked `"preview"` (inside
+`CellPanel.svelte`, with an in-canvas expand button; the selected node grows for
+readability) and a `"full"` variant. Expanding **replaces the grid stack**:
+`App.svelte` hides the canvas/`GridView`/`HUD`/`PlayDock` and renders the brain
+in the main area (left of the rail, below the topbar) with the title, compact
+charge / link-distance sliders and synthesis line floating on the dotted
+background — no card chrome. d3's internal timer is stopped; ticks are driven by
+a self-cancelling `requestAnimationFrame` loop, and the knob reads are `untrack`ed
 so slider moves re-warm the layout in place instead of rebuilding it.
 
 `src/lib/brain.ts` is the DOM-free decode layer: `unpackConn` mirrors the

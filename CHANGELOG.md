@@ -12,11 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   replaced by a real force-directed visualization of the selected agent's neural
   network (`BrainExplorer.svelte`, d3-force). Sensors are pinned on the left,
   actions on the right, and internal neurons relax as a cloud between them;
-  connections are directed (arrowheads) and signed (blue = excitatory, red =
-  inhibitory, width ∝ |weight|), and clicking a node highlights its incident
-  edges and shows a floating card with the node's full name. A docked preview
-  lives in the Cell panel with a centered explorer card (charge / link-distance
-  sliders, brain-synthesis line). Four new WASM pointer getters
+  connections are directed (arrowheads; recurrent self-loops as curved arrows)
+  and signed (blue = excitatory, red = inhibitory, width ∝ |weight|), and
+  clicking a node highlights its incident edges and shows its full name as muted
+  text. A docked preview lives in the Cell panel; expanding it replaces the grid
+  with the brain (title, charge / link-distance sliders and synthesis line
+  floating on the dotted background). Four new WASM pointer getters
   (`biosim_wasm_get_genome_conn_ptr`, `…_genome_wgt_ptr`, `…_conn_length_ptr`,
   `…_neuron_count_ptr`) expose the `s_sim.nnet` buffers; the worker unpacks the
   connection genes (mirroring `gene.h`) in `brain.ts` and serves them over a new
