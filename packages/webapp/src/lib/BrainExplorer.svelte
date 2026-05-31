@@ -3,7 +3,7 @@
     // the left, actions on the right, internal neurons relax as a d3-force cloud
     // in between. Connections are directed (arrowheads) and signed (blue =
     // excitatory, red = inhibitory); clicking a node highlights its incident
-    // connections and shows a floating card with its full name.
+    // connections and shows its full sensor/action name as muted text.
     //
     // We stop d3's internal timer and drive ticks from our own requestAnimation-
     // Frame loop, which self-halts once alpha decays below alphaMin. Slider
@@ -23,7 +23,32 @@
         type SimulationNodeDatum,
         type SimulationLinkDatum,
     } from "d3-force";
-    import { Skull, Maximize2 } from "lucide-svelte";
+    import {
+        ArrowBigDownDash,
+        ArrowBigUpDash,
+        CornerUpLeft,
+        CornerUpRight,
+        Dices,
+        Dna,
+        Expand,
+        HouseWifi,
+        LoaderPinwheel,
+        Maximize2,
+        MoveHorizontal,
+        MoveVertical,
+        MoveDown,
+        MoveLeft,
+        MoveRight,
+        MoveUp,
+        Radar,
+        Radio,
+        RadioTower,
+        RefreshCcw,
+        Skull,
+        UnfoldHorizontal,
+        UnfoldVertical,
+        Wifi,
+    } from "lucide-svelte";
     import {
         GENE_IO,
         SENSOR_LABELS,
@@ -57,6 +82,7 @@
     const R_IO = 12;
     const R_INT = 7;
     const ARROW_GAP = 2; // so the arrow tip just touches the target circle
+    const PREVIEW_GROW = 1.8; // selected sense/action enlarges in the small view
 
     // ── Force knobs (full variant) + focus state ─────────────────────────────
     let chargeMag = $state(180);
@@ -78,7 +104,31 @@
         weight: number;
     }
 
-    const ICON_COMPONENTS = { skull: Skull };
+    const ICON_COMPONENTS = {
+        "arrow-big-up-dash": ArrowBigUpDash,
+        "arrow-big-down-dash": ArrowBigDownDash,
+        "corner-up-right": CornerUpRight,
+        "corner-up-left": CornerUpLeft,
+        dices: Dices,
+        dna: Dna,
+        expand: Expand,
+        "house-wifi": HouseWifi,
+        "loader-pinwheel": LoaderPinwheel,
+        "move-horizontal": MoveHorizontal,
+        "move-vertical": MoveVertical,
+        "move-down": MoveDown,
+        "move-left": MoveLeft,
+        "move-right": MoveRight,
+        "move-up": MoveUp,
+        radar: Radar,
+        radio: Radio,
+        "radio-tower": RadioTower,
+        "refresh-ccw": RefreshCcw,
+        skull: Skull,
+        "unfold-horizontal": UnfoldHorizontal,
+        "unfold-vertical": UnfoldVertical,
+        wifi: Wifi,
+    };
 
     // Marker is namespaced per variant so a mounted preview + full overlay never
     // collide on element ids (avoids module-level mutable state).
@@ -105,6 +155,26 @@
 
     function radius(kind: GNode["kind"]): number {
         return kind === "neuron" ? R_INT : R_IO;
+    }
+
+    // Selected sense/action nodes grow in the small preview for readability.
+    function nodeScale(n: GNode): number {
+        return variant === "preview" &&
+            focusedId === n.id &&
+            n.kind !== "neuron"
+            ? PREVIEW_GROW
+            : 1;
+    }
+
+    // Self-loop drawn as a curved arrow above the node (local coords, node at
+    // origin), mirroring the PoC. Gets the shared arrowhead via marker-end.
+    function selfLoopPath(r: number): string {
+        const sx = -r * 0.5;
+        const sy = -r * 0.87;
+        const ex = r * 0.5;
+        const ey = -r * 0.87;
+        const l = r * 2.4;
+        return `M${sx},${sy} C${-l},${-l * 2.4} ${l},${-l * 2.4} ${ex},${ey}`;
     }
 
     function spread(count: number, i: number): number {
@@ -157,17 +227,25 @@
                 fy: spread(actionArr.length, i),
             }),
         );
+        // Seed neurons on a deterministic golden-angle spiral filling the
+        // central band — derived from the layout coords (NOT the viewBox origin),
+        // so a rebuild never flings nodes in from the top-left corner.
+        const cx = (COL_L + COL_R) / 2;
+        const cy = (TOP + BOT) / 2;
+        const rx = (COL_R - COL_L) / 5;
+        const ry = (BOT - TOP) / 4;
+        const goldenAngle = Math.PI * (3 - Math.sqrt(5));
         for (let i = 0; i < neuronCount; i++) {
-            // Seed near the centre (NOT the viewBox origin) with deterministic
-            // spread, so a rebuild never flings nodes in from the top-left.
+            const a = i * goldenAngle;
+            const rad = Math.sqrt((i + 0.5) / Math.max(neuronCount, 1));
             pushNode({
                 id: `n${i}`,
                 kind: "neuron",
                 num: i,
                 label: String(i),
                 selfWeight: null,
-                x: VW / 2 + (((i * 73) % 200) - 100),
-                y: VH / 2 + (((i * 131) % 260) - 130),
+                x: cx + Math.cos(a) * rx * rad,
+                y: cy + Math.sin(a) * ry * rad,
             });
         }
 
@@ -294,19 +372,28 @@
         focusedIdx >= 0 ? render.nodes[focusedIdx] : null,
     );
 
-    // Floating name card position: viewBox coords → stage pixels (xMidYMid meet).
-    const cardPos = $derived.by(() => {
+    // Name shown for a selected sense/action (neurons show nothing).
+    const nameText = $derived(
+        focusedNode && focusedNode.kind !== "neuron"
+            ? fullName(focusedNode)
+            : null,
+    );
+
+    // Name position (stage pixels). Full view: just under the node (viewBox →
+    // pixels, xMidYMid meet). Preview: pinned top-centre (the graph is too small
+    // to label in place).
+    const namePos = $derived.by(() => {
+        if (!nameText) return null;
+        if (variant === "preview") return { left: stageW / 2, top: 6 };
         if (focusedIdx < 0 || !pos[focusedIdx] || !stageW || !stageH) {
             return null;
         }
         const scale = Math.min(stageW / VW, stageH / VH);
         const offX = (stageW - VW * scale) / 2;
         const offY = (stageH - VH * scale) / 2;
-        const px = offX + pos[focusedIdx].x * scale;
-        const py = offY + pos[focusedIdx].y * scale;
         return {
-            left: Math.max(4, Math.min(stageW - 160, px + 14)),
-            top: Math.max(4, Math.min(stageH - 38, py - 12)),
+            left: offX + pos[focusedIdx].x * scale,
+            top: offY + pos[focusedIdx].y * scale + R_IO * scale + 6,
         };
     });
 
@@ -422,6 +509,21 @@
                 </marker>
             </defs>
 
+            {#if variant === "full"}
+                <text
+                    class="brain__caption"
+                    x={COL_L}
+                    y={TOP - 28}
+                    text-anchor="middle">SENSE</text
+                >
+                <text
+                    class="brain__caption"
+                    x={COL_R}
+                    y={TOP - 28}
+                    text-anchor="middle">ACTION</text
+                >
+            {/if}
+
             <!-- Background: click (or Esc) to clear focus -->
             <rect
                 x="0"
@@ -492,80 +594,82 @@
                             aria-label="{n.kind} {n.label}"
                         >
                             {#if n.selfWeight !== null}
-                                <circle
+                                <path
                                     class="brain__selfloop"
-                                    cx="0"
-                                    cy={-(R_INT + 8)}
-                                    r="5"
+                                    d={selfLoopPath(radius(n.kind))}
                                     fill="none"
-                                    stroke={n.selfWeight >= 0
+                                    stroke={(n.selfWeight ?? 0) >= 0
                                         ? "var(--color-link-pos)"
                                         : "var(--color-link-neg)"}
-                                    stroke-width="1.2"
+                                    stroke-width={strokeWidth(
+                                        n.selfWeight ?? 0,
+                                    )}
+                                    marker-end="url(#{arrowId})"
                                 />
                             {/if}
-                            {#if n.kind === "neuron"}
-                                <circle
-                                    r={R_INT}
-                                    fill="var(--color-surface)"
-                                    stroke="var(--color-text)"
-                                    stroke-width="1"
-                                />
-                            {:else if n.kind === "sense"}
-                                <circle
-                                    r={R_IO}
-                                    fill="var(--color-surface)"
-                                    stroke="var(--color-text)"
-                                    stroke-width="1.5"
-                                />
-                            {:else}
-                                <circle r={R_IO} fill="var(--color-text)" />
-                            {/if}
-
-                            {#if glyph}
-                                {@const Icon =
-                                    ICON_COMPONENTS[
-                                        glyph as keyof typeof ICON_COMPONENTS
-                                    ]}
-                                {#if Icon}
-                                    <foreignObject
-                                        x={-R_IO + 2}
-                                        y={-R_IO + 2}
-                                        width={R_IO * 2 - 4}
-                                        height={R_IO * 2 - 4}
-                                    >
-                                        <Icon
-                                            size={R_IO * 2 - 4}
-                                            color="var(--color-surface)"
-                                        />
-                                    </foreignObject>
+                            <g transform="scale({nodeScale(n)})">
+                                {#if n.kind === "neuron"}
+                                    <circle
+                                        r={R_INT}
+                                        fill="var(--color-surface)"
+                                        stroke="var(--color-text)"
+                                        stroke-width="1"
+                                    />
+                                {:else if n.kind === "sense"}
+                                    <circle
+                                        r={R_IO}
+                                        fill="var(--color-surface)"
+                                        stroke="var(--color-text)"
+                                        stroke-width="1.5"
+                                    />
+                                {:else}
+                                    <circle r={R_IO} fill="var(--color-text)" />
                                 {/if}
-                            {:else if n.kind !== "neuron"}
-                                <text
-                                    class="brain__label"
-                                    class:brain__label--invert={n.kind ===
-                                        "action"}
-                                    text-anchor="middle"
-                                    dominant-baseline="central"
-                                >
-                                    {n.label}
-                                </text>
-                            {/if}
+
+                                {#if glyph}
+                                    {@const Icon =
+                                        ICON_COMPONENTS[
+                                            glyph as keyof typeof ICON_COMPONENTS
+                                        ]}
+                                    {#if Icon}
+                                        <foreignObject
+                                            x={-R_IO + 2}
+                                            y={-R_IO + 2}
+                                            width={R_IO * 2 - 4}
+                                            height={R_IO * 2 - 4}
+                                        >
+                                            <Icon
+                                                size={R_IO * 2 - 4}
+                                                color={n.kind === "action"
+                                                    ? "var(--color-surface)"
+                                                    : "var(--color-text)"}
+                                            />
+                                        </foreignObject>
+                                    {/if}
+                                {:else if n.kind !== "neuron"}
+                                    <text
+                                        class="brain__label"
+                                        class:brain__label--invert={n.kind ===
+                                            "action"}
+                                        text-anchor="middle"
+                                        dominant-baseline="central"
+                                    >
+                                        {n.label}
+                                    </text>
+                                {/if}
+                            </g>
                         </g>
                     {/if}
                 {/each}
             </g>
         </svg>
 
-        {#if focusedNode && cardPos}
+        {#if nameText && namePos}
             <div
-                class="brain__card"
-                style="left: {cardPos.left}px; top: {cardPos.top}px"
+                class="brain__name"
+                style="left: {namePos.left}px; top: {namePos.top}px"
             >
-                <span class="brain__card-name">{fullName(focusedNode)}</span>
-                <span class="brain__card-kind small-caps"
-                    >{focusedNode.kind}</span
-                >
+                {nameText}
             </div>
         {/if}
 
@@ -679,29 +783,21 @@
         fill: var(--color-surface);
     }
 
-    /* ── Floating node info card ── */
-    .brain__card {
+    .brain__caption {
+        font-family: var(--font-mono);
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        fill: var(--color-text-muted);
+    }
+
+    /* ── Selected-node name (muted text, no card chrome) ── */
+    .brain__name {
         position: absolute;
+        transform: translateX(-50%);
         pointer-events: none;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding: var(--space-1) var(--space-2);
-        background: var(--color-surface);
-        border: 1px solid var(--color-border-subtle);
-        border-radius: var(--radius-sm);
-        box-shadow: var(--shadow-floating);
         white-space: nowrap;
-    }
-
-    .brain__card-name {
-        font-family: var(--font-sans);
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--color-text);
-    }
-
-    .brain__card-kind {
+        font-family: var(--font-mono);
+        font-size: 0.6875rem;
         color: var(--color-text-muted);
     }
 

@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import BrainExplorer from "./BrainExplorer.svelte";
 import { GENE_IO, GENE_NEURON, type BrainConn } from "./brain";
 
-// sensor 0 (X) → neuron 0 → action 8 (MOVE_RIGHT, "↱").
+// sensor 0 (X, text label) → neuron 0 → action 8 (MOVE_RIGHT, a glyph).
 const conns: BrainConn[] = [
     {
         srcType: GENE_IO,
@@ -21,10 +21,20 @@ const conns: BrainConn[] = [
 ];
 
 describe("BrainExplorer", () => {
-    it("renders sense and action labels", () => {
+    it("renders the sense node's text label", () => {
         render(BrainExplorer, { conns, neuronCount: 1, variant: "preview" });
-        expect(screen.getByText("X")).toBeTruthy(); // sensor 0
-        expect(screen.getByText("↱")).toBeTruthy(); // action 8
+        expect(screen.getByText("X")).toBeTruthy(); // sensor 0 (text label)
+    });
+
+    it("shows the full name of a selected sense, nothing for a neuron", async () => {
+        render(BrainExplorer, { conns, neuronCount: 1, variant: "preview" });
+        expect(screen.queryByText("Location X")).toBeNull();
+        await fireEvent.click(screen.getByLabelText("sense X"));
+        expect(screen.getByText("Location X")).toBeTruthy();
+        // Selecting a neuron shows no name text.
+        await fireEvent.click(screen.getByLabelText("neuron 0"));
+        expect(screen.queryByText("Location X")).toBeNull();
+        expect(screen.queryByText(/internal neuron/i)).toBeNull();
     });
 
     it("renders one node per distinct sense, action and neuron", () => {
