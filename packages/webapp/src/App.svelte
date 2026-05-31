@@ -14,7 +14,7 @@
     import HoverCard from "./lib/HoverCard.svelte";
     import BrainExplorer from "./lib/BrainExplorer.svelte";
     import type { BrainConn } from "./lib/brain";
-    import { MousePointerClick, Minimize2 } from "lucide-svelte";
+    import { MousePointerClick, ArrowLeft } from "lucide-svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -495,12 +495,13 @@
                     Brain · Agent #{displayBrain.id.toString().padStart(4, "0")}
                 </h2>
                 <button
-                    class="brain-region__close"
+                    class="brain-region__back"
                     onclick={() => (brainExpanded = false)}
-                    aria-label="Close brain explorer"
-                    title="Close (Esc)"
+                    aria-label="Back to grid"
+                    title="Back to grid (Esc)"
                 >
-                    <Minimize2 size={15} />
+                    <ArrowLeft size={14} />
+                    back to grid (esc)
                 </button>
             </div>
             <BrainExplorer
@@ -612,17 +613,22 @@
         margin: 0;
     }
 
-    .brain-region__close {
-        display: flex;
+    .brain-region__back {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
         padding: var(--space-1);
         background: transparent;
         border: 0;
         cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
         color: var(--color-text-muted);
         transition: color 0.1s;
     }
 
-    .brain-region__close:hover {
+    .brain-region__back:hover {
         color: var(--color-text);
     }
 

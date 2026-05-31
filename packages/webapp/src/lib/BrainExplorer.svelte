@@ -687,7 +687,7 @@
                 aria-label="Expand brain explorer"
                 title="Expand brain explorer"
             >
-                <Maximize2 size={14} />
+                <Maximize2 size={9} />
             </button>
         {/if}
     </div>
