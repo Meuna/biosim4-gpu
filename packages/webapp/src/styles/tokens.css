@@ -21,6 +21,8 @@
     --_neutral-900: #131313;
     --_accent: #15803d;
     --_warn: #b91c1c;
+    --_link-pos: #1d4ed8;
+    --_link-neg: #dc2626;
     /* Translucent raw values */
     --_dot: rgba(10, 10, 10, 0.08);
     --_border-subtle: rgba(10, 10, 10, 0.12);
@@ -46,6 +48,9 @@
     --color-control-surface: var(--_control-bg);
     --color-challenge-border: var(--_challenge-border);
     --color-warn: var(--_warn);
+    /* Brain-network connection weights: excitatory (blue) / inhibitory (red). */
+    --color-link-pos: var(--_link-pos);
+    --color-link-neg: var(--_link-neg);
 
     /* ── Spacing scale ── */
     --space-1: 0.25rem;
