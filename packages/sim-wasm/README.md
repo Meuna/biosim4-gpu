@@ -127,6 +127,23 @@ size for the typed-array index):
 | `biosim_wasm_get_genome_fingerprint_ptr` | `HEAPU32` | `uint64` (2×uint32 LE) | Genome hash set in `generation.c`. Read as `lo = HEAPU32[off + id*2]`, `hi = HEAPU32[off + id*2 + 1]`. |
 | `biosim_wasm_get_grid_cells_ptr` | `HEAPU32` | `uint32` | Flat row-major grid: `cells[gy*W + gx]`. Encoding: `0` = empty, `0xFFFFFFFF` = barrier, else **1-based agent index** (`raw - 1` = agent id). |
 
+**Brain (neural net) queries.** The connection and weight arrays are stored
+column-major with a `slot * population + id` stride (`conn_slot` outer,
+`agent_idx` inner). Read connection `slot` of agent `id` as
+`view[slot * population + id]`. Packed connection genes are decoded with the
+`gene.h` bit layout (`BIOSIM_GENE_SRC_TYPE` / `SRC_NUM` / `SINK_TYPE` /
+`SINK_NUM`); weights are fixed-point, divide by `BIOSIM_GENE_WEIGHT_SCALE`
+(8192). After slot compilation, IO source/sink numbers are real
+`biosim_sensor_t` / `biosim_action_t` ordinals and neuron numbers are compact
+`0..neuron_count-1`.
+
+| Function | HEAP view | Element type | Description |
+|---|---|---|---|
+| `biosim_wasm_get_genome_conn_ptr` | `HEAPU16` | `uint16` | Packed conn genes `[slot * pop + id]`. |
+| `biosim_wasm_get_genome_wgt_ptr` | `HEAPI16` | `int16` | Conn weights `[slot * pop + id]` (÷8192). |
+| `biosim_wasm_get_conn_length_ptr` | `HEAPU16` | `uint16` | Active connection count `[id]`. |
+| `biosim_wasm_get_neuron_count_ptr` | `HEAPU8` | `uint8` | Active neuron count `[id]`. |
+
 ## Default parameters
 
 Matches `sim-ref` defaults: population 3000, grid 128×128, 300 steps/generation,
