@@ -355,19 +355,25 @@ import so Vite does not attempt to rebundle the pre-built Emscripten output.
 `src/lib/BrainExplorer.svelte` renders an agent's neural network as a
 force-directed graph (d3-force): sensors pinned on the left column, actions on
 the right, internal neurons relaxing as a cloud between them. Connections are
-directed (arrowheads) and signed (accent = excitatory, warn = inhibitory, width
-∝ |weight|); clicking a node highlights its incident edges. The same component
-serves a docked `"preview"` (inside `CellPanel.svelte`) and a full-screen
-`"full"` overlay (hosted by `App.svelte`) with charge / link-distance sliders, a
-reheat button, the brain-synthesis line and a legend. d3's internal timer is
-stopped; ticks are driven by a self-cancelling `requestAnimationFrame` loop.
+directed (arrowheads trimmed to the node circumference) and signed (blue =
+excitatory, red = inhibitory, width ∝ |weight|); clicking a node highlights its
+incident edges (others fade to 0.05 opacity), turns its ring emerald, and shows
+a floating card with the node's full sensor/action name. The same component
+serves a docked `"preview"` (inside `CellPanel.svelte`, with an in-canvas expand
+button) and a `"full"` variant shown in a centered, non-fullscreen card
+(`App.svelte`) with compact charge / link-distance sliders and the
+brain-synthesis line. d3's internal timer is stopped; ticks are driven by a
+self-cancelling `requestAnimationFrame` loop, and the knob reads are `untrack`ed
+so slider moves re-warm the layout in place instead of rebuilding it.
 
 `src/lib/brain.ts` is the DOM-free decode layer: `unpackConn` mirrors the
 `gene.h` bit-layout (`[srcType:1][srcNum:7][sinkType:1][sinkNum:7]`, weight ÷
-`WEIGHT_SCALE`), `SENSOR_LABELS` / `ACTION_LABELS` / `ACTION_ICONS` map ordinals
-to short labels, and `brainSynthesis` counts the wired senses/actions. Per the
-gh-74 trade-off the connection genes are unpacked in the worker (TS), not in
-WASM, so the wasm/worker interface stays four plain pointer getters.
+`WEIGHT_SCALE`); `SENSOR_LABELS` / `ACTION_LABELS` give short in-node labels
+(a `"glyph:<name>"` entry renders an icon instead of text), `SENSOR_NAMES` /
+`ACTION_NAMES` give full names for the info card, and `brainSynthesis` counts the
+wired senses/actions. Per the gh-74 trade-off the connection genes are unpacked
+in the worker (TS), not in WASM, so the wasm/worker interface stays four plain
+pointer getters.
 
 The worker exposes the network over the message protocol: the UI sends
 `{ type: "requestBrain", id }`; the worker reads the `s_sim.nnet` heap buffers
