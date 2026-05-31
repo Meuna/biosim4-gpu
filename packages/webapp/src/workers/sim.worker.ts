@@ -9,6 +9,7 @@ import {
     kinematicPosition,
     lerpVec2,
 } from "../lib/kinematic";
+import { unpackConn, type BrainConn } from "../lib/brain";
 
 interface EmscriptenModule {
     ccall(
@@ -146,7 +147,8 @@ export type WorkerCmd =
     | { type: "randomAgent" }
     | { type: "selectAgentById"; id: number }
     | { type: "selectAgent"; id: number | null }
-    | { type: "hoverAgent"; id: number | null };
+    | { type: "hoverAgent"; id: number | null }
+    | { type: "requestBrain"; id: number };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -168,7 +170,13 @@ export type WorkerEvent =
     | { type: "error"; message: string }
     | { type: "agentPicked"; reason: "click" | "hover"; info: AgentInfo }
     | { type: "agentMissed"; reason: "click" | "hover" }
-    | { type: "agentUpdated"; info: AgentInfo };
+    | { type: "agentUpdated"; info: AgentInfo }
+    | {
+          type: "brainData";
+          id: number;
+          conns: BrainConn[];
+          neuronCount: number;
+      };
 
 // ── Rendering mode ────────────────────────────────────────────────────────────
 
@@ -411,6 +419,31 @@ function notifySelectionUpdate(): void {
         type: "agentUpdated",
         info: readAgentInfo(selectedAgentId),
     } satisfies WorkerEvent);
+}
+
+// Reads and decodes agent `id`'s neural network from the WASM heap. The conn /
+// weight arrays are column-major with a `slot * pop + id` stride (nnet.h).
+function readBrain(id: number): {
+    conns: BrainConn[];
+    neuronCount: number;
+} {
+    const { HEAPU8 } = biosim!;
+    const HEAPU16 = new Uint16Array(HEAPU8.buffer);
+    const HEAPI16 = new Int16Array(HEAPU8.buffer);
+    const pop = call("biosim_wasm_get_population");
+    // genome_conn/conn_length are uint16 (>>1), genome_wgt is int16 (>>1),
+    // neuron_count is uint8 (no shift) — mirror the typed-view discipline.
+    const connOff = call("biosim_wasm_get_genome_conn_ptr") >>> 1;
+    const wgtOff = call("biosim_wasm_get_genome_wgt_ptr") >>> 1;
+    const lenOff = call("biosim_wasm_get_conn_length_ptr") >>> 1;
+    const neuronOff = call("biosim_wasm_get_neuron_count_ptr");
+    const connLen = HEAPU16[lenOff + id];
+    const conns: BrainConn[] = [];
+    for (let slot = 0; slot < connLen; slot++) {
+        const i = slot * pop + id;
+        conns.push(unpackConn(HEAPU16[connOff + i], HEAPI16[wgtOff + i]));
+    }
+    return { conns, neuronCount: HEAPU8[neuronOff + id] };
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────
@@ -1089,6 +1122,17 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
                 type: "agentPicked",
                 reason: "click",
                 info: readAgentInfo(id),
+            } satisfies WorkerEvent);
+            break;
+        }
+        case "requestBrain": {
+            if (!biosim) break;
+            const { conns, neuronCount } = readBrain(cmd.id);
+            postMessage({
+                type: "brainData",
+                id: cmd.id,
+                conns,
+                neuronCount,
             } satisfies WorkerEvent);
             break;
         }
