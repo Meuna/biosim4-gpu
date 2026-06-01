@@ -49,4 +49,31 @@ describe("RightRail", () => {
         fireEvent.click(screen.getByRole("tab", { name: /cell/i }));
         expect(switched).toBe("cell");
     });
+
+    it("calls onClose when close button is clicked", () => {
+        let closed = false;
+        render(RightRail, {
+            open: true,
+            activeTab: "sim",
+            hasSelection: false,
+            onTabChange: () => {},
+            onClose: () => {
+                closed = true;
+            },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /close panel/i }));
+        expect(closed).toBe(true);
+    });
+
+    it("renders no close button when onClose is not provided", () => {
+        render(RightRail, {
+            open: true,
+            activeTab: "sim",
+            hasSelection: false,
+            onTabChange: () => {},
+        });
+        expect(
+            screen.queryByRole("button", { name: /close panel/i }),
+        ).toBeNull();
+    });
 });

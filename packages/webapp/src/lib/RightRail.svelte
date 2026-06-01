@@ -1,11 +1,13 @@
 <script lang="ts">
     import type { Snippet } from "svelte";
+    import { PanelRightClose } from "lucide-svelte";
 
     let {
         open,
         activeTab,
         hasSelection,
         onTabChange,
+        onClose,
         sim,
         cell,
     }: {
@@ -13,6 +15,7 @@
         activeTab: "sim" | "cell";
         hasSelection: boolean;
         onTabChange: (t: "sim" | "cell") => void;
+        onClose?: () => void;
         sim?: Snippet;
         cell?: Snippet;
     } = $props();
@@ -45,6 +48,15 @@
                 {/if}
                 Cell
             </button>
+            {#if onClose}
+                <button
+                    class="rail__close"
+                    onclick={onClose}
+                    aria-label="Close panel"
+                >
+                    <PanelRightClose size={16} />
+                </button>
+            {/if}
         </div>
 
         <!-- Tab body -->
@@ -169,6 +181,31 @@
             opacity: 1;
             transform: scale(1);
         }
+    }
+
+    /* Close icon button — right side of tab bar, separated by a border */
+    .rail__close {
+        flex-shrink: 0;
+        width: 3rem;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-left: 1px solid var(--color-border-subtle);
+        background: transparent;
+        cursor: pointer;
+        color: var(--color-text-muted);
+        transition: color 0.1s;
+    }
+
+    .rail__close:hover {
+        color: var(--color-text);
+    }
+
+    .rail__close:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: -2px;
     }
 
     /* ── Tab body ── */
