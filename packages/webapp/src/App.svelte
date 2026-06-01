@@ -434,11 +434,12 @@
         />
     {/if}
 
-    <!-- Hamburger toggle — top-right, z-index: 21 (below rail at 22) -->
+    <!-- Hamburger toggle — top-right, z-index: 30 -->
     <button
         class="hamburger"
+        class:hamburger--open={railOpen}
         onclick={() => (railOpen = !railOpen)}
-        aria-label="Open panel"
+        aria-label={railOpen ? "Close panel" : "Open panel"}
         aria-expanded={railOpen}
     >
         <Menu size={18} />
@@ -450,7 +451,6 @@
         {activeTab}
         hasSelection={displayAgent !== null}
         onTabChange={(t) => (activeTab = t)}
-        onClose={() => (railOpen = false)}
     >
         {#snippet sim()}<SimConfigPanel {send} />{/snippet}
         {#snippet cell()}
@@ -536,7 +536,7 @@
         position: fixed;
         right: var(--space-6);
         top: calc(3.5rem + var(--space-5));
-        z-index: 21;
+        z-index: 30;
         width: 2.75rem;
         height: 2.75rem;
         display: flex;
@@ -548,8 +548,14 @@
         cursor: pointer;
         color: var(--color-text);
         transition:
+            transform 0.26s cubic-bezier(0.2, 0.7, 0.3, 1),
             border-color 0.1s,
             color 0.1s;
+    }
+
+    .hamburger--open {
+        transform: translateX(var(--space-4)) translateY(calc(-1 * var(--space-3))) scale(0.6);
+        transform-origin: top right;
     }
 
     .hamburger:hover {
