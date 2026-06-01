@@ -5,9 +5,9 @@
         AgentInfo,
     } from "./workers/sim.worker";
     import TopBar from "./lib/TopBar.svelte";
-    import PlayDock from "./lib/PlayDock.svelte";
     import GridView from "./lib/GridView.svelte";
     import HUD from "./lib/HUD.svelte";
+    import TelemetryHUD from "./lib/TelemetryHUD.svelte";
     import RightRail from "./lib/RightRail.svelte";
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
     import CellPanel from "./lib/CellPanel.svelte";
@@ -110,6 +110,7 @@
             }
         } else if (msg.type === "configured") {
             isRunning = false;
+            hasStarted = false;
             currentGen = 0;
             currentStep = 0;
             survivalHistory = [];
@@ -127,6 +128,10 @@
 
     // ── Simulation state ─────────────────────────────────────────────────────
     let isRunning = $state(false);
+    let hasStarted = $state(false);
+    const mode = $derived(
+        isRunning ? "running" : hasStarted ? "paused" : "kinetic",
+    ) as "kinetic" | "running" | "paused";
     let currentGen = $state(0);
     let currentStep = $state(0);
     let currentPop = $state(3000);
@@ -268,19 +273,23 @@
             send({ type: "stop" });
         } else {
             isRunning = true;
+            hasStarted = true;
             send({ type: "play" });
         }
     }
 
     function handleStep(): void {
+        hasStarted = true;
         send({ type: "step" });
     }
 
     function handleGen(): void {
+        hasStarted = true;
         send({ type: "nextGeneration" });
     }
 
     function handleReset(): void {
+        hasStarted = false;
         isRunning = false;
         // 'reset' returns the worker to idle (kinematic sculpture) and zeros
         // playing state; 'stop' alone would only freeze agents at grid positions.
@@ -399,39 +408,33 @@
         </div>
     {/if}
 
-    <!-- z-index: 20 — fixed top bar -->
+    <!-- z-index: 20 — fixed top bar (contains PlayDock inline) -->
     <TopBar
         running={isRunning}
-        gen={currentGen}
-        step={currentStep}
-        {stepsPerGen}
+        onToggle={handleToggle}
+        onStep={handleStep}
+        onGen={handleGen}
+        onReset={handleReset}
     />
 
     <!-- Grid stack — hidden while the brain explorer is expanded (it takes over
          the main area). -->
     {#if !brainExpanded}
-        <!-- z-index: 25 — floating play controls, centered over the grid -->
-        <PlayDock
-            running={isRunning}
-            centerX={gridGeom.cx}
-            onToggle={handleToggle}
-            onStep={handleStep}
-            onGen={handleGen}
-            onReset={handleReset}
-        />
-
         <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
-        <GridView geom={gridGeom} running={isRunning} {gridSizeX} {gridSizeY} />
+        <GridView geom={gridGeom} {mode} {gridSizeX} {gridSizeY} />
 
-        <!-- z-index: 15 — telemetry HUD, bottom-left -->
-        <HUD
+        <!-- z-index: 15 — telemetry stats, top-right of grid -->
+        <TelemetryHUD
+            geom={gridGeom}
             running={isRunning}
             gen={currentGen}
             step={currentStep}
             {stepsPerGen}
             pop={currentPop}
-            {survivalHistory}
         />
+
+        <!-- z-index: 15 — survival sparkline, bottom-left -->
+        <HUD {survivalHistory} />
     {/if}
 
     <!-- Hamburger toggle — top-right, z-index: 30 -->
@@ -554,7 +557,8 @@
     }
 
     .hamburger--open {
-        transform: translateX(var(--space-4)) translateY(calc(-1 * var(--space-3))) scale(0.6);
+        transform: translateX(var(--space-4))
+            translateY(calc(-1 * var(--space-3))) scale(0.6);
         transform-origin: top right;
     }
 

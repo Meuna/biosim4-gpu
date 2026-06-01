@@ -1,14 +1,18 @@
 <script lang="ts">
+    import PlayDock from "./PlayDock.svelte";
+
     let {
         running,
-        gen,
-        step,
-        stepsPerGen,
+        onToggle,
+        onStep,
+        onGen,
+        onReset,
     }: {
         running: boolean;
-        gen: number;
-        step: number;
-        stepsPerGen: number;
+        onToggle: () => void;
+        onStep: () => void;
+        onGen: () => void;
+        onReset: () => void;
     } = $props();
 </script>
 
@@ -19,19 +23,7 @@
     </div>
 
     <div class="topbar__center">
-        {#if running}
-            <div class="status-chip status-chip--running">
-                <span class="pulse-dot" aria-hidden="true"></span>
-                <span class="status-chip__text">
-                    running · gen {gen} · step {step}/{stepsPerGen}
-                </span>
-            </div>
-        {:else}
-            <div class="status-chip status-chip--idle">
-                <span class="idle-dot" aria-hidden="true"></span>
-                <span class="status-chip__text">idle</span>
-            </div>
-        {/if}
+        <PlayDock {running} {onToggle} {onStep} {onGen} {onReset} />
     </div>
 
     <div class="topbar__right">
@@ -94,63 +86,6 @@
         position: absolute;
         left: 50%;
         transform: translateX(-50%);
-    }
-
-    .status-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-1) var(--space-3);
-        border-radius: var(--radius-pill);
-        border: 1px solid var(--color-border-subtle);
-        font-family: var(--font-mono);
-        font-size: 0.75rem;
-    }
-
-    .status-chip--running {
-        background: var(--color-accent-surface);
-        border-color: var(--color-accent-border);
-        color: var(--color-accent-text);
-    }
-
-    .status-chip--idle {
-        color: var(--color-text-muted);
-    }
-
-    .status-chip__text {
-        white-space: nowrap;
-    }
-
-    .pulse-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        background: var(--color-accent);
-        flex-shrink: 0;
-        animation: pulse 1.6s ease-out infinite;
-    }
-
-    .idle-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        border: 1.5px solid var(--color-text-muted);
-        flex-shrink: 0;
-    }
-
-    @keyframes pulse {
-        0% {
-            opacity: 1;
-            transform: scale(1);
-        }
-        50% {
-            opacity: 0.5;
-            transform: scale(0.85);
-        }
-        100% {
-            opacity: 1;
-            transform: scale(1);
-        }
     }
 
     .topbar__right {
