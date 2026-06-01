@@ -4,18 +4,8 @@
     const PAD_Y = 2;
 
     let {
-        running,
-        gen,
-        step,
-        stepsPerGen,
-        pop,
         survivalHistory,
     }: {
-        running: boolean;
-        gen: number;
-        step: number;
-        stepsPerGen: number;
-        pop: number;
         survivalHistory: number[];
     } = $props();
 
@@ -52,39 +42,9 @@
             y: (1 - h[i]) * (SVG_H - PAD_Y * 2) + PAD_Y,
         };
     });
-
-    /** Zero-pad a number to 3 digits */
-    function pad3(n: number): string {
-        return n.toString().padStart(3, "0");
-    }
-
-    /** Format population with space separator (French locale style) */
-    function fmtPop(n: number): string {
-        return n.toLocaleString("fr-FR");
-    }
 </script>
 
-<aside class="hud" aria-label="Simulation telemetry">
-    <p class="hud__header small-caps">Telemetry</p>
-
-    <dl class="hud__stats">
-        <dt class="hud__key">gen</dt>
-        <dd class="hud__val">{pad3(gen)}</dd>
-
-        <dt class="hud__key">step</dt>
-        <dd class="hud__val">
-            {pad3(step)}<span class="hud__total">/{stepsPerGen}</span>
-        </dd>
-
-        <dt class="hud__key">pop</dt>
-        <dd class="hud__val">{fmtPop(pop)}</dd>
-
-        <dt class="hud__key">fps</dt>
-        <dd class="hud__val" class:hud__val--accent={running}>
-            {running ? "60" : "--"}
-        </dd>
-    </dl>
-
+<aside class="hud" aria-label="Survival history">
     <p class="hud__sparkline-label small-caps">
         survival · last {survivalHistory.length} gens
     </p>
@@ -131,38 +91,6 @@
         left: var(--space-6);
         bottom: var(--space-5);
         z-index: 15;
-    }
-
-    .hud__header {
-        margin: 0 0 var(--space-2) 0;
-        /* .small-caps handles font/size/casing */
-    }
-
-    .hud__stats {
-        display: grid;
-        grid-template-columns: auto auto;
-        gap: var(--space-1) var(--space-6);
-        margin: 0 0 var(--space-3) 0;
-    }
-
-    .hud__key {
-        font-family: var(--font-mono);
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-    }
-
-    .hud__val {
-        font-family: var(--font-mono);
-        font-size: 0.75rem;
-        color: var(--color-text);
-    }
-
-    .hud__val--accent {
-        color: var(--color-accent-text);
-    }
-
-    .hud__total {
-        color: var(--color-text-muted);
     }
 
     .hud__sparkline-label {

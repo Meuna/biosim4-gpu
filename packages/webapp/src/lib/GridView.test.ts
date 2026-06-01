@@ -4,14 +4,20 @@ import GridView from "./GridView.svelte";
 const defaultGeom = { x: 80, y: 136, w: 600, h: 600, cx: 380, cy: 436 };
 
 describe("GridView", () => {
-    it("shows the idle overlay when not running", () => {
-        render(GridView, { geom: defaultGeom, running: false });
+    it("shows the idle overlay when mode is kinetic", () => {
+        render(GridView, { geom: defaultGeom, mode: "kinetic" });
         expect(screen.getByLabelText("Simulation not started")).toBeTruthy();
         expect(screen.getByText(/press play/i)).toBeTruthy();
     });
 
     it("hides the idle overlay when running", () => {
-        render(GridView, { geom: defaultGeom, running: true });
+        render(GridView, { geom: defaultGeom, mode: "running" });
+        expect(screen.queryByLabelText("Simulation not started")).toBeNull();
+        expect(screen.queryByText(/press play/i)).toBeNull();
+    });
+
+    it("hides the idle overlay when paused", () => {
+        render(GridView, { geom: defaultGeom, mode: "paused" });
         expect(screen.queryByLabelText("Simulation not started")).toBeNull();
         expect(screen.queryByText(/press play/i)).toBeNull();
     });
@@ -19,7 +25,7 @@ describe("GridView", () => {
     it("shows the correct grid size in the idle meta line (square)", () => {
         render(GridView, {
             geom: defaultGeom,
-            running: false,
+            mode: "kinetic",
             gridSizeX: 64,
             gridSizeY: 64,
         });
@@ -29,7 +35,7 @@ describe("GridView", () => {
     it("shows different X and Y sizes in the idle meta line (rectangular)", () => {
         render(GridView, {
             geom: { ...defaultGeom, h: 300 },
-            running: false,
+            mode: "kinetic",
             gridSizeX: 128,
             gridSizeY: 64,
         });
@@ -39,7 +45,7 @@ describe("GridView", () => {
     it("renders axis labels with separate X and Y values", () => {
         render(GridView, {
             geom: { ...defaultGeom, h: 300 },
-            running: false,
+            mode: "kinetic",
             gridSizeX: 256,
             gridSizeY: 128,
         });

@@ -1,7 +1,7 @@
 <script lang="ts">
     let {
         geom,
-        running,
+        mode,
         gridSizeX = 128,
         gridSizeY = 128,
     }: {
@@ -13,7 +13,7 @@
             cx: number;
             cy: number;
         };
-        running: boolean;
+        mode: "kinetic" | "running" | "paused";
         gridSizeX?: number;
         gridSizeY?: number;
     } = $props();
@@ -45,8 +45,8 @@
         >{gridSizeX}</span
     >
 
-    <!-- Idle overlay — visible only when simulation is not running -->
-    {#if !running}
+    <!-- Idle overlay — visible only before simulation has ever been started -->
+    {#if mode === "kinetic"}
         <div class="idle-overlay" aria-label="Simulation not started">
             <p class="idle-overlay__hint small-caps">Awaiting initialization</p>
             <p class="idle-overlay__display">

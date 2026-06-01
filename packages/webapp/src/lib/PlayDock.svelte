@@ -1,14 +1,21 @@
 <script lang="ts">
+    import {
+        Play,
+        Pause,
+        StepForward,
+        RotateCcw,
+        Baby,
+        Dna,
+    } from "lucide-svelte";
+
     let {
         running,
-        centerX,
         onToggle,
         onStep,
         onGen,
         onReset,
     }: {
         running: boolean;
-        centerX: number;
         onToggle: () => void;
         onStep: () => void;
         onGen: () => void;
@@ -16,135 +23,117 @@
     } = $props();
 </script>
 
-<div class="playdock" style="left: {centerX}px">
-    <!-- Primary play / pause toggle -->
+<div class="dock">
     <button
-        class="button button--pill button--filled playdock__primary"
+        class="dock__btn dock__btn--primary"
         onclick={onToggle}
-        aria-label={running ? "Pause simulation" : "Play simulation"}
+        aria-label={running ? "Stop simulation" : "Play simulation"}
     >
         {#if running}
-            <!-- Pause bars -->
-            <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="currentColor"
-                aria-hidden="true"
-            >
-                <rect x="2" y="1" width="3" height="10" rx="0.5" />
-                <rect x="7" y="1" width="3" height="10" rx="0.5" />
-            </svg>
-            Pause
+            <Pause size={14} />
+            Stop
         {:else}
-            <!-- Play triangle -->
-            <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                fill="currentColor"
-                aria-hidden="true"
-            >
-                <polygon points="2,1 11,6 2,11" />
-            </svg>
+            <Play size={14} />
             Play
         {/if}
     </button>
 
-    <div class="playdock__divider" aria-hidden="true"></div>
+    <div class="dock__sep" aria-hidden="true"></div>
 
-    <!-- Step one tick -->
     <button
-        class="button button--pill button--ghost"
+        class="dock__btn"
         onclick={onStep}
         aria-label="Step one simulation tick"
     >
+        <StepForward size={14} />
         Step
-        <svg
-            width="10"
-            height="10"
-            viewBox="0 0 10 10"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            aria-hidden="true"
-        >
-            <polyline points="2,2 7,5 2,8" />
-        </svg>
     </button>
 
-    <!-- Advance one generation -->
+    <button class="dock__btn" onclick={onReset} aria-label="Restart simulation">
+        <RotateCcw size={14} />
+        Restart
+    </button>
+
+    <div class="dock__sep" aria-hidden="true"></div>
+
     <button
-        class="button button--pill button--ghost"
+        class="dock__btn"
         onclick={onGen}
         aria-label="Advance one generation"
     >
-        Gen
-        <svg
-            width="10"
-            height="10"
-            viewBox="0 0 10 10"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            aria-hidden="true"
-        >
-            <polyline points="2,2 7,5 2,8" />
-        </svg>
+        <Baby size={14} />
+        Next Gen
     </button>
 
-    <div class="playdock__divider" aria-hidden="true"></div>
-
-    <!-- Reset simulation -->
     <button
-        class="button button--pill button--ghost button--icon"
-        onclick={onReset}
-        aria-label="Reset simulation"
+        class="dock__btn"
+        disabled
+        aria-label="Clear genome (not yet implemented)"
     >
-        <svg
-            width="14"
-            height="14"
-            viewBox="0 0 14 14"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-        >
-            <path d="M2.5 7a4.5 4.5 0 1 1 1 2.8" />
-            <polyline points="1,7.5 2.5,9.5 4,7.5" />
-        </svg>
+        <Dna size={14} />
+        Clear Genom
     </button>
 </div>
 
 <style>
-    .playdock {
-        position: fixed;
-        top: 4.75rem;
-        transform: translateX(-50%);
-        z-index: 25;
+    .dock {
         display: flex;
         align-items: center;
+        gap: 0;
+    }
+
+    .dock__btn {
+        display: inline-flex;
+        align-items: center;
         gap: var(--space-1);
-        padding: var(--space-1);
+        height: 2rem;
+        padding: 0 var(--space-2);
+        background: transparent;
+        border: none;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        color: var(--color-text-muted);
+        letter-spacing: 0.04em;
+        transition:
+            color 0.1s,
+            background 0.1s;
+        white-space: nowrap;
+    }
+
+    .dock__btn:hover:not(:disabled) {
+        color: var(--color-text);
+    }
+
+    .dock__btn:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
+
+    .dock__btn:disabled {
+        opacity: 0.35;
+        cursor: default;
+    }
+
+    .dock__btn--primary {
+        background: var(--color-text);
+        color: var(--color-surface);
         border-radius: var(--radius-pill);
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        box-shadow: var(--shadow-floating);
-        transition: left 0.26s cubic-bezier(0.2, 0.7, 0.3, 1);
+        padding: 0 var(--space-3);
+        font-weight: 500;
     }
 
-    .playdock__primary {
-        height: 2.25rem;
-        padding: 0 var(--space-4);
+    .dock__btn--primary:hover {
+        opacity: 0.85;
+        color: var(--color-surface);
     }
 
-    .playdock__divider {
+    .dock__sep {
         width: 1px;
         height: 1.25rem;
         background: var(--color-border-subtle);
-        margin: 0 var(--space-1);
+        margin: 0 var(--space-2);
         flex-shrink: 0;
     }
 </style>
