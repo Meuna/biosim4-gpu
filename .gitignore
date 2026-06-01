@@ -64,3 +64,4 @@ cmake-build-*/
 
 # Per-developer Claude Code settings (never committed; .claude/settings.json is)
 .claude/settings.local.json
+.claude/CLAUDE.local.md
