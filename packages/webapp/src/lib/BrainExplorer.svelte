@@ -487,13 +487,11 @@
         actions · {synthesis.connections} connections
     </p>
 
-    <div
-        class="brain__stage"
-        bind:clientWidth={stageW}
-        bind:clientHeight={stageH}
-    >
+    <div class="brain__stage">
         <svg
             class="brain__svg"
+            bind:clientWidth={stageW}
+            bind:clientHeight={stageH}
             viewBox="0 0 {VW} {VH}"
             preserveAspectRatio="xMidYMid meet"
             role="img"
