@@ -14,7 +14,7 @@
     import HoverCard from "./lib/HoverCard.svelte";
     import BrainExplorer from "./lib/BrainExplorer.svelte";
     import type { BrainConn } from "./lib/brain";
-    import { MousePointerClick, ArrowLeft } from "lucide-svelte";
+    import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -434,27 +434,14 @@
         />
     {/if}
 
-    <!-- Hamburger toggle — top-right, z-index: 30 -->
+    <!-- Hamburger toggle — top-right, z-index: 21 (below rail at 22) -->
     <button
         class="hamburger"
         onclick={() => (railOpen = !railOpen)}
-        aria-label={railOpen ? "Close panel" : "Open panel"}
+        aria-label="Open panel"
         aria-expanded={railOpen}
     >
-        <svg
-            width="18"
-            height="14"
-            viewBox="0 0 18 14"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.5"
-            stroke-linecap="round"
-            aria-hidden="true"
-        >
-            <line x1="0" y1="1" x2="18" y2="1" />
-            <line x1="0" y1="7" x2="18" y2="7" />
-            <line x1="0" y1="13" x2="18" y2="13" />
-        </svg>
+        <Menu size={18} />
     </button>
 
     <!-- z-index: 22 — slide-in right rail with two tabs -->
@@ -463,6 +450,7 @@
         {activeTab}
         hasSelection={displayAgent !== null}
         onTabChange={(t) => (activeTab = t)}
+        onClose={() => (railOpen = false)}
     >
         {#snippet sim()}<SimConfigPanel {send} />{/snippet}
         {#snippet cell()}
@@ -548,7 +536,7 @@
         position: fixed;
         right: var(--space-6);
         top: calc(3.5rem + var(--space-5));
-        z-index: 30;
+        z-index: 21;
         width: 2.75rem;
         height: 2.75rem;
         display: flex;
