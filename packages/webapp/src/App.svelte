@@ -359,7 +359,7 @@
         send({ type: "nextGeneration" });
     }
 
-    function handleRestart(): void {
+    function handleRewind(): void {
         send({ type: "restart" });
     }
 
@@ -478,7 +478,7 @@
         onToggle={handleToggle}
         onStep={handleStep}
         onGen={handleGen}
-        onRestart={handleRestart}
+        onRewind={handleRewind}
     />
 
     <!-- Grid stack — hidden while the brain explorer is expanded (it takes over

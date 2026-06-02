@@ -10,7 +10,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onRestart: noOp,
+            onRewind: noOp,
         });
         expect(screen.getByText("biosim4-gpu")).toBeTruthy();
         expect(screen.getByText("visualizer · v0.1")).toBeTruthy();
@@ -22,7 +22,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onRestart: noOp,
+            onRewind: noOp,
         });
         const link = screen.getByRole("link", { name: /github/i });
         expect(link).toBeTruthy();
@@ -35,7 +35,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onRestart: noOp,
+            onRewind: noOp,
         });
         expect(
             screen.getByRole("button", { name: /play simulation/i }),
@@ -48,27 +48,25 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onRestart: noOp,
+            onRewind: noOp,
         });
         expect(
             screen.getByRole("button", { name: /stop simulation/i }),
         ).toBeTruthy();
     });
 
-    it("renders Step, Restart, Next Gen, and Clear Genom buttons", () => {
+    it("renders Step, Rewind, Next Gen, and Clear Genom buttons", () => {
         render(TopBar, {
             running: false,
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onRestart: noOp,
+            onRewind: noOp,
         });
         expect(
             screen.getByRole("button", { name: /step one simulation tick/i }),
         ).toBeTruthy();
-        expect(
-            screen.getByRole("button", { name: /restart simulation/i }),
-        ).toBeTruthy();
+        expect(screen.getByRole("button", { name: /rewind/i })).toBeTruthy();
         expect(
             screen.getByRole("button", { name: /advance one generation/i }),
         ).toBeTruthy();

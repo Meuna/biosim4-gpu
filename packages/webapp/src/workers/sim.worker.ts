@@ -1031,7 +1031,6 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             setChallengeSpec(p.challenge);
             currentChallenge = p.challenge;
             call("biosim_wasm_init");
-            call("biosim_wasm_save_gen_snapshot");
             cacheBarrierCells();
             mode = "idle";
             startTime = performance.now();
@@ -1049,7 +1048,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         case "restart":
             playing = false;
-            call("biosim_wasm_restore_gen_snapshot");
+            call("biosim_wasm_restart_from_survivors");
             postMessage(statusNow("paused"));
             break;
         case "clearGenom":
@@ -1184,7 +1183,6 @@ async function init(): Promise<void> {
         locateFile: (filename: string) => `/wasm/${filename}`,
     });
     call("biosim_wasm_init");
-    call("biosim_wasm_save_gen_snapshot");
     postMessage({ type: "ready" } satisfies WorkerEvent);
 }
 
