@@ -111,11 +111,8 @@
                 } satisfies WorkerCmd);
             }
         } else if (msg.type === "status") {
-            // Parse step count from "Run step N" status messages.
-            const m = msg.message.match(/Run step (\d+)/);
-            if (m) currentStep = parseInt(m[1], 10);
-            // Detect auto-stop at end of generation.
-            if (msg.message.includes("Reached end of generation")) {
+            currentStep = msg.step;
+            if (msg.state === "gen_complete") {
                 isRunning = false;
             }
         } else if (msg.type === "census") {
@@ -362,15 +359,8 @@
         send({ type: "nextGeneration" });
     }
 
-    function handleReset(): void {
-        hasStarted = false;
-        isRunning = false;
-        // 'reset' returns the worker to idle (kinematic sculpture) and zeros
-        // playing state; 'stop' alone would only freeze agents at grid positions.
-        send({ type: "reset" });
-        currentGen = 0;
-        currentStep = 0;
-        survivalHistory = [];
+    function handleRestart(): void {
+        send({ type: "restart" });
     }
 
     // ── Agent selection ───────────────────────────────────────────────────────
@@ -488,7 +478,7 @@
         onToggle={handleToggle}
         onStep={handleStep}
         onGen={handleGen}
-        onReset={handleReset}
+        onRestart={handleRestart}
     />
 
     <!-- Grid stack — hidden while the brain explorer is expanded (it takes over

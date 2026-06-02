@@ -6,13 +6,13 @@
         onToggle,
         onStep,
         onGen,
-        onReset,
+        onRestart,
     }: {
         running: boolean;
         onToggle: () => void;
         onStep: () => void;
         onGen: () => void;
-        onReset: () => void;
+        onRestart: () => void;
     } = $props();
 </script>
 
@@ -23,7 +23,7 @@
     </div>
 
     <div class="topbar__center">
-        <PlayDock {running} {onToggle} {onStep} {onGen} {onReset} />
+        <PlayDock {running} {onToggle} {onStep} {onGen} {onRestart} />
     </div>
 
     <div class="topbar__right">

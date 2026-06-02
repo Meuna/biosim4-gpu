@@ -10,7 +10,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onReset: noOp,
+            onRestart: noOp,
         });
         expect(screen.getByText("biosim4-gpu")).toBeTruthy();
         expect(screen.getByText("visualizer · v0.1")).toBeTruthy();
@@ -22,7 +22,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onReset: noOp,
+            onRestart: noOp,
         });
         const link = screen.getByRole("link", { name: /github/i });
         expect(link).toBeTruthy();
@@ -35,7 +35,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onReset: noOp,
+            onRestart: noOp,
         });
         expect(
             screen.getByRole("button", { name: /play simulation/i }),
@@ -48,7 +48,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onReset: noOp,
+            onRestart: noOp,
         });
         expect(
             screen.getByRole("button", { name: /stop simulation/i }),
@@ -61,7 +61,7 @@ describe("TopBar", () => {
             onToggle: noOp,
             onStep: noOp,
             onGen: noOp,
-            onReset: noOp,
+            onRestart: noOp,
         });
         expect(
             screen.getByRole("button", { name: /step one simulation tick/i }),

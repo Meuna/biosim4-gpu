@@ -13,13 +13,13 @@
         onToggle,
         onStep,
         onGen,
-        onReset,
+        onRestart,
     }: {
         running: boolean;
         onToggle: () => void;
         onStep: () => void;
         onGen: () => void;
-        onReset: () => void;
+        onRestart: () => void;
     } = $props();
 </script>
 
@@ -49,7 +49,11 @@
         Step
     </button>
 
-    <button class="dock__btn" onclick={onReset} aria-label="Restart simulation">
+    <button
+        class="dock__btn"
+        onclick={onRestart}
+        aria-label="Restart simulation"
+    >
         <RotateCcw size={14} />
         Restart
     </button>
