@@ -1,15 +1,17 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import PlayDock from "./PlayDock.svelte";
 
+const defaultProps = {
+    running: false,
+    onToggle: () => {},
+    onStep: () => {},
+    onGen: () => {},
+    onRestart: () => {},
+};
+
 describe("PlayDock", () => {
     it("shows Play button when not running", () => {
-        render(PlayDock, {
-            running: false,
-            onToggle: () => {},
-            onStep: () => {},
-            onGen: () => {},
-            onReset: () => {},
-        });
+        render(PlayDock, defaultProps);
         expect(
             screen.getByRole("button", { name: /play simulation/i }),
         ).toBeTruthy();
@@ -19,13 +21,7 @@ describe("PlayDock", () => {
     });
 
     it("shows Stop button when running", () => {
-        render(PlayDock, {
-            running: true,
-            onToggle: () => {},
-            onStep: () => {},
-            onGen: () => {},
-            onReset: () => {},
-        });
+        render(PlayDock, { ...defaultProps, running: true });
         expect(
             screen.getByRole("button", { name: /stop simulation/i }),
         ).toBeTruthy();
@@ -35,13 +31,7 @@ describe("PlayDock", () => {
     });
 
     it("renders Step, Restart, and Next Gen buttons", () => {
-        render(PlayDock, {
-            running: false,
-            onToggle: () => {},
-            onStep: () => {},
-            onGen: () => {},
-            onReset: () => {},
-        });
+        render(PlayDock, defaultProps);
         expect(
             screen.getByRole("button", { name: /step one simulation tick/i }),
         ).toBeTruthy();
@@ -54,13 +44,7 @@ describe("PlayDock", () => {
     });
 
     it("renders Clear Genom button as disabled", () => {
-        render(PlayDock, {
-            running: false,
-            onToggle: () => {},
-            onStep: () => {},
-            onGen: () => {},
-            onReset: () => {},
-        });
+        render(PlayDock, defaultProps);
         const btn = screen.getByRole("button", {
             name: /clear genome/i,
         }) as HTMLButtonElement;
@@ -71,13 +55,10 @@ describe("PlayDock", () => {
     it("calls onToggle when primary button clicked", () => {
         let called = false;
         render(PlayDock, {
-            running: false,
+            ...defaultProps,
             onToggle: () => {
                 called = true;
             },
-            onStep: () => {},
-            onGen: () => {},
-            onReset: () => {},
         });
         fireEvent.click(
             screen.getByRole("button", { name: /play simulation/i }),
@@ -88,13 +69,10 @@ describe("PlayDock", () => {
     it("calls onStep when Step button clicked", () => {
         let called = false;
         render(PlayDock, {
-            running: false,
-            onToggle: () => {},
+            ...defaultProps,
             onStep: () => {
                 called = true;
             },
-            onGen: () => {},
-            onReset: () => {},
         });
         fireEvent.click(
             screen.getByRole("button", { name: /step one simulation tick/i }),
@@ -102,14 +80,11 @@ describe("PlayDock", () => {
         expect(called).toBe(true);
     });
 
-    it("calls onReset when Restart button clicked", () => {
+    it("calls onRestart when Restart button clicked", () => {
         let called = false;
         render(PlayDock, {
-            running: false,
-            onToggle: () => {},
-            onStep: () => {},
-            onGen: () => {},
-            onReset: () => {
+            ...defaultProps,
+            onRestart: () => {
                 called = true;
             },
         });

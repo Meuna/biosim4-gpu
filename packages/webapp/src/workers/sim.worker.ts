@@ -116,7 +116,8 @@ export type WorkerCmd =
     | { type: "stop" }
     | { type: "reset" }
     | { type: "step" }
-    | { type: "stepAgent" }
+    | { type: "restart" }
+    | { type: "clearGenom" }
     | { type: "nextGeneration" }
     | { type: "configure"; params: SimParams }
     | {
@@ -152,7 +153,12 @@ export type WorkerCmd =
 
 export type WorkerEvent =
     | { type: "ready" }
-    | { type: "status"; message: string }
+    | {
+          type: "status";
+          state: "idle" | "running" | "paused" | "gen_complete";
+          gen: number;
+          step: number;
+      }
     | {
           type: "census";
           gen: number;
@@ -931,26 +937,21 @@ function startTransitionIfNeeded(): void {
     }
 }
 
+function statusNow(
+    state: "idle" | "running" | "paused" | "gen_complete",
+): WorkerEvent {
+    return {
+        type: "status",
+        state,
+        gen: call("biosim_wasm_get_gen"),
+        step: call("biosim_wasm_get_step"),
+    };
+}
+
 function doStep(): void {
     startTransitionIfNeeded();
     call("biosim_wasm_do_step");
-    const step = call("biosim_wasm_get_step");
-    postMessage({
-        type: "status",
-        message: `Run step ${step}`,
-    } satisfies WorkerEvent);
-    notifySelectionUpdate();
-}
-
-function doStepAgent(): void {
-    startTransitionIfNeeded();
-    call("biosim_wasm_do_step_agent");
-    const agent = call("biosim_wasm_get_last_agent");
-    const step = call("biosim_wasm_get_step");
-    postMessage({
-        type: "status",
-        message: `Run a agent ${agent} at step ${step}`,
-    } satisfies WorkerEvent);
+    postMessage(statusNow("running"));
     notifySelectionUpdate();
 }
 
@@ -974,25 +975,15 @@ function playTick(): void {
     if (!playing) return;
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
-        postMessage({
-            type: "status",
-            message: "Reached end of generation",
-        } satisfies WorkerEvent);
+        postMessage(statusNow("gen_complete"));
         return;
     }
     call("biosim_wasm_do_step");
-    const step = call("biosim_wasm_get_step");
-    postMessage({
-        type: "status",
-        message: `Run step ${step}`,
-    } satisfies WorkerEvent);
+    postMessage(statusNow("running"));
     notifySelectionUpdate();
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
-        postMessage({
-            type: "status",
-            message: "Reached end of generation",
-        } satisfies WorkerEvent);
+        postMessage(statusNow("gen_complete"));
     } else {
         setTimeout(playTick, 0);
     }
@@ -1006,20 +997,14 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         case "play":
             startTransitionIfNeeded();
             playing = true;
-            postMessage({
-                type: "status",
-                message: "Resume running",
-            } satisfies WorkerEvent);
+            postMessage(statusNow("running"));
             playTick();
             break;
         case "stop":
             playing = false;
             // mode intentionally unchanged — agents freeze at their current
             // grid positions (idle-timeout return to kinematic is future work).
-            postMessage({
-                type: "status",
-                message: "Stop requested",
-            } satisfies WorkerEvent);
+            postMessage(statusNow("paused"));
             break;
         case "reset":
             playing = false;
@@ -1046,6 +1031,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             setChallengeSpec(p.challenge);
             currentChallenge = p.challenge;
             call("biosim_wasm_init");
+            call("biosim_wasm_save_gen_snapshot");
             cacheBarrierCells();
             mode = "idle";
             startTime = performance.now();
@@ -1061,8 +1047,15 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         case "step":
             doStep();
             break;
-        case "stepAgent":
-            doStepAgent();
+        case "restart":
+            playing = false;
+            call("biosim_wasm_restore_gen_snapshot");
+            postMessage(statusNow("paused"));
+            break;
+        case "clearGenom":
+            playing = false;
+            call("biosim_wasm_clear_genome");
+            postMessage(statusNow("idle"));
             break;
         case "nextGeneration":
             doNextGeneration();
@@ -1191,6 +1184,7 @@ async function init(): Promise<void> {
         locateFile: (filename: string) => `/wasm/${filename}`,
     });
     call("biosim_wasm_init");
+    call("biosim_wasm_save_gen_snapshot");
     postMessage({ type: "ready" } satisfies WorkerEvent);
 }
 
