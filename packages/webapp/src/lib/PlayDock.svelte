@@ -3,7 +3,7 @@
         Play,
         Pause,
         StepForward,
-        RotateCcw,
+        History,
         Baby,
         Dna,
     } from "lucide-svelte";
@@ -13,13 +13,13 @@
         onToggle,
         onStep,
         onGen,
-        onRestart,
+        onRewind,
     }: {
         running: boolean;
         onToggle: () => void;
         onStep: () => void;
         onGen: () => void;
-        onRestart: () => void;
+        onRewind: () => void;
     } = $props();
 </script>
 
@@ -49,15 +49,6 @@
         Step
     </button>
 
-    <button
-        class="dock__btn"
-        onclick={onRestart}
-        aria-label="Restart simulation"
-    >
-        <RotateCcw size={14} />
-        Restart
-    </button>
-
     <div class="dock__sep" aria-hidden="true"></div>
 
     <button
@@ -67,6 +58,15 @@
     >
         <Baby size={14} />
         Next Gen
+    </button>
+
+    <button
+        class="dock__btn"
+        onclick={onRewind}
+        aria-label="Rewind: reproduce a new generation from the last survivors"
+    >
+        <History size={14} />
+        Rewind
     </button>
 
     <button

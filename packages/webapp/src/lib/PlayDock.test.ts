@@ -6,7 +6,7 @@ const defaultProps = {
     onToggle: () => {},
     onStep: () => {},
     onGen: () => {},
-    onRestart: () => {},
+    onRewind: () => {},
 };
 
 describe("PlayDock", () => {
@@ -30,14 +30,12 @@ describe("PlayDock", () => {
         ).toBeNull();
     });
 
-    it("renders Step, Restart, and Next Gen buttons", () => {
+    it("renders Step, Next Gen, and Rewind buttons", () => {
         render(PlayDock, defaultProps);
         expect(
             screen.getByRole("button", { name: /step one simulation tick/i }),
         ).toBeTruthy();
-        expect(
-            screen.getByRole("button", { name: /restart simulation/i }),
-        ).toBeTruthy();
+        expect(screen.getByRole("button", { name: /rewind/i })).toBeTruthy();
         expect(
             screen.getByRole("button", { name: /advance one generation/i }),
         ).toBeTruthy();
@@ -80,17 +78,15 @@ describe("PlayDock", () => {
         expect(called).toBe(true);
     });
 
-    it("calls onRestart when Restart button clicked", () => {
+    it("calls onRewind when Rewind button clicked", () => {
         let called = false;
         render(PlayDock, {
             ...defaultProps,
-            onRestart: () => {
+            onRewind: () => {
                 called = true;
             },
         });
-        fireEvent.click(
-            screen.getByRole("button", { name: /restart simulation/i }),
-        );
+        fireEvent.click(screen.getByRole("button", { name: /rewind/i }));
         expect(called).toBe(true);
     });
 });
