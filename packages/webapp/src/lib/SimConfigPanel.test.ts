@@ -1,11 +1,42 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
 import { vi } from "vitest";
 import SimConfigPanel from "./SimConfigPanel.svelte";
-import type { WorkerCmd } from "../workers/sim.worker";
+import type { SimParams } from "../workers/sim.worker";
+
+const DEFAULTS: SimParams = {
+    population: 3000,
+    gridSizeX: 128,
+    gridSizeY: 128,
+    stepsPerGen: 300,
+    maxGenomeLen: 24,
+    maxNeurons: 5,
+    pointMutationRate: 0.001,
+    sexualReproduction: false,
+    chooseParentsByFitness: false,
+    losRange: 16,
+    sensorRadius: 2,
+    enableKill: false,
+    responsivenessCurveK: 2.0,
+    challenge: { kind: "x_band", xMin: 0.5, xMax: 1.0, mirror: false },
+    barriers: [],
+};
+
+function renderPanel(overrides?: Partial<Parameters<typeof render>[1]>) {
+    return render(SimConfigPanel, {
+        props: {
+            draftConfig: { ...DEFAULTS },
+            isDirty: false,
+            onDraftChange: vi.fn(),
+            onRevert: vi.fn(),
+            onApply: vi.fn(),
+            ...overrides?.props,
+        },
+    });
+}
 
 describe("SimConfigPanel", () => {
     it("renders the Simulation heading and Configuration eyebrow", () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+        renderPanel();
         expect(
             screen.getByRole("heading", { name: "Simulation" }),
         ).toBeTruthy();
@@ -13,101 +44,92 @@ describe("SimConfigPanel", () => {
     });
 
     it("shows section labels sim.h, genome.h, io.h directly (no global toggle)", () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+        renderPanel();
         expect(screen.getByText("sim.h")).toBeTruthy();
         expect(screen.getByText("genome.h")).toBeTruthy();
         expect(screen.getByText("io.h")).toBeTruthy();
     });
 
     it("renders ParamSlider for Population", () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+        renderPanel();
         expect(screen.getByLabelText("Population")).toBeTruthy();
     });
 
     it("renders ParamSlider for Mutation rate", () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+        renderPanel();
         expect(screen.getByLabelText("Mutation rate")).toBeTruthy();
     });
 
     it("renders GridSizeControl with the Grid section label", () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+        renderPanel();
         expect(screen.getByText("Grid")).toBeTruthy();
         expect(screen.getByText("grid.h")).toBeTruthy();
     });
 
     it("shows challenge section with kind dropdown", () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+        renderPanel();
         expect(screen.getByText("Challenge")).toBeTruthy();
         expect(screen.getByLabelText("Challenge kind")).toBeTruthy();
     });
 
     it("shows barriers section with add button", () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+        renderPanel();
         expect(screen.getByText("Barriers")).toBeTruthy();
         expect(screen.getByLabelText("Add barrier")).toBeTruthy();
     });
 
-    it('starts in sync and shows "✓ in sync"', () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
+    it('shows "✓ in sync" when isDirty is false', () => {
+        renderPanel({ props: { isDirty: false } });
         expect(screen.getByText("✓ in sync")).toBeTruthy();
     });
 
-    it("marks apply button as dirty after changing a parameter", async () => {
-        render(SimConfigPanel, { props: { send: vi.fn() } });
-        await fireEvent.input(screen.getByLabelText("Population"), {
-            target: { value: "500" },
-        });
+    it('shows "apply & restart →" when isDirty is true', () => {
+        renderPanel({ props: { isDirty: true } });
         expect(screen.getByText("apply & restart →")).toBeTruthy();
     });
 
-    it("calls send with configure command when apply is clicked", async () => {
-        const send = vi.fn<[WorkerCmd], void>();
-        render(SimConfigPanel, { props: { send } });
-        await fireEvent.input(screen.getByLabelText("Population"), {
-            target: { value: "500" },
-        });
-        await fireEvent.click(
-            screen.getByRole("button", {
-                name: "Apply configuration and restart simulation",
-            }),
-        );
-        expect(send).toHaveBeenCalledOnce();
-        const cmd = send.mock.calls[0][0];
-        expect(cmd.type).toBe("configure");
-        if (cmd.type === "configure") {
-            expect(cmd.params.population).toBe(500);
-        }
+    it("does not render revert button when isDirty is false", () => {
+        renderPanel({ props: { isDirty: false } });
+        expect(
+            screen.queryByRole("button", { name: "Revert all changes" }),
+        ).toBeNull();
     });
 
-    it("configure command includes a challenge field", async () => {
-        const send = vi.fn<[WorkerCmd], void>();
-        render(SimConfigPanel, { props: { send } });
-        await fireEvent.input(screen.getByLabelText("Population"), {
-            target: { value: "500" },
-        });
-        await fireEvent.click(
-            screen.getByRole("button", {
-                name: "Apply configuration and restart simulation",
-            }),
-        );
-        const cmd = send.mock.calls[0][0];
-        if (cmd.type === "configure") {
-            expect(cmd.params.challenge).toBeDefined();
-            expect(cmd.params.challenge.kind).toBe("x_band");
-        }
+    it("renders revert button when isDirty is true", () => {
+        renderPanel({ props: { isDirty: true } });
+        expect(
+            screen.getByRole("button", { name: "Revert all changes" }),
+        ).toBeTruthy();
     });
 
-    it("resets dirty flag after apply", async () => {
-        const send = vi.fn();
-        render(SimConfigPanel, { props: { send } });
-        await fireEvent.input(screen.getByLabelText("Population"), {
-            target: { value: "500" },
-        });
+    it("calls onApply when apply button is clicked", async () => {
+        const onApply = vi.fn();
+        renderPanel({ props: { isDirty: true, onApply } });
         await fireEvent.click(
             screen.getByRole("button", {
                 name: "Apply configuration and restart simulation",
             }),
         );
-        expect(screen.getByText("✓ in sync")).toBeTruthy();
+        expect(onApply).toHaveBeenCalledOnce();
+    });
+
+    it("calls onRevert when revert button is clicked", async () => {
+        const onRevert = vi.fn();
+        renderPanel({ props: { isDirty: true, onRevert } });
+        await fireEvent.click(
+            screen.getByRole("button", { name: "Revert all changes" }),
+        );
+        expect(onRevert).toHaveBeenCalledOnce();
+    });
+
+    it("calls onDraftChange with updated population when slider changes", async () => {
+        const onDraftChange = vi.fn<[SimParams], void>();
+        renderPanel({ props: { onDraftChange } });
+        await fireEvent.input(screen.getByLabelText("Population"), {
+            target: { value: "500" },
+        });
+        expect(onDraftChange).toHaveBeenCalledOnce();
+        const updated = onDraftChange.mock.calls[0][0];
+        expect(updated.population).toBe(500);
     });
 });

@@ -3,6 +3,8 @@
         WorkerCmd,
         WorkerEvent,
         AgentInfo,
+        SimParams,
+        ChallengeSpec,
     } from "./workers/sim.worker";
     import TopBar from "./lib/TopBar.svelte";
     import GridView from "./lib/GridView.svelte";
@@ -15,6 +17,31 @@
     import BrainExplorer from "./lib/BrainExplorer.svelte";
     import type { BrainConn } from "./lib/brain";
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
+
+    // ── Config defaults (must match bindings.c s_params_mut) ────────────────
+    const DEFAULT_CHALLENGE: ChallengeSpec = {
+        kind: "x_band",
+        xMin: 0.5,
+        xMax: 1.0,
+        mirror: false,
+    };
+    const DEFAULTS: SimParams = {
+        population: 3000,
+        gridSizeX: 128,
+        gridSizeY: 128,
+        stepsPerGen: 300,
+        maxGenomeLen: 24,
+        maxNeurons: 5,
+        pointMutationRate: 0.001,
+        sexualReproduction: false,
+        chooseParentsByFitness: false,
+        losRange: 16,
+        sensorRadius: 2,
+        enableKill: false,
+        responsivenessCurveK: 2.0,
+        challenge: DEFAULT_CHALLENGE,
+        barriers: [],
+    };
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -118,6 +145,16 @@
             gridSizeX = msg.gridSizeX;
             gridSizeY = msg.gridSizeY;
             stepsPerGen = msg.stepsPerGen;
+            if (pendingLastPlayedConfig !== null) {
+                lastPlayedConfig = pendingLastPlayedConfig;
+                pendingLastPlayedConfig = null;
+            }
+            if (pendingPlay) {
+                pendingPlay = false;
+                isRunning = true;
+                hasStarted = true;
+                send({ type: "play" });
+            }
         }
         // "error" type is silently ignored in this phase; no UI for it yet.
     });
@@ -125,6 +162,23 @@
     function send(cmd: WorkerCmd): void {
         worker.postMessage(cmd);
     }
+
+    // ── Draft / last-played config ───────────────────────────────────────────
+    let draftConfig = $state<SimParams>({
+        ...DEFAULTS,
+        challenge: { ...DEFAULT_CHALLENGE },
+    });
+    let lastPlayedConfig = $state<SimParams>({
+        ...DEFAULTS,
+        challenge: { ...DEFAULT_CHALLENGE },
+    });
+    const isDirty = $derived(
+        JSON.stringify($state.snapshot(draftConfig)) !==
+            JSON.stringify($state.snapshot(lastPlayedConfig)),
+    );
+    // Plain (non-reactive) — only read inside the worker message handler.
+    let pendingPlay = false;
+    let pendingLastPlayedConfig: SimParams | null = null;
 
     // ── Simulation state ─────────────────────────────────────────────────────
     let isRunning = $state(false);
@@ -266,11 +320,31 @@
         } satisfies WorkerCmd);
     });
 
+    // ── Draft config callbacks ────────────────────────────────────────────────
+    function handleDraftChange(params: SimParams): void {
+        draftConfig = params;
+    }
+
+    function handleApply(): void {
+        const snapshot = $state.snapshot(draftConfig) as SimParams;
+        pendingLastPlayedConfig = snapshot;
+        send({ type: "configure", params: snapshot });
+    }
+
+    function handleRevert(): void {
+        draftConfig = { ...($state.snapshot(lastPlayedConfig) as SimParams) };
+    }
+
     // ── Play / pause / step / gen / reset ────────────────────────────────────
     function handleToggle(): void {
         if (isRunning) {
             isRunning = false;
             send({ type: "stop" });
+        } else if (isDirty) {
+            pendingPlay = true;
+            const snapshot = $state.snapshot(draftConfig) as SimParams;
+            pendingLastPlayedConfig = snapshot;
+            send({ type: "configure", params: snapshot });
         } else {
             isRunning = true;
             hasStarted = true;
@@ -455,7 +529,15 @@
         hasSelection={displayAgent !== null}
         onTabChange={(t) => (activeTab = t)}
     >
-        {#snippet sim()}<SimConfigPanel {send} />{/snippet}
+        {#snippet sim()}
+            <SimConfigPanel
+                {draftConfig}
+                {isDirty}
+                onDraftChange={handleDraftChange}
+                onRevert={handleRevert}
+                onApply={handleApply}
+            />
+        {/snippet}
         {#snippet cell()}
             <CellPanel
                 agent={displayAgent}
@@ -486,7 +568,7 @@
                     Brain · Agent #{displayBrain.id.toString().padStart(4, "0")}
                 </h2>
                 <button
-                    class="brain-region__back"
+                    class="button button--utility brain-region__back"
                     onclick={() => (brainExpanded = false)}
                     aria-label="Back to grid"
                     title="Back to grid (Esc)"
@@ -616,16 +698,6 @@
     .brain-region__back {
         margin-left: auto;
         display: inline-flex;
-        align-items: center;
-        gap: var(--space-1);
-        padding: var(--space-1);
-        background: transparent;
-        border: 0;
-        cursor: pointer;
-        font-family: var(--font-mono);
-        font-size: var(--text-sm);
-        color: var(--color-text-muted);
-        transition: color 0.1s;
     }
 
     .brain-region__back:hover {
