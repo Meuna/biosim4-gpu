@@ -18,8 +18,6 @@
     border-radius: var(--radius-sm);
     padding: var(--space-1) var(--space-3);
     cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
     transition:
         border-color 0.1s,
         color 0.1s,
@@ -44,6 +42,8 @@
 
 /* Pill variant — rounded, sans-serif, normal case */
 .button--pill {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     border-radius: var(--radius-pill);
     font-family: var(--font-sans);
     text-transform: none;
@@ -53,6 +53,8 @@
 
 /* Filled variant — solid background */
 .button--filled {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     background: var(--color-text);
     color: var(--color-surface);
     border-color: var(--color-text);
@@ -66,12 +68,26 @@
 
 /* Ghost variant — subtle border and muted text */
 .button--ghost {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     border-color: var(--color-border-subtle);
     color: var(--color-text-muted);
 }
 
 .button--ghost:hover {
     border-color: var(--color-border);
+    color: var(--color-text);
+}
+
+/* Utility variant — no border and muted text */
+.button--utility {
+    color: var(--color-text-muted);
+    border: 0;
+    padding: var(--space-1);
+    gap: var(--space-1);
+}
+
+.button--utility:hover {
     color: var(--color-text);
 }
 

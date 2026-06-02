@@ -2,70 +2,40 @@
     // SimConfigPanel — Simulation configuration panel.
     // All scalar knobs use ParamSlider; grid size uses GridSizeControl.
     // Presets and sliders for the grid are always visible simultaneously.
-    import type {
-        WorkerCmd,
-        SimParams,
-        ChallengeSpec,
-    } from "../workers/sim.worker";
+    import type { SimParams } from "../workers/sim.worker";
     import ParamSlider from "./ParamSlider.svelte";
     import GridSizeControl from "./GridSizeControl.svelte";
     import ChallengeControl from "./ChallengeControl.svelte";
     import BarrierControl from "./BarrierControl.svelte";
-    import { TriangleAlert } from "lucide-svelte";
+    import { TriangleAlert, Undo2 } from "lucide-svelte";
 
     interface Props {
-        send: (cmd: WorkerCmd) => void;
+        draftConfig: SimParams;
+        isDirty: boolean;
+        onDraftChange: (params: SimParams) => void;
+        onRevert: () => void;
+        onApply: () => void;
     }
-    const { send }: Props = $props();
-
-    const DEFAULT_CHALLENGE: ChallengeSpec = {
-        kind: "x_band",
-        xMin: 0.5,
-        xMax: 1.0,
-        mirror: false,
-    };
-
-    const DEFAULTS: SimParams = {
-        population: 3000,
-        gridSizeX: 128,
-        gridSizeY: 128,
-        stepsPerGen: 300,
-        maxGenomeLen: 24,
-        maxNeurons: 5,
-        pointMutationRate: 0.001,
-        sexualReproduction: false,
-        chooseParentsByFitness: false,
-        losRange: 16,
-        sensorRadius: 2,
-        enableKill: false,
-        responsivenessCurveK: 2.0,
-        challenge: DEFAULT_CHALLENGE,
-        barriers: [],
-    };
-
-    let params = $state<SimParams>({ ...DEFAULTS });
-    let dirty = $state(false);
-
-    function markDirty(): void {
-        dirty = true;
-    }
-
-    function applyConfig(): void {
-        // $state.snapshot() produces a plain (non-proxy) deep copy so that
-        // postMessage's structured-clone can serialise the nested challenge object.
-        send({
-            type: "configure",
-            params: $state.snapshot(params) as SimParams,
-        });
-        dirty = false;
-    }
+    const { draftConfig, isDirty, onDraftChange, onRevert, onApply }: Props =
+        $props();
 </script>
 
 <div class="sim-config">
     <!-- Panel header -->
     <div class="sim-config__header">
         <p class="small-caps sim-config__eyebrow">Configuration</p>
-        <h2 class="sim-config__title">Simulation</h2>
+        <div class="sim-config__title-row">
+            <h2 class="sim-config__title">Simulation</h2>
+            {#if isDirty}
+                <button
+                    class="button button--utility sim-config__revert"
+                    onclick={onRevert}
+                    aria-label="Revert all changes"
+                >
+                    <Undo2 size={14} /> revert
+                </button>
+            {/if}
+        </div>
         <p class="sim-config__subtitle">biosim4-gpu / OpenCL stepper</p>
     </div>
 
@@ -81,10 +51,9 @@
         min={100}
         max={10000}
         step={100}
-        value={params.population}
+        value={draftConfig.population}
         onchange={(v) => {
-            params.population = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, population: v });
         }}
     />
 
@@ -94,10 +63,9 @@
         min={50}
         max={1000}
         step={10}
-        value={params.stepsPerGen}
+        value={draftConfig.stepsPerGen}
         onchange={(v) => {
-            params.stepsPerGen = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, stepsPerGen: v });
         }}
     />
 
@@ -110,12 +78,10 @@
     </div>
 
     <GridSizeControl
-        gridSizeX={params.gridSizeX}
-        gridSizeY={params.gridSizeY}
+        gridSizeX={draftConfig.gridSizeX}
+        gridSizeY={draftConfig.gridSizeY}
         onchange={(x, y) => {
-            params.gridSizeX = x;
-            params.gridSizeY = y;
-            markDirty();
+            onDraftChange({ ...draftConfig, gridSizeX: x, gridSizeY: y });
         }}
     />
 
@@ -133,10 +99,9 @@
         min={4}
         max={64}
         step={1}
-        value={params.maxGenomeLen}
+        value={draftConfig.maxGenomeLen}
         onchange={(v) => {
-            params.maxGenomeLen = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, maxGenomeLen: v });
         }}
     />
 
@@ -146,10 +111,9 @@
         min={1}
         max={20}
         step={1}
-        value={params.maxNeurons}
+        value={draftConfig.maxNeurons}
         onchange={(v) => {
-            params.maxNeurons = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, maxNeurons: v });
         }}
     />
 
@@ -159,11 +123,10 @@
         min={0}
         max={0.05}
         step={0.0001}
-        value={params.pointMutationRate}
+        value={draftConfig.pointMutationRate}
         format={(v) => v.toFixed(4)}
         onchange={(v) => {
-            params.pointMutationRate = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, pointMutationRate: v });
         }}
     />
 
@@ -172,12 +135,13 @@
             <input
                 type="checkbox"
                 class="toggle-checkbox"
-                checked={params.sexualReproduction}
+                checked={draftConfig.sexualReproduction}
                 onchange={(e) => {
-                    params.sexualReproduction = (
-                        e.target as HTMLInputElement
-                    ).checked;
-                    markDirty();
+                    onDraftChange({
+                        ...draftConfig,
+                        sexualReproduction: (e.target as HTMLInputElement)
+                            .checked,
+                    });
                 }}
                 aria-label="Sexual reproduction"
             />
@@ -190,12 +154,13 @@
             <input
                 type="checkbox"
                 class="toggle-checkbox"
-                checked={params.chooseParentsByFitness}
+                checked={draftConfig.chooseParentsByFitness}
                 onchange={(e) => {
-                    params.chooseParentsByFitness = (
-                        e.target as HTMLInputElement
-                    ).checked;
-                    markDirty();
+                    onDraftChange({
+                        ...draftConfig,
+                        chooseParentsByFitness: (e.target as HTMLInputElement)
+                            .checked,
+                    });
                 }}
                 aria-label="Choose parents by fitness"
             />
@@ -217,10 +182,9 @@
         min={1}
         max={32}
         step={1}
-        value={params.losRange}
+        value={draftConfig.losRange}
         onchange={(v) => {
-            params.losRange = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, losRange: v });
         }}
     />
 
@@ -230,10 +194,9 @@
         min={1}
         max={16}
         step={1}
-        value={params.sensorRadius}
+        value={draftConfig.sensorRadius}
         onchange={(v) => {
-            params.sensorRadius = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, sensorRadius: v });
         }}
     />
 
@@ -242,10 +205,12 @@
             <input
                 type="checkbox"
                 class="toggle-checkbox"
-                checked={params.enableKill}
+                checked={draftConfig.enableKill}
                 onchange={(e) => {
-                    params.enableKill = (e.target as HTMLInputElement).checked;
-                    markDirty();
+                    onDraftChange({
+                        ...draftConfig,
+                        enableKill: (e.target as HTMLInputElement).checked,
+                    });
                 }}
                 aria-label="Enable kill action"
             />
@@ -259,11 +224,10 @@
         min={0.5}
         max={4.0}
         step={0.1}
-        value={params.responsivenessCurveK}
+        value={draftConfig.responsivenessCurveK}
         format={(v) => v.toFixed(1)}
         onchange={(v) => {
-            params.responsivenessCurveK = v;
-            markDirty();
+            onDraftChange({ ...draftConfig, responsivenessCurveK: v });
         }}
     />
 
@@ -276,14 +240,13 @@
     </div>
 
     <ChallengeControl
-        value={params.challenge}
+        value={draftConfig.challenge}
         onchange={(spec) => {
-            params.challenge = spec;
-            markDirty();
+            onDraftChange({ ...draftConfig, challenge: spec });
         }}
     />
 
-    {#if (params.challenge.kind === "near_barrier" || params.challenge.kind === "location_sequence") && params.barriers.length === 0}
+    {#if (draftConfig.challenge.kind === "near_barrier" || draftConfig.challenge.kind === "location_sequence") && draftConfig.barriers.length === 0}
         <p class="sim-config__barrier-warning">
             <TriangleAlert size={14} style="display: inline-block;" />
             This challenge requires at least one barrier — add one in the Barriers
@@ -300,11 +263,10 @@
     </div>
 
     <BarrierControl
-        value={params.barriers}
-        challengeKind={params.challenge.kind}
+        value={draftConfig.barriers}
+        challengeKind={draftConfig.challenge.kind}
         onchange={(b) => {
-            params.barriers = b;
-            markDirty();
+            onDraftChange({ ...draftConfig, barriers: b });
         }}
     />
 
@@ -314,14 +276,14 @@
 <!-- Sticky apply bar — stays at bottom of rail scroll area -->
 <div class="sim-config__apply">
     <button
-        class="button button--pill {dirty
+        class="button button--pill {isDirty
             ? 'button--filled'
             : 'button--ghost'} sim-config__apply-btn"
-        disabled={!dirty}
-        onclick={applyConfig}
+        disabled={!isDirty}
+        onclick={onApply}
         aria-label="Apply configuration and restart simulation"
     >
-        {dirty ? "apply & restart →" : "✓ in sync"}
+        {isDirty ? "apply & restart →" : "✓ in sync"}
     </button>
 </div>
 
@@ -338,6 +300,12 @@
         margin: 0 0 var(--space-1) 0;
     }
 
+    .sim-config__title-row {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-3);
+    }
+
     .sim-config__title {
         font-family: var(--font-sans);
         font-size: var(--text-2xl);
@@ -345,6 +313,11 @@
         line-height: 1.12;
         color: var(--color-text);
         margin: 0;
+    }
+
+    .sim-config__revert {
+        margin-left: auto;
+        display: inline-flex;
     }
 
     .sim-config__subtitle {
