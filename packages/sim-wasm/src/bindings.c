@@ -36,7 +36,7 @@ static const biosim_param_entry_t s_params[] = {
 
 /* ── mutable parameter override table ───────────────────────────────────────
  * Lazy copy of s_params. biosim_wasm_set_param_* writes here; biosim_wasm_init
- * passes this table to biosim_params_init so overrides survive reinit.        */
+ * passes this table to biosim_params_init so overrides survive reinit.  */
 
 static biosim_param_entry_t s_params_mut[S_PARAMS_COUNT];
 static bool s_params_mut_ready = false;
@@ -53,7 +53,7 @@ static void params_mut_ensure(void) {
 /* Module-level challenge spec. biosim_wasm_set_challenge_kind resets and sets
  * the kind; per-kind setters fill the union fields. biosim_wasm_init passes
  * &s_challenge to biosim_sim_create, so any override applied before init
- * takes effect on the next reinitialisation.                                */
+ * takes effect on the next reinitialisation. */
 static biosim_challenge_spec_t s_challenge = {
     .kind = BIOSIM_CHALLENGE_X_BAND,
     .x_band = {.x_min = 0.5F, .x_max = 1.0F, .mirror = false},
@@ -64,7 +64,7 @@ static biosim_challenge_spec_t s_challenge = {
 /* Module-level barrier list. biosim_wasm_clear_barriers resets the list;
  * biosim_wasm_add_barrier appends one spec. biosim_wasm_init passes
  * s_barriers/s_n_barriers to biosim_sim_create. The array grows on demand
- * via realloc; there is no hard upper limit.                                */
+ * via realloc; there is no hard upper limit. */
 static biosim_barrier_spec_t *s_barriers = NULL;
 static size_t s_barriers_cap = 0U;
 static uint32_t s_n_barriers = 0U;
@@ -75,49 +75,44 @@ static biosim_sim_t s_sim;
 static biosim_census_t s_last_census;
 static bool s_initialized = false;
 
-/* ── survivors slab ──────────────────────────────────────────────────────────
+/* ── survivors ───────────────────────────────────────────────────────────────
  * Compact genome snapshot of the challenge-passing agents from the most recent
- * generation boundary. Stored in row-major survivor order (s * max_len + j),
- * matching the temp buffers used inside biosim_generation_reproduce.
+ * generation boundary. Stored in row-major survivor order (s * stride + j)
+ * where stride == s_surv_stride_cap.
  *
- * All four pointer slabs are allocated eagerly in biosim_wasm_init
- * (max_len × pop for conn/wgt, pop for len/scores) and freed by wasm_teardown.
- * s_surv_gen_rng captures s_sim.gen_rng before reproduction so that
- * biosim_wasm_restart_from_survivors can re-seed the same deterministic run.  */
+ * All four buffers are allocated lazily in snapshot_survivors and grow on
+ * demand (doubling policy). s_surv_pop_cap tracks the allocated slot count
+ * (population dimension); s_surv_stride_cap tracks the allocated stride
+ * (genome dimension). The snapshot stride may exceed the current
+ * s_sim.genome.max_len after a reinit — spawn_generation always uses
+ * s_surv_stride_cap, never the live max_len, to index these buffers.
+ * s_saved_gen_rng captures s_sim.gen_rng before reproduction so that
+ * biosim_wasm_restart_from_survivors can re-seed the same deterministic run. */
 
-static uint16_t *s_surv_conn = NULL; /* compact: s * max_len + j */
-static int16_t *s_surv_wgt = NULL;   /* compact: s * max_len + j */
-static uint16_t *s_surv_len = NULL;  /* per survivor             */
-static float *s_surv_scores = NULL;  /* per survivor             */
+static uint16_t *s_surv_conn = NULL; /* compact: s * s_surv_stride_cap + j */
+static int16_t *s_surv_wgt = NULL;   /* compact: s * s_surv_stride_cap + j */
+static uint16_t *s_surv_len = NULL;  /* per survivor                       */
+static float *s_surv_scores = NULL;  /* per survivor                       */
 static uint32_t s_surv_count = 0U;
-static uint64_t s_surv_gen_rng = 0ULL;
-static bool s_has_survivors = false;
+static uint32_t s_surv_pop_cap = 0U;    /* allocated survivor slots        */
+static uint16_t s_surv_stride_cap = 0U; /* allocated stride per survivor   */
+static uint64_t s_saved_gen_rng = 0ULL;
+
+/* ── forward declarations ────────────────────────────────────────────────── */
+
+static biosim_status_t spawn_generation(void);
+EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void);
 
 /* ── lifecycle ───────────────────────────────────────────────────────────── */
 
-static void wasm_teardown(void) {
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_init(void) {
+    biosim_log_init(&biosim_log_default_ctx);
     if (s_initialized) {
         biosim_sim_free(&s_sim);
         s_initialized = false;
     }
     memset(&s_sim, 0, sizeof(s_sim));
     memset(&s_last_census, 0, sizeof(s_last_census));
-    free(s_surv_conn);
-    s_surv_conn = NULL;
-    free(s_surv_wgt);
-    s_surv_wgt = NULL;
-    free(s_surv_len);
-    s_surv_len = NULL;
-    free(s_surv_scores);
-    s_surv_scores = NULL;
-    s_surv_count = 0U;
-    s_surv_gen_rng = 0ULL;
-    s_has_survivors = false;
-}
-
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_init(void) {
-    biosim_log_init(&biosim_log_default_ctx);
-    wasm_teardown();
     params_mut_ensure();
 
     biosim_params_t p;
@@ -127,37 +122,41 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_init(void) {
     }
 
     rc = biosim_sim_create(&s_sim, &p, &s_challenge, s_barriers, s_n_barriers);
+    if (rc != BIOSIM_OK) {
+        return (int)rc;
+    }
+    s_initialized = true;
     biosim_params_free(&p);
     if (rc != BIOSIM_OK) {
         return (int)rc;
     }
 
-    const uint32_t pop = s_sim.agents.population;
-    const uint16_t max_len = s_sim.genome.max_len;
-
-    s_surv_conn = malloc((size_t)max_len * pop * sizeof(uint16_t));
-    s_surv_wgt = malloc((size_t)max_len * pop * sizeof(int16_t));
-    s_surv_len = malloc((size_t)pop * sizeof(uint16_t));
-    s_surv_scores = malloc((size_t)pop * sizeof(float));
-    if (!s_surv_conn || !s_surv_wgt || !s_surv_len || !s_surv_scores) {
-        biosim_sim_free(&s_sim);
-        free(s_surv_conn);
-        s_surv_conn = NULL;
-        free(s_surv_wgt);
-        s_surv_wgt = NULL;
-        free(s_surv_len);
-        s_surv_len = NULL;
-        free(s_surv_scores);
-        s_surv_scores = NULL;
-        return BIOSIM_ERR_NOMEM;
+    rc = spawn_generation();
+    if (rc != BIOSIM_OK) {
+        biosim_wasm_free();
     }
-
-    s_initialized = true;
-    return BIOSIM_OK;
+    return (int)rc;
 }
 
 EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
-    wasm_teardown();
+    if (s_initialized) {
+        biosim_sim_free(&s_sim);
+        s_initialized = false;
+    }
+    memset(&s_sim, 0, sizeof(s_sim));
+    memset(&s_last_census, 0, sizeof(s_last_census));
+    free(s_surv_conn);
+    free(s_surv_wgt);
+    free(s_surv_len);
+    free(s_surv_scores);
+    s_surv_conn = NULL;
+    s_surv_wgt = NULL;
+    s_surv_len = NULL;
+    s_surv_scores = NULL;
+    s_surv_count = 0U;
+    s_surv_pop_cap = 0U;
+    s_surv_stride_cap = 0U;
+    s_saved_gen_rng = 0ULL;
     free(s_barriers);
     s_barriers = NULL;
     s_barriers_cap = 0U;
@@ -251,19 +250,17 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_neighbor_count(
     s_challenge.neighbor_count.exclude_border = (exclude_border != 0);
 }
 
-/* clang-format off */
 EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_center_sparse(
-    float x, float y, float outer_r, float inner_r,
-    float min_n, float max_n, int weighted) {
-    s_challenge.center_sparse.x       = x;
-    s_challenge.center_sparse.y       = y;
+    float x, float y, float outer_r, float inner_r, float min_n, float max_n, int weighted
+) {
+    s_challenge.center_sparse.x = x;
+    s_challenge.center_sparse.y = y;
     s_challenge.center_sparse.outer_r = outer_r;
     s_challenge.center_sparse.inner_r = inner_r;
-    s_challenge.center_sparse.min_n   = min_n;
-    s_challenge.center_sparse.max_n   = max_n;
+    s_challenge.center_sparse.min_n = min_n;
+    s_challenge.center_sparse.max_n = max_n;
     s_challenge.center_sparse.weighted = (weighted != 0);
 }
-/* clang-format on */
 
 EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_near_barrier(float radius) {
     s_challenge.near_barrier.radius = radius;
@@ -280,6 +277,20 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_clear_barriers(void) {
     s_n_barriers = 0U;
 }
 
+static int barriers_grow(void) {
+    if (s_n_barriers < s_barriers_cap) {
+        return BIOSIM_OK;
+    }
+    size_t new_cap = s_barriers_cap == 0U ? 8U : s_barriers_cap * 2U;
+    biosim_barrier_spec_t *grown = realloc(s_barriers, new_cap * sizeof(biosim_barrier_spec_t));
+    if (grown == NULL) {
+        return BIOSIM_ERR_NOMEM;
+    }
+    s_barriers = grown;
+    s_barriers_cap = new_cap;
+    return BIOSIM_OK;
+}
+
 /* Append one barrier spec to the list. x and y are grid cell coordinates;
  * pass -32768 (INT16_MIN = BIOSIM_BARRIER_POS_UNSET) for random placement.
  * length and width are in cells; pass 0.0 (BIOSIM_BARRIER_DIM_UNSET) for a
@@ -288,14 +299,9 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_clear_barriers(void) {
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
     int kind, int x, int y, float length, float width
 ) {
-    if (s_n_barriers >= s_barriers_cap) {
-        size_t new_cap = s_barriers_cap == 0U ? 8U : s_barriers_cap * 2U;
-        biosim_barrier_spec_t *grown = realloc(s_barriers, new_cap * sizeof(biosim_barrier_spec_t));
-        if (grown == NULL) {
-            return BIOSIM_ERR_NOMEM;
-        }
-        s_barriers = grown;
-        s_barriers_cap = new_cap;
+    int rc = barriers_grow();
+    if (rc != BIOSIM_OK) {
+        return rc;
     }
     biosim_barrier_spec_t *b = &s_barriers[s_n_barriers];
     b->kind = (biosim_barrier_kind_t)kind;
@@ -326,69 +332,93 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_step(void) {
 
 /* ── survivors operations ────────────────────────────────────────────────── */
 
-/* Save compact survivor genomes and the generation RNG seed into the slab.
+static int survivors_grow(uint32_t n_survivors, uint16_t max_len) {
+    uint32_t new_pop = s_surv_pop_cap;
+    uint16_t new_stride = s_surv_stride_cap;
+    if (n_survivors > s_surv_pop_cap) {
+        new_pop = (s_surv_pop_cap * 2U >= n_survivors) ? s_surv_pop_cap * 2U : n_survivors;
+    }
+    if (max_len > s_surv_stride_cap) {
+        uint16_t doubled = (uint16_t)(s_surv_stride_cap * 2U);
+        new_stride = (doubled >= max_len) ? doubled : max_len;
+    }
+    if (new_pop == s_surv_pop_cap && new_stride == s_surv_stride_cap) {
+        return BIOSIM_OK;
+    }
+    uint16_t *nc = realloc(s_surv_conn, (size_t)new_stride * new_pop * sizeof(uint16_t));
+    int16_t *nw = realloc(s_surv_wgt, (size_t)new_stride * new_pop * sizeof(int16_t));
+    uint16_t *nl = realloc(s_surv_len, (size_t)new_pop * sizeof(uint16_t));
+    float *ns = realloc(s_surv_scores, (size_t)new_pop * sizeof(float));
+    if (!nc || !nw || !nl || !ns) {
+        free(nc);
+        free(nw);
+        free(nl);
+        free(ns);
+        return BIOSIM_ERR_NOMEM;
+    }
+    s_surv_conn = nc;
+    s_surv_wgt = nw;
+    s_surv_len = nl;
+    s_surv_scores = ns;
+    s_surv_pop_cap = new_pop;
+    s_surv_stride_cap = new_stride;
+    return BIOSIM_OK;
+}
+
+/* Save compact survivor genomes and the generation RNG seed.
  * survivors[]/scores[] come from biosim_generation_collect_survivors.
  * gen_rng is captured before reproduction so biosim_wasm_restart_from_survivors
  * can deterministically regenerate the same population.                     */
-static int save_survivors(const uint32_t *survivors, const float *scores, uint32_t n_survivors) {
+static int snapshot_survivors(
+    const uint32_t *survivors, const float *scores, uint32_t n_survivors
+) {
     const uint32_t pop = s_sim.agents.population;
     const uint16_t max_len = s_sim.genome.max_len;
+
+    int rc = survivors_grow(n_survivors, max_len);
+    if (rc != BIOSIM_OK) {
+        return rc;
+    }
 
     for (uint32_t s = 0U; s < n_survivors; s++) {
         const uint32_t src = survivors[s];
         const uint16_t len = s_sim.genome.len[src];
         s_surv_len[s] = len;
         for (uint16_t j = 0U; j < len; j++) {
-            s_surv_conn[(size_t)s * max_len + j] = s_sim.genome.conn[(size_t)j * pop + src];
-            s_surv_wgt[(size_t)s * max_len + j] = s_sim.genome.wgt[(size_t)j * pop + src];
+            s_surv_conn[(size_t)s * s_surv_stride_cap + j] =
+                s_sim.genome.conn[(size_t)j * pop + src];
+            s_surv_wgt[(size_t)s * s_surv_stride_cap + j] = s_sim.genome.wgt[(size_t)j * pop + src];
         }
         s_surv_scores[s] = scores[s];
     }
 
     s_surv_count = n_survivors;
-    s_surv_gen_rng = s_sim.gen_rng;
-    s_has_survivors = true;
+    s_saved_gen_rng = s_sim.gen_rng;
     return BIOSIM_OK;
 }
 
-/* Discard the saved survivors so the next init() starts from a random genome. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
-    if (!s_initialized) {
-        return BIOSIM_ERR_INVALID;
-    }
-    s_has_survivors = false;
-    return BIOSIM_OK;
-}
+/* Populate the grid for a new generation run.
+ * Branches on s_surv_count: if survivors exist, breeds from the compact
+ * genome; randomises otherwise.
+ * Resets s_sim.step and s_sim.kills to zero on success.
+ * Must be called after biosim_sim_create (or after snapshot_survivors) before any
+ * simulation steps are taken.                                                */
+static biosim_status_t spawn_generation(void) {
+    biosim_status_t rc;
 
-/* Reproduce a new population from the saved survivors, using the same gen_rng
- * seed as the original reproduction.  Thanks to determinism, calling this
- * after biosim_wasm_next_generation yields the same starting population.
- * Falls back to biosim_generation_init_random when no survivors were saved.  */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_restart_from_survivors(void) {
-    if (!s_initialized || !s_has_survivors) {
-        return BIOSIM_ERR_INVALID;
-    }
-
-    biosim_status_t rc = BIOSIM_OK;
-
-    if (s_surv_count == 0U) {
-        s_sim.gen_rng = s_surv_gen_rng;
-        rc = biosim_generation_init_random(&s_sim);
-    } else {
+    if (s_surv_count > 0U) {
         const uint32_t pop = s_sim.agents.population;
-        const uint16_t max_len = s_sim.genome.max_len;
 
-        /* Write compact survivor data back into genome slots [0 .. n-1] in
-         * column-major layout so biosim_generation_reproduce can read them. */
         for (uint32_t s = 0U; s < s_surv_count; s++) {
             s_sim.genome.len[s] = s_surv_len[s];
             for (uint16_t j = 0U; j < s_surv_len[s]; j++) {
-                s_sim.genome.conn[(size_t)j * pop + s] = s_surv_conn[(size_t)s * max_len + j];
-                s_sim.genome.wgt[(size_t)j * pop + s] = s_surv_wgt[(size_t)s * max_len + j];
+                s_sim.genome.conn[(size_t)j * pop + s] =
+                    s_surv_conn[(size_t)s * s_surv_stride_cap + j];
+                s_sim.genome.wgt[(size_t)j * pop + s] =
+                    s_surv_wgt[(size_t)s * s_surv_stride_cap + j];
             }
         }
 
-        /* Build an index array [0, 1, …, n-1] pointing at the restored slots. */
         uint32_t *survivors = malloc((size_t)s_surv_count * sizeof(uint32_t));
         float *scores = malloc((size_t)s_surv_count * sizeof(float));
         if (!survivors || !scores) {
@@ -400,18 +430,38 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_restart_from_survivors(void) {
             survivors[s] = s;
             scores[s] = s_surv_scores[s];
         }
-
-        s_sim.gen_rng = s_surv_gen_rng;
         rc = biosim_generation_reproduce(&s_sim, survivors, scores, s_surv_count);
         free(survivors);
         free(scores);
+    } else {
+        rc = biosim_generation_init_random(&s_sim);
     }
 
     if (rc == BIOSIM_OK) {
         s_sim.step = 0U;
         s_sim.kills = 0U;
     }
-    return (int)rc;
+    return rc;
+}
+
+/* Discard the saved survivors so the next init() starts from a random genome. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
+    if (!s_initialized) {
+        return BIOSIM_ERR_INVALID;
+    }
+    s_surv_count = 0U;
+    return BIOSIM_OK;
+}
+
+/* Reproduce a new population from the saved survivors, using the same gen_rng
+ * seed as the original reproduction.  Thanks to determinism, calling this
+ * after biosim_wasm_next_generation yields the same starting population. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_restart_from_survivors(void) {
+    if (!s_initialized) {
+        return BIOSIM_ERR_INVALID;
+    }
+    s_sim.gen_rng = s_saved_gen_rng;
+    return (int)spawn_generation();
 }
 
 /* ── generation-level operations ─────────────────────────────────────────── */
@@ -431,24 +481,15 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation(void) {
         return BIOSIM_ERR_NOMEM;
     }
 
-    biosim_status_t rc = BIOSIM_OK;
-
     uint32_t n_surv = biosim_generation_collect_survivors(&s_sim, survivors, scores);
     biosim_census_take(&s_sim, survivors, n_surv, &s_last_census);
-    save_survivors(survivors, scores, n_surv);
-
-    if (n_surv > 0U) {
-        rc = biosim_generation_reproduce(&s_sim, survivors, scores, n_surv);
-    } else {
-        rc = biosim_generation_init_random(&s_sim);
-    }
+    snapshot_survivors(survivors, scores, n_surv);
 
     free(survivors);
     free(scores);
 
+    biosim_status_t rc = spawn_generation();
     if (rc == BIOSIM_OK) {
-        s_sim.kills = 0U;
-        s_sim.step = 0U;
         s_sim.gen++;
     }
     return (int)rc;
