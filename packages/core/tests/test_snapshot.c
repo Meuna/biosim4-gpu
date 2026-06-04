@@ -585,6 +585,116 @@ void test_load_last_no_complete_gen(void) {
     biosim_sim_free(&sim2);
 }
 
+/* load_survivors with pop_file (6) > pop_sim (4): snap->count must equal pop_sim. */
+void test_load_survivors_pop_file_larger(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_load_surv_large.bsm4";
+    (void)remove(path);
+
+    biosim_sim_t sim_write;
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK,
+        sim_test_create(
+            &sim_write,
+            &(sim_test_scn_t){
+                .population = 6U,
+                .size_x = 4,
+                .size_y = 4,
+                .genome_max_len = 4U,
+                .max_neurons = 2U,
+                .los_range = 4U,
+                .steps_per_gen = 1U,
+                .sensor_radius = 1,
+            }
+        )
+    );
+
+    FILE *f = fopen(path, "w+b");
+    TEST_ASSERT_NOT_NULL(f);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim_write));
+
+    uint32_t survivors[6] = {0U, 1U, 2U, 3U, 4U, 5U};
+    float scores[6] = {0.1F, 0.2F, 0.3F, 0.4F, 0.5F, 0.6F};
+    biosim_survivor_snap_t wsnap = {0};
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK, build_snap_from_agents(&sim_write, survivors, scores, 6U, &wsnap)
+    );
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim_write, &wsnap));
+    biosim_survivor_snap_free(&wsnap);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
+    (void)fclose(f);
+
+    biosim_sim_t sim_read;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim_read)); /* pop = 4 */
+
+    biosim_survivor_snap_t rsnap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim_read, &rsnap));
+
+    TEST_ASSERT_EQUAL_UINT32(4U, rsnap.count); /* truncated to pop_sim */
+    for (uint32_t s = 0U; s < rsnap.count; s++) {
+        TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
+    }
+
+    (void)remove(path);
+    biosim_survivor_snap_free(&rsnap);
+    biosim_sim_free(&sim_write);
+    biosim_sim_free(&sim_read);
+}
+
+/* load_survivors with pop_file (4) < pop_sim (6): snap->count must equal pop_file. */
+void test_load_survivors_pop_file_smaller(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_load_surv_small.bsm4";
+    (void)remove(path);
+
+    biosim_sim_t sim_write;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim_write)); /* pop = 4 */
+
+    FILE *f = fopen(path, "w+b");
+    TEST_ASSERT_NOT_NULL(f);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim_write));
+
+    uint32_t survivors[4] = {0U, 1U, 2U, 3U};
+    float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
+    biosim_survivor_snap_t wsnap = {0};
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK, build_snap_from_agents(&sim_write, survivors, scores, 4U, &wsnap)
+    );
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim_write, &wsnap));
+    biosim_survivor_snap_free(&wsnap);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
+    (void)fclose(f);
+
+    biosim_sim_t sim_read;
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK,
+        sim_test_create(
+            &sim_read,
+            &(sim_test_scn_t){
+                .population = 6U,
+                .size_x = 4,
+                .size_y = 4,
+                .genome_max_len = 4U,
+                .max_neurons = 2U,
+                .los_range = 4U,
+                .steps_per_gen = 1U,
+                .sensor_radius = 1,
+            }
+        )
+    );
+
+    biosim_survivor_snap_t rsnap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim_read, &rsnap));
+
+    TEST_ASSERT_EQUAL_UINT32(4U, rsnap.count); /* all pop_file entries loaded */
+    for (uint32_t s = 0U; s < rsnap.count; s++) {
+        TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
+    }
+
+    (void)remove(path);
+    biosim_survivor_snap_free(&rsnap);
+    biosim_sim_free(&sim_write);
+    biosim_sim_free(&sim_read);
+}
+
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -601,6 +711,8 @@ int main(void) {
     RUN_TEST(test_load_last_no_complete_gen);
     RUN_TEST(test_population_load_file_larger_than_sim);
     RUN_TEST(test_population_load_file_smaller_than_sim);
+    RUN_TEST(test_load_survivors_pop_file_larger);
+    RUN_TEST(test_load_survivors_pop_file_smaller);
     RUN_TEST(test_session_restore_identical_second_generation);
     return UNITY_END();
 }
