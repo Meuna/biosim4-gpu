@@ -994,18 +994,6 @@ function playTick(): void {
 self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
     const cmd = e.data;
     switch (cmd.type) {
-        case "play":
-            startTransitionIfNeeded();
-            playing = true;
-            postMessage(statusNow("running"));
-            playTick();
-            break;
-        case "stop":
-            playing = false;
-            // mode intentionally unchanged — agents freeze at their current
-            // grid positions (idle-timeout return to kinematic is future work).
-            postMessage(statusNow("paused"));
-            break;
         case "reset":
             playing = false;
             mode = "idle";
@@ -1013,6 +1001,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         case "configure": {
             playing = false;
+            const prevMode = mode;
             const p = cmd.params;
             setParamInt("population", p.population);
             setParamInt("grid-size-x", p.gridSizeX);
@@ -1032,7 +1021,8 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             currentChallenge = p.challenge;
             call("biosim_wasm_init");
             cacheBarrierCells();
-            mode = "idle";
+            // Skip the kinematic intro if the user was already watching the grid.
+            mode = prevMode === "idle" ? "idle" : "running";
             startTime = performance.now();
             postMessage({
                 type: "configured",
@@ -1043,6 +1033,18 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             } satisfies WorkerEvent);
             break;
         }
+        case "play":
+            startTransitionIfNeeded();
+            playing = true;
+            postMessage(statusNow("running"));
+            playTick();
+            break;
+        case "stop":
+            playing = false;
+            // mode intentionally unchanged — agents freeze at their current
+            // grid positions (idle-timeout return to kinematic is future work).
+            postMessage(statusNow("paused"));
+            break;
         case "step":
             doStep();
             break;
@@ -1051,13 +1053,13 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             call("biosim_wasm_restart_from_survivors");
             postMessage(statusNow("paused"));
             break;
+        case "nextGeneration":
+            doNextGeneration();
+            break;
         case "clearGenom":
             playing = false;
             call("biosim_wasm_clear_genome");
             postMessage(statusNow("idle"));
-            break;
-        case "nextGeneration":
-            doNextGeneration();
             break;
         case "pickAgentAtCell": {
             if (!biosim || !layout) break;

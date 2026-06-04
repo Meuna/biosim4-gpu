@@ -28,7 +28,6 @@ function renderPanel(overrides?: Partial<Parameters<typeof render>[1]>) {
             isDirty: false,
             onDraftChange: vi.fn(),
             onRevert: vi.fn(),
-            onApply: vi.fn(),
             ...overrides?.props,
         },
     });
@@ -78,16 +77,6 @@ describe("SimConfigPanel", () => {
         expect(screen.getByLabelText("Add barrier")).toBeTruthy();
     });
 
-    it('shows "✓ in sync" when isDirty is false', () => {
-        renderPanel({ props: { isDirty: false } });
-        expect(screen.getByText("✓ in sync")).toBeTruthy();
-    });
-
-    it('shows "apply & restart →" when isDirty is true', () => {
-        renderPanel({ props: { isDirty: true } });
-        expect(screen.getByText("apply & restart →")).toBeTruthy();
-    });
-
     it("does not render revert button when isDirty is false", () => {
         renderPanel({ props: { isDirty: false } });
         expect(
@@ -100,17 +89,6 @@ describe("SimConfigPanel", () => {
         expect(
             screen.getByRole("button", { name: "Revert all changes" }),
         ).toBeTruthy();
-    });
-
-    it("calls onApply when apply button is clicked", async () => {
-        const onApply = vi.fn();
-        renderPanel({ props: { isDirty: true, onApply } });
-        await fireEvent.click(
-            screen.getByRole("button", {
-                name: "Apply configuration and restart simulation",
-            }),
-        );
-        expect(onApply).toHaveBeenCalledOnce();
     });
 
     it("calls onRevert when revert button is clicked", async () => {
