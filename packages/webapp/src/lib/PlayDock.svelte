@@ -10,22 +10,25 @@
 
     let {
         running,
+        genComplete,
         onToggle,
         onStep,
         onGen,
         onRewind,
     }: {
         running: boolean;
+        genComplete: boolean;
         onToggle: () => void;
         onStep: () => void;
-        onGen: () => void;
-        onRewind: () => void;
+        onGen: (autoPlay: boolean) => void;
+        onRewind: (autoPlay: boolean) => void;
     } = $props();
 </script>
 
 <div class="dock">
     <button
         class="dock__btn dock__btn--primary"
+        disabled={genComplete && !running}
         onclick={onToggle}
         aria-label={running ? "Stop simulation" : "Play simulation"}
     >
@@ -51,23 +54,29 @@
 
     <div class="dock__sep" aria-hidden="true"></div>
 
-    <button
-        class="dock__btn"
-        onclick={onGen}
-        aria-label="Advance one generation"
-    >
-        <Baby size={14} />
-        Next Gen
-    </button>
+    <div class="dock__autoplay-group">
+        <button
+            class="dock__btn"
+            onclick={(e) => onGen(e.ctrlKey)}
+            aria-label="Advance one generation (Ctrl+click to auto play)"
+        >
+            <Baby size={14} />
+            Next Gen
+        </button>
 
-    <button
-        class="dock__btn"
-        onclick={onRewind}
-        aria-label="Rewind: reproduce a new generation from the last survivors"
-    >
-        <History size={14} />
-        Rewind
-    </button>
+        <button
+            class="dock__btn"
+            onclick={(e) => onRewind(e.ctrlKey)}
+            aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
+        >
+            <History size={14} />
+            Rewind
+        </button>
+
+        <span class="dock__autoplay-hint" aria-hidden="true"
+            >ctrl+click to auto-play</span
+        >
+    </div>
 
     <button
         class="dock__btn"
@@ -106,7 +115,7 @@
         white-space: nowrap;
     }
 
-    .dock__btn:hover:not(:disabled) {
+    .dock__btn:not(.dock__btn--primary):hover:not(:disabled) {
         color: var(--color-text);
     }
 
@@ -128,9 +137,10 @@
         font-weight: 500;
     }
 
-    .dock__btn--primary:hover {
-        opacity: 0.85;
-        color: var(--color-surface);
+    .dock__btn--primary:hover:not(:disabled) {
+        background: var(--color-text);
+        color: var(--color-accent);
+        opacity: 1;
     }
 
     .dock__sep {
@@ -139,5 +149,26 @@
         background: var(--color-border-subtle);
         margin: 0 var(--space-2);
         flex-shrink: 0;
+    }
+
+    /* Shared hint floats below Next Gen + Rewind without affecting their height */
+    .dock__autoplay-group {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .dock__autoplay-hint {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        font-family: var(--font-mono);
+        font-size: 0.5rem;
+        color: var(--color-text-muted);
+        opacity: 0.55;
+        white-space: nowrap;
+        pointer-events: none;
+        letter-spacing: 0.03em;
     }
 </style>

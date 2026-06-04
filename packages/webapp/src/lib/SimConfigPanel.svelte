@@ -14,10 +14,8 @@
         isDirty: boolean;
         onDraftChange: (params: SimParams) => void;
         onRevert: () => void;
-        onApply: () => void;
     }
-    const { draftConfig, isDirty, onDraftChange, onRevert, onApply }: Props =
-        $props();
+    const { draftConfig, isDirty, onDraftChange, onRevert }: Props = $props();
 </script>
 
 <div class="sim-config">
@@ -273,20 +271,6 @@
     <div class="sim-config__spacer sim-config__spacer--lg"></div>
 </div>
 
-<!-- Sticky apply bar — stays at bottom of rail scroll area -->
-<div class="sim-config__apply">
-    <button
-        class="button button--pill {isDirty
-            ? 'button--filled'
-            : 'button--ghost'} sim-config__apply-btn"
-        disabled={!isDirty}
-        onclick={onApply}
-        aria-label="Apply configuration and restart simulation"
-    >
-        {isDirty ? "apply & restart →" : "✓ in sync"}
-    </button>
-</div>
-
 <style>
     .sim-config {
         padding: var(--space-6);
@@ -346,25 +330,5 @@
 
     .sim-config__spacer--lg {
         height: var(--space-8);
-    }
-
-    /* Sticky apply bar */
-    .sim-config__apply {
-        position: sticky;
-        bottom: 0;
-        padding: var(--space-3) var(--space-6);
-        background: linear-gradient(
-            to top,
-            var(--color-surface-alt) 70%,
-            transparent
-        );
-        display: flex;
-        gap: var(--space-2);
-        z-index: 1;
-    }
-
-    .sim-config__apply-btn {
-        flex: 1;
-        justify-content: center;
     }
 </style>

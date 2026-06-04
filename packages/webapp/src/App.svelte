@@ -114,6 +114,7 @@
             currentStep = msg.step;
             if (msg.state === "gen_complete") {
                 isRunning = false;
+                isGenComplete = true;
             }
         } else if (msg.type === "census") {
             currentGen = msg.gen;
@@ -135,6 +136,7 @@
         } else if (msg.type === "configured") {
             isRunning = false;
             hasStarted = false;
+            isGenComplete = false;
             currentGen = 0;
             currentStep = 0;
             survivalHistory = [];
@@ -180,6 +182,7 @@
     // ── Simulation state ─────────────────────────────────────────────────────
     let isRunning = $state(false);
     let hasStarted = $state(false);
+    let isGenComplete = $state(false);
     const mode = $derived(
         isRunning ? "running" : hasStarted ? "paused" : "kinetic",
     ) as "kinetic" | "running" | "paused";
@@ -322,12 +325,6 @@
         draftConfig = params;
     }
 
-    function handleApply(): void {
-        const snapshot = $state.snapshot(draftConfig) as SimParams;
-        pendingLastPlayedConfig = snapshot;
-        send({ type: "configure", params: snapshot });
-    }
-
     function handleRevert(): void {
         draftConfig = { ...($state.snapshot(lastPlayedConfig) as SimParams) };
     }
@@ -339,12 +336,14 @@
             send({ type: "stop" });
         } else if (isDirty) {
             pendingPlay = true;
+            isGenComplete = false;
             const snapshot = $state.snapshot(draftConfig) as SimParams;
             pendingLastPlayedConfig = snapshot;
             send({ type: "configure", params: snapshot });
         } else {
             isRunning = true;
             hasStarted = true;
+            isGenComplete = false;
             send({ type: "play" });
         }
     }
@@ -354,13 +353,24 @@
         send({ type: "step" });
     }
 
-    function handleGen(): void {
+    function handleGen(autoPlay: boolean): void {
+        isGenComplete = false;
         hasStarted = true;
         send({ type: "nextGeneration" });
+        if (autoPlay) {
+            isRunning = true;
+            send({ type: "play" });
+        }
     }
 
-    function handleRewind(): void {
+    function handleRewind(autoPlay: boolean): void {
+        isGenComplete = false;
         send({ type: "restart" });
+        if (autoPlay) {
+            isRunning = true;
+            hasStarted = true;
+            send({ type: "play" });
+        }
     }
 
     // ── Agent selection ───────────────────────────────────────────────────────
@@ -475,6 +485,7 @@
     <!-- z-index: 20 — fixed top bar (contains PlayDock inline) -->
     <TopBar
         running={isRunning}
+        genComplete={isGenComplete}
         onToggle={handleToggle}
         onStep={handleStep}
         onGen={handleGen}
@@ -525,7 +536,6 @@
                 {isDirty}
                 onDraftChange={handleDraftChange}
                 onRevert={handleRevert}
-                onApply={handleApply}
             />
         {/snippet}
         {#snippet cell()}
