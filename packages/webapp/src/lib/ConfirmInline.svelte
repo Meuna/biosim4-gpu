@@ -17,12 +17,12 @@
 {#if open}
     <div class="confirm-inline" role="group" aria-label="Confirm action">
         <button
-            class="confirm-inline__btn confirm-inline__btn--confirm"
+            class="button button--pill confirm-inline__btn--confirm"
             onclick={onConfirm}
         >
             {confirmLabel}
         </button>
-        <button class="confirm-inline__btn" onclick={onCancel}>
+        <button class="button button--pill button--ghost" onclick={onCancel}>
             {cancelLabel}
         </button>
     </div>
@@ -33,35 +33,6 @@
         display: flex;
         align-items: center;
         gap: var(--space-1);
-    }
-
-    .confirm-inline__btn {
-        display: inline-flex;
-        align-items: center;
-        height: 2rem;
-        padding: 0 var(--space-2);
-        background: transparent;
-        border: 1px solid var(--color-border-subtle);
-        border-radius: var(--radius-sm);
-        cursor: pointer;
-        font-family: var(--font-mono);
-        font-size: 0.75rem;
-        color: var(--color-text-muted);
-        letter-spacing: 0.04em;
-        white-space: nowrap;
-        transition:
-            color 0.1s,
-            border-color 0.1s;
-    }
-
-    .confirm-inline__btn:hover {
-        color: var(--color-text);
-        border-color: var(--color-border);
-    }
-
-    .confirm-inline__btn:focus-visible {
-        outline: 2px solid var(--color-accent);
-        outline-offset: 2px;
     }
 
     .confirm-inline__btn--confirm {
