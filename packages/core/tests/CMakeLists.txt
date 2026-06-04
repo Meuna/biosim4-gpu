@@ -59,3 +59,8 @@ add_executable(core-params-tests test_params.c)
 target_link_libraries(core-params-tests PRIVATE core unity)
 target_compile_features(core-params-tests PRIVATE c_std_11)
 add_test(NAME core-params-tests COMMAND core-params-tests)
+
+add_executable(core-survivor-snap-tests test_survivor_snap.c)
+target_link_libraries(core-survivor-snap-tests PRIVATE core unity)
+target_compile_features(core-survivor-snap-tests PRIVATE c_std_11)
+add_test(NAME core-survivor-snap-tests COMMAND core-survivor-snap-tests)
