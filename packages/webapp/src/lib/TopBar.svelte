@@ -3,16 +3,18 @@
 
     let {
         running,
+        genComplete,
         onToggle,
         onStep,
         onGen,
         onRewind,
     }: {
         running: boolean;
+        genComplete: boolean;
         onToggle: () => void;
         onStep: () => void;
-        onGen: () => void;
-        onRewind: () => void;
+        onGen: (autoPlay: boolean) => void;
+        onRewind: (autoPlay: boolean) => void;
     } = $props();
 </script>
 
@@ -23,7 +25,14 @@
     </div>
 
     <div class="topbar__center">
-        <PlayDock {running} {onToggle} {onStep} {onGen} {onRewind} />
+        <PlayDock
+            {running}
+            {genComplete}
+            {onToggle}
+            {onStep}
+            {onGen}
+            {onRewind}
+        />
     </div>
 
     <div class="topbar__right">
