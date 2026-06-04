@@ -14,8 +14,19 @@
         isDirty: boolean;
         onDraftChange: (params: SimParams) => void;
         onRevert: () => void;
+        incompatibleFields?: string[];
+        genomeMaxLenUsed?: number;
+        genomeMaxNeuronsUsed?: number;
     }
-    const { draftConfig, isDirty, onDraftChange, onRevert }: Props = $props();
+    const {
+        draftConfig,
+        isDirty,
+        onDraftChange,
+        onRevert,
+        incompatibleFields = [],
+        genomeMaxLenUsed = 0,
+        genomeMaxNeuronsUsed = 0,
+    }: Props = $props();
 </script>
 
 <div class="sim-config">
@@ -91,29 +102,54 @@
         <span class="sim-config__hint">genome.h</span>
     </div>
 
-    <ParamSlider
-        label="Max genome length"
-        hint="genes / agent"
-        min={4}
-        max={64}
-        step={1}
-        value={draftConfig.maxGenomeLen}
-        onchange={(v) => {
-            onDraftChange({ ...draftConfig, maxGenomeLen: v });
-        }}
-    />
+    <div
+        class="sim-config__field-wrap"
+        class:sim-config__field-wrap--invalid={incompatibleFields.includes(
+            "maxGenomeLen",
+        )}
+    >
+        <ParamSlider
+            label="Max genome length"
+            hint="genes / agent"
+            min={4}
+            max={64}
+            step={1}
+            value={draftConfig.maxGenomeLen}
+            onchange={(v) => {
+                onDraftChange({ ...draftConfig, maxGenomeLen: v });
+            }}
+        />
+        {#if incompatibleFields.includes("maxGenomeLen")}
+            <p class="sim-config__incompat-hint">
+                Survivors use up to {genomeMaxLenUsed} — increase to re-enable play.
+            </p>
+        {/if}
+    </div>
 
-    <ParamSlider
-        label="Max neurons"
-        hint="hidden neurons"
-        min={1}
-        max={20}
-        step={1}
-        value={draftConfig.maxNeurons}
-        onchange={(v) => {
-            onDraftChange({ ...draftConfig, maxNeurons: v });
-        }}
-    />
+    <div
+        class="sim-config__field-wrap"
+        class:sim-config__field-wrap--invalid={incompatibleFields.includes(
+            "maxNeurons",
+        )}
+    >
+        <ParamSlider
+            label="Max neurons"
+            hint="hidden neurons"
+            min={1}
+            max={20}
+            step={1}
+            value={draftConfig.maxNeurons}
+            onchange={(v) => {
+                onDraftChange({ ...draftConfig, maxNeurons: v });
+            }}
+        />
+        {#if incompatibleFields.includes("maxNeurons")}
+            <p class="sim-config__incompat-hint">
+                Survivors use up to {genomeMaxNeuronsUsed} — increase to re-enable
+                play.
+            </p>
+        {/if}
+    </div>
 
     <ParamSlider
         label="Mutation rate"
@@ -322,6 +358,23 @@
         font-size: var(--text-sm);
         color: var(--color-warn);
         margin: var(--space-2) 0 0 0;
+    }
+
+    .sim-config__field-wrap {
+        padding-left: var(--space-2);
+        border-left: 2px solid transparent;
+        transition: border-color 0.1s;
+    }
+
+    .sim-config__field-wrap--invalid {
+        border-left-color: var(--color-warn);
+    }
+
+    .sim-config__incompat-hint {
+        font-family: var(--font-mono);
+        font-size: 0.625rem;
+        color: var(--color-warn);
+        margin: calc(-1 * var(--space-2)) 0 var(--space-4) 0;
     }
 
     .sim-config__spacer {

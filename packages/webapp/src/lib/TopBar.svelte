@@ -4,17 +4,21 @@
     let {
         running,
         genComplete,
+        genomIncompatible = false,
         onToggle,
         onStep,
         onGen,
         onRewind,
+        onClearGenom,
     }: {
         running: boolean;
         genComplete: boolean;
+        genomIncompatible?: boolean;
         onToggle: () => void;
         onStep: () => void;
         onGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
+        onClearGenom: () => void;
     } = $props();
 </script>
 
@@ -28,10 +32,12 @@
         <PlayDock
             {running}
             {genComplete}
+            {genomIncompatible}
             {onToggle}
             {onStep}
             {onGen}
             {onRewind}
+            {onClearGenom}
         />
     </div>
 

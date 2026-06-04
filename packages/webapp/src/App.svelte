@@ -15,6 +15,7 @@
     import CellPanel from "./lib/CellPanel.svelte";
     import HoverCard from "./lib/HoverCard.svelte";
     import BrainExplorer from "./lib/BrainExplorer.svelte";
+    import ConfigChangeDialog from "./lib/ConfigChangeDialog.svelte";
     import type { BrainConn } from "./lib/brain";
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
 
@@ -122,6 +123,8 @@
             const rate =
                 msg.population > 0 ? msg.survivors / msg.population : 0;
             survivalHistory = [...survivalHistory.slice(-11), rate];
+            workerGenomeMaxLenUsed = msg.genomeMaxLenUsed;
+            workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
         } else if (msg.type === "agentUpdated") {
             selectedAgent = msg.info;
         } else if (msg.type === "brainData") {
@@ -144,6 +147,8 @@
             gridSizeX = msg.gridSizeX;
             gridSizeY = msg.gridSizeY;
             stepsPerGen = msg.stepsPerGen;
+            workerGenomeMaxLenUsed = 0;
+            workerGenomeMaxNeuronsUsed = 0;
             if (pendingLastPlayedConfig !== null) {
                 lastPlayedConfig = pendingLastPlayedConfig;
                 pendingLastPlayedConfig = null;
@@ -197,6 +202,28 @@
     let gridSizeX = $state(128);
     let gridSizeY = $state(128);
 
+    // Genome max values from the last census; reset to 0 after configure/clearGenom.
+    let workerGenomeMaxLenUsed = $state(0);
+    let workerGenomeMaxNeuronsUsed = $state(0);
+
+    // Genome compatibility gate — true when draft would truncate live survivors.
+    const genomIncompatible = $derived(
+        (workerGenomeMaxLenUsed > 0 &&
+            draftConfig.maxGenomeLen < workerGenomeMaxLenUsed) ||
+            (workerGenomeMaxNeuronsUsed > 0 &&
+                draftConfig.maxNeurons < workerGenomeMaxNeuronsUsed),
+    );
+    const incompatibleFields = $derived<string[]>([
+        ...(workerGenomeMaxLenUsed > 0 &&
+        draftConfig.maxGenomeLen < workerGenomeMaxLenUsed
+            ? ["maxGenomeLen"]
+            : []),
+        ...(workerGenomeMaxNeuronsUsed > 0 &&
+        draftConfig.maxNeurons < workerGenomeMaxNeuronsUsed
+            ? ["maxNeurons"]
+            : []),
+    ]);
+
     // ── UI state ─────────────────────────────────────────────────────────────
     let selectedAgent = $state<AgentInfo | null>(null);
     let hoveredAgent = $state<AgentInfo | null>(null);
@@ -208,6 +235,8 @@
     );
     let railOpen = $state(false);
     let activeTab = $state<"sim" | "cell">("sim");
+    let showConfigChangeDialog = $state(false);
+    let gridBlurred = $state(false);
 
     // ── Brain explorer ───────────────────────────────────────────────────────
     let brain = $state<{
@@ -323,10 +352,42 @@
     // ── Draft config callbacks ────────────────────────────────────────────────
     function handleDraftChange(params: SimParams): void {
         draftConfig = params;
+        if (isRunning) {
+            isRunning = false;
+            send({ type: "stop" });
+            gridBlurred = true;
+            showConfigChangeDialog = true;
+        }
     }
 
     function handleRevert(): void {
         draftConfig = { ...($state.snapshot(lastPlayedConfig) as SimParams) };
+    }
+
+    function handleClearGenom(): void {
+        workerGenomeMaxLenUsed = 0;
+        workerGenomeMaxNeuronsUsed = 0;
+        send({ type: "clearGenom" });
+    }
+
+    function handleDialogRevertContinue(): void {
+        handleRevert();
+        showConfigChangeDialog = false;
+        gridBlurred = false;
+        isRunning = true;
+        hasStarted = true;
+        send({ type: "play" });
+    }
+
+    function handleDialogPauseSaveGenome(): void {
+        showConfigChangeDialog = false;
+        gridBlurred = false;
+    }
+
+    function handleDialogPauseClearGenome(): void {
+        showConfigChangeDialog = false;
+        gridBlurred = false;
+        handleClearGenom();
     }
 
     // ── Play / pause / step / gen / reset ────────────────────────────────────
@@ -334,6 +395,8 @@
         if (isRunning) {
             isRunning = false;
             send({ type: "stop" });
+        } else if (genomIncompatible) {
+            return;
         } else if (isDirty) {
             pendingPlay = true;
             isGenComplete = false;
@@ -486,17 +549,33 @@
     <TopBar
         running={isRunning}
         genComplete={isGenComplete}
+        {genomIncompatible}
         onToggle={handleToggle}
         onStep={handleStep}
         onGen={handleGen}
         onRewind={handleRewind}
+        onClearGenom={handleClearGenom}
+    />
+
+    <!-- z-index: 55/60 — config-change-while-running dialog -->
+    <ConfigChangeDialog
+        open={showConfigChangeDialog}
+        onRevertContinue={handleDialogRevertContinue}
+        onPauseSaveGenome={handleDialogPauseSaveGenome}
+        onPauseClearGenome={handleDialogPauseClearGenome}
     />
 
     <!-- Grid stack — hidden while the brain explorer is expanded (it takes over
          the main area). -->
     {#if !brainExpanded}
         <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
-        <GridView geom={gridGeom} {mode} {gridSizeX} {gridSizeY} />
+        <GridView
+            geom={gridGeom}
+            {mode}
+            {gridSizeX}
+            {gridSizeY}
+            blurred={gridBlurred}
+        />
 
         <!-- z-index: 15 — telemetry stats, top-right of grid -->
         <TelemetryHUD
@@ -534,6 +613,9 @@
             <SimConfigPanel
                 {draftConfig}
                 {isDirty}
+                {incompatibleFields}
+                genomeMaxLenUsed={workerGenomeMaxLenUsed}
+                genomeMaxNeuronsUsed={workerGenomeMaxNeuronsUsed}
                 onDraftChange={handleDraftChange}
                 onRevert={handleRevert}
             />

@@ -165,6 +165,8 @@ export type WorkerEvent =
           population: number;
           survivors: number;
           kills: number;
+          genomeMaxLenUsed: number;
+          genomeMaxNeuronsUsed: number;
       }
     | {
           type: "configured";
@@ -962,12 +964,16 @@ function doNextGeneration(): void {
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
     const kills = call("biosim_wasm_census_kills");
+    const genomeMaxLenUsed = call("biosim_wasm_genome_max_len_used");
+    const genomeMaxNeuronsUsed = call("biosim_wasm_genome_max_neurons_used");
     postMessage({
         type: "census",
         gen,
         population,
         survivors,
         kills,
+        genomeMaxLenUsed,
+        genomeMaxNeuronsUsed,
     } satisfies WorkerEvent);
 }
 
