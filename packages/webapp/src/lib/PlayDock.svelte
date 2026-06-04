@@ -190,9 +190,14 @@
         font-family: var(--font-mono);
         font-size: 0.5rem;
         color: var(--color-text-muted);
-        opacity: 0.55;
+        opacity: 0;
         white-space: nowrap;
         pointer-events: none;
         letter-spacing: 0.03em;
+        transition: opacity 0.15s;
+    }
+
+    .dock__autoplay-group:hover .dock__autoplay-hint {
+        opacity: 0.55;
     }
 </style>
