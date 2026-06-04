@@ -13,6 +13,7 @@
 #include "biosim/core/nnet.h"
 #include "biosim/core/params.h"
 #include "biosim/core/status.h"
+#include "biosim/core/survivor_snap.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -111,20 +112,19 @@ void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i);
 void biosim_sim_next_step(biosim_sim_t *sim);
 
 /*
- * Advance one generation: evaluate the challenge for all alive agents, write
- * the snapshot output session (if active), collect statistics, reproduce
- * survivors, recompile neural networks, and respawn the full population on the
- * grid.
+ * Retire the current generation: collect survivors into snap, take census,
+ * write the snapshot session record (if active), then reset sim->kills and
+ * sim->step to 0 and increment sim->gen.
  *
- * Reproduction mode is controlled by sim->sexual_reproduction (two-parent
- * crossover vs. single-parent copy) and sim->choose_parents_by_fitness
- * (score-biased vs. uniform random parent selection).
+ * Does NOT spawn the next population; the caller must call
+ * biosim_generation_spawn(sim, snap) after this returns.
  *
- * After the call: sim->step and sim->kills are reset to 0 and sim->gen is
- * incremented. out receives the census taken from the just-completed generation.
+ * out receives the census taken from the just-completed generation.
  * Returns BIOSIM_ERR_NOMEM if any required allocation fails; on error the
  * generation counters are not advanced and out is not written.
  */
-biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out);
+biosim_status_t biosim_sim_retire_generation(
+    biosim_sim_t *sim, biosim_survivor_snap_t *snap, struct biosim_census *out
+);
 
 #endif /* BIOSIM_CORE_SIM_H */

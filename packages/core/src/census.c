@@ -2,10 +2,7 @@
 
 /* ── collection ─────────────────────────────────────────────────────────── */
 
-void biosim_census_take(
-    const biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_survivors, biosim_census_t *out
-) {
-    (void)survivors;
+void biosim_census_take(const biosim_sim_t *sim, uint32_t n_survivors, biosim_census_t *out) {
     out->gen = sim->gen;
     out->population = sim->agents.population;
     out->survivors = n_survivors;

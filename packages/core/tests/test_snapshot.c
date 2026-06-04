@@ -5,9 +5,42 @@
 #include "biosim/core/generation.h"
 #include "biosim/core/io_eval.h"
 #include "biosim/core/sim.h"
+#include "biosim/core/survivor_snap.h"
 #include "unity.h"
 
 #include <stdio.h>
+
+/* ── helpers ─────────────────────────────────────────────────────────────── */
+
+/*
+ * Build a snap from an explicit agent-index array + scores array so that
+ * low-level tests can still call biosim_snapshot_write_genome directly.
+ */
+static biosim_status_t build_snap_from_agents(
+    const biosim_sim_t *sim,
+    const uint32_t *survivors,
+    const float *scores,
+    uint32_t n_surv,
+    biosim_survivor_snap_t *snap
+) {
+    biosim_status_t st = biosim_survivor_snap_grow(snap, n_surv, sim->genome.max_len);
+    if (st != BIOSIM_OK) {
+        return st;
+    }
+    for (uint32_t s = 0U; s < n_surv; s++) {
+        uint32_t src = survivors[s];
+        snap->len[s] = sim->genome.len[src];
+        snap->scores[s] = scores[s];
+        for (uint16_t j = 0U; j < snap->len[s]; j++) {
+            snap->conn[(size_t)s * snap->stride_cap + j] =
+                sim->genome.conn[(size_t)j * sim->genome.population + src];
+            snap->wgt[(size_t)s * snap->stride_cap + j] =
+                sim->genome.wgt[(size_t)j * sim->genome.population + src];
+        }
+    }
+    snap->count = n_surv;
+    return BIOSIM_OK;
+}
 
 /* ── tests ──────────────────────────────────────────────────────────────── */
 
@@ -87,9 +120,14 @@ void test_genome_roundtrip_single_record(void) {
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
     uint32_t n_surv = 4U;
     float scores[4] = {0.25F, 0.50F, 0.75F, 1.00F};
+
+    biosim_survivor_snap_t snap = {0};
     TEST_ASSERT_EQUAL_INT(
-        BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, scores, n_surv)
+        BIOSIM_OK, build_snap_from_agents(&sim, survivors, scores, n_surv, &snap)
     );
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
+    biosim_survivor_snap_free(&snap);
+
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
     biosim_sim_t sim2;
@@ -136,12 +174,14 @@ void test_multi_gen_load_last(void) {
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
     float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
 
-    /* Write 3 records, each with sim.gen different */
     for (uint32_t g = 0U; g < 3U; g++) {
         sim.gen = g;
+        biosim_survivor_snap_t snap = {0};
         TEST_ASSERT_EQUAL_INT(
-            BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U)
+            BIOSIM_OK, build_snap_from_agents(&sim, survivors, scores, 4U, &snap)
         );
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
+        biosim_survivor_snap_free(&snap);
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
 
@@ -183,9 +223,12 @@ void test_multi_gen_scan_without_gen_count(void) {
     float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
     for (uint32_t g = 0U; g < 3U; g++) {
         sim.gen = g;
+        biosim_survivor_snap_t snap = {0};
         TEST_ASSERT_EQUAL_INT(
-            BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U)
+            BIOSIM_OK, build_snap_from_agents(&sim, survivors, scores, 4U, &snap)
         );
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
+        biosim_survivor_snap_free(&snap);
     }
     /* Deliberately do NOT call finalize, so generation_count stays 0 */
 
@@ -227,9 +270,12 @@ void test_load_gen_index(void) {
     float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
     for (uint32_t g = 0U; g < 3U; g++) {
         sim.gen = g;
+        biosim_survivor_snap_t snap = {0};
         TEST_ASSERT_EQUAL_INT(
-            BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U)
+            BIOSIM_OK, build_snap_from_agents(&sim, survivors, scores, 4U, &snap)
         );
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
+        biosim_survivor_snap_free(&snap);
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
 
@@ -266,7 +312,10 @@ void test_load_gen_out_of_range(void) {
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
     float scores[4] = {0.25F, 0.50F, 0.75F, 1.00F};
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, survivors, scores, 4U));
+    biosim_survivor_snap_t snap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, build_snap_from_agents(&sim, survivors, scores, 4U, &snap));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
+    biosim_survivor_snap_free(&snap);
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
     biosim_sim_t sim2;
@@ -316,9 +365,12 @@ void test_population_load_file_larger_than_sim(void) {
 
     uint32_t survivors[6] = {0U, 1U, 2U, 3U, 4U, 5U};
     float scores[6] = {0.1F, 0.2F, 0.3F, 0.4F, 0.5F, 0.6F};
+    biosim_survivor_snap_t snap = {0};
     TEST_ASSERT_EQUAL_INT(
-        BIOSIM_OK, biosim_snapshot_write_genome(f, &sim_write, survivors, scores, 6U)
+        BIOSIM_OK, build_snap_from_agents(&sim_write, survivors, scores, 6U, &snap)
     );
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim_write, &snap));
+    biosim_survivor_snap_free(&snap);
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
     biosim_sim_t sim_read;
@@ -361,9 +413,12 @@ void test_population_load_file_smaller_than_sim(void) {
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
     float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
+    biosim_survivor_snap_t snap = {0};
     TEST_ASSERT_EQUAL_INT(
-        BIOSIM_OK, biosim_snapshot_write_genome(f, &sim_write, survivors, scores, 4U)
+        BIOSIM_OK, build_snap_from_agents(&sim_write, survivors, scores, 4U, &snap)
     );
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim_write, &snap));
+    biosim_survivor_snap_free(&snap);
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
 
     biosim_sim_t sim_read;
@@ -414,7 +469,6 @@ void test_population_load_file_smaller_than_sim(void) {
  * Two generations on sim1; snapshot written after gen 0 via session API.
  * sim2 is restored and also runs gen 1.  After the second generation both sims
  * must be numerically identical across all sub-structs (agents, grid, genome, nnet).
- * Failure in assert_sim_equal is accepted — RNG reproducibility gap is noted.
  */
 void test_session_restore_identical_second_generation(void) {
     static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_e2e_test.bsm4";
@@ -426,29 +480,41 @@ void test_session_restore_identical_second_generation(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_32x32(&sim1));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim1, path, 1));
 
-    /* gen 0: step×8, evaluate, snapshot_write, reproduce */
+    /* gen 0: step×8, retire, spawn */
     sim_test_run_one_gen(&sim1);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_next_generation(&sim1, &census));
+
+    biosim_survivor_snap_t snap1 = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_retire_generation(&sim1, &snap1, &census));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_spawn(&sim1, &snap1));
+    /* sim1.gen == 1 */
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim1));
 
     biosim_sim_t sim2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_32x32(&sim2));
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_restore(path, &sim2));
+
+    biosim_survivor_snap_t snap2 = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim2, &snap2));
+    /* sim2.gen == 1 (load_survivors sets gen = gen_idx + 1) */
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_spawn(&sim2, &snap2));
 
     /* Run both sims to the end of gen 1 */
-    sim_test_run_one_gen(&sim1); /* gen 1 */
-    sim_test_run_one_gen(&sim2); /* gen 1 */
+    sim_test_run_one_gen(&sim1);
+    sim_test_run_one_gen(&sim2);
 
     assert_sim_equal(&sim1, &sim2);
 
     /* Advance to gen 2 */
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_next_generation(&sim1, &census));
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_next_generation(&sim2, &census));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_retire_generation(&sim1, &snap1, &census));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_spawn(&sim1, &snap1));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_retire_generation(&sim2, &snap2, &census));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_spawn(&sim2, &snap2));
 
     assert_sim_equal(&sim1, &sim2);
 
     (void)remove(path);
+    biosim_survivor_snap_free(&snap1);
+    biosim_survivor_snap_free(&snap2);
     biosim_sim_free(&sim1);
     biosim_sim_free(&sim2);
 }

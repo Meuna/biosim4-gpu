@@ -214,32 +214,21 @@ void biosim_sim_next_step(biosim_sim_t *sim) {
 
 /* ── per-generation ─────────────────────────────────────────────────────── */
 
-biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_census *out) {
-    const uint32_t pop = sim->agents.population;
-
-    /* alloc start here, free on exit label */
-    uint32_t *survivors = NULL;
-    float *scores = NULL;
+biosim_status_t biosim_sim_retire_generation(
+    biosim_sim_t *sim, biosim_survivor_snap_t *snap, struct biosim_census *out
+) {
     biosim_status_t returncode = BIOSIM_OK;
 
-    survivors = malloc(pop * sizeof(uint32_t));
-    scores = malloc(pop * sizeof(float));
-    if (survivors == NULL || scores == NULL) {
-        returncode = BIOSIM_ERR_NOMEM;
-        goto exit;
-    }
-
-    uint32_t n_survivors = biosim_generation_collect_survivors(sim, survivors, scores);
-    biosim_census_take(sim, survivors, n_survivors, out);
-    returncode = biosim_snapshot_session_write(sim, survivors, scores, n_survivors);
+    returncode = biosim_generation_collect_survivors(sim, snap);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    if (n_survivors > 0) {
-        returncode = biosim_generation_reproduce(sim, survivors, scores, n_survivors);
-    } else {
-        returncode = biosim_generation_init_random(sim);
+    biosim_census_take(sim, snap->count, out);
+
+    returncode = biosim_snapshot_session_write(sim, snap);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
     }
 
     sim->kills = 0U;
@@ -247,10 +236,8 @@ biosim_status_t biosim_sim_next_generation(biosim_sim_t *sim, struct biosim_cens
     sim->gen++;
 
 exit:
-    free(survivors);
-    free(scores);
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF("next generation failed (%s)", biosim_strerror(returncode));
+        BIOSIM_ERRORF("retire generation failed (%s)", biosim_strerror(returncode));
     }
     return returncode;
 }

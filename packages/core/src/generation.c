@@ -14,13 +14,30 @@
 
 /* ── survivor collection ────────────────────────────────────────────────── */
 
-uint32_t biosim_generation_collect_survivors(
-    biosim_sim_t *sim, uint32_t *survivors, float *scores
+biosim_status_t biosim_generation_collect_survivors(
+    biosim_sim_t *sim, biosim_survivor_snap_t *snap
 ) {
     const uint32_t pop = sim->agents.population;
-    uint32_t n = 0;
+    const biosim_genome_t *genome = &sim->genome;
+    const uint16_t g_max_len = genome->max_len;
 
-    for (uint32_t i = 0; i < pop; i++) {
+    uint32_t *temp_idx = NULL;
+    float *temp_scores = NULL;
+    biosim_status_t returncode = BIOSIM_OK;
+
+    temp_idx = malloc((size_t)pop * sizeof(uint32_t));
+    if (temp_idx == NULL) {
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
+    }
+    temp_scores = malloc((size_t)pop * sizeof(float));
+    if (temp_scores == NULL) {
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
+    }
+
+    uint32_t n = 0U;
+    for (uint32_t i = 0U; i < pop; i++) {
         if (!sim->agents.alive[i]) {
             continue;
         }
@@ -28,19 +45,42 @@ uint32_t biosim_generation_collect_survivors(
         if (!r.passed) {
             continue;
         }
-        survivors[n] = i;
-        scores[n] = r.score;
+        temp_idx[n] = i;
+        temp_scores[n] = r.score;
         n++;
     }
 
-    return n;
+    returncode = biosim_survivor_snap_grow(snap, n, g_max_len);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    for (uint32_t s = 0U; s < n; s++) {
+        const uint32_t src = temp_idx[s];
+        const uint16_t len = genome->len[src];
+        snap->len[s] = len;
+        snap->scores[s] = temp_scores[s];
+        for (uint16_t j = 0U; j < len; j++) {
+            snap->conn[(size_t)s * snap->stride_cap + j] = genome->conn[(size_t)j * pop + src];
+            snap->wgt[(size_t)s * snap->stride_cap + j] = genome->wgt[(size_t)j * pop + src];
+        }
+    }
+    snap->count = n;
+
+exit:
+    free(temp_idx);
+    free(temp_scores);
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("collect survivors failed (%s)", biosim_strerror(returncode));
+    }
+    return returncode;
 }
 
 /* ── random initialisation ─────────────────────────────────────────────── */
 
 /*
  * Clear all non-barrier cells and zero the signal layer.
- * Called at every generation boundary by both init_random and reproduce.
+ * Called at every generation boundary by both init_random and breed.
  */
 static void clear_agents_from_grid(biosim_sim_t *sim) {
     biosim_grid_t *grid = &sim->grid;
@@ -96,101 +136,64 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
 exit:
     if (returncode != BIOSIM_OK) {
         BIOSIM_ERRORF("generation random init failed (%s)", biosim_strerror(returncode));
-        goto exit;
     }
-    return BIOSIM_OK;
+    return returncode;
 }
 
 /* ── reproduction ───────────────────────────────────────────────────────── */
 
-/*
- * Copy survivor genome data into a compact flat array before overwriting any
- * genome slot.  This prevents parent data from being clobbered during in-place
- * reproduction.
- *
- * temp_conn / temp_wgt are strided by genome->max_len: entry s starts at
- * s * max_len.  temp_len[s] holds the active gene count for survivor s.
- */
-static void snapshot_survivor_genomes(
-    const biosim_genome_t *genome,
-    const uint32_t *survivors,
-    uint32_t n_survivors,
-    uint16_t *temp_conn,
-    int16_t *temp_wgt,
-    uint16_t *temp_len
-) {
-    const uint32_t pop = genome->population;
-    const uint16_t g_max_len = genome->max_len;
-
-    for (uint32_t s = 0; s < n_survivors; s++) {
-        const uint32_t src = survivors[s];
-        const uint16_t len = genome->len[src];
-        temp_len[s] = len;
-        for (uint16_t j = 0; j < len; j++) {
-            temp_conn[(size_t)s * g_max_len + j] = genome->conn[(size_t)j * pop + src];
-            temp_wgt[(size_t)s * g_max_len + j] = genome->wgt[(size_t)j * pop + src];
-        }
-    }
-}
-
 static void restore_genome_slot(
-    biosim_genome_t *genome,
-    uint32_t dst,
-    const uint16_t *temp_conn,
-    const int16_t *temp_wgt,
-    const uint16_t *temp_len,
-    uint32_t parent_s
+    biosim_genome_t *genome, uint32_t dst, const biosim_survivor_snap_t *snap, uint32_t snap_s
 ) {
     const uint32_t pop = genome->population;
-    const uint16_t g_max_len = genome->max_len;
-    const uint16_t len = temp_len[parent_s];
+    const uint16_t len = snap->len[snap_s];
+    const uint16_t stride = snap->stride_cap;
 
     genome->len[dst] = len;
-    for (uint16_t j = 0; j < len; j++) {
-        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)parent_s * g_max_len + j];
-        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)parent_s * g_max_len + j];
+    for (uint16_t j = 0U; j < len; j++) {
+        genome->conn[(size_t)j * pop + dst] = snap->conn[(size_t)snap_s * stride + j];
+        genome->wgt[(size_t)j * pop + dst] = snap->wgt[(size_t)snap_s * stride + j];
     }
 }
 
 /*
- * Single-point crossover directly from snapshot temp buffers into a live
+ * Single-point crossover from snap rows snap_pa and snap_pb into a live
  * genome slot.  Mirrors biosim_genome_crossover semantics: crossover point k
- * in [0, min(len_a, len_b)]; child gets genes [0..k) from pa_s and [k..len_b)
- * from pb_s; child len = pb_s len (capped at max_len).
+ * in [0, min(len_a, len_b)]; child gets genes [0..k) from pa and [k..len_b)
+ * from pb; child len = pb len (capped at max_len).
  */
 static void crossover_from_snapshot(
     biosim_genome_t *genome,
     uint32_t dst,
-    const uint16_t *temp_conn,
-    const int16_t *temp_wgt,
-    const uint16_t *temp_len,
-    uint32_t pa_s,
-    uint32_t pb_s,
+    const biosim_survivor_snap_t *snap,
+    uint32_t snap_pa,
+    uint32_t snap_pb,
     uint64_t *rng
 ) {
     const uint32_t pop = genome->population;
-    const uint16_t g_max_len = genome->max_len;
-    const uint32_t len_a = temp_len[pa_s];
-    const uint32_t len_b = temp_len[pb_s];
+    const uint16_t stride = snap->stride_cap;
+    const uint32_t len_a = snap->len[snap_pa];
+    const uint32_t len_b = snap->len[snap_pb];
     const uint32_t min_len = len_a < len_b ? len_a : len_b;
     const uint32_t k = (uint32_t)(biosim_rng_next(rng) % ((uint64_t)min_len + 1ULL));
-    const uint32_t child_len = len_b < (uint32_t)g_max_len ? len_b : (uint32_t)g_max_len;
+    const uint32_t max_len = (uint32_t)genome->max_len;
+    const uint32_t child_len = len_b < max_len ? len_b : max_len;
 
-    for (uint32_t j = 0; j < k; j++) {
-        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pa_s * g_max_len + j];
-        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pa_s * g_max_len + j];
+    for (uint32_t j = 0U; j < k; j++) {
+        genome->conn[(size_t)j * pop + dst] = snap->conn[(size_t)snap_pa * stride + j];
+        genome->wgt[(size_t)j * pop + dst] = snap->wgt[(size_t)snap_pa * stride + j];
     }
     for (uint32_t j = k; j < child_len; j++) {
-        genome->conn[(size_t)j * pop + dst] = temp_conn[(size_t)pb_s * g_max_len + j];
-        genome->wgt[(size_t)j * pop + dst] = temp_wgt[(size_t)pb_s * g_max_len + j];
+        genome->conn[(size_t)j * pop + dst] = snap->conn[(size_t)snap_pb * stride + j];
+        genome->wgt[(size_t)j * pop + dst] = snap->wgt[(size_t)snap_pb * stride + j];
     }
     genome->len[dst] = (uint16_t)child_len;
 }
 
 /*
- * Select one or two parent snapshot indices.
+ * Select one or two parent indices (into snap_order[]).
  *
- * When by_fitness && n_survivors > 1:
+ * When by_fitness && n > 1:
  *   pa drawn uniformly from [1, n-1]; pb drawn from [0, pa-1] — harmonically
  *   biased toward 0 (best score after sort).  Mirrors the reference algorithm.
  * When !by_fitness: pa and pb drawn uniformly from [0, n-1].
@@ -198,44 +201,38 @@ static void crossover_from_snapshot(
  *   the RNG sequence consistent when by_fitness is true.
  */
 static void select_parents(
-    uint32_t n_survivors,
-    bool by_fitness,
-    bool sexual,
-    uint64_t *rng,
-    uint32_t *pa_out,
-    uint32_t *pb_out
+    uint32_t n, bool by_fitness, bool sexual, uint64_t *rng, uint32_t *pa_out, uint32_t *pb_out
 ) {
-    if (by_fitness && n_survivors > 1) {
-        uint32_t pa = 1U + (uint32_t)(biosim_rng_next(rng) % (uint64_t)(n_survivors - 1U));
+    if (by_fitness && n > 1U) {
+        uint32_t pa = 1U + (uint32_t)(biosim_rng_next(rng) % (uint64_t)(n - 1U));
         uint32_t pb = (uint32_t)(biosim_rng_next(rng) % (uint64_t)pa);
         *pa_out = pa;
         *pb_out = pb;
     } else {
-        *pa_out = (uint32_t)(biosim_rng_next(rng) % (uint64_t)n_survivors);
+        *pa_out = (uint32_t)(biosim_rng_next(rng) % (uint64_t)n);
         if (sexual) {
-            *pb_out = (uint32_t)(biosim_rng_next(rng) % (uint64_t)n_survivors);
+            *pb_out = (uint32_t)(biosim_rng_next(rng) % (uint64_t)n);
         } else {
             *pb_out = *pa_out;
         }
     }
 }
 
-/* Materialise a child genome from the snapshot: crossover (sexual) or copy (asexual). */
+/* Materialise a child genome from snap rows: crossover (sexual) or copy (asexual). */
 static void materialize_child(
     biosim_genome_t *genome,
     uint32_t dst,
-    const uint16_t *temp_conn,
-    const int16_t *temp_wgt,
-    const uint16_t *temp_len,
+    const biosim_survivor_snap_t *snap,
+    const uint32_t *snap_order,
     uint32_t pa,
     uint32_t pb,
     bool sexual,
     uint64_t *rng
 ) {
     if (sexual) {
-        crossover_from_snapshot(genome, dst, temp_conn, temp_wgt, temp_len, pa, pb, rng);
+        crossover_from_snapshot(genome, dst, snap, snap_order[pa], snap_order[pb], rng);
     } else {
-        restore_genome_slot(genome, dst, temp_conn, temp_wgt, temp_len, pb);
+        restore_genome_slot(genome, dst, snap, snap_order[pb]);
     }
 }
 
@@ -259,42 +256,42 @@ static int cmp_survivor_desc(const void *a, const void *b) {
 }
 
 /*
- * Sort survivors[] and scores[] together by score descending so that index 0
- * holds the highest-scoring parent.
+ * Sort snap_order[0..n-1] by snap->scores[snap_order[i]] descending so that
+ * snap_order[0] points to the highest-scoring survivor.
+ * snap itself is not modified.
  */
-static biosim_status_t sort_survivors_by_score(uint32_t *survivors, float *scores, uint32_t n) {
-    /* alloc start here, free on exit label */
+static biosim_status_t sort_snap_order_by_score(
+    const float *scores, uint32_t n, uint32_t *snap_order
+) {
     survivor_entry_t *tmp = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
     tmp = malloc((size_t)n * sizeof(survivor_entry_t));
-    if (!tmp) {
+    if (tmp == NULL) {
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
-    for (uint32_t i = 0; i < n; i++) {
-        tmp[i].idx = survivors[i];
-        tmp[i].score = scores[i];
+    for (uint32_t i = 0U; i < n; i++) {
+        tmp[i].idx = snap_order[i];
+        tmp[i].score = scores[snap_order[i]];
     }
     qsort(tmp, (size_t)n, sizeof(survivor_entry_t), cmp_survivor_desc);
-    for (uint32_t i = 0; i < n; i++) {
-        survivors[i] = tmp[i].idx;
-        scores[i] = tmp[i].score;
+    for (uint32_t i = 0U; i < n; i++) {
+        snap_order[i] = tmp[i].idx;
     }
 exit:
     free(tmp);
     return returncode;
 }
 
-/* ── main reproduce entry point ─────────────────────────────────────────── */
+/* ── main breed entry point ─────────────────────────────────────────────── */
 
 /* Place one agent slot: select parents, build genome, compile nnet, find cell. */
 static biosim_status_t reproduce_one_agent(
     biosim_sim_t *sim,
     uint32_t i,
-    const uint16_t *temp_conn,
-    const int16_t *temp_wgt,
-    const uint16_t *temp_len,
+    const biosim_survivor_snap_t *snap,
+    const uint32_t *snap_order,
     uint32_t n_survivors,
     uint64_t gen_seed
 ) {
@@ -313,9 +310,7 @@ static biosim_status_t reproduce_one_agent(
         &pa,
         &pb
     );
-    materialize_child(
-        genome, i, temp_conn, temp_wgt, temp_len, pa, pb, sim->sexual_reproduction, &sim->gen_rng
-    );
+    materialize_child(genome, i, snap, snap_order, pa, pb, sim->sexual_reproduction, &sim->gen_rng);
     biosim_genome_mutate(genome, i, sim->mutation_rate, &sim->gen_rng);
 
     biosim_status_t returncode =
@@ -336,31 +331,32 @@ static biosim_status_t reproduce_one_agent(
 
 exit:
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF("failed to reproduce agent %u (%s)", i, biosim_strerror(returncode));
+        BIOSIM_ERRORF("failed to breed agent %u (%s)", i, biosim_strerror(returncode));
     }
     return returncode;
 }
 
-biosim_status_t biosim_generation_reproduce(
-    biosim_sim_t *sim, uint32_t *survivors, float *scores, uint32_t n_survivors
-) {
-    assert(n_survivors > 0);
+biosim_status_t biosim_generation_breed(biosim_sim_t *sim, const biosim_survivor_snap_t *snap) {
+    assert(snap->count > 0U);
 
-    biosim_genome_t *genome = &sim->genome;
-
-    const uint32_t pop = sim->agents.population;
-    const uint16_t g_max_len = genome->max_len;
+    const uint32_t n_survivors = snap->count;
     const bool by_fitness = sim->choose_parents_by_fitness;
+    const uint32_t pop = sim->agents.population;
 
-    /* alloc start here, free on exit label */
-    uint16_t *temp_conn = NULL;
-    int16_t *temp_wgt = NULL;
-    uint16_t *temp_len = NULL;
+    uint32_t *snap_order = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
-    /* Sort temp buffers snapshot so that they are already in score order */
-    if (by_fitness && n_survivors > 1 && scores != NULL) {
-        returncode = sort_survivors_by_score(survivors, scores, n_survivors);
+    snap_order = malloc((size_t)n_survivors * sizeof(uint32_t));
+    if (snap_order == NULL) {
+        returncode = BIOSIM_ERR_NOMEM;
+        goto exit;
+    }
+    for (uint32_t s = 0U; s < n_survivors; s++) {
+        snap_order[s] = s;
+    }
+
+    if (by_fitness && n_survivors > 1U) {
+        returncode = sort_snap_order_by_score(snap->scores, n_survivors, snap_order);
         if (returncode != BIOSIM_OK) {
             goto exit;
         }
@@ -368,23 +364,10 @@ biosim_status_t biosim_generation_reproduce(
 
     clear_agents_from_grid(sim);
 
-    /* snapshot survivor genomes before any slot is overwritten */
-    temp_conn = malloc((size_t)n_survivors * g_max_len * sizeof(uint16_t));
-    temp_wgt = malloc((size_t)n_survivors * g_max_len * sizeof(int16_t));
-    temp_len = malloc((size_t)n_survivors * sizeof(uint16_t));
-
-    if (temp_conn == NULL || temp_wgt == NULL || temp_len == NULL) {
-        returncode = BIOSIM_ERR_NOMEM;
-        goto exit;
-    }
-
-    snapshot_survivor_genomes(genome, survivors, n_survivors, temp_conn, temp_wgt, temp_len);
-
     const uint64_t gen_seed = biosim_rng_next(&sim->gen_rng);
 
-    for (uint32_t i = 0; i < pop; i++) {
-        biosim_status_t st =
-            reproduce_one_agent(sim, i, temp_conn, temp_wgt, temp_len, n_survivors, gen_seed);
+    for (uint32_t i = 0U; i < pop; i++) {
+        biosim_status_t st = reproduce_one_agent(sim, i, snap, snap_order, n_survivors, gen_seed);
         if (st != BIOSIM_OK) {
             returncode = st;
             goto exit;
@@ -392,11 +375,18 @@ biosim_status_t biosim_generation_reproduce(
     }
 
 exit:
-    free(temp_conn);
-    free(temp_wgt);
-    free(temp_len);
+    free(snap_order);
     if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF("generation reproduce failed (%s)", biosim_strerror(returncode));
+        BIOSIM_ERRORF("generation breed failed (%s)", biosim_strerror(returncode));
     }
     return returncode;
+}
+
+/* ── spawn ──────────────────────────────────────────────────────────────── */
+
+biosim_status_t biosim_generation_spawn(biosim_sim_t *sim, biosim_survivor_snap_t *snap) {
+    if (snap->count > 0U) {
+        return biosim_generation_breed(sim, snap);
+    }
+    return biosim_generation_init_random(sim);
 }

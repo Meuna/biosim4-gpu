@@ -64,3 +64,8 @@ add_executable(core-survivor-snap-tests test_survivor_snap.c)
 target_link_libraries(core-survivor-snap-tests PRIVATE core unity)
 target_compile_features(core-survivor-snap-tests PRIVATE c_std_11)
 add_test(NAME core-survivor-snap-tests COMMAND core-survivor-snap-tests)
+
+add_executable(core-generation-tests test_generation.c)
+target_link_libraries(core-generation-tests PRIVATE core-sim-test-utils)
+target_compile_features(core-generation-tests PRIVATE c_std_11)
+add_test(NAME core-generation-tests COMMAND core-generation-tests)
