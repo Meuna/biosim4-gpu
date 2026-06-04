@@ -31,15 +31,12 @@ typedef struct biosim_census {
 /*
  * Snapshot a census from the current sim state.
  *
- * survivors   — array of n_survivors agent indices that passed the challenge
- * n_survivors — number of entries in survivors[]
+ * n_survivors — number of agents that passed the challenge this generation
  * out         — census struct to fill; all fields are written
  *
  * Must be called before sim->kills is reset to 0.
  */
-void biosim_census_take(
-    const biosim_sim_t *sim, const uint32_t *survivors, uint32_t n_survivors, biosim_census_t *out
-);
+void biosim_census_take(const biosim_sim_t *sim, uint32_t n_survivors, biosim_census_t *out);
 
 /* Print the census column header to stream. */
 void biosim_census_print_header(FILE *stream);

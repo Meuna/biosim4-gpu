@@ -6,15 +6,17 @@
 #define BIOSIM_CORE_GENERATION_H
 
 #include "biosim/core/sim.h"
-#include <stdint.h>
+#include "biosim/core/survivor_snap.h"
 
 /*
- * Evaluate the challenge for every alive agent and collect passing indices into
- * survivors[], with the corresponding fitness score (0..1) into scores[].
- * Both arrays must each point to a caller-allocated buffer with at least
- * sim->agents.population elements. Returns the number of survivors found.
+ * Evaluate the challenge for every alive agent, grow snap as needed, and fill
+ * snap->conn/wgt/len/scores with compact row-major survivor genomes.
+ * Sets snap->count to the number of survivors found.
+ * Returns BIOSIM_ERR_NOMEM if snap growth or a temporary allocation fails.
  */
-uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *survivors, float *scores);
+biosim_status_t biosim_generation_collect_survivors(
+    biosim_sim_t *sim, biosim_survivor_snap_t *snap
+);
 
 /*
  * Initialise the full population from scratch: clear non-barrier grid cells
@@ -25,19 +27,20 @@ uint32_t biosim_generation_collect_survivors(biosim_sim_t *sim, uint32_t *surviv
 biosim_status_t biosim_generation_init_random(biosim_sim_t *sim);
 
 /*
- * Reproduce: clear the grid, snapshot survivor genomes, repopulate every slot
- * with genomes derived from survivor parents (with mutation), recompile neural
- * networks, and place agents on the grid.
- *
- * scores[] is the parallel fitness array from biosim_generation_collect_survivors.
- * It is used when sim->choose_parents_by_fitness is true (score-biased selection).
- * sim->sexual_reproduction controls whether crossover is applied.
- *
- * Precondition: n_survivors > 0.
+ * Breed the next population from a compact genome snapshot.
+ * Clears the grid, then repopulates every slot with genomes derived from
+ * snap->conn/wgt/len/scores (with mutation and optional crossover/fitness-bias).
+ * sim->sexual_reproduction and sim->choose_parents_by_fitness control behaviour.
+ * Precondition: snap->count > 0.
  * Returns BIOSIM_ERR_NOMEM if any required allocation fails.
  */
-biosim_status_t biosim_generation_reproduce(
-    biosim_sim_t *sim, uint32_t *survivors, float *scores, uint32_t n_survivors
-);
+biosim_status_t biosim_generation_breed(biosim_sim_t *sim, const biosim_survivor_snap_t *snap);
+
+/*
+ * Spawn the next generation: calls breed if snap->count > 0, else init_random.
+ * This is the single entry point at the start of every generation after the first.
+ * Returns BIOSIM_ERR_NOMEM on allocation failure.
+ */
+biosim_status_t biosim_generation_spawn(biosim_sim_t *sim, biosim_survivor_snap_t *snap);
 
 #endif /* BIOSIM_CORE_GENERATION_H */

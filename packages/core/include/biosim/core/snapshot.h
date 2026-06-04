@@ -6,6 +6,7 @@
 #define BIOSIM_CORE_SNAPSHOT_H
 
 #include "biosim/core/sim.h"
+#include "biosim/core/survivor_snap.h"
 #include <stdint.h>
 
 /* Bump when the on-disk record layout changes. */
@@ -30,12 +31,16 @@ typedef struct {
 /*
  * Open path, validate the header, run coherency checks (warns to stderr on
  * topology mismatches; fatal error on schema/catalogue mismatch), load the
- * last generation record, reproduce from the loaded survivors, and update
- * sim->gen / sim->gen_rng / sim->kills / sim->step.
+ * last generation record into snap (growing it as needed), and update
+ * sim->gen (set to gen_idx + 1) and sim->gen_rng.
+ * Does NOT call breed; the caller is responsible for calling
+ * biosim_generation_spawn to produce the next population.
  * Returns BIOSIM_ERR_INVALID on file, format, or fatal compat errors.
  * Returns BIOSIM_ERR_NOMEM on allocation failure.
  */
-biosim_status_t biosim_snapshot_restore(const char *path, biosim_sim_t *sim);
+biosim_status_t biosim_snapshot_load_survivors(
+    const char *path, biosim_sim_t *sim, biosim_survivor_snap_t *snap
+);
 
 /* ── output session ──────────────────────────────────────────────────────── */
 
@@ -49,14 +54,12 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
 /*
  * Write a generation record if the current generation index satisfies the
  * schedule (interval > 0: every Nth gen; interval = 0: final gen only).
- * survivors[n_survivors] are agent indices; scores[n_survivors] are the
- * corresponding challenge scores in [0, 1].
- * Skips silently when n_survivors == 0 or sim->snap_f == NULL.
+ * Skips silently when snap->count == 0 or sim->snap_f == NULL.
  * Returns BIOSIM_OK even on write failure (non-fatal); the error is logged to
  * stderr.
  */
 biosim_status_t biosim_snapshot_session_write(
-    biosim_sim_t *sim, const uint32_t *survivors, const float *scores, uint32_t n_survivors
+    biosim_sim_t *sim, const biosim_survivor_snap_t *snap
 );
 
 /*
@@ -75,20 +78,14 @@ biosim_status_t biosim_snapshot_write_header(FILE *f, const biosim_sim_t *sim);
 
 /*
  * Append one generation record to an open snapshot file.
- * survivors[n_survivors] are agent indices into sim->genome.
- * scores[n_survivors] are the corresponding challenge scores in [0, 1].
  * Records sim->gen and sim->gen_rng at the moment of the call; call this
  * after biosim_generation_collect_survivors and before
- * biosim_generation_reproduce so gen_rng is captured at the correct point.
+ * biosim_generation_breed so gen_rng is captured at the correct point.
  * Returns BIOSIM_ERR_IO on I/O failure.
  * Returns BIOSIM_ERR_NOMEM if a temporary buffer cannot be allocated.
  */
 biosim_status_t biosim_snapshot_write_genome(
-    FILE *f,
-    const biosim_sim_t *sim,
-    const uint32_t *survivors,
-    const float *scores,
-    uint32_t n_survivors
+    FILE *f, const biosim_sim_t *sim, const biosim_survivor_snap_t *snap
 );
 
 /*
