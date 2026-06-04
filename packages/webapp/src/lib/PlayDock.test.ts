@@ -3,10 +3,13 @@ import PlayDock from "./PlayDock.svelte";
 
 const defaultProps = {
     running: false,
+    genComplete: false,
+    genomIncompatible: false,
     onToggle: () => {},
     onStep: () => {},
     onGen: () => {},
     onRewind: () => {},
+    onClearGenom: () => {},
 };
 
 describe("PlayDock", () => {
@@ -41,13 +44,75 @@ describe("PlayDock", () => {
         ).toBeTruthy();
     });
 
-    it("renders Clear Genom button as disabled", () => {
+    it("renders Clear Genom button as enabled", () => {
         render(PlayDock, defaultProps);
         const btn = screen.getByRole("button", {
             name: /clear genome/i,
         }) as HTMLButtonElement;
         expect(btn).toBeTruthy();
+        expect(btn.disabled).toBe(false);
+    });
+
+    it("shows ConfirmInline after clicking Clear Genom", async () => {
+        render(PlayDock, defaultProps);
+        await fireEvent.click(
+            screen.getByRole("button", { name: /clear genome/i }),
+        );
+        expect(screen.getByText("Clear")).toBeTruthy();
+        expect(screen.getByText("Cancel")).toBeTruthy();
+    });
+
+    it("calls onClearGenom after confirming clear", async () => {
+        let called = false;
+        render(PlayDock, {
+            ...defaultProps,
+            onClearGenom: () => {
+                called = true;
+            },
+        });
+        await fireEvent.click(
+            screen.getByRole("button", { name: /clear genome/i }),
+        );
+        await fireEvent.click(screen.getByText("Clear"));
+        expect(called).toBe(true);
+    });
+
+    it("cancels clear without calling onClearGenom", async () => {
+        let called = false;
+        render(PlayDock, {
+            ...defaultProps,
+            onClearGenom: () => {
+                called = true;
+            },
+        });
+        await fireEvent.click(
+            screen.getByRole("button", { name: /clear genome/i }),
+        );
+        await fireEvent.click(screen.getByText("Cancel"));
+        expect(called).toBe(false);
+        expect(
+            screen.getByRole("button", { name: /clear genome/i }),
+        ).toBeTruthy();
+    });
+
+    it("disables Play button when genomIncompatible and not running", () => {
+        render(PlayDock, { ...defaultProps, genomIncompatible: true });
+        const btn = screen.getByRole("button", {
+            name: /play simulation/i,
+        }) as HTMLButtonElement;
         expect(btn.disabled).toBe(true);
+    });
+
+    it("does not disable Play button when genomIncompatible but running", () => {
+        render(PlayDock, {
+            ...defaultProps,
+            running: true,
+            genomIncompatible: true,
+        });
+        const btn = screen.getByRole("button", {
+            name: /stop simulation/i,
+        }) as HTMLButtonElement;
+        expect(btn.disabled).toBe(false);
     });
 
     it("calls onToggle when primary button clicked", () => {

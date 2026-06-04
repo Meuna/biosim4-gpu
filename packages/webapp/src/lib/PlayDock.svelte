@@ -7,28 +7,35 @@
         Baby,
         Dna,
     } from "lucide-svelte";
+    import ConfirmInline from "./ConfirmInline.svelte";
 
     let {
         running,
         genComplete,
+        genomIncompatible = false,
         onToggle,
         onStep,
         onGen,
         onRewind,
+        onClearGenom,
     }: {
         running: boolean;
         genComplete: boolean;
+        genomIncompatible?: boolean;
         onToggle: () => void;
         onStep: () => void;
         onGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
+        onClearGenom: () => void;
     } = $props();
+
+    let clearConfirmOpen = $state(false);
 </script>
 
 <div class="dock">
     <button
         class="dock__btn dock__btn--primary"
-        disabled={genComplete && !running}
+        disabled={(genComplete && !running) || (genomIncompatible && !running)}
         onclick={onToggle}
         aria-label={running ? "Stop simulation" : "Play simulation"}
     >
@@ -78,14 +85,31 @@
         >
     </div>
 
-    <button
-        class="dock__btn"
-        disabled
-        aria-label="Clear genome (not yet implemented)"
-    >
-        <Dna size={14} />
-        Clear Genom
-    </button>
+    {#if clearConfirmOpen}
+        <ConfirmInline
+            open={clearConfirmOpen}
+            confirmLabel="Clear"
+            cancelLabel="Cancel"
+            onConfirm={() => {
+                clearConfirmOpen = false;
+                onClearGenom();
+            }}
+            onCancel={() => {
+                clearConfirmOpen = false;
+            }}
+        />
+    {:else}
+        <button
+            class="dock__btn"
+            onclick={() => {
+                clearConfirmOpen = true;
+            }}
+            aria-label="Clear genome"
+        >
+            <Dna size={14} />
+            Clear Genom
+        </button>
+    {/if}
 </div>
 
 <style>
