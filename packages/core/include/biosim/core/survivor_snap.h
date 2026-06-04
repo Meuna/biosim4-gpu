@@ -16,13 +16,13 @@
  * grow and free tolerate zero-initialised state.
  */
 typedef struct {
-    uint16_t *conn;       /* compact row-major: s * stride_cap + j  */
-    int16_t  *wgt;        /* compact row-major: s * stride_cap + j  */
-    uint16_t *len;        /* genome length per survivor              */
-    float    *scores;     /* challenge score per survivor            */
-    uint32_t  count;      /* live survivor count (filled by collect) */
-    uint32_t  pop_cap;    /* allocated survivor slots                */
-    uint16_t  stride_cap; /* allocated cols per survivor (>= max_len)*/
+    uint16_t *conn;      /* compact row-major: s * stride_cap + j  */
+    int16_t *wgt;        /* compact row-major: s * stride_cap + j  */
+    uint16_t *len;       /* genome length per survivor              */
+    float *scores;       /* challenge score per survivor            */
+    uint32_t count;      /* live survivor count (filled by collect) */
+    uint32_t pop_cap;    /* allocated survivor slots                */
+    uint16_t stride_cap; /* allocated cols per survivor (>= max_len)*/
 } biosim_survivor_snap_t;
 
 /*

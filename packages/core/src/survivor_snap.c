@@ -11,17 +11,15 @@ biosim_status_t biosim_survivor_snap_grow(
         return BIOSIM_OK;
     }
 
-    uint32_t new_pop    = snap->pop_cap;
+    uint32_t new_pop = snap->pop_cap;
     uint16_t new_stride = snap->stride_cap;
 
     if (n_survivors > snap->pop_cap) {
         uint32_t doubled = snap->pop_cap == 0U ? n_survivors : snap->pop_cap * 2U;
-        new_pop          = doubled >= n_survivors ? doubled : n_survivors;
+        new_pop = doubled >= n_survivors ? doubled : n_survivors;
     }
     if (g_max_len > snap->stride_cap) {
-        uint16_t doubled = snap->stride_cap == 0U
-                               ? g_max_len
-                               : (uint16_t)(snap->stride_cap * 2U);
+        uint16_t doubled = snap->stride_cap == 0U ? g_max_len : (uint16_t)(snap->stride_cap * 2U);
         new_stride = doubled >= g_max_len ? doubled : g_max_len;
     }
 
@@ -55,7 +53,7 @@ biosim_status_t biosim_survivor_snap_grow(
     }
     snap->scores = ns;
 
-    snap->pop_cap    = new_pop;
+    snap->pop_cap = new_pop;
     snap->stride_cap = new_stride;
     return BIOSIM_OK;
 }
@@ -68,11 +66,11 @@ void biosim_survivor_snap_free(biosim_survivor_snap_t *snap) {
     free(snap->wgt);
     free(snap->len);
     free(snap->scores);
-    snap->conn       = NULL;
-    snap->wgt        = NULL;
-    snap->len        = NULL;
-    snap->scores     = NULL;
-    snap->count      = 0U;
-    snap->pop_cap    = 0U;
+    snap->conn = NULL;
+    snap->wgt = NULL;
+    snap->len = NULL;
+    snap->scores = NULL;
+    snap->count = 0U;
+    snap->pop_cap = 0U;
     snap->stride_cap = 0U;
 }
