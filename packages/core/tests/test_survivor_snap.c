@@ -21,7 +21,7 @@ void test_grow_zero_init_first_alloc(void) {
 void test_grow_noop_when_capacity_sufficient(void) {
     biosim_survivor_snap_t snap = {0};
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_survivor_snap_grow(&snap, 4U, 8U));
-    uint32_t pop_before    = snap.pop_cap;
+    uint32_t pop_before = snap.pop_cap;
     uint16_t stride_before = snap.stride_cap;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_survivor_snap_grow(&snap, 4U, 8U));
     TEST_ASSERT_EQUAL_UINT32(pop_before, snap.pop_cap);
@@ -42,7 +42,9 @@ void test_grow_doubles_stride_dimension(void) {
     biosim_survivor_snap_t snap = {0};
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_survivor_snap_grow(&snap, 4U, 8U));
     uint16_t first_stride = snap.stride_cap;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_survivor_snap_grow(&snap, 4U, (uint16_t)(first_stride + 1U)));
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK, biosim_survivor_snap_grow(&snap, 4U, (uint16_t)(first_stride + 1U))
+    );
     TEST_ASSERT_TRUE(snap.stride_cap >= (uint16_t)(first_stride * 2U));
     biosim_survivor_snap_free(&snap);
 }
