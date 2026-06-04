@@ -66,11 +66,11 @@ if(NOT BIOSIM_BUILD_WEBAPP)
   # CLI/TOML configuration parsing library (depends on core + argtable3 + tomlc17)
   add_subdirectory(packages/cfgparse)
   # Single-threaded CPU reference simulator executable
-  add_subdirectory(packages/sim-ref) # depends on core + cfgparse
+  # add_subdirectory(packages/sim-ref) # gh-85: excluded during Sub-Plan A; revert in Sub-Plan B
   # OpenCL GPU simulator (depends on core + cfgparse + OpenCL; optional at configure time)
-  if(BIOSIM_BUILD_GPU)
-    add_subdirectory(packages/sim-gpu)
-  endif()
+  # if(BIOSIM_BUILD_GPU)                # gh-85: excluded during Sub-Plan A; revert in Sub-Plan B
+  #   add_subdirectory(packages/sim-gpu)
+  # endif()
   # Developer workflow targets for the native tree (format, lint, benchmark)
   include(DevWorkflow)
 else()
