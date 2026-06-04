@@ -4,6 +4,7 @@
         mode,
         gridSizeX = 128,
         gridSizeY = 128,
+        blurred = false,
     }: {
         geom: {
             x: number;
@@ -16,6 +17,7 @@
         mode: "kinetic" | "running" | "paused";
         gridSizeX?: number;
         gridSizeY?: number;
+        blurred?: boolean;
     } = $props();
 </script>
 
@@ -27,6 +29,7 @@
 -->
 <div
     class="grid-view"
+    class:grid-view--blurred={blurred}
     style="left: {geom.x}px; top: {geom.y}px; width: {geom.w}px; height: {geom.h}px"
     aria-label="Simulation grid zone"
 >
@@ -65,6 +68,14 @@
         position: absolute;
         z-index: 5;
         pointer-events: none;
+        transition:
+            filter 0.2s,
+            opacity 0.2s;
+    }
+
+    .grid-view--blurred {
+        filter: blur(2px);
+        opacity: 0.5;
     }
 
     /* ── Crop marks ── */
