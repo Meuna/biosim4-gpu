@@ -81,7 +81,7 @@ static bool initialized = false;
  * generation boundary.  Populated by biosim_generation_collect_survivors at
  * each generation boundary; consumed by biosim_generation_spawn.
  * snap.gen_rng captures sim.gen_rng before reproduction so that
- * biosim_wasm_restart_from_survivors can re-seed the same deterministic run. */
+ * biosim_wasm_rewind_generation can re-seed the same deterministic run. */
 
 static biosim_survivor_snap_t snap = {0};
 
@@ -183,7 +183,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
 /* Reproduce a new population from the saved survivors, using the same gen_rng
  * seed as the original reproduction.  Thanks to determinism, calling this
  * after biosim_wasm_next_generation yields the same starting population. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_restart_from_survivors(void) {
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind_generation(void) {
     if (!initialized) {
         return BIOSIM_ERR_INVALID;
     }

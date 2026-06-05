@@ -116,7 +116,7 @@ export type WorkerCmd =
     | { type: "stop" }
     | { type: "reset" }
     | { type: "step" }
-    | { type: "restart" }
+    | { type: "rewind" }
     | { type: "clearGenom" }
     | { type: "nextGeneration" }
     | { type: "configure"; params: SimParams }
@@ -1054,9 +1054,9 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         case "step":
             doStep();
             break;
-        case "restart":
+        case "rewind":
             playing = false;
-            call("biosim_wasm_restart_from_survivors");
+            call("biosim_wasm_rewind_generation");
             postMessage(statusNow("paused"));
             break;
         case "nextGeneration":

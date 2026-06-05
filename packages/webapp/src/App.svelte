@@ -428,7 +428,7 @@
 
     function handleRewind(autoPlay: boolean): void {
         isGenComplete = false;
-        send({ type: "restart" });
+        send({ type: "rewind" });
         if (autoPlay) {
             isRunning = true;
             hasStarted = true;
