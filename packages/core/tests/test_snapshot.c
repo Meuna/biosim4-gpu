@@ -43,13 +43,21 @@ static biosim_status_t build_snap_from_agents(
 
 /* ── fixture ─────────────────────────────────────────────────────────────── */
 
-static biosim_sim_t s_sim;
+static biosim_sim_t sim;
+static biosim_survivor_snap_t snap;
+
+static const uint32_t k_fix_survivors[4] = {0U, 1U, 2U, 3U};
+static const float k_fix_scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim));
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK, build_snap_from_agents(&sim, k_fix_survivors, k_fix_scores, 4U, &snap)
+    );
 }
 void tearDown(void) {
-    biosim_sim_free(&s_sim);
+    biosim_sim_free(&sim);
+    biosim_survivor_snap_free(&snap);
 }
 
 /* ── tests ──────────────────────────────────────────────────────────────── */
@@ -58,7 +66,7 @@ void test_write_header_correct_magic(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     (void)fseek(f, 0L, SEEK_SET);
     TEST_ASSERT_EQUAL_UINT8(0x42U, (uint8_t)fgetc(f));
@@ -73,7 +81,7 @@ void test_read_header_roundtrip(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     (void)fseek(f, 0L, SEEK_SET);
     biosim_snap_header_t hdr;
@@ -83,8 +91,8 @@ void test_read_header_roundtrip(void) {
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_IO_SCHEMA_VERSION, hdr.schema_version);
     TEST_ASSERT_EQUAL_UINT16((uint16_t)BIOSIM_NUM_SENSORS, hdr.num_sensors);
     TEST_ASSERT_EQUAL_UINT16((uint16_t)BIOSIM_NUM_ACTIONS, hdr.num_actions);
-    TEST_ASSERT_EQUAL_UINT16(s_sim.genome.max_len, hdr.genome_max_len);
-    TEST_ASSERT_EQUAL_UINT8(s_sim.nnet.max_neurons, hdr.max_neurons);
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_len, hdr.genome_max_len);
+    TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, hdr.max_neurons);
     TEST_ASSERT_EQUAL_UINT32(0U, hdr.generation_count); /* finalize not called */
 
     (void)fclose(f);
@@ -94,7 +102,7 @@ void test_bad_magic_returns_invalid(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
 
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
     (void)fseek(f, 0L, SEEK_SET);
     (void)fputc(0x00, f); /* corrupt magic */
     (void)fseek(f, 0L, SEEK_SET);
@@ -114,12 +122,12 @@ void test_genome_roundtrip_single_record(void) {
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
     biosim_survivor_snap_t wsnap = {0};
     TEST_ASSERT_EQUAL_INT(
-        BIOSIM_OK, build_snap_from_agents(&s_sim, survivors, scores, n_surv, &wsnap)
+        BIOSIM_OK, build_snap_from_agents(&sim, survivors, scores, n_surv, &wsnap)
     );
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &s_sim, &wsnap));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &wsnap));
     biosim_survivor_snap_free(&wsnap);
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
     (void)fclose(f);
@@ -130,18 +138,18 @@ void test_genome_roundtrip_single_record(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim2, &rsnap));
 
     TEST_ASSERT_EQUAL_UINT32(n_surv, rsnap.count);
-    TEST_ASSERT_EQUAL_UINT32(s_sim.gen, sim2.gen);
-    TEST_ASSERT_EQUAL_UINT64(s_sim.gen_rng, sim2.gen_rng);
+    TEST_ASSERT_EQUAL_UINT32(sim.gen, sim2.gen);
+    TEST_ASSERT_EQUAL_UINT64(sim.gen_rng, sim2.gen_rng);
     for (uint32_t s = 0U; s < n_surv; s++) {
         TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
-        TEST_ASSERT_EQUAL_UINT16(s_sim.genome.len[survivors[s]], rsnap.len[s]);
+        TEST_ASSERT_EQUAL_UINT16(sim.genome.len[survivors[s]], rsnap.len[s]);
         for (uint16_t j = 0U; j < rsnap.len[s]; j++) {
             TEST_ASSERT_EQUAL_UINT16(
-                s_sim.genome.conn[(size_t)j * s_sim.genome.population + survivors[s]],
+                sim.genome.conn[(size_t)j * sim.genome.population + survivors[s]],
                 rsnap.conn[(size_t)s * rsnap.stride_cap + j]
             );
             TEST_ASSERT_EQUAL_INT16(
-                s_sim.genome.wgt[(size_t)j * s_sim.genome.population + survivors[s]],
+                sim.genome.wgt[(size_t)j * sim.genome.population + survivors[s]],
                 rsnap.wgt[(size_t)s * rsnap.stride_cap + j]
             );
         }
@@ -158,19 +166,11 @@ void test_multi_gen_load_last(void) {
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
-
-    uint32_t survivors[4] = {0U, 1U, 2U, 3U};
-    float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     for (uint32_t g = 0U; g < 3U; g++) {
-        s_sim.gen = g;
-        biosim_survivor_snap_t snap = {0};
-        TEST_ASSERT_EQUAL_INT(
-            BIOSIM_OK, build_snap_from_agents(&s_sim, survivors, scores, 4U, &snap)
-        );
-        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &s_sim, &snap));
-        biosim_survivor_snap_free(&snap);
+        sim.gen = g;
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
     (void)fclose(f);
@@ -195,18 +195,11 @@ void test_multi_gen_scan_without_gen_count(void) {
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
-    uint32_t survivors[4] = {0U, 1U, 2U, 3U};
-    float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
     for (uint32_t g = 0U; g < 3U; g++) {
-        s_sim.gen = g;
-        biosim_survivor_snap_t snap = {0};
-        TEST_ASSERT_EQUAL_INT(
-            BIOSIM_OK, build_snap_from_agents(&s_sim, survivors, scores, 4U, &snap)
-        );
-        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &s_sim, &snap));
-        biosim_survivor_snap_free(&snap);
+        sim.gen = g;
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
     }
     /* Deliberately do NOT call finalize, so generation_count stays 0 */
     (void)fclose(f);
@@ -284,7 +277,7 @@ void test_load_last_truncated_last_gen(void) {
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     /* Write only the entry_size prefix — no payload follows */
     uint64_t fake_size = 1000U;
@@ -309,7 +302,7 @@ void test_load_last_no_complete_gen(void) {
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
     /* No genome entries; generation_count stays 0 */
     (void)fclose(f);
 
@@ -329,7 +322,22 @@ void test_load_survivors_pop_file_larger(void) {
     (void)remove(path);
 
     biosim_sim_t sim_write;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_4x4_pop6(&sim_write));
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK,
+        sim_test_create(
+            &sim_write,
+            &(sim_test_scn_t){
+                .population = 6U,
+                .size_x = 4,
+                .size_y = 4,
+                .genome_max_len = 4U,
+                .max_neurons = 2U,
+                .los_range = 4U,
+                .steps_per_gen = 1U,
+                .sensor_radius = 1,
+            }
+        )
+    );
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
@@ -370,26 +378,35 @@ void test_load_survivors_pop_file_smaller(void) {
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &s_sim)); /* pop = 4 */
-
-    uint32_t survivors[4] = {0U, 1U, 2U, 3U};
-    float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
-    biosim_survivor_snap_t wsnap = {0};
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, build_snap_from_agents(&s_sim, survivors, scores, 4U, &wsnap));
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &s_sim, &wsnap));
-    biosim_survivor_snap_free(&wsnap);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim)); /* pop = 4 */
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
     (void)fclose(f);
 
     biosim_sim_t sim_read;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_4x4_pop6(&sim_read));
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK,
+        sim_test_create(
+            &sim_read,
+            &(sim_test_scn_t){
+                .population = 6U,
+                .size_x = 4,
+                .size_y = 4,
+                .genome_max_len = 4U,
+                .max_neurons = 2U,
+                .los_range = 4U,
+                .steps_per_gen = 1U,
+                .sensor_radius = 1,
+            }
+        )
+    );
 
     biosim_survivor_snap_t rsnap = {0};
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim_read, &rsnap));
 
     TEST_ASSERT_EQUAL_UINT32(4U, rsnap.count); /* all pop_file entries loaded */
     for (uint32_t s = 0U; s < rsnap.count; s++) {
-        TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
+        TEST_ASSERT_EQUAL_FLOAT(snap.scores[s], rsnap.scores[s]);
     }
 
     (void)remove(path);
