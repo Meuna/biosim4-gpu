@@ -118,17 +118,12 @@ void test_genome_roundtrip_single_record(void) {
 
     uint32_t survivors[4] = {0U, 1U, 2U, 3U};
     uint32_t n_surv = 4U;
-    float scores[4] = {0.25F, 0.50F, 0.75F, 1.00F};
+    float scores[4] = {0.1F, 0.2F, 0.3F, 0.4F};
 
     FILE *f = fopen(path, "w+b");
     TEST_ASSERT_NOT_NULL(f);
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
-    biosim_survivor_snap_t wsnap = {0};
-    TEST_ASSERT_EQUAL_INT(
-        BIOSIM_OK, build_snap_from_agents(&sim, survivors, scores, n_surv, &wsnap)
-    );
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &wsnap));
-    biosim_survivor_snap_free(&wsnap);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
     (void)fclose(f);
 
