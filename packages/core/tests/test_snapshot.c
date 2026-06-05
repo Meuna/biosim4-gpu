@@ -5,7 +5,6 @@
 #include "biosim/core/generation.h"
 #include "biosim/core/io_eval.h"
 #include "biosim/core/sim.h"
-#include "biosim/core/survivor_snap.h"
 #include "unity.h"
 
 #include <stdio.h>

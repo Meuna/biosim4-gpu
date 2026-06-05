@@ -1,7 +1,7 @@
 #include "biosim/core/census.h"
 #include "biosim/core/generation.h"
 #include "biosim/core/sim.h"
-#include "biosim/core/survivor_snap.h"
+#include "biosim/core/snapshot.h"
 #include "biosim/core/test_utils.h"
 #include "unity.h"
 
