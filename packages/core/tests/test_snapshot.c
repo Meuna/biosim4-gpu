@@ -26,6 +26,8 @@ static biosim_status_t build_snap_from_agents(
     if (st != BIOSIM_OK) {
         return st;
     }
+    snap->gen = sim->gen;
+    snap->gen_rng = sim->gen_rng;
     for (uint32_t s = 0U; s < n_surv; s++) {
         uint32_t src = survivors[s];
         snap->len[s] = sim->genome.len[src];
@@ -135,6 +137,8 @@ void test_genome_roundtrip_single_record(void) {
     TEST_ASSERT_EQUAL_UINT32(n_surv, rsnap.count);
     TEST_ASSERT_EQUAL_UINT32(sim.gen, sim2.gen);
     TEST_ASSERT_EQUAL_UINT64(sim.gen_rng, sim2.gen_rng);
+    TEST_ASSERT_EQUAL_UINT32(snap.gen, rsnap.gen);
+    TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, rsnap.gen_rng);
     for (uint32_t s = 0U; s < n_surv; s++) {
         TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
         TEST_ASSERT_EQUAL_UINT16(sim.genome.len[survivors[s]], rsnap.len[s]);
@@ -164,7 +168,7 @@ void test_multi_gen_load_last(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     for (uint32_t g = 0U; g < 3U; g++) {
-        sim.gen = g;
+        snap.gen = g;
         TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
     }
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 3U));
@@ -177,6 +181,7 @@ void test_multi_gen_load_last(void) {
 
     /* load_survivors should return the last gen (gen_idx=2) */
     TEST_ASSERT_EQUAL_UINT32(2U, sim2.gen);
+    TEST_ASSERT_EQUAL_UINT32(2U, rsnap.gen);
     TEST_ASSERT_EQUAL_UINT32(4U, rsnap.count);
 
     (void)remove(path);
@@ -193,7 +198,7 @@ void test_multi_gen_scan_without_gen_count(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
 
     for (uint32_t g = 0U; g < 3U; g++) {
-        sim.gen = g;
+        snap.gen = g;
         TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
     }
     /* Deliberately do NOT call finalize, so generation_count stays 0 */

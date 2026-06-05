@@ -80,11 +80,10 @@ static bool s_initialized = false;
  * Compact genome snapshot of the challenge-passing agents from the most recent
  * generation boundary.  Populated by biosim_generation_collect_survivors at
  * each generation boundary; consumed by biosim_generation_spawn.
- * s_saved_gen_rng captures s_sim.gen_rng before reproduction so that
+ * snap.gen_rng captures s_sim.gen_rng before reproduction so that
  * biosim_wasm_restart_from_survivors can re-seed the same deterministic run. */
 
 static biosim_survivor_snap_t s_snap = {0};
-static uint64_t s_saved_gen_rng = 0ULL;
 
 /* ── forward declarations ────────────────────────────────────────────────── */
 
@@ -139,7 +138,6 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
     memset(&s_last_census, 0, sizeof(s_last_census));
     biosim_survivor_snap_free(&s_snap);
     s_snap = (biosim_survivor_snap_t){0};
-    s_saved_gen_rng = 0ULL;
     free(s_barriers);
     s_barriers = NULL;
     s_barriers_cap = 0U;
@@ -344,7 +342,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_restart_from_survivors(void) {
     if (!s_initialized) {
         return BIOSIM_ERR_INVALID;
     }
-    s_sim.gen_rng = s_saved_gen_rng;
+    s_sim.gen_rng = s_snap.gen_rng;
     return (int)spawn_generation();
 }
 
@@ -360,7 +358,6 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation(void) {
     }
 
     biosim_census_take(&s_sim, s_snap.count, &s_last_census);
-    s_saved_gen_rng = s_sim.gen_rng;
 
     rc = spawn_generation();
     if (rc == BIOSIM_OK) {

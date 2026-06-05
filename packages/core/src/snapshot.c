@@ -77,6 +77,8 @@ void biosim_survivor_snap_free(biosim_survivor_snap_t *snap) {
     snap->count = 0U;
     snap->pop_cap = 0U;
     snap->stride_cap = 0U;
+    snap->gen = 0U;
+    snap->gen_rng = 0U;
 }
 
 /* ── file-format constants ───────────────────────────────────────────────── */
@@ -175,7 +177,7 @@ biosim_status_t biosim_snapshot_write_genome(
         returncode = BIOSIM_ERR_IO;
         goto exit;
     }
-    if (!write_u32(f, sim->gen)) {
+    if (!write_u32(f, snap->gen)) {
         returncode = BIOSIM_ERR_IO;
         goto exit;
     }
@@ -183,7 +185,7 @@ biosim_status_t biosim_snapshot_write_genome(
         returncode = BIOSIM_ERR_IO;
         goto exit;
     }
-    if (!write_u64(f, sim->gen_rng)) {
+    if (!write_u64(f, snap->gen_rng)) {
         returncode = BIOSIM_ERR_IO;
         goto exit;
     }
@@ -626,6 +628,8 @@ biosim_status_t biosim_snapshot_load_survivors(
 
     sim->gen = gen_idx;
     sim->gen_rng = gen_rng;
+    snap->gen = gen_idx;
+    snap->gen_rng = gen_rng;
 
 exit:
     if (f != NULL) {
