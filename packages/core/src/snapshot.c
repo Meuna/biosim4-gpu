@@ -768,8 +768,7 @@ biosim_status_t biosim_snapshot_load_survivors(
         goto exit;
     }
 
-    /* Match old biosim_snapshot_restore post-breed semantics: gen = gen_idx + 1. */
-    sim->gen = gen_idx + 1U;
+    sim->gen = gen_idx;
     sim->gen_rng = gen_rng;
 
 exit:

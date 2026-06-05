@@ -32,7 +32,8 @@ typedef struct {
  * Open path, validate the header, run coherency checks (warns to stderr on
  * topology mismatches; fatal error on schema/catalogue mismatch), load the
  * last generation record into snap (growing it as needed), and update
- * sim->gen (set to gen_idx + 1) and sim->gen_rng.
+ * sim->gen (set to the loaded generation index) and sim->gen_rng.
+ * The caller increments sim->gen if starting a new generation from the snap.
  * Does NOT call breed; the caller is responsible for calling
  * biosim_generation_spawn to produce the next population.
  * Returns BIOSIM_ERR_INVALID on file, format, or fatal compat errors.

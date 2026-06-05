@@ -38,7 +38,7 @@ biosim_status_t biosim_generation_breed(biosim_sim_t *sim, const biosim_survivor
 
 /*
  * Spawn the next generation: calls breed if snap->count > 0, else init_random.
- * This is the single entry point at the start of every generation after the first.
+ * This is the single entry point at the start of every generation.
  * Returns BIOSIM_ERR_NOMEM on allocation failure.
  */
 biosim_status_t biosim_generation_spawn(biosim_sim_t *sim, biosim_survivor_snap_t *snap);

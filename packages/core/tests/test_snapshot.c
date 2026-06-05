@@ -495,7 +495,7 @@ void test_session_restore_identical_second_generation(void) {
 
     biosim_survivor_snap_t snap2 = {0};
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim2, &snap2));
-    /* sim2.gen == 1 (load_survivors sets gen = gen_idx + 1) */
+    sim2.gen++; /* advance past the loaded generation, matching sim1 after retire */
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_spawn(&sim2, &snap2));
 
     /* Run both sims to the end of gen 1 */
