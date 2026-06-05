@@ -32,7 +32,7 @@ A task is **NOT** complete while lint reports any error or warning.
 
 - **Files**: `snake_case.c`, `snake_case.h`; kernel files: `k_name.cl`
 - **Public API**: `biosim_` prefix; **types**: `biosim_*_t`
-- **Kernel entry points**: `k_` prefix only — e.g. `k_feedforward`, `k_movement`
+- **Kernel entry points**: `k_` prefix only — e.g. `k_feedforward`, `k_movement`. No other scope prefix (`s_`, `g_`, etc.) on any symbol.
 - **Section separators**: 79-char banner with U+2500 in multi-section `.c` files
 
 ## Error handling
