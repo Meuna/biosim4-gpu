@@ -25,8 +25,6 @@ if(CLANG_TIDY_EXECUTABLE)
   add_custom_target(lint
     COMMAND ${CMAKE_COMMAND} -E echo "Running clang-tidy..."
     COMMAND git ls-files -- "*.c" ":(exclude)third_party/**" ":(exclude)packages/sim-wasm/**"
-                                             ":(exclude)packages/sim-ref/**"
-                                             ":(exclude)packages/sim-gpu/**"
             | xargs ${CLANG_TIDY_EXECUTABLE}
                     --config-file=${CMAKE_SOURCE_DIR}/.clang-tidy
                     -p ${CMAKE_BINARY_DIR}
