@@ -108,15 +108,19 @@ automatically when the PR is merged.
 
 ### 6. Respond to review comments
 
-After receiving review feedback:
+IMPORTANT: respond to the latest review ONLY, or a specific review ID when provided.
 
-1. Read the review: `gh pr view {pr-number} --comments`
-2. Address each comment as a separate atomic commit — one commit per comment
-   addressed, using the same commit format (`gh-{N}: {what changed}`).
-3. Push: `git push`
+1. If not provided, find the latest review ID:
+   `LATEST_REVIEW=$(gh api repos/<owner>/<repo>/pulls/<pr>/reviews --jq '.[-1].id')`
+2. Read the main review comment:
+   `gh api repos/<owner>/<repo>/pulls/<pr>/reviews --jq ".[] | select(.id == $LATEST_REVIEW) | .body"`
+3. Read the inline comments:
+   `gh api repos/<owner>/<repo>/pulls/<pr>/comments --jq ".[] | select(.pull_request_review_id == $LATEST_REVIEW) | {id,path,line,start_line,side,body}"`
+4. Implement the review, group related review changes into focused commits.
+5. Push: `git push`
 
 Do not squash or amend commits during review response. Preserve the atomic
-trail so reviewers can track each change individually.
+trail so reviewers can track changes individually.
 
 ## Working with this repository
 
