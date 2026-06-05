@@ -7,7 +7,7 @@ const defaultProps = {
     genomIncompatible: false,
     onToggle: () => {},
     onStep: () => {},
-    onGen: () => {},
+    onNextGen: () => {},
     onRewind: () => {},
     onClearGenom: () => {},
 };

@@ -9,7 +9,7 @@ describe("TopBar", () => {
             running: false,
             onToggle: noOp,
             onStep: noOp,
-            onGen: noOp,
+            onNextGen: noOp,
             onRewind: noOp,
         });
         expect(screen.getByText("biosim4-gpu")).toBeTruthy();
@@ -21,7 +21,7 @@ describe("TopBar", () => {
             running: false,
             onToggle: noOp,
             onStep: noOp,
-            onGen: noOp,
+            onNextGen: noOp,
             onRewind: noOp,
         });
         const link = screen.getByRole("link", { name: /github/i });
@@ -34,7 +34,7 @@ describe("TopBar", () => {
             running: false,
             onToggle: noOp,
             onStep: noOp,
-            onGen: noOp,
+            onNextGen: noOp,
             onRewind: noOp,
         });
         expect(
@@ -47,7 +47,7 @@ describe("TopBar", () => {
             running: true,
             onToggle: noOp,
             onStep: noOp,
-            onGen: noOp,
+            onNextGen: noOp,
             onRewind: noOp,
         });
         expect(
@@ -60,7 +60,7 @@ describe("TopBar", () => {
             running: false,
             onToggle: noOp,
             onStep: noOp,
-            onGen: noOp,
+            onNextGen: noOp,
             onRewind: noOp,
         });
         expect(

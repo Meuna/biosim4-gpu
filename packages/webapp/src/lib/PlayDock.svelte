@@ -15,7 +15,7 @@
         genomIncompatible = false,
         onToggle,
         onStep,
-        onGen,
+        onNextGen,
         onRewind,
         onClearGenom,
     }: {
@@ -24,7 +24,7 @@
         genomIncompatible?: boolean;
         onToggle: () => void;
         onStep: () => void;
-        onGen: (autoPlay: boolean) => void;
+        onNextGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
     } = $props();
@@ -64,7 +64,7 @@
     <div class="dock__autoplay-group">
         <button
             class="dock__btn"
-            onclick={(e) => onGen(e.ctrlKey)}
+            onclick={(e) => onNextGen(e.ctrlKey)}
             aria-label="Advance one generation (Ctrl+click to auto play)"
         >
             <Baby size={14} />

@@ -416,7 +416,7 @@
         send({ type: "step" });
     }
 
-    function handleGen(autoPlay: boolean): void {
+    function handleNextGen(autoPlay: boolean): void {
         isGenComplete = false;
         hasStarted = true;
         send({ type: "nextGeneration" });
@@ -552,7 +552,7 @@
         {genomIncompatible}
         onToggle={handleToggle}
         onStep={handleStep}
-        onGen={handleGen}
+        onNextGen={handleNextGen}
         onRewind={handleRewind}
         onClearGenom={handleClearGenom}
     />

@@ -7,7 +7,7 @@
         genomIncompatible = false,
         onToggle,
         onStep,
-        onGen,
+        onNextGen,
         onRewind,
         onClearGenom,
     }: {
@@ -16,7 +16,7 @@
         genomIncompatible?: boolean;
         onToggle: () => void;
         onStep: () => void;
-        onGen: (autoPlay: boolean) => void;
+        onNextGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
     } = $props();
@@ -35,7 +35,7 @@
             {genomIncompatible}
             {onToggle}
             {onStep}
-            {onGen}
+            {onNextGen}
             {onRewind}
             {onClearGenom}
         />
