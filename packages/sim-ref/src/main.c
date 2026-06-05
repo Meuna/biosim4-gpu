@@ -6,6 +6,7 @@
 #include "biosim/cfgparse/barriers.h"
 #include "biosim/cfgparse/challenges.h"
 #include "biosim/core/census.h"
+#include "biosim/core/generation.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
 #include "biosim/core/sim.h"
@@ -62,6 +63,7 @@ int main(int argc, char **argv) {
     /* alloc start here, free on exit label */
     biosim_params_t p;
     biosim_sim_t sim;
+    biosim_survivor_snap_t snap = {0};
     biosim_barrier_spec_t *barriers = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
@@ -127,10 +129,11 @@ int main(int argc, char **argv) {
     const int snap_interval = biosim_params_get_int(&p, "interval");
 
     if (snap_in_path != NULL) {
-        returncode = biosim_snapshot_restore(snap_in_path, &sim);
+        returncode = biosim_snapshot_load_survivors(snap_in_path, &sim, &snap);
         if (returncode != BIOSIM_OK) {
             goto exit;
         }
+        sim.gen++; /* Convention: snapshots hold the generation of the survivors */
     }
 
     /* ── open snapshot-out session if configured ─────────────────────────── */
@@ -147,6 +150,11 @@ int main(int argc, char **argv) {
     biosim_census_print_header(stdout);
 
     while (sim.gen < sim.max_generations && !g_halt_requested) {
+        returncode = biosim_generation_spawn(&sim, &snap);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
+        }
+
         while (sim.step < sim.steps_per_gen) {
             for (uint32_t i = 0U; i < sim.agents.population; i++) {
                 if (sim.agents.alive[i]) {
@@ -157,7 +165,7 @@ int main(int argc, char **argv) {
         }
 
         biosim_census_t census;
-        returncode = biosim_sim_next_generation(&sim, &census);
+        returncode = biosim_sim_retire_generation(&sim, &snap, &census);
         if (returncode != BIOSIM_OK) {
             goto exit;
         }
@@ -169,6 +177,7 @@ int main(int argc, char **argv) {
     }
 
 exit:
+    biosim_survivor_snap_free(&snap);
     biosim_sim_free(&sim);
     biosim_params_free(&p);
     free(barriers);

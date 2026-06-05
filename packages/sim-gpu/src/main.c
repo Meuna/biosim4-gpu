@@ -6,9 +6,11 @@
 #include "biosim/cfgparse/barriers.h"
 #include "biosim/cfgparse/challenges.h"
 #include "biosim/core/census.h"
+#include "biosim/core/generation.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
 #include "biosim/core/sim.h"
+#include "biosim/core/snapshot.h"
 #include "biosim/core/status.h"
 #include "biosim/sim-gpu/pipeline.h"
 #include "biosim/sim-gpu/runner.h"
@@ -82,6 +84,7 @@ int main(int argc, char **argv) {
     /* alloc start here, free on exit label */
     biosim_params_t p;
     biosim_sim_t sim;
+    biosim_survivor_snap_t snap = {0};
     biosim_gpu_runner_t runner;
     biosim_gpu_pipeline_t pipeline;
     biosim_barrier_spec_t *barriers = NULL;
@@ -163,6 +166,16 @@ int main(int argc, char **argv) {
     biosim_census_print_header(stdout);
 
     while (sim.gen < sim.max_generations && !g_halt_requested) {
+        returncode = biosim_generation_spawn(&sim, &snap);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
+        }
+
+        returncode = biosim_gpu_pipeline_sync_from_host(&pipeline, &sim);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
+        }
+
         while (sim.step < sim.steps_per_gen) {
             returncode = biosim_gpu_pipeline_step(&pipeline, &sim);
             if (returncode != BIOSIM_OK) {
@@ -177,16 +190,11 @@ int main(int argc, char **argv) {
         }
 
         biosim_census_t census;
-        returncode = biosim_sim_next_generation(&sim, &census);
+        returncode = biosim_sim_retire_generation(&sim, &snap, &census);
         if (returncode != BIOSIM_OK) {
             goto exit;
         }
         biosim_census_print(stdout, &census);
-
-        returncode = biosim_gpu_pipeline_sync_from_host(&pipeline, &sim);
-        if (returncode != BIOSIM_OK) {
-            goto exit;
-        }
     }
 
     if (g_halt_requested) {
@@ -194,6 +202,7 @@ int main(int argc, char **argv) {
     }
 
 exit:
+    biosim_survivor_snap_free(&snap);
     biosim_gpu_pipeline_free(&pipeline);
     biosim_gpu_runner_free(&runner);
     biosim_sim_free(&sim);
