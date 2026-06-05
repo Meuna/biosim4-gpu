@@ -29,6 +29,7 @@ A task is **NOT** complete while lint reports any error or warning.
 - **Files**: `snake_case.c`, `snake_case.h`
 - **Public API**: `biosim_` prefix — e.g. `biosim_genome_mutate`
 - **Types**: `biosim_*_t` — e.g. `biosim_coord_t`
+- **No scope prefix** (`s_`, `g_`, etc.) on any symbol. Use IDE navigation, not prefixes.
 - **Section separators**: `.c` files with multiple logical groups use a
   79-char banner: `/* ── lifecycle ──────────────────────────────────────────────────────────── */`
 
