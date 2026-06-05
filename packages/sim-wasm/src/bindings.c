@@ -144,6 +144,76 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
     n_barriers = 0U;
 }
 
+/* ── stepping ────────────────────────────────────────────────────────────── */
+
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_step(void) {
+    for (uint32_t i = 0U; i < sim.agents.population; i++) {
+        if (sim.agents.alive[i]) {
+            biosim_sim_step_agent(&sim, i);
+        }
+    }
+    biosim_sim_next_step(&sim);
+    return BIOSIM_OK;
+}
+
+/* ── generation operations ───────────────────────────────────────────────── */
+
+/* Populate the grid for a new generation run via core's spawn logic.
+ * Resets sim.step and sim.kills to zero on success.
+ * Must be called after biosim_sim_create (or after collect_survivors) before
+ * any simulation steps are taken. */
+static biosim_status_t spawn_generation(void) {
+    biosim_status_t rc = biosim_generation_spawn(&sim, &snap);
+    if (rc == BIOSIM_OK) {
+        sim.step = 0U;
+        sim.kills = 0U;
+    }
+    return rc;
+}
+
+/* Discard the saved survivors so the next init() starts from a random genome. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
+    if (!initialized) {
+        return BIOSIM_ERR_INVALID;
+    }
+    snap.count = 0U;
+    return BIOSIM_OK;
+}
+
+/* Reproduce a new population from the saved survivors, using the same gen_rng
+ * seed as the original reproduction.  Thanks to determinism, calling this
+ * after biosim_wasm_next_generation yields the same starting population. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_restart_from_survivors(void) {
+    if (!initialized) {
+        return BIOSIM_ERR_INVALID;
+    }
+    sim.gen_rng = snap.gen_rng;
+    return (int)spawn_generation();
+}
+
+/* Advance one generation: collect survivors, take census, then spawn the next
+ * population (breed from survivors, or randomise if none passed the challenge),
+ * then advance the generation counter. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation(void) {
+    biosim_status_t rc = biosim_generation_collect_survivors(&sim, &snap);
+    if (rc != BIOSIM_OK) {
+        goto exit;
+    }
+
+    biosim_census_take(&sim, snap.count, &last_census);
+
+    rc = spawn_generation();
+    if (rc == BIOSIM_OK) {
+        sim.gen++;
+    }
+
+exit:
+    if (rc != BIOSIM_OK) {
+        BIOSIM_ERRORF("next generation failed (%s)", biosim_strerror(rc));
+    }
+    return (int)rc;
+}
+
 /* ── parameter setters ───────────────────────────────────────────────────── */
 
 /* Set a named integer parameter before the next biosim_wasm_init call.
@@ -297,78 +367,6 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
 /* Number of barriers currently in the list.                                */
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_n_barriers(void) {
     return n_barriers;
-}
-
-/* ── step-level operations ───────────────────────────────────────────────── */
-
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_step(void) {
-    for (uint32_t i = 0U; i < sim.agents.population; i++) {
-        if (sim.agents.alive[i]) {
-            biosim_sim_step_agent(&sim, i);
-        }
-    }
-    biosim_sim_next_step(&sim);
-    return BIOSIM_OK;
-}
-
-/* ── generation spawn ────────────────────────────────────────────────────── */
-
-/* Populate the grid for a new generation run via core's spawn logic.
- * Resets sim.step and sim.kills to zero on success.
- * Must be called after biosim_sim_create (or after collect_survivors) before
- * any simulation steps are taken. */
-static biosim_status_t spawn_generation(void) {
-    biosim_status_t rc = biosim_generation_spawn(&sim, &snap);
-    if (rc == BIOSIM_OK) {
-        sim.step = 0U;
-        sim.kills = 0U;
-    }
-    return rc;
-}
-
-/* Discard the saved survivors so the next init() starts from a random genome. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
-    if (!initialized) {
-        return BIOSIM_ERR_INVALID;
-    }
-    snap.count = 0U;
-    return BIOSIM_OK;
-}
-
-/* Reproduce a new population from the saved survivors, using the same gen_rng
- * seed as the original reproduction.  Thanks to determinism, calling this
- * after biosim_wasm_next_generation yields the same starting population. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_restart_from_survivors(void) {
-    if (!initialized) {
-        return BIOSIM_ERR_INVALID;
-    }
-    sim.gen_rng = snap.gen_rng;
-    return (int)spawn_generation();
-}
-
-/* ── generation-level operations ─────────────────────────────────────────── */
-
-/* Advance one generation: collect survivors, take census, then spawn the next
- * population (breed from survivors, or randomise if none passed the challenge),
- * then advance the generation counter. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation(void) {
-    biosim_status_t rc = biosim_generation_collect_survivors(&sim, &snap);
-    if (rc != BIOSIM_OK) {
-        goto exit;
-    }
-
-    biosim_census_take(&sim, snap.count, &last_census);
-
-    rc = spawn_generation();
-    if (rc == BIOSIM_OK) {
-        sim.gen++;
-    }
-
-exit:
-    if (rc != BIOSIM_OK) {
-        BIOSIM_ERRORF("next generation failed (%s)", biosim_strerror(rc));
-    }
-    return (int)rc;
 }
 
 /* ── state queries ───────────────────────────────────────────────────────── */
