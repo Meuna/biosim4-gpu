@@ -26,7 +26,7 @@ The format is binary, little-endian throughout.
 |--------|------|-------|-------|
 | 0 | 4 | magic | `0x42 0x53 0x4D 0x34` ("BSM4") |
 | 4 | 2 | format_version | `BIOSIM_SNAP_FORMAT_VERSION` (current: 2) |
-| 6 | 2 | schema_version | `BIOSIM_IO_SCHEMA_VERSION` (from `io_catalogue.h`) |
+| 6 | 2 | schema_version | `BIOSIM_IO_SCHEMA_VERSION` (from `io_defs.h`) |
 | 8 | 2 | num_sensors | `BIOSIM_NUM_SENSORS` at write time |
 | 10 | 2 | num_actions | `BIOSIM_NUM_ACTIONS` at write time |
 | 12 | 2 | genome_max_len | `sim->genome.max_len` at write time |
@@ -58,9 +58,9 @@ Let `n = n_survivors` and `L = genome_max_len` (from file header).
 Genome arrays use the transposed SoA layout: gene slot `j` of survivor `s`
 is at index `j * n_survivors + s`.
 
-`gen_rng` is captured after `biosim_generation_collect_survivors` and before
-`biosim_generation_reproduce`. Restoring `sim->gen_rng` to this value before
-calling reproduce yields a deterministic replay.
+`gen_rng` is captured inside `biosim_generation_collect_survivors` (before breed).
+Restoring `sim->gen_rng` to this value before calling `biosim_generation_breed`
+yields a deterministic replay.
 
 ### Approximate sizes
 
@@ -70,13 +70,16 @@ At defaults (pop = 3000, 750 survivors at 25%, `genome_max_len = 24`):
 
 ### Restore pattern
 
-```
-biosim_snapshot_restore(path, &sim)
+```c
+biosim_survivor_snap_t snap = {0};
+biosim_snapshot_load_survivors(path, &sim, &snap);
+sim.gen++;  /* advance to the next generation */
+biosim_generation_spawn(&sim, &snap);
 ```
 
-Loads the last generation record, calls `biosim_generation_reproduce` exactly as
-a normal generation boundary would, and resets generation counters. No special
-simulation loop path is needed.
+`biosim_snapshot_load_survivors` reads the last generation record into `snap` and
+sets `sim->gen` to the stored generation index. The caller increments `gen` and calls
+`biosim_generation_spawn`, which breeds the loaded survivors into the next population.
 
 ## TOML parameter format
 

@@ -8,6 +8,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`biosim_survivor_snap_t`** (gh-85) — compact genome snapshot type that carries
+  survivor genomes, scores, `gen`, and `gen_rng` across every generation boundary.
+  Defined in `snapshot_defs.h`; lifecycle functions `biosim_survivor_snap_grow` and
+  `biosim_survivor_snap_free` declared in `snapshot.h`. The snap is now the single
+  shared buffer used by `collect_survivors`, `breed`, `session_write`, and
+  `load_survivors` — no more internal copies.
+
+### Changed
+- **Generation breeding path rationalized** (gh-85) — the monolithic
+  `biosim_generation_reproduce` is replaced by three focused functions:
+  `biosim_generation_collect_survivors` (challenge eval + snap fill),
+  `biosim_generation_breed` (reproduce next population from snap), and
+  `biosim_generation_spawn` (breed if `snap->count > 0`, else `init_random`).
+  `biosim_generation_spawn` is the single entry point at the start of every
+  generation.
+- **`biosim_sim_next_generation` → `biosim_sim_retire_generation`** (gh-85) —
+  retire collects survivors, takes census, and writes the snapshot, but does **not**
+  spawn the next generation. Callers call `biosim_generation_spawn` after retire.
+- **`biosim_snapshot_restore` → `biosim_snapshot_load_survivors`** (gh-85) —
+  loads the last record into `snap` and sets `sim->gen` to the stored index.
+  Does not call breed. Caller increments `gen` and calls `biosim_generation_spawn`.
+- **`biosim_census_take` signature** (gh-85) — unused `const uint32_t *survivors`
+  parameter removed; call sites pass `snap->count` as `n_survivors` directly.
+
+### Removed
+- **`biosim_generation_reproduce`** (gh-85) — replaced by `collect_survivors` /
+  `breed` / `spawn`.
+- **`biosim_sim_next_generation`** (gh-85) — replaced by `biosim_sim_retire_generation`.
+- **`biosim_snapshot_restore`** (gh-85) — replaced by `biosim_snapshot_load_survivors`.
+- **`biosim_snapshot_load` and `biosim_snapshot_load_last`** (gh-85) — test-only
+  helpers; coverage migrated to `load_survivors`-based tests.
+
+### Added
 - **Brain explorer** (gh-74) — the Cell panel's hard-coded brain placeholder is
   replaced by a real force-directed visualization of the selected agent's neural
   network (`BrainExplorer.svelte`, d3-force). Sensors are pinned on the left,

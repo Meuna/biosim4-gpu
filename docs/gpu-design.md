@@ -199,9 +199,10 @@ At the end of each generation the host:
 
 1. Reads back `alive[]`, `loc_x/y`, `challenge_bits`, and `signal` via
    `biosim_gpu_pipeline_sync_to_host`.
-2. Evaluates survivors (challenge-based fitness) and reproduces the population
-   via `biosim_sim_next_generation`.
-3. Writes the full new population state (all mutable buffers) back to the device
+2. Collects survivors, takes census, and writes the snapshot via
+   `biosim_sim_retire_generation`.
+3. Breeds the next population from the snap via `biosim_generation_spawn`.
+4. Writes the full new population state (all mutable buffers) back to the device
    via `biosim_gpu_pipeline_sync_from_host`.
 
 Keeping the boundary on the host means the GPU refactoring does not require
