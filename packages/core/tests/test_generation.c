@@ -36,6 +36,7 @@ void test_collect_survivors_sets_genome_data(void) {
 
     biosim_survivor_snap_t snap = {0};
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_collect_survivors(&sim, &snap));
+    TEST_ASSERT_GREATER_THAN_UINT32(0U, snap.count);
 
     for (uint32_t s = 0U; s < snap.count; s++) {
         TEST_ASSERT_TRUE(snap.len[s] > 0U);
