@@ -107,44 +107,4 @@ biosim_status_t biosim_snapshot_finalize(FILE *f, uint32_t generation_count);
  */
 biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *header_out);
 
-/*
- * Load survivor genomes from the 0-based generation entry at gen_idx into
- * sim->genome slots 0..n-1, where n = min(file_n_survivors, sim->genome.population).
- * sim must already be fully allocated via biosim_sim_create. scores_out receives the
- * n challenge scores; must point to at least sim->genome.population floats.
- * On success:
- *   *n_survivors_out  — number of survivors loaded
- *   *gen_idx_out      — the generation index stored in the entry
- *   *gen_rng_out      — gen_rng captured at snapshot-write time
- * Returns BIOSIM_ERR_NOTFOUND if gen_idx is out of range.
- * Returns BIOSIM_ERR_IO on I/O failure.
- * Returns BIOSIM_EOF on end-of-file.
- * Returns BIOSIM_ERR_NOMEM if a temporary buffer cannot be allocated.
- */
-biosim_status_t biosim_snapshot_load(
-    FILE *f,
-    uint32_t gen_idx,
-    const biosim_snap_header_t *header,
-    biosim_sim_t *sim,
-    float *scores_out,
-    uint32_t *n_survivors_out,
-    uint32_t *gen_idx_out,
-    uint64_t *gen_rng_out
-);
-
-/*
- * Convenience: load the last generation entry in the file.
- * Uses header->generation_count if non-zero; otherwise scans to EOF.
- * Same output and return conventions as biosim_snapshot_load.
- */
-biosim_status_t biosim_snapshot_load_last(
-    FILE *f,
-    const biosim_snap_header_t *header,
-    biosim_sim_t *sim,
-    float *scores_out,
-    uint32_t *n_survivors_out,
-    uint32_t *gen_idx_out,
-    uint64_t *gen_rng_out
-);
-
 #endif /* BIOSIM_CORE_SNAPSHOT_H */
