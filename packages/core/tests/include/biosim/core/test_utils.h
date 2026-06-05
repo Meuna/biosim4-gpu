@@ -37,10 +37,12 @@ typedef struct {
 biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg);
 
 /* ── named presets ──────────────────────────────────────────────────────────
- * 4x4 grid: pop=4, genome_max_len=4, max_neurons=2.
- * 32x32 grid: pop=64, 8 steps/gen, mutation enabled.
- * 128x128 grid: pop=3000, 16 steps/gen, mutation enabled, barriers. */
+ * 8x8 grid:   pop=4,    genome_max_len=4,  max_neurons=2, steps=1.
+ * 4x4 pop6:   pop=6,    genome_max_len=4,  max_neurons=2, steps=1.
+ * 32x32 grid: pop=64,   genome_max_len=24, max_neurons=3, 16 steps/gen, mutation.
+ * 128x128:    pop=3000, genome_max_len=24, max_neurons=5, 16 steps/gen, mutation, barriers. */
 biosim_status_t sim_test_make_8x8(biosim_sim_t *sim);
+biosim_status_t sim_test_make_4x4_pop6(biosim_sim_t *sim);
 biosim_status_t sim_test_make_32x32(biosim_sim_t *sim);
 biosim_status_t sim_test_make_128x128(biosim_sim_t *sim);
 
