@@ -214,8 +214,10 @@ biosim_challenge_spec_from_params(&p, &challenge);
 biosim_sim_create(&sim, &p, &challenge, barriers, n_barriers);
 
 biosim_survivor_snap_t snap = {0};
-if (snap_in_path)
+if (snap_in_path) {
     biosim_snapshot_load_survivors(snap_in_path, &sim, &snap);
+    sim.gen++;  /* convention: snapshots hold the survivors' gen index */
+}
 biosim_generation_spawn(&sim, &snap);                  // breed or randomise
 biosim_snapshot_session_open(&sim, snap_out_path, N);  // if --snapshot-out
 
@@ -331,20 +333,24 @@ drives the K1→K5 kernel sequence each step.
 | `biosim_gpu_pipeline_create(sim, runner, exec_dir, out)` | Build programs, allocate GPU buffers, upload initial state; set all static kernel args once |
 | `biosim_gpu_pipeline_step(p, sim)` | Enqueue one complete step (K1→K5); no clFinish |
 | `biosim_gpu_pipeline_sync_to_host(p, sim)` | clFinish + download alive, loc, challenge_bits, signal for generation evaluation |
-| `biosim_gpu_pipeline_sync_from_host(p, sim)` | Re-upload all mutable buffers after `biosim_sim_next_generation` |
+| `biosim_gpu_pipeline_sync_from_host(p, sim)` | Re-upload all mutable buffers after `biosim_generation_spawn` |
 | `biosim_gpu_pipeline_free(p)` | Release all GPU resources |
 
-The main loop in `biosim-gpu` is a direct parallel of `sim-ref`'s loop:
+Spawn creates the new HOST population; `sync_from_host` uploads it to the GPU
+before the step kernels run; `sync_to_host` downloads results so `retire_generation`
+can evaluate survivors.
 ```c
-// inner loop — no host/device sync
-while (sim.step < sim.steps_per_gen) {
-    biosim_gpu_pipeline_step(&pipeline, &sim);
-    sim.step++;
+while (sim.gen < sim.max_generations) {
+    biosim_generation_spawn(&sim, &snap);                      // new HOST population
+    biosim_gpu_pipeline_sync_from_host(&pipeline, &sim);       // upload to GPU
+    while (sim.step < sim.steps_per_gen) {
+        biosim_gpu_pipeline_step(&pipeline, &sim);
+        sim.step++;
+    }
+    biosim_gpu_pipeline_sync_to_host(&pipeline, &sim);
+    biosim_sim_retire_generation(&sim, &snap, &census);        // collect, census, write, gen++
+    biosim_census_print(stdout, &census);
 }
-// generation boundary
-biosim_gpu_pipeline_sync_to_host(&pipeline, &sim);
-biosim_sim_next_generation(&sim, &census);
-biosim_gpu_pipeline_sync_from_host(&pipeline, &sim);
 ```
 
 ### Key types
