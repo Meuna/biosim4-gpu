@@ -60,15 +60,16 @@ future GPU simulator need with identical behavior.
 
 | Module | Key types | Key functions |
 |--------|-----------|---------------|
-| [`sim.h`](../packages/core/include/biosim/core/sim.h) | `biosim_sim_t` | <ul><li>`biosim_sim_step_agent` — sense, feedforward, act, and propose a move for one agentd</li><li>`biosim_sim_next_step` — commit kills, grant moves, fade signal, run per-step challenge hook</li><li>`biosim_sim_next_generation` — evaluate challenge, reproduce, respawn</li></ul> |
+| [`sim.h`](../packages/core/include/biosim/core/sim.h) | `biosim_sim_t` | <ul><li>`biosim_sim_step_agent` — sense, feedforward, act, and propose a move for one agent</li><li>`biosim_sim_next_step` — commit kills, grant moves, fade signal, run per-step challenge hook</li><li>`biosim_sim_retire_generation` — collect survivors into snap, take census, write snapshot, advance generation counter</li></ul> |
 | [`agents.h`](../packages/core/include/biosim/core/agents.h) | `biosim_agents_t` | <ul><li>`biosim_agents_init_slot` — mark alive, set position, seed RNG</li></ul> |
 | [`grid.h`](../packages/core/include/biosim/core/grid.h) | `biosim_grid_t` | <ul><li>`biosim_grid_at` — read a cell</li><li>`biosim_grid_set` — write a cell</li><li>`biosim_grid_find_empty` — random empty-cell search</li></ul> |
 | [`genome.h`](../packages/core/include/biosim/core/genome.h) | `biosim_genome_t` | <ul><li>`biosim_genome_init_slot` — randomize one agent's genome</li><li>`biosim_genome_copy_slot` — copy genome between slots</li><li>`biosim_genome_mutate` — point / insertion / deletion mutations</li><li>`biosim_genome_crossover` — single-point two-parent crossover</li><li>`biosim_genome_sort_by_length` — sort agents by descending length</li></ul> |
 | [`nnet.h`](../packages/core/include/biosim/core/nnet.h) | `biosim_nnet_t` | <ul><li>`biosim_nnet_compile` — compile genome into neural network</li><li>`biosim_nnet_feedforward` — run one feedforward pass</li></ul> |
 | [`io_defs.h`](../packages/core/include/biosim/core/io_defs.h) | `biosim_sensor_t`, `biosim_action_t` | HOST/DEVICE portable enums (21 sensors, 17 actions) and direction tables (`BIOSIM_DIR_DX`, `BIOSIM_DIR_DY`). Included by both host code and OpenCL kernels. |
 | [`io_eval.h`](../packages/core/include/biosim/core/io_eval.h) | — | HOST-only API: <ul><li>`biosim_sensor_eval` — evaluate one sensor for an agent</li><li>`biosim_action_apply` — apply one action output</li><li>`biosim_action_propose_move` — convert accumulated dx/dy into desired_x/desired_y</li></ul> |
-| [`challenges.h`](../packages/core/include/biosim/core/challenges.h) | `biosim_challenge_spec_t` | <ul><li>`biosim_challenge_step` — per-step challenge hook</li><li>`biosim_generation_collect_survivors` — evaluate agents at gen end</li></ul> |
-| [`snapshot.h`](../packages/core/include/biosim/core/snapshot.h) | — | <ul><li>`biosim_snapshot_session_open` — open a write session</li><li>`biosim_snapshot_session_write` — write current generation's survivors</li><li>`biosim_snapshot_session_close` — finalize the file</li><li>`biosim_snapshot_restore` — load last record and reproduce</li></ul> |
+| [`challenges.h`](../packages/core/include/biosim/core/challenges.h) | `biosim_challenge_spec_t` | <ul><li>`biosim_challenge_step` — per-step challenge hook</li></ul> |
+| [`generation.h`](../packages/core/include/biosim/core/generation.h) | — | <ul><li>`biosim_generation_collect_survivors` — evaluate challenge, build compact snap (genomes + scores + gen + gen_rng)</li><li>`biosim_generation_breed` — reproduce next population from snap</li><li>`biosim_generation_spawn` — breed if snap has survivors, else randomise</li><li>`biosim_generation_init_random` — randomise all agent genomes and positions</li></ul> |
+| [`snapshot.h`](../packages/core/include/biosim/core/snapshot.h) | `biosim_survivor_snap_t` | <ul><li>`biosim_survivor_snap_grow` — grow snap buffers to fit n survivors</li><li>`biosim_survivor_snap_free` — release snap heap memory</li><li>`biosim_snapshot_session_open` — open a write session</li><li>`biosim_snapshot_session_write` — write current generation's survivors</li><li>`biosim_snapshot_session_close` — finalize the file</li><li>`biosim_snapshot_load_survivors` — load last record into snap and sim (caller calls `biosim_generation_spawn` next)</li></ul> |
 | [`rng.h`](../packages/core/include/biosim/core/rng.h) | — | <ul><li>`biosim_rng_next` — advance xorshift64 and return state</li><li>`biosim_rng_seed` — initialize from two uint64_t seeds</li></ul> |
 | [`status.h`](../packages/core/include/biosim/core/status.h) | `biosim_status_t` | <ul><li>`biosim_strerror` — map status code to human-readable string</li></ul> |
 | [`log.h`](../packages/core/include/biosim/core/log.h) | `biosim_log_ctx_t` | <ul><li>`biosim_log_init` — set threshold, detect terminal color</li><li>`BIOSIM_ERRORF` / `WARNF` / `INFOF` / `DEBUGF` / `TRACEF` — level-gated macros</li></ul> |
@@ -123,6 +124,33 @@ typedef struct {
     uint16_t *len;  /* [agent_idx] active gene count */
 } biosim_genome_t;
 ```
+
+### Generation boundary: `biosim_survivor_snap_t`
+
+`biosim_survivor_snap_t` (defined in `snapshot_defs.h`) is the self-contained
+record that crosses every generation boundary. `biosim_generation_collect_survivors`
+fills it; `biosim_generation_breed` reads it; `biosim_snapshot_session_write` serialises
+it to disk; `biosim_snapshot_load_survivors` deserialises it back.
+
+```c
+typedef struct {
+    uint16_t *conn;      /* compact row-major: survivor s, gene j → s*stride_cap+j */
+    int16_t  *wgt;       /* same layout as conn */
+    uint16_t *len;       /* genome length per survivor */
+    float    *scores;    /* challenge score per survivor */
+    uint32_t  count;     /* live survivor count */
+    uint32_t  pop_cap;   /* allocated survivor slots (grows on demand) */
+    uint16_t  stride_cap;/* allocated columns per survivor (>= max genome len) */
+    uint32_t  gen;       /* generation index at collection time */
+    uint64_t  gen_rng;   /* sim RNG state before breed — sufficient to replay */
+} biosim_survivor_snap_t;
+```
+
+Together, the genome buffers, scores, `gen`, and `gen_rng` fully scope a
+reproducible simulation boundary: restoring a snap and calling
+`biosim_generation_breed` with the same `gen_rng` on `sim->gen_rng` produces
+an identical next-generation population. `sim->gen_rng` remains the live
+authoritative state; `snap->gen_rng` is the serialisation carrier.
 
 ### Host/device portability
 
@@ -185,7 +213,10 @@ biosim_barrier_params_load(config_path, &barriers, &n_barriers);
 biosim_challenge_spec_from_params(&p, &challenge);
 biosim_sim_create(&sim, &p, &challenge, barriers, n_barriers);
 
-biosim_snapshot_restore(snap_in_path, &sim);           // if --snapshot-in
+biosim_survivor_snap_t snap = {0};
+if (snap_in_path)
+    biosim_snapshot_load_survivors(snap_in_path, &sim, &snap);
+biosim_generation_spawn(&sim, &snap);                  // breed or randomise
 biosim_snapshot_session_open(&sim, snap_out_path, N);  // if --snapshot-out
 
 while (sim.gen < sim.max_generations) {
@@ -195,8 +226,9 @@ while (sim.gen < sim.max_generations) {
                 biosim_sim_step_agent(&sim, i);
         biosim_sim_next_step(&sim);
     }
-    biosim_sim_next_generation(&sim, &census);
+    biosim_sim_retire_generation(&sim, &snap, &census); // collect, census, write, gen++
     biosim_census_print(stdout, &census);
+    biosim_generation_spawn(&sim, &snap);               // breed survivors into next gen
 }
 biosim_sim_free(&sim);
 ```

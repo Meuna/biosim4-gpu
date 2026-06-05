@@ -26,6 +26,9 @@ biosim_status_t biosim_generation_collect_survivors(
     float *temp_scores = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
+    snap->gen = sim->gen;
+    snap->gen_rng = sim->gen_rng;
+
     temp_idx = malloc((size_t)pop * sizeof(uint32_t));
     if (temp_idx == NULL) {
         returncode = BIOSIM_ERR_NOMEM;

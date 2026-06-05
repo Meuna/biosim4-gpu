@@ -25,6 +25,8 @@ void test_collect_survivors_all_pass(void) {
     TEST_ASSERT_NOT_NULL(snap.len);
     TEST_ASSERT_NOT_NULL(snap.wgt);
     TEST_ASSERT_NOT_NULL(snap.scores);
+    TEST_ASSERT_EQUAL_UINT32(sim.gen, snap.gen);
+    TEST_ASSERT_EQUAL_UINT64(sim.gen_rng, snap.gen_rng);
 
     biosim_survivor_snap_free(&snap);
     biosim_sim_free(&sim);
