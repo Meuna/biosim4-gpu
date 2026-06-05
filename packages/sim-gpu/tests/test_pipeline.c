@@ -3,7 +3,9 @@
 
 #include "biosim/core/census.h"
 #include "biosim/core/challenge_defs.h"
+#include "biosim/core/generation.h"
 #include "biosim/core/log.h"
+#include "biosim/core/snapshot.h"
 #include "biosim/sim-gpu/pipeline.h"
 #include "gpu_test_utils.h"
 #include "unity.h"
@@ -109,11 +111,13 @@ void test_pipeline_step_loop_no_crash(void) {
     TEST_ASSERT_EQUAL_UINT32(pop, alive_count);
 }
 
-/* Run a full generation (step loop + sync_to_host + next_generation +
+/* Run a full generation (step loop + sync_to_host + retire + spawn +
  * sync_from_host) then run a second step loop.  Verifies the upload/download
  * cycle and that the pipeline continues to work after a generation boundary. */
 void test_pipeline_generation_boundary(void) {
     TEST_ASSERT_EQUAL_INT_MESSAGE(BIOSIM_OK, fixture_status, "fixture setup failed");
+
+    biosim_survivor_snap_t snap = {0};
 
     /* ── generation 0 step loop ─────────────────────────────────────────── */
     uint32_t steps = sim.steps_per_gen;
@@ -126,8 +130,8 @@ void test_pipeline_generation_boundary(void) {
 
     /* ── generation boundary ─────────────────────────────────────────────── */
     biosim_census_t census;
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_next_generation(&sim, &census));
-
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_sim_retire_generation(&sim, &snap, &census));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_spawn(&sim, &snap));
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_gpu_pipeline_sync_from_host(&pipeline, &sim));
 
     /* ── generation 1 step loop ─────────────────────────────────────────── */
@@ -147,6 +151,7 @@ void test_pipeline_generation_boundary(void) {
         }
     }
     TEST_ASSERT_EQUAL_UINT32(pop, alive_count);
+    biosim_survivor_snap_free(&snap);
 }
 
 /* ── main ───────────────────────────────────────────────────────────────── */
