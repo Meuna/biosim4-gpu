@@ -215,6 +215,26 @@ void test_breed_sexual_reproduction(void) {
     biosim_sim_free(&sim);
 }
 
+/*
+ * Same gen_rng seed → identical populations after init_random.
+ */
+void test_init_random_reproducibility(void) {
+    biosim_sim_t sim1;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim1));
+
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim2));
+    sim2.gen_rng = sim1.gen_rng;
+
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_init_random(&sim1));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_init_random(&sim2));
+
+    assert_genome_equal(&sim1.genome, &sim2.genome);
+
+    biosim_sim_free(&sim1);
+    biosim_sim_free(&sim2);
+}
+
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -227,5 +247,6 @@ int main(void) {
     RUN_TEST(test_spawn_with_survivors_breeds);
     RUN_TEST(test_spawn_with_zero_survivors_init_random);
     RUN_TEST(test_full_generation_cycle);
+    RUN_TEST(test_init_random_reproducibility);
     return UNITY_END();
 }
