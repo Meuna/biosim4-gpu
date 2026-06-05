@@ -1,4 +1,4 @@
-#include "biosim/core/survivor_snap.h"
+#include "biosim/core/snapshot.h"
 #include "unity.h"
 
 void setUp(void) {

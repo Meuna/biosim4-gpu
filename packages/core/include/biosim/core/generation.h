@@ -6,7 +6,6 @@
 #define BIOSIM_CORE_GENERATION_H
 
 #include "biosim/core/sim.h"
-#include "biosim/core/survivor_snap.h"
 
 /*
  * Evaluate the challenge for every alive agent, grow snap as needed, and fill

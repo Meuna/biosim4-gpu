@@ -6,25 +6,29 @@
 #define BIOSIM_CORE_SNAPSHOT_H
 
 #include "biosim/core/sim.h"
-#include "biosim/core/survivor_snap.h"
+#include "biosim/core/snapshot_defs.h"
 #include <stdint.h>
 
-/* Bump when the on-disk record layout changes. */
-#define BIOSIM_SNAP_FORMAT_VERSION 2U
+/* ── survivor snap lifecycle ─────────────────────────────────────────────── */
 
 /*
- * Information read from the 32-byte file header.
- * Used by the caller to perform coherency checks before loading agent data.
+ * Grow snap to hold at least n_survivors entries each with at least
+ * g_max_len columns.  Uses a doubling policy on each dimension independently.
+ * Tolerates zero-initialised snap (first-time alloc).
+ * n_survivors == 0 is a no-op.
+ * On realloc failure, the partially-grown snap is left intact; the caller
+ * must free it with biosim_survivor_snap_free.
  */
-typedef struct {
-    uint16_t format_version;
-    uint16_t schema_version;
-    uint16_t num_sensors;
-    uint16_t num_actions;
-    uint16_t genome_max_len;
-    uint8_t max_neurons;
-    uint32_t generation_count; /* 0 = unknown / streaming */
-} biosim_snap_header_t;
+biosim_status_t biosim_survivor_snap_grow(
+    biosim_survivor_snap_t *snap, uint32_t n_survivors, uint16_t g_max_len
+);
+
+/*
+ * Free all buffers in snap.  Tolerates NULL snap and NULL members.
+ * Does NOT free snap itself (snap is typically stack-allocated by the caller).
+ * Zeros all fields so snap is safe to pass to grow again.
+ */
+void biosim_survivor_snap_free(biosim_survivor_snap_t *snap);
 
 /* ── high-level restore ──────────────────────────────────────────────────── */
 

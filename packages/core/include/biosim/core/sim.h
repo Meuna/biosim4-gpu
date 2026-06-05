@@ -12,8 +12,8 @@
 #include "biosim/core/grid.h"
 #include "biosim/core/nnet.h"
 #include "biosim/core/params.h"
+#include "biosim/core/snapshot_defs.h"
 #include "biosim/core/status.h"
-#include "biosim/core/survivor_snap.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
