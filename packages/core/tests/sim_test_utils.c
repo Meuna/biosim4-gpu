@@ -102,6 +102,22 @@ biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
     );
 }
 
+biosim_status_t sim_test_make_4x4_pop6(biosim_sim_t *sim) {
+    return sim_test_create(
+        sim,
+        &(sim_test_scn_t){
+            .population = 6U,
+            .size_x = 4,
+            .size_y = 4,
+            .genome_max_len = 4U,
+            .max_neurons = 2U,
+            .los_range = 4U,
+            .steps_per_gen = 1U,
+            .sensor_radius = 1,
+        }
+    );
+}
+
 biosim_status_t sim_test_make_128x128(biosim_sim_t *sim) {
     static const biosim_barrier_spec_t k_barriers[] = {
         {BIOSIM_BARRIER_HBAR, 21, 32, 32.0F, 4.0F},
