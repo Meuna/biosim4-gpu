@@ -386,9 +386,15 @@
     // ── Draft config callbacks ────────────────────────────────────────────────
     function handleDraftChange(params: SimParams): void {
         draftConfig = params;
-        if (isRunning) {
-            isRunning = false;
-            send({ type: "stop" });
+        if (
+            !isGenComplete &&
+            (isRunning || hasStarted) &&
+            !showConfigChangeDialog
+        ) {
+            if (isRunning) {
+                isRunning = false;
+                send({ type: "stop" });
+            }
             gridBlurred = true;
             showConfigChangeDialog = true;
         }
@@ -413,15 +419,10 @@
         send({ type: "play" });
     }
 
-    function handleDialogPauseSaveGenome(): void {
+    function handleDialogRewind(): void {
         showConfigChangeDialog = false;
         gridBlurred = false;
-    }
-
-    function handleDialogPauseClearGenome(): void {
-        showConfigChangeDialog = false;
-        gridBlurred = false;
-        handleClearGenom();
+        handleRewind(false);
     }
 
     // ── Play / pause / step / gen / reset ────────────────────────────────────
@@ -607,8 +608,7 @@
     <ConfigChangeDialog
         open={showConfigChangeDialog}
         onRevertContinue={handleDialogRevertContinue}
-        onPauseSaveGenome={handleDialogPauseSaveGenome}
-        onPauseClearGenome={handleDialogPauseClearGenome}
+        onRewind={handleDialogRewind}
     />
 
     <!-- Grid stack — hidden while the brain explorer is expanded (it takes over

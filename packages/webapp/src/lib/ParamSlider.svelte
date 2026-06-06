@@ -16,6 +16,11 @@
     const { label, hint, min, max, step, value, format, onchange }: Props =
         $props();
 
+    let localValue = $state<number>(0);
+    $effect(() => {
+        localValue = value;
+    });
+
     let editing = $state(false);
     let editVal = $state("");
     let editInput = $state<HTMLInputElement | undefined>();
@@ -60,8 +65,11 @@
             {min}
             {max}
             {step}
-            {value}
+            value={localValue}
             oninput={(e) => {
+                localValue = parseFloat((e.target as HTMLInputElement).value);
+            }}
+            onchange={(e) => {
                 onchange(parseFloat((e.target as HTMLInputElement).value));
             }}
             aria-label={label}
@@ -90,7 +98,7 @@
                 aria-label={"Edit " + label}
                 title="Click to edit"
             >
-                {display(value)}
+                {display(localValue)}
             </button>
         {/if}
     </div>

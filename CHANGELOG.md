@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `load_survivors` — no more internal copies.
 
 ### Changed
+- **`ConfigChangeDialog` redesigned** (gh-92) — dialog now also appears when the
+  simulation is paused mid-generation; "Pause and save genome" replaced by "Rewind
+  with the new conf" (triggers a configured rewind, identical to clicking Rewind
+  with a dirty config); "Pause and clear genome" removed; primary action renamed to
+  "Revert and resume (esc)". Slider changes no longer open the dialog mid-drag; the
+  parent callback fires on release.
 - **Generation breeding path rationalized** (gh-85) — the monolithic
   `biosim_generation_reproduce` is replaced by three focused functions:
   `biosim_generation_collect_survivors` (challenge eval + snap fill),

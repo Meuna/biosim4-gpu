@@ -35,7 +35,7 @@ describe("ParamSlider", () => {
         expect(screen.getByText("agents")).toBeTruthy();
     });
 
-    it("calls onchange when slider moves", async () => {
+    it("calls onchange when slider is committed", async () => {
         const onchange = vi.fn();
         render(ParamSlider, {
             props: {
@@ -47,7 +47,7 @@ describe("ParamSlider", () => {
                 onchange,
             },
         });
-        await fireEvent.input(screen.getByLabelText("Population"), {
+        await fireEvent.change(screen.getByLabelText("Population"), {
             target: { value: "500" },
         });
         expect(onchange).toHaveBeenCalledWith(500);

@@ -64,7 +64,7 @@ describe("GridSizeControl", () => {
         render(GridSizeControl, {
             props: { gridSizeX: 128, gridSizeY: 128, onchange },
         });
-        await fireEvent.input(screen.getByLabelText("Width (X)"), {
+        await fireEvent.change(screen.getByLabelText("Width (X)"), {
             target: { value: "64" },
         });
         expect(onchange).toHaveBeenCalledWith(64, 128);
@@ -75,7 +75,7 @@ describe("GridSizeControl", () => {
         render(GridSizeControl, {
             props: { gridSizeX: 128, gridSizeY: 128, onchange },
         });
-        await fireEvent.input(screen.getByLabelText("Height (Y)"), {
+        await fireEvent.change(screen.getByLabelText("Height (Y)"), {
             target: { value: "64" },
         });
         expect(onchange).toHaveBeenCalledWith(128, 64);

@@ -103,7 +103,7 @@ describe("SimConfigPanel", () => {
     it("calls onDraftChange with updated population when slider changes", async () => {
         const onDraftChange = vi.fn<[SimParams], void>();
         renderPanel({ props: { onDraftChange } });
-        await fireEvent.input(screen.getByLabelText("Population"), {
+        await fireEvent.change(screen.getByLabelText("Population"), {
             target: { value: "500" },
         });
         expect(onDraftChange).toHaveBeenCalledOnce();

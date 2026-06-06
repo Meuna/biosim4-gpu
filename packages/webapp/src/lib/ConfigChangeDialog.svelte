@@ -1,16 +1,14 @@
 <script lang="ts">
-    import { Undo2, Dna, Trash2 } from "lucide-svelte";
+    import { Undo2, History } from "lucide-svelte";
 
     let {
         open,
         onRevertContinue,
-        onPauseSaveGenome,
-        onPauseClearGenome,
+        onRewind,
     }: {
         open: boolean;
         onRevertContinue: () => void;
-        onPauseSaveGenome: () => void;
-        onPauseClearGenome: () => void;
+        onRewind: () => void;
     } = $props();
 
     let primaryBtn = $state<HTMLButtonElement | undefined>();
@@ -52,18 +50,11 @@
                 onclick={onRevertContinue}
             >
                 <Undo2 size={14} />
-                Revert and continue
+                Revert and resume (esc)
             </button>
-            <button class="button dialog-btn" onclick={onPauseSaveGenome}>
-                <Dna size={14} />
-                Pause and save genome
-            </button>
-            <button
-                class="button dialog-btn dialog-btn--warn"
-                onclick={onPauseClearGenome}
-            >
-                <Trash2 size={14} />
-                Pause and clear genome
+            <button class="button dialog-btn" onclick={onRewind}>
+                <History size={14} />
+                Rewind with the new conf
             </button>
         </div>
     </div>
@@ -118,16 +109,5 @@
         justify-content: flex-start;
         width: 100%;
         font-size: var(--text-sm);
-    }
-
-    .dialog-btn--warn {
-        color: var(--color-warn);
-        border-color: var(--color-warn);
-    }
-
-    .dialog-btn--warn:hover {
-        color: var(--color-warn);
-        border-color: var(--color-warn);
-        opacity: 0.8;
     }
 </style>

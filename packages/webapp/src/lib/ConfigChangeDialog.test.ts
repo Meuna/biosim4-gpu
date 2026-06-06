@@ -4,8 +4,7 @@ import ConfigChangeDialog from "./ConfigChangeDialog.svelte";
 const defaultProps = {
     open: true,
     onRevertContinue: () => {},
-    onPauseSaveGenome: () => {},
-    onPauseClearGenome: () => {},
+    onRewind: () => {},
 };
 
 describe("ConfigChangeDialog", () => {
@@ -14,17 +13,14 @@ describe("ConfigChangeDialog", () => {
         expect(screen.queryByRole("dialog")).toBeNull();
     });
 
-    it("renders dialog with all three options when open", () => {
+    it("renders dialog with both options when open", () => {
         render(ConfigChangeDialog, defaultProps);
         expect(screen.getByRole("dialog")).toBeTruthy();
         expect(
-            screen.getByRole("button", { name: /revert and continue/i }),
+            screen.getByRole("button", { name: /revert and resume/i }),
         ).toBeTruthy();
         expect(
-            screen.getByRole("button", { name: /pause and save genome/i }),
-        ).toBeTruthy();
-        expect(
-            screen.getByRole("button", { name: /pause and clear genome/i }),
+            screen.getByRole("button", { name: /rewind with the new conf/i }),
         ).toBeTruthy();
     });
 
@@ -37,35 +33,21 @@ describe("ConfigChangeDialog", () => {
             },
         });
         fireEvent.click(
-            screen.getByRole("button", { name: /revert and continue/i }),
+            screen.getByRole("button", { name: /revert and resume/i }),
         );
         expect(called).toBe(true);
     });
 
-    it("calls onPauseSaveGenome when that button is clicked", () => {
+    it("calls onRewind when that button is clicked", () => {
         let called = false;
         render(ConfigChangeDialog, {
             ...defaultProps,
-            onPauseSaveGenome: () => {
+            onRewind: () => {
                 called = true;
             },
         });
         fireEvent.click(
-            screen.getByRole("button", { name: /pause and save genome/i }),
-        );
-        expect(called).toBe(true);
-    });
-
-    it("calls onPauseClearGenome when that button is clicked", () => {
-        let called = false;
-        render(ConfigChangeDialog, {
-            ...defaultProps,
-            onPauseClearGenome: () => {
-                called = true;
-            },
-        });
-        fireEvent.click(
-            screen.getByRole("button", { name: /pause and clear genome/i }),
+            screen.getByRole("button", { name: /rewind with the new conf/i }),
         );
         expect(called).toBe(true);
     });

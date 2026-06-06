@@ -80,7 +80,7 @@ describe("ChallengeControl", () => {
         render(ChallengeControl, {
             props: { value: defaultXBand, onchange },
         });
-        await fireEvent.input(screen.getByLabelText("X min"), {
+        await fireEvent.change(screen.getByLabelText("X min"), {
             target: { value: "0.3" },
         });
         expect(onchange).toHaveBeenCalledOnce();
