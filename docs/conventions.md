@@ -15,13 +15,12 @@
 ### Format
 
 ```
-gh-{N}: {imperative description}
+"<scope>: <imperative description> (#<issue-number>)"
 ```
 
-where `{N}` is the GitHub issue number. Examples:
+- `CLAUDE.md: add PR workflow section (#51)`
+- `webapp: design kinematic and grid canvas feature (#48)`
 
-- `gh-51: add PR workflow section to CLAUDE.md`
-- `gh-48: design kinematic and grid canvas feature`
 
 ### Rules
 
@@ -29,14 +28,4 @@ where `{N}` is the GitHub issue number. Examples:
 - No period at the end of the description.
 - Every commit must reference an issue number.
 - Multiple commits per PR are allowed; each references the same issue number.
-- Do **not** put `closes` in commit messages — use `Closes #{N}` in the PR
-  body instead so that GitHub closes the issue on merge.
-
-### Review-response commits
-
-When addressing PR review comments, group related changes into focused commits.
-Use the same format:
-
-```
-gh-{N}: {description of what changed in response to review}
-```
+- When addressing PR review comments, group related changes into focused commits.

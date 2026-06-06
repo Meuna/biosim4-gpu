@@ -79,11 +79,8 @@ and encouraged for large changes. Use the commit format defined in
 `docs/conventions.md`:
 
 ```
-gh-{N}: {imperative description}
+"<scope>: <imperative description> (#<issue-number>)"
 ```
-
-Do **not** use `closes gh-{N}:` in commit messages — the issue is closed when
-the PR is merged, not by individual commits.
 
 ### 4. Quality check
 
