@@ -63,6 +63,12 @@
 </div>
 
 <style>
+    /*
+     * Layout: rail, circles, and knob all sit on the 50% axis so the rail
+     * stays aligned with the vertical centre of the surrounding toolbar row.
+     * Labels hang below the circle bottom via calc(50% + radius + gap) and
+     * overflow the 2rem container visually — overflow: visible is the default.
+     */
     .discrete-slider {
         display: inline-flex;
         align-items: center;
@@ -74,7 +80,7 @@
     .discrete-slider__track {
         position: relative;
         width: 100%;
-        height: 1.5rem;
+        height: 2rem;
     }
 
     .discrete-slider__rail {
@@ -125,25 +131,23 @@
     .discrete-slider__circle {
         position: absolute;
         top: 50%;
-        width: 0.5rem;
-        height: 0.5rem;
+        width: 1rem;
+        height: 1rem;
         border-radius: 9999px;
         border: 1.5px solid var(--color-border);
         background: var(--color-surface);
         transform: translateY(-50%);
-        transition:
-            background 0.1s,
-            border-color 0.1s;
     }
 
     .discrete-slider__stop--active .discrete-slider__circle {
-        background: var(--color-text);
         border-color: var(--color-text);
+        border: 2px solid var(--color-border);
     }
 
     .discrete-slider__label {
         position: absolute;
-        bottom: 0;
+        /* circle bottom = 50% + 0.5rem; add 0.25rem gap */
+        top: calc(50% + 0.5rem);
         display: flex;
         align-items: center;
         justify-content: center;
