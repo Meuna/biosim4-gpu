@@ -243,7 +243,7 @@
     let workerGenomeMaxNeuronsUsed = $state(0);
 
     // ── Speed / FPS ──────────────────────────────────────────────────────────
-    let targetSpeed = $state<0 | 1 | 25 | 50>(0);
+    let targetSpeed = $state(0);
     let measuredFps = $state<number | null>(null);
 
     $effect(() => {
@@ -456,7 +456,7 @@
         }
     }
 
-    function handleSetSpeed(fps: 0 | 1 | 25 | 50): void {
+    function handleSetSpeed(fps: number): void {
         targetSpeed = fps;
         send({ type: "setSpeed", fps } satisfies WorkerCmd);
     }

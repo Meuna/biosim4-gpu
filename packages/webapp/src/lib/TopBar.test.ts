@@ -9,7 +9,7 @@ const defaultProps = {
     onStep: noOp,
     onNextGen: noOp,
     onRewind: noOp,
-    targetSpeed: 0 as const,
+    targetSpeed: 0,
     onSetSpeed: noOp,
 };
 

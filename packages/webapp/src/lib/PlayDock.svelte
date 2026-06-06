@@ -8,7 +8,14 @@
         Dna,
     } from "lucide-svelte";
     import ConfirmInline from "./ConfirmInline.svelte";
-    import SpeedSlider from "./SpeedSlider.svelte";
+    import DiscreteSlider from "./DiscreteSlider.svelte";
+
+    const SPEED_STOPS: { value: number; label: string; ariaLabel: string }[] = [
+        { value: 1, label: "1", ariaLabel: "1 fps" },
+        { value: 25, label: "25", ariaLabel: "25 fps" },
+        { value: 50, label: "50", ariaLabel: "50 fps" },
+        { value: 0, label: "glyph:infinity", ariaLabel: "Unlimited" },
+    ];
 
     let {
         running,
@@ -25,20 +32,25 @@
         running: boolean;
         genComplete: boolean;
         genomIncompatible?: boolean;
-        targetSpeed: 0 | 1 | 25 | 50;
+        targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
         onNextGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
-        onSetSpeed: (fps: 0 | 1 | 25 | 50) => void;
+        onSetSpeed: (fps: number) => void;
     } = $props();
 
     let clearConfirmOpen = $state(false);
 </script>
 
 <div class="dock">
-    <SpeedSlider value={targetSpeed} onChange={onSetSpeed} />
+    <DiscreteSlider
+        stops={SPEED_STOPS}
+        value={targetSpeed}
+        onChange={onSetSpeed}
+        ariaLabel="Simulation speed"
+    />
 
     <div class="dock__sep" aria-hidden="true"></div>
 

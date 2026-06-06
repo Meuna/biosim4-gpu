@@ -5,7 +5,7 @@ const defaultProps = {
     running: false,
     genComplete: false,
     genomIncompatible: false,
-    targetSpeed: 0 as const,
+    targetSpeed: 0,
     onToggle: () => {},
     onStep: () => {},
     onNextGen: () => {},

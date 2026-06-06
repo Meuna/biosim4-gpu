@@ -16,13 +16,13 @@
         running: boolean;
         genComplete: boolean;
         genomIncompatible?: boolean;
-        targetSpeed: 0 | 1 | 25 | 50;
+        targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
         onNextGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
-        onSetSpeed: (fps: 0 | 1 | 25 | 50) => void;
+        onSetSpeed: (fps: number) => void;
     } = $props();
 </script>
 
