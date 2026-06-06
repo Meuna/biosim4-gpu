@@ -5,20 +5,24 @@
         running,
         genComplete,
         genomIncompatible = false,
+        targetSpeed,
         onToggle,
         onStep,
         onNextGen,
         onRewind,
         onClearGenom,
+        onSetSpeed,
     }: {
         running: boolean;
         genComplete: boolean;
         genomIncompatible?: boolean;
+        targetSpeed: 0 | 1 | 25 | 50;
         onToggle: () => void;
         onStep: () => void;
         onNextGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
+        onSetSpeed: (fps: 0 | 1 | 25 | 50) => void;
     } = $props();
 </script>
 
@@ -33,11 +37,13 @@
             {running}
             {genComplete}
             {genomIncompatible}
+            {targetSpeed}
             {onToggle}
             {onStep}
             {onNextGen}
             {onRewind}
             {onClearGenom}
+            {onSetSpeed}
         />
     </div>
 

@@ -170,6 +170,8 @@
                     neuronCount: msg.neuronCount,
                 };
             }
+        } else if (msg.type === "fps") {
+            measuredFps = msg.value;
         } else if (msg.type === "configured") {
             isRunning = false;
             hasStarted = false;
@@ -239,6 +241,14 @@
     // Genome max values from the last census; reset to 0 after configure/clearGenom.
     let workerGenomeMaxLenUsed = $state(0);
     let workerGenomeMaxNeuronsUsed = $state(0);
+
+    // ── Speed / FPS ──────────────────────────────────────────────────────────
+    let targetSpeed = $state<0 | 1 | 25 | 50>(0);
+    let measuredFps = $state<number | null>(null);
+
+    $effect(() => {
+        if (!isRunning) measuredFps = null;
+    });
 
     // Genome compatibility gate — true when draft would truncate live survivors.
     const genomIncompatible = $derived(
@@ -446,6 +456,11 @@
         }
     }
 
+    function handleSetSpeed(fps: 0 | 1 | 25 | 50): void {
+        targetSpeed = fps;
+        send({ type: "setSpeed", fps } satisfies WorkerCmd);
+    }
+
     function handleStep(): void {
         hasStarted = true;
         send({ type: "step" });
@@ -597,6 +612,8 @@
         running={isRunning}
         genComplete={isGenComplete}
         {genomIncompatible}
+        {targetSpeed}
+        onSetSpeed={handleSetSpeed}
         onToggle={handleToggle}
         onStep={handleStep}
         onNextGen={handleNextGen}
@@ -631,6 +648,7 @@
             step={currentStep}
             {stepsPerGen}
             pop={currentPop}
+            fps={measuredFps}
         />
 
         <!-- z-index: 15 — survival sparkline, bottom-left -->

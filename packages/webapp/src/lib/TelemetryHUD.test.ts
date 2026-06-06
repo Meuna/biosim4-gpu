@@ -56,7 +56,7 @@ describe("TelemetryHUD", () => {
         expect(screen.getByText("--")).toBeTruthy();
     });
 
-    it("shows 60 for fps when running", () => {
+    it("shows measured fps value when provided", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
             running: true,
@@ -64,7 +64,8 @@ describe("TelemetryHUD", () => {
             step: 0,
             stepsPerGen: 300,
             pop: 0,
+            fps: 30,
         });
-        expect(screen.getByText("60")).toBeTruthy();
+        expect(screen.getByText("30")).toBeTruthy();
     });
 });

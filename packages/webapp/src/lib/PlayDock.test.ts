@@ -5,11 +5,13 @@ const defaultProps = {
     running: false,
     genComplete: false,
     genomIncompatible: false,
+    targetSpeed: 0 as const,
     onToggle: () => {},
     onStep: () => {},
     onNextGen: () => {},
     onRewind: () => {},
     onClearGenom: () => {},
+    onSetSpeed: () => {},
 };
 
 describe("PlayDock", () => {

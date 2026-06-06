@@ -6,6 +6,7 @@
         step,
         stepsPerGen,
         pop,
+        fps = null,
     }: {
         geom: {
             x: number;
@@ -20,6 +21,7 @@
         step: number;
         stepsPerGen: number;
         pop: number;
+        fps?: number | null;
     } = $props();
 
     function pad3(n: number): string {
@@ -52,7 +54,7 @@
 
         <dt class="telemetry__key">fps</dt>
         <dd class="telemetry__val" class:telemetry__val--accent={running}>
-            {running ? "60" : "--"}
+            {fps !== null ? Math.round(fps).toString() : "--"}
         </dd>
     </dl>
 </aside>

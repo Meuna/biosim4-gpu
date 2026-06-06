@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Discrete speed selector in PlayDock** (gh-59) — custom 4-stop slider (1 fps · 25
+  fps · 50 fps · ∞) placed left of the Play button throttles simulation playback speed;
+  step-rate FPS is measured over 1-second windows in the worker and displayed live in
+  TelemetryHUD, replacing the static "60" placeholder.
 - **`biosim_survivor_snap_t`** (gh-85) — compact genome snapshot type that carries
   survivor genomes, scores, `gen`, and `gen_rng` across every generation boundary.
   Defined in `snapshot_defs.h`; lifecycle functions `biosim_survivor_snap_grow` and

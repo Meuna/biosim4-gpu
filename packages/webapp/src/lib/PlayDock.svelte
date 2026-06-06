@@ -8,31 +8,40 @@
         Dna,
     } from "lucide-svelte";
     import ConfirmInline from "./ConfirmInline.svelte";
+    import SpeedSlider from "./SpeedSlider.svelte";
 
     let {
         running,
         genComplete,
         genomIncompatible = false,
+        targetSpeed,
         onToggle,
         onStep,
         onNextGen,
         onRewind,
         onClearGenom,
+        onSetSpeed,
     }: {
         running: boolean;
         genComplete: boolean;
         genomIncompatible?: boolean;
+        targetSpeed: 0 | 1 | 25 | 50;
         onToggle: () => void;
         onStep: () => void;
         onNextGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
+        onSetSpeed: (fps: 0 | 1 | 25 | 50) => void;
     } = $props();
 
     let clearConfirmOpen = $state(false);
 </script>
 
 <div class="dock">
+    <SpeedSlider value={targetSpeed} onChange={onSetSpeed} />
+
+    <div class="dock__sep" aria-hidden="true"></div>
+
     <button
         class="dock__btn dock__btn--primary"
         disabled={(genComplete && !running) || (genomIncompatible && !running)}

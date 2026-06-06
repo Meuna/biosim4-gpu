@@ -10,6 +10,7 @@ import {
     lerpVec2,
 } from "../lib/kinematic";
 import { unpackConn, type BrainConn } from "../lib/brain";
+import { stepDelay, createFpsWindow } from "../lib/playbackRate";
 
 // ── Types & Protocol ──────────────────────────────────────────────────────────
 
@@ -153,7 +154,8 @@ export type WorkerCmd =
     | { type: "selectAgentById"; id: number }
     | { type: "selectAgent"; id: number | null }
     | { type: "hoverAgent"; id: number | null }
-    | { type: "requestBrain"; id: number };
+    | { type: "requestBrain"; id: number }
+    | { type: "setSpeed"; fps: number };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -209,7 +211,8 @@ export type WorkerEvent =
           id: number;
           conns: BrainConn[];
           neuronCount: number;
-      };
+      }
+    | { type: "fps"; value: number };
 
 interface Layout {
     canvasW: number;
@@ -965,6 +968,8 @@ function startAnimLoop(): void {
 // ── Simulation control ────────────────────────────────────────────────────────
 
 let playing = false;
+let targetFps = 0;
+let fpsWindow = createFpsWindow();
 
 function applyConfig(p: SimParams): void {
     setParamInt("population", p.population);
@@ -1030,19 +1035,26 @@ function playTick(): void {
         postMessage(statusNow("gen_complete"));
         return;
     }
+    const tickStart = performance.now();
     call("biosim_wasm_do_step");
     postMessage(statusNow("running"));
     notifySelectionUpdate();
+    const elapsed = performance.now() - tickStart;
+    const fpsReading = fpsWindow.tick(performance.now());
+    if (fpsReading !== null) {
+        postMessage({ type: "fps", value: fpsReading } satisfies WorkerEvent);
+    }
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
         postMessage(statusNow("gen_complete"));
     } else {
-        setTimeout(playTick, 0);
+        setTimeout(playTick, stepDelay(targetFps, elapsed));
     }
 }
 
 function handlePlay(): void {
     startTransitionIfNeeded();
+    fpsWindow = createFpsWindow();
     playing = true;
     postMessage(statusNow("running"));
     playTick();
@@ -1232,6 +1244,9 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             } satisfies WorkerEvent);
             break;
         }
+        case "setSpeed":
+            targetFps = cmd.fps;
+            break;
         case "selectAgent":
             selectedAgentId = cmd.id;
             break;

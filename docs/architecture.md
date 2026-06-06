@@ -423,3 +423,10 @@ The worker exposes the network over the message protocol: the UI sends
 `slot * pop + id` stride and replies `{ type: "brainData", id, conns,
 neuronCount }`. `App.svelte` requests the brain whenever the displayed agent
 changes and discards payloads whose `id` no longer matches.
+
+The worker protocol also carries two playback-speed entries: the UI sends
+`{ type: "setSpeed"; fps: number }` (where `fps` is `0 | 1 | 25 | 50` and `0`
+means unlimited) to throttle the simulation step rate; the worker replies with
+`{ type: "fps"; value: number }` at roughly one-second intervals, reporting the
+measured step-rate in steps per second. The throttle and FPS-window logic live
+in `src/lib/playbackRate.ts` so they can be unit-tested without loading WASM.

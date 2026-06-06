@@ -3,66 +3,46 @@ import TopBar from "./TopBar.svelte";
 
 const noOp = () => {};
 
+const defaultProps = {
+    running: false,
+    onToggle: noOp,
+    onStep: noOp,
+    onNextGen: noOp,
+    onRewind: noOp,
+    targetSpeed: 0 as const,
+    onSetSpeed: noOp,
+};
+
 describe("TopBar", () => {
     it("renders the brand name and subtitle", () => {
-        render(TopBar, {
-            running: false,
-            onToggle: noOp,
-            onStep: noOp,
-            onNextGen: noOp,
-            onRewind: noOp,
-        });
+        render(TopBar, defaultProps);
         expect(screen.getByText("biosim4-gpu")).toBeTruthy();
         expect(screen.getByText("visualizer · v0.1")).toBeTruthy();
     });
 
     it("renders the GitHub link", () => {
-        render(TopBar, {
-            running: false,
-            onToggle: noOp,
-            onStep: noOp,
-            onNextGen: noOp,
-            onRewind: noOp,
-        });
+        render(TopBar, defaultProps);
         const link = screen.getByRole("link", { name: /github/i });
         expect(link).toBeTruthy();
         expect((link as HTMLAnchorElement).href).toContain("github.com");
     });
 
     it("renders Play button inside the topbar when not running", () => {
-        render(TopBar, {
-            running: false,
-            onToggle: noOp,
-            onStep: noOp,
-            onNextGen: noOp,
-            onRewind: noOp,
-        });
+        render(TopBar, defaultProps);
         expect(
             screen.getByRole("button", { name: /play simulation/i }),
         ).toBeTruthy();
     });
 
     it("renders Stop button inside the topbar when running", () => {
-        render(TopBar, {
-            running: true,
-            onToggle: noOp,
-            onStep: noOp,
-            onNextGen: noOp,
-            onRewind: noOp,
-        });
+        render(TopBar, { ...defaultProps, running: true });
         expect(
             screen.getByRole("button", { name: /stop simulation/i }),
         ).toBeTruthy();
     });
 
     it("renders Step, Rewind, Next Gen, and Clear Genom buttons", () => {
-        render(TopBar, {
-            running: false,
-            onToggle: noOp,
-            onStep: noOp,
-            onNextGen: noOp,
-            onRewind: noOp,
-        });
+        render(TopBar, defaultProps);
         expect(
             screen.getByRole("button", { name: /step one simulation tick/i }),
         ).toBeTruthy();
