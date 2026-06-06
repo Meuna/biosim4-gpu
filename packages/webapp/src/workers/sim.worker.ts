@@ -11,6 +11,8 @@ import {
 } from "../lib/kinematic";
 import { unpackConn, type BrainConn } from "../lib/brain";
 
+// ── Types & Protocol ──────────────────────────────────────────────────────────
+
 interface EmscriptenModule {
     ccall(
         name: string,
@@ -189,14 +191,14 @@ export type WorkerEvent =
           type: "nextGenerationConfigured";
           gen: number;
           population: number;
+          gridSizeX: number;
+          gridSizeY: number;
+          stepsPerGen: number;
           censusPopulation: number;
           survivors: number;
           kills: number;
           genomeMaxLenUsed: number;
           genomeMaxNeuronsUsed: number;
-          gridSizeX: number;
-          gridSizeY: number;
-          stepsPerGen: number;
       }
     | { type: "error"; message: string }
     | { type: "agentPicked"; reason: "click" | "hover"; info: AgentInfo }
@@ -209,66 +211,6 @@ export type WorkerEvent =
           neuronCount: number;
       };
 
-// ── Rendering mode ────────────────────────────────────────────────────────────
-
-type Mode = "idle" | "transitioning-in" | "running";
-
-// ── Module-level state ────────────────────────────────────────────────────────
-
-let biosim: EmscriptenModule | null = null;
-let playing = false;
-let ctx: OffscreenCanvasRenderingContext2D | null = null;
-let selectedAgentId: number | null = null;
-let hoveredAgentId: number | null = null;
-// Matches --_accent; updated from the main thread on canvas init.
-let accentColor = "#15803d";
-
-// Maps ChallengeSpec.kind strings to biosim_challenge_kind_t ordinals (challenge_defs.h).
-const CHALLENGE_KIND_INT: Record<string, number> = {
-    x_band: 0,
-    disc: 1,
-    corners: 2,
-    neighbor_count: 3,
-    center_sparse: 4,
-    against_wall: 5,
-    migrate_distance: 6,
-    touch_any_wall: 7,
-    radioactive_walls: 8,
-    pairs: 9,
-    location_sequence: 10,
-    near_barrier: 11,
-    altruism: 12,
-};
-
-// Maps BarrierSpec.kind strings to biosim_barrier_kind_t ordinals (barriers.h).
-const BARRIER_KIND_INT: Record<BarrierKind, number> = {
-    hbar: 0,
-    vbar: 1,
-    square: 2,
-    circle: 3,
-};
-
-// Current challenge spec; updated on every configure command.
-// Default matches the hardcoded s_challenge initialiser in bindings.c.
-let currentChallenge: ChallengeSpec = {
-    kind: "x_band",
-    xMin: 0.5,
-    xMax: 1.0,
-    mirror: false,
-};
-
-// Overlay colours for challenge target zones. Initialised from CSS tokens passed
-// via the "canvas" command; fallbacks used in tests.
-let challengeOverlayColor = "rgba(0, 0, 0, 0.12)";
-let challengeBorderColor = "rgba(0, 0, 0, 0.35)";
-// Tiled dot pattern for challenge near-edge strips; created once after ctx is ready.
-let hatchPattern: CanvasPattern | null = null;
-// Tiled diagonal-line (///) pattern for barrier cells; created once after ctx is ready.
-let barrierHatchPattern: CanvasPattern | null = null;
-// Cached barrier cell coordinates: flat [gx0,gy0, gx1,gy1, ...].
-// Populated after biosim_wasm_init so we read the authoritative grid once per configure.
-let barrierCells: Int32Array | null = null;
-
 interface Layout {
     canvasW: number;
     canvasH: number;
@@ -280,15 +222,11 @@ interface Layout {
     gridCellsY: number;
 }
 
-let layout: Layout | null = null;
-let mode: Mode = "idle";
-let startTime = performance.now(); // epoch for kinematic t (seconds)
-let kFrozenT = 0; // kinematic t captured at the moment play/step was pressed
-let transitionStart = 0; // performance.now() when current transition began
-const TRANSITION_IN_MS = 600;
-let animInterval: ReturnType<typeof setInterval> | null = null;
+type Mode = "idle" | "transitioning-in" | "running";
 
-// ── Utility ───────────────────────────────────────────────────────────────────
+// ── WASM Bindings ─────────────────────────────────────────────────────────────
+
+let biosim: EmscriptenModule | null = null;
 
 function call(name: string): number {
     return biosim!.ccall(name, "number", [], []);
@@ -320,6 +258,141 @@ function setParamBool(name: string, val: boolean): void {
         [name, val ? 1 : 0],
     );
 }
+
+// ── Barriers ──────────────────────────────────────────────────────────────────
+
+// Maps BarrierSpec.kind strings to biosim_barrier_kind_t ordinals (barriers.h).
+const BARRIER_KIND_INT: Record<BarrierKind, number> = {
+    hbar: 0,
+    vbar: 1,
+    square: 2,
+    circle: 3,
+};
+
+// Cached barrier cell coordinates: flat [gx0,gy0, gx1,gy1, ...].
+// Populated after biosim_wasm_init so we read the authoritative grid once per configure.
+let barrierCells: Int32Array | null = null;
+// Tiled diagonal-line (///) pattern for barrier cells; created once after ctx is ready.
+let barrierHatchPattern: CanvasPattern | null = null;
+
+// Passes barrier specs to WASM; converts fractions to cell coordinates.
+function setBarriers(
+    specs: BarrierSpec[],
+    gridSizeX: number,
+    gridSizeY: number,
+): void {
+    biosim!.ccall("biosim_wasm_clear_barriers", null, [], []);
+    const gridMin = Math.min(gridSizeX, gridSizeY);
+    for (const spec of specs) {
+        const x =
+            spec.x !== null ? Math.round(spec.x * (gridSizeX - 1)) : -32768;
+        const y =
+            spec.y !== null ? Math.round(spec.y * (gridSizeY - 1)) : -32768;
+        const len = spec.length !== null ? spec.length * gridMin : 0.0;
+        const w = spec.width !== null ? spec.width * gridMin : 0.0;
+        biosim!.ccall(
+            "biosim_wasm_add_barrier",
+            "number",
+            ["number", "number", "number", "number", "number"],
+            [BARRIER_KIND_INT[spec.kind], x, y, len, w],
+        );
+    }
+}
+
+// Scans the grid for BIOSIM_GRID_BARRIER cells (0xFFFFFFFF) and caches their
+// coordinates. Called once after biosim_wasm_init so rendering reuses the cache.
+function cacheBarrierCells(): void {
+    if (!biosim || !layout) {
+        barrierCells = null;
+        return;
+    }
+    const { gridCellsX: W, gridCellsY: H } = layout;
+    const cellsOff = call("biosim_wasm_get_grid_cells_ptr") >>> 2;
+    const { HEAPU32 } = biosim;
+    const tmp: number[] = [];
+    for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+            if (HEAPU32[cellsOff + y * W + x] === 0xffffffff) {
+                tmp.push(x, y);
+            }
+        }
+    }
+    barrierCells = new Int32Array(tmp);
+}
+
+// Builds an 8×8 tiled diagonal-line (///) pattern for rendering barrier cells.
+function createBarrierHatchPattern(): CanvasPattern | null {
+    if (!ctx) return null;
+    const size = 8;
+    const pc = new OffscreenCanvas(size, size);
+    const px = pc.getContext("2d");
+    if (!px) return null;
+    px.strokeStyle = challengeBorderColor;
+    px.lineWidth = 1;
+    px.beginPath();
+    for (let i = -size; i <= size * 2; i += 4) {
+        px.moveTo(i, 0);
+        px.lineTo(i + size, size);
+    }
+    px.stroke();
+    return ctx.createPattern(pc, "repeat");
+}
+
+// Draws all cached barrier cells using the diagonal-line hatch pattern.
+function drawBarriers(): void {
+    if (
+        !ctx ||
+        !layout ||
+        !barrierHatchPattern ||
+        !barrierCells ||
+        barrierCells.length === 0
+    )
+        return;
+    const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
+    const cellW = gridW / gridCellsX;
+    const cellH = gridH / gridCellsY;
+    ctx.fillStyle = barrierHatchPattern;
+    for (let i = 0; i < barrierCells.length; i += 2) {
+        const gx = barrierCells[i];
+        const gy = barrierCells[i + 1];
+        ctx.fillRect(gridX + gx * cellW, gridY + gy * cellH, cellW, cellH);
+    }
+}
+
+// ── Challenges ────────────────────────────────────────────────────────────────
+
+// Maps ChallengeSpec.kind strings to biosim_challenge_kind_t ordinals (challenge_defs.h).
+const CHALLENGE_KIND_INT: Record<string, number> = {
+    x_band: 0,
+    disc: 1,
+    corners: 2,
+    neighbor_count: 3,
+    center_sparse: 4,
+    against_wall: 5,
+    migrate_distance: 6,
+    touch_any_wall: 7,
+    radioactive_walls: 8,
+    pairs: 9,
+    location_sequence: 10,
+    near_barrier: 11,
+    altruism: 12,
+};
+
+// Current challenge spec; updated on every configure command.
+// Default matches the hardcoded s_challenge initialiser in bindings.c.
+let currentChallenge: ChallengeSpec = {
+    kind: "x_band",
+    xMin: 0.5,
+    xMax: 1.0,
+    mirror: false,
+};
+
+// Overlay colours for challenge target zones. Initialised from CSS tokens passed
+// via the "canvas" command; fallbacks used in tests.
+let challengeOverlayColor = "rgba(0, 0, 0, 0.12)";
+let challengeBorderColor = "rgba(0, 0, 0, 0.35)";
+// Tiled dot pattern for challenge near-edge strips; created once after ctx is ready.
+let hatchPattern: CanvasPattern | null = null;
 
 function setChallengeSpec(spec: ChallengeSpec): void {
     biosim!.ccall(
@@ -408,94 +481,6 @@ function setChallengeSpec(spec: ChallengeSpec): void {
     }
 }
 
-// ── Agent inspection ──────────────────────────────────────────────────────────
-
-function readAgentInfo(id: number): AgentInfo {
-    const { HEAP32, HEAPU8, HEAPU32 } = biosim!;
-    const HEAPU16 = new Uint16Array(HEAPU8.buffer);
-    const HEAPF32 = new Float32Array(HEAPU8.buffer);
-    const aliveOff = call("biosim_wasm_get_alive_ptr");
-    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
-    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
-    const bxOff = call("biosim_wasm_get_birth_x_ptr") >>> 2;
-    const byOff = call("biosim_wasm_get_birth_y_ptr") >>> 2;
-    const dirOff = call("biosim_wasm_get_last_move_dir_ptr");
-    const oscOff = call("biosim_wasm_get_osc_period_ptr") >>> 1;
-    const respOff = call("biosim_wasm_get_responsiveness_ptr") >>> 2;
-    const losOff = call("biosim_wasm_get_los_range_ptr");
-    const cbOff = call("biosim_wasm_get_challenge_bits_ptr") >>> 2;
-    const fpOff = call("biosim_wasm_get_genome_fingerprint_ptr") >>> 2;
-    const lo = HEAPU32[fpOff + id * 2];
-    const hi = HEAPU32[fpOff + id * 2 + 1];
-    return {
-        id,
-        alive: HEAPU8[aliveOff + id] !== 0,
-        gx: HEAP32[locXOff + id],
-        gy: HEAP32[locYOff + id],
-        birthX: HEAP32[bxOff + id],
-        birthY: HEAP32[byOff + id],
-        heading: HEAPU8[dirOff + id] & 7,
-        oscPeriod: HEAPU16[oscOff + id],
-        responsiveness: HEAPF32[respOff + id],
-        losRange: HEAPU8[losOff + id],
-        challengeBits: HEAPU32[cbOff + id],
-        fingerprint:
-            hi.toString(16).padStart(8, "0") + lo.toString(16).padStart(8, "0"),
-    };
-}
-
-function notifySelectionUpdate(): void {
-    if (selectedAgentId === null || !biosim) return;
-    postMessage({
-        type: "agentUpdated",
-        info: readAgentInfo(selectedAgentId),
-    } satisfies WorkerEvent);
-}
-
-// Reads and decodes agent `id`'s neural network from the WASM heap. The conn /
-// weight arrays are column-major with a `slot * pop + id` stride (nnet.h).
-function readBrain(id: number): {
-    conns: BrainConn[];
-    neuronCount: number;
-} {
-    const { HEAPU8 } = biosim!;
-    const HEAPU16 = new Uint16Array(HEAPU8.buffer);
-    const HEAPI16 = new Int16Array(HEAPU8.buffer);
-    const pop = call("biosim_wasm_get_population");
-    // genome_conn/conn_length are uint16 (>>1), genome_wgt is int16 (>>1),
-    // neuron_count is uint8 (no shift) — mirror the typed-view discipline.
-    const connOff = call("biosim_wasm_get_genome_conn_ptr") >>> 1;
-    const wgtOff = call("biosim_wasm_get_genome_wgt_ptr") >>> 1;
-    const lenOff = call("biosim_wasm_get_conn_length_ptr") >>> 1;
-    const neuronOff = call("biosim_wasm_get_neuron_count_ptr");
-    const connLen = HEAPU16[lenOff + id];
-    const conns: BrainConn[] = [];
-    for (let slot = 0; slot < connLen; slot++) {
-        const i = slot * pop + id;
-        conns.push(unpackConn(HEAPU16[connOff + i], HEAPI16[wgtOff + i]));
-    }
-    return { conns, neuronCount: HEAPU8[neuronOff + id] };
-}
-
-// ── Rendering ─────────────────────────────────────────────────────────────────
-
-// Shared fill style for agents in all modes.
-// Matches --color-text (#0a0a0a). The worker cannot read CSS custom properties;
-// update this literal if the palette changes.
-// The selected-cell accent colour is applied by the UI overlay, not the canvas.
-const AGENT_COLOR = "#0a0a0a";
-
-function applyAgentStyle(): void {
-    if (!ctx) return;
-    ctx.fillStyle = AGENT_COLOR;
-}
-
-function clearCanvas(): void {
-    if (!ctx || !layout) return;
-    // Transparent clear — CSS dot-grid and GridView overlay show through.
-    ctx.clearRect(0, 0, layout.canvasW, layout.canvasH);
-}
-
 // Builds an 8×8 tiled dot pattern on a scratch OffscreenCanvas.
 function createHatchPattern(): CanvasPattern | null {
     if (!ctx) return null;
@@ -508,90 +493,6 @@ function createHatchPattern(): CanvasPattern | null {
     px.arc(size / 2, size / 2, 1.5, 0, Math.PI * 2);
     px.fill();
     return ctx.createPattern(pc, "repeat");
-}
-
-// Builds an 8×8 tiled diagonal-line (///) pattern for rendering barrier cells.
-function createBarrierHatchPattern(): CanvasPattern | null {
-    if (!ctx) return null;
-    const size = 8;
-    const pc = new OffscreenCanvas(size, size);
-    const px = pc.getContext("2d");
-    if (!px) return null;
-    px.strokeStyle = challengeBorderColor;
-    px.lineWidth = 1;
-    px.beginPath();
-    for (let i = -size; i <= size * 2; i += 4) {
-        px.moveTo(i, 0);
-        px.lineTo(i + size, size);
-    }
-    px.stroke();
-    return ctx.createPattern(pc, "repeat");
-}
-
-// Passes barrier specs to WASM; converts fractions to cell coordinates.
-function setBarriers(
-    specs: BarrierSpec[],
-    gridSizeX: number,
-    gridSizeY: number,
-): void {
-    biosim!.ccall("biosim_wasm_clear_barriers", null, [], []);
-    const gridMin = Math.min(gridSizeX, gridSizeY);
-    for (const spec of specs) {
-        const x =
-            spec.x !== null ? Math.round(spec.x * (gridSizeX - 1)) : -32768;
-        const y =
-            spec.y !== null ? Math.round(spec.y * (gridSizeY - 1)) : -32768;
-        const len = spec.length !== null ? spec.length * gridMin : 0.0;
-        const w = spec.width !== null ? spec.width * gridMin : 0.0;
-        biosim!.ccall(
-            "biosim_wasm_add_barrier",
-            "number",
-            ["number", "number", "number", "number", "number"],
-            [BARRIER_KIND_INT[spec.kind], x, y, len, w],
-        );
-    }
-}
-
-// Scans the grid for BIOSIM_GRID_BARRIER cells (0xFFFFFFFF) and caches their
-// coordinates. Called once after biosim_wasm_init so rendering reuses the cache.
-function cacheBarrierCells(): void {
-    if (!biosim || !layout) {
-        barrierCells = null;
-        return;
-    }
-    const { gridCellsX: W, gridCellsY: H } = layout;
-    const cellsOff = call("biosim_wasm_get_grid_cells_ptr") >>> 2;
-    const { HEAPU32 } = biosim;
-    const tmp: number[] = [];
-    for (let y = 0; y < H; y++) {
-        for (let x = 0; x < W; x++) {
-            if (HEAPU32[cellsOff + y * W + x] === 0xffffffff) {
-                tmp.push(x, y);
-            }
-        }
-    }
-    barrierCells = new Int32Array(tmp);
-}
-
-// Draws all cached barrier cells using the diagonal-line hatch pattern.
-function drawBarriers(): void {
-    if (
-        !ctx ||
-        !layout ||
-        !barrierHatchPattern ||
-        !barrierCells ||
-        barrierCells.length === 0
-    )
-        return;
-    const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
-    const cellW = gridW / gridCellsX;
-    const cellH = gridH / gridCellsY;
-    ctx.fillStyle = barrierHatchPattern;
-    for (let i = 0; i < barrierCells.length; i += 2) {
-        const gx = barrierCells[i];
-        const gy = barrierCells[i + 1];
-        ctx.fillRect(gridX + gx * cellW, gridY + gy * cellH, cellW, cellH);
-    }
 }
 
 function drawChallengeOverlay(spec: ChallengeSpec): void {
@@ -757,6 +658,109 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
     }
 
     ctx.restore();
+}
+
+// ── Agents ────────────────────────────────────────────────────────────────────
+
+let selectedAgentId: number | null = null;
+let hoveredAgentId: number | null = null;
+
+function readAgentInfo(id: number): AgentInfo {
+    const { HEAP32, HEAPU8, HEAPU32 } = biosim!;
+    const HEAPU16 = new Uint16Array(HEAPU8.buffer);
+    const HEAPF32 = new Float32Array(HEAPU8.buffer);
+    const aliveOff = call("biosim_wasm_get_alive_ptr");
+    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
+    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
+    const bxOff = call("biosim_wasm_get_birth_x_ptr") >>> 2;
+    const byOff = call("biosim_wasm_get_birth_y_ptr") >>> 2;
+    const dirOff = call("biosim_wasm_get_last_move_dir_ptr");
+    const oscOff = call("biosim_wasm_get_osc_period_ptr") >>> 1;
+    const respOff = call("biosim_wasm_get_responsiveness_ptr") >>> 2;
+    const losOff = call("biosim_wasm_get_los_range_ptr");
+    const cbOff = call("biosim_wasm_get_challenge_bits_ptr") >>> 2;
+    const fpOff = call("biosim_wasm_get_genome_fingerprint_ptr") >>> 2;
+    const lo = HEAPU32[fpOff + id * 2];
+    const hi = HEAPU32[fpOff + id * 2 + 1];
+    return {
+        id,
+        alive: HEAPU8[aliveOff + id] !== 0,
+        gx: HEAP32[locXOff + id],
+        gy: HEAP32[locYOff + id],
+        birthX: HEAP32[bxOff + id],
+        birthY: HEAP32[byOff + id],
+        heading: HEAPU8[dirOff + id] & 7,
+        oscPeriod: HEAPU16[oscOff + id],
+        responsiveness: HEAPF32[respOff + id],
+        losRange: HEAPU8[losOff + id],
+        challengeBits: HEAPU32[cbOff + id],
+        fingerprint:
+            hi.toString(16).padStart(8, "0") + lo.toString(16).padStart(8, "0"),
+    };
+}
+
+function notifySelectionUpdate(): void {
+    if (selectedAgentId === null || !biosim) return;
+    postMessage({
+        type: "agentUpdated",
+        info: readAgentInfo(selectedAgentId),
+    } satisfies WorkerEvent);
+}
+
+// Reads and decodes agent `id`'s neural network from the WASM heap. The conn /
+// weight arrays are column-major with a `slot * pop + id` stride (nnet.h).
+function readBrain(id: number): {
+    conns: BrainConn[];
+    neuronCount: number;
+} {
+    const { HEAPU8 } = biosim!;
+    const HEAPU16 = new Uint16Array(HEAPU8.buffer);
+    const HEAPI16 = new Int16Array(HEAPU8.buffer);
+    const pop = call("biosim_wasm_get_population");
+    // genome_conn/conn_length are uint16 (>>1), genome_wgt is int16 (>>1),
+    // neuron_count is uint8 (no shift) — mirror the typed-view discipline.
+    const connOff = call("biosim_wasm_get_genome_conn_ptr") >>> 1;
+    const wgtOff = call("biosim_wasm_get_genome_wgt_ptr") >>> 1;
+    const lenOff = call("biosim_wasm_get_conn_length_ptr") >>> 1;
+    const neuronOff = call("biosim_wasm_get_neuron_count_ptr");
+    const connLen = HEAPU16[lenOff + id];
+    const conns: BrainConn[] = [];
+    for (let slot = 0; slot < connLen; slot++) {
+        const i = slot * pop + id;
+        conns.push(unpackConn(HEAPU16[connOff + i], HEAPI16[wgtOff + i]));
+    }
+    return { conns, neuronCount: HEAPU8[neuronOff + id] };
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+
+// Shared fill style for agents in all modes.
+// Matches --color-text (#0a0a0a). The worker cannot read CSS custom properties;
+// update this literal if the palette changes.
+// The selected-cell accent colour is applied by the UI overlay, not the canvas.
+const AGENT_COLOR = "#0a0a0a";
+
+let ctx: OffscreenCanvasRenderingContext2D | null = null;
+// Matches --_accent; updated from the main thread on canvas init.
+let accentColor = "#15803d";
+let layout: Layout | null = null;
+
+let mode: Mode = "idle";
+let startTime = performance.now(); // epoch for kinematic t (seconds)
+let kFrozenT = 0; // kinematic t captured at the moment play/step was pressed
+let transitionStart = 0; // performance.now() when current transition began
+const TRANSITION_IN_MS = 600;
+let animInterval: ReturnType<typeof setInterval> | null = null;
+
+function clearCanvas(): void {
+    if (!ctx || !layout) return;
+    // Transparent clear — CSS dot-grid and GridView overlay show through.
+    ctx.clearRect(0, 0, layout.canvasW, layout.canvasH);
+}
+
+function applyAgentStyle(): void {
+    if (!ctx) return;
+    ctx.fillStyle = AGENT_COLOR;
 }
 
 function drawKinematic(t: number): void {
@@ -928,7 +932,13 @@ function drawTransitionIn(frac: number): void {
     ctx.fill();
 }
 
-// ── Animation loop ────────────────────────────────────────────────────────────
+function startTransitionIfNeeded(): void {
+    if (mode === "idle") {
+        kFrozenT = (performance.now() - startTime) / 1000;
+        transitionStart = performance.now();
+        mode = "transitioning-in";
+    }
+}
 
 function animTick(): void {
     if (!ctx || !layout || !biosim) return;
@@ -952,14 +962,27 @@ function startAnimLoop(): void {
     animInterval = setInterval(animTick, 1000 / 60);
 }
 
-// ── Simulation step helpers ───────────────────────────────────────────────────
+// ── Simulation control ────────────────────────────────────────────────────────
 
-function startTransitionIfNeeded(): void {
-    if (mode === "idle") {
-        kFrozenT = (performance.now() - startTime) / 1000;
-        transitionStart = performance.now();
-        mode = "transitioning-in";
-    }
+let playing = false;
+
+function applyConfig(p: SimParams): void {
+    setParamInt("population", p.population);
+    setParamInt("grid-size-x", p.gridSizeX);
+    setParamInt("grid-size-y", p.gridSizeY);
+    setParamInt("steps-per-gen", p.stepsPerGen);
+    setParamInt("max-genome-len", p.maxGenomeLen);
+    setParamInt("max-neurons", p.maxNeurons);
+    setParamFloat("point-mutation-rate", p.pointMutationRate);
+    setParamBool("sexual-reproduction", p.sexualReproduction);
+    setParamBool("choose-parents-by-fitness", p.chooseParentsByFitness);
+    setParamInt("los-range", p.losRange);
+    setParamInt("sensor-radius", p.sensorRadius);
+    setParamBool("enable-kill", p.enableKill);
+    setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
+    setBarriers(p.barriers, p.gridSizeX, p.gridSizeY);
+    setChallengeSpec(p.challenge);
+    currentChallenge = p.challenge;
 }
 
 function statusNow(
@@ -1016,27 +1039,6 @@ function playTick(): void {
     } else {
         setTimeout(playTick, 0);
     }
-}
-
-// ── Command handlers ──────────────────────────────────────────────────────────
-
-function applyConfig(p: SimParams): void {
-    setParamInt("population", p.population);
-    setParamInt("grid-size-x", p.gridSizeX);
-    setParamInt("grid-size-y", p.gridSizeY);
-    setParamInt("steps-per-gen", p.stepsPerGen);
-    setParamInt("max-genome-len", p.maxGenomeLen);
-    setParamInt("max-neurons", p.maxNeurons);
-    setParamFloat("point-mutation-rate", p.pointMutationRate);
-    setParamBool("sexual-reproduction", p.sexualReproduction);
-    setParamBool("choose-parents-by-fitness", p.chooseParentsByFitness);
-    setParamInt("los-range", p.losRange);
-    setParamInt("sensor-radius", p.sensorRadius);
-    setParamBool("enable-kill", p.enableKill);
-    setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
-    setBarriers(p.barriers, p.gridSizeX, p.gridSizeY);
-    setChallengeSpec(p.challenge);
-    currentChallenge = p.challenge;
 }
 
 function handlePlay(): void {
