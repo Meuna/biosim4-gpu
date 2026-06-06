@@ -1,10 +1,4 @@
 <script lang="ts" generics="T">
-    import { Infinity as InfinityIcon } from "lucide-svelte";
-
-    const GLYPH_ICONS: Record<string, typeof InfinityIcon> = {
-        infinity: InfinityIcon,
-    };
-
     let {
         stops,
         value,
@@ -30,11 +24,6 @@
     <div class="discrete-slider__track">
         <div class="discrete-slider__rail"></div>
         {#each stops as stop, i}
-            {@const glyphKey = stop.label.startsWith("glyph:")
-                ? stop.label.slice(6)
-                : null}
-            {@const GlyphIcon =
-                glyphKey !== null ? (GLYPH_ICONS[glyphKey] ?? null) : null}
             <button
                 class="discrete-slider__stop"
                 class:discrete-slider__stop--active={i === activeIndex}
@@ -46,11 +35,7 @@
             >
                 <div class="discrete-slider__circle"></div>
                 <span class="discrete-slider__label">
-                    {#if GlyphIcon}
-                        <GlyphIcon size={12} aria-hidden="true" />
-                    {:else}
-                        {stop.label}
-                    {/if}
+                    {stop.label}
                 </span>
             </button>
         {/each}
