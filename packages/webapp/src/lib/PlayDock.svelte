@@ -52,6 +52,7 @@
 
     <button
         class="dock__btn"
+        disabled={running}
         onclick={onStep}
         aria-label="Step one simulation tick"
     >

@@ -125,6 +125,40 @@
             survivalHistory = [...survivalHistory.slice(-11), rate];
             workerGenomeMaxLenUsed = msg.genomeMaxLenUsed;
             workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
+        } else if (msg.type === "rewindConfigured") {
+            isGenComplete = false;
+            currentGen = msg.gen;
+            currentStep = 0;
+            currentPop = msg.population;
+            gridSizeX = msg.gridSizeX;
+            gridSizeY = msg.gridSizeY;
+            stepsPerGen = msg.stepsPerGen;
+            survivalHistory = [];
+            workerGenomeMaxLenUsed = 0;
+            workerGenomeMaxNeuronsUsed = 0;
+            if (pendingLastPlayedConfig !== null) {
+                lastPlayedConfig = pendingLastPlayedConfig;
+                pendingLastPlayedConfig = null;
+            }
+        } else if (msg.type === "nextGenerationConfigured") {
+            isGenComplete = false;
+            currentGen = msg.gen;
+            currentStep = 0;
+            currentPop = msg.population;
+            gridSizeX = msg.gridSizeX;
+            gridSizeY = msg.gridSizeY;
+            stepsPerGen = msg.stepsPerGen;
+            const rate =
+                msg.censusPopulation > 0
+                    ? msg.survivors / msg.censusPopulation
+                    : 0;
+            survivalHistory = [...survivalHistory.slice(-11), rate];
+            workerGenomeMaxLenUsed = msg.genomeMaxLenUsed;
+            workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
+            if (pendingLastPlayedConfig !== null) {
+                lastPlayedConfig = pendingLastPlayedConfig;
+                pendingLastPlayedConfig = null;
+            }
         } else if (msg.type === "agentUpdated") {
             selectedAgent = msg.info;
         } else if (msg.type === "brainData") {
@@ -419,7 +453,13 @@
     function handleNextGen(autoPlay: boolean): void {
         isGenComplete = false;
         hasStarted = true;
-        send({ type: "nextGeneration" });
+        if (isDirty) {
+            const snapshot = $state.snapshot(draftConfig) as SimParams;
+            pendingLastPlayedConfig = snapshot;
+            send({ type: "nextGenerationConfigured", params: snapshot });
+        } else {
+            send({ type: "nextGeneration" });
+        }
         if (autoPlay) {
             isRunning = true;
             send({ type: "play" });
@@ -428,7 +468,13 @@
 
     function handleRewind(autoPlay: boolean): void {
         isGenComplete = false;
-        send({ type: "rewind" });
+        if (isDirty) {
+            const snapshot = $state.snapshot(draftConfig) as SimParams;
+            pendingLastPlayedConfig = snapshot;
+            send({ type: "rewindConfigured", params: snapshot });
+        } else {
+            send({ type: "rewind" });
+        }
         if (autoPlay) {
             isRunning = true;
             hasStarted = true;

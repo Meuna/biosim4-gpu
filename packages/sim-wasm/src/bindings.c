@@ -214,6 +214,51 @@ exit:
     return (int)rc;
 }
 
+/* Reinitialise with the params already set via biosim_wasm_set_param_*,
+ * biosim_wasm_set_challenge_*, and biosim_wasm_add_barrier, then rewind:
+ * restore gen_rng and gen from snap so the population is deterministically
+ * reproduced from the same survivors as the last generation boundary.
+ * The internal spawn inside biosim_wasm_init is harmless — spawn clears the
+ * grid on entry, so a second spawn simply overwrites it. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind_configured(void) {
+    int rc = biosim_wasm_init();
+    if (rc != BIOSIM_OK) {
+        return rc;
+    }
+    sim.gen_rng = snap.gen_rng;
+    sim.gen = snap.gen;
+    return (int)spawn_generation();
+}
+
+/* Collect survivors and census from the current sim, reinitialise with the
+ * params already set via biosim_wasm_set_param_* / set_challenge / add_barrier,
+ * then breed the next generation from those survivors.
+ * biosim_wasm_init zeroes last_census, so save and restore it around the call
+ * so that biosim_wasm_census_*() return valid data after this function. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation_configured(void) {
+    biosim_status_t rc = biosim_generation_collect_survivors(&sim, &snap);
+    if (rc != BIOSIM_OK) {
+        goto exit;
+    }
+    biosim_census_take(&sim, snap.count, &last_census);
+    {
+        biosim_census_t saved = last_census;
+        rc = (biosim_status_t)biosim_wasm_init();
+        if (rc != BIOSIM_OK) {
+            goto exit;
+        }
+        last_census = saved;
+    }
+    sim.gen_rng = snap.gen_rng;
+    sim.gen = snap.gen + 1U;
+    rc = spawn_generation();
+exit:
+    if (rc != BIOSIM_OK) {
+        BIOSIM_ERRORF("next generation configured failed (%s)", biosim_strerror(rc));
+    }
+    return (int)rc;
+}
+
 /* ── parameter setters ───────────────────────────────────────────────────── */
 
 /* Set a named integer parameter before the next biosim_wasm_init call.

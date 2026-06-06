@@ -117,8 +117,10 @@ export type WorkerCmd =
     | { type: "reset" }
     | { type: "step" }
     | { type: "rewind" }
+    | { type: "rewindConfigured"; params: SimParams }
     | { type: "clearGenom" }
     | { type: "nextGeneration" }
+    | { type: "nextGenerationConfigured"; params: SimParams }
     | { type: "configure"; params: SimParams }
     | {
           type: "canvas";
@@ -171,6 +173,27 @@ export type WorkerEvent =
     | {
           type: "configured";
           population: number;
+          gridSizeX: number;
+          gridSizeY: number;
+          stepsPerGen: number;
+      }
+    | {
+          type: "rewindConfigured";
+          gen: number;
+          population: number;
+          gridSizeX: number;
+          gridSizeY: number;
+          stepsPerGen: number;
+      }
+    | {
+          type: "nextGenerationConfigured";
+          gen: number;
+          population: number;
+          censusPopulation: number;
+          survivors: number;
+          kills: number;
+          genomeMaxLenUsed: number;
+          genomeMaxNeuronsUsed: number;
           gridSizeX: number;
           gridSizeY: number;
           stepsPerGen: number;
@@ -995,6 +1018,112 @@ function playTick(): void {
     }
 }
 
+// ── Command handlers ──────────────────────────────────────────────────────────
+
+function applyConfig(p: SimParams): void {
+    setParamInt("population", p.population);
+    setParamInt("grid-size-x", p.gridSizeX);
+    setParamInt("grid-size-y", p.gridSizeY);
+    setParamInt("steps-per-gen", p.stepsPerGen);
+    setParamInt("max-genome-len", p.maxGenomeLen);
+    setParamInt("max-neurons", p.maxNeurons);
+    setParamFloat("point-mutation-rate", p.pointMutationRate);
+    setParamBool("sexual-reproduction", p.sexualReproduction);
+    setParamBool("choose-parents-by-fitness", p.chooseParentsByFitness);
+    setParamInt("los-range", p.losRange);
+    setParamInt("sensor-radius", p.sensorRadius);
+    setParamBool("enable-kill", p.enableKill);
+    setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
+    setBarriers(p.barriers, p.gridSizeX, p.gridSizeY);
+    setChallengeSpec(p.challenge);
+    currentChallenge = p.challenge;
+}
+
+function handlePlay(): void {
+    startTransitionIfNeeded();
+    playing = true;
+    postMessage(statusNow("running"));
+    playTick();
+}
+
+function handleStop(): void {
+    playing = false;
+    // mode intentionally unchanged — agents freeze at their current
+    // grid positions (idle-timeout return to kinematic is future work).
+    postMessage(statusNow("paused"));
+}
+
+function handleRewind(): void {
+    playing = false;
+    call("biosim_wasm_rewind_generation");
+    postMessage(statusNow("paused"));
+}
+
+function handleRewindConfigured(params: SimParams): void {
+    playing = false;
+    const prevMode = mode;
+    applyConfig(params);
+    call("biosim_wasm_rewind_configured");
+    cacheBarrierCells();
+    mode = prevMode === "idle" ? "idle" : "running";
+    startTime = performance.now();
+    postMessage({
+        type: "rewindConfigured",
+        gen: call("biosim_wasm_get_gen"),
+        population: call("biosim_wasm_get_population"),
+        gridSizeX: params.gridSizeX,
+        gridSizeY: params.gridSizeY,
+        stepsPerGen: params.stepsPerGen,
+    } satisfies WorkerEvent);
+}
+
+function handleNextGenerationConfigured(params: SimParams): void {
+    const prevMode = mode;
+    startTransitionIfNeeded();
+    applyConfig(params);
+    call("biosim_wasm_next_generation_configured");
+    cacheBarrierCells();
+    mode = prevMode === "idle" ? "idle" : "running";
+    startTime = performance.now();
+    postMessage({
+        type: "nextGenerationConfigured",
+        gen: call("biosim_wasm_census_gen"),
+        population: call("biosim_wasm_get_population"),
+        censusPopulation: call("biosim_wasm_census_population"),
+        survivors: call("biosim_wasm_census_survivors"),
+        kills: call("biosim_wasm_census_kills"),
+        genomeMaxLenUsed: call("biosim_wasm_genome_max_len_used"),
+        genomeMaxNeuronsUsed: call("biosim_wasm_genome_max_neurons_used"),
+        gridSizeX: params.gridSizeX,
+        gridSizeY: params.gridSizeY,
+        stepsPerGen: params.stepsPerGen,
+    } satisfies WorkerEvent);
+}
+
+function handleConfigure(params: SimParams): void {
+    playing = false;
+    const prevMode = mode;
+    applyConfig(params);
+    call("biosim_wasm_init");
+    cacheBarrierCells();
+    // Skip the kinematic intro if the user was already watching the grid.
+    mode = prevMode === "idle" ? "idle" : "running";
+    startTime = performance.now();
+    postMessage({
+        type: "configured",
+        population: params.population,
+        gridSizeX: params.gridSizeX,
+        gridSizeY: params.gridSizeY,
+        stepsPerGen: params.stepsPerGen,
+    } satisfies WorkerEvent);
+}
+
+function handleClearGenom(): void {
+    playing = false;
+    call("biosim_wasm_clear_genome");
+    postMessage(statusNow("idle"));
+}
+
 // ── Message handler ───────────────────────────────────────────────────────────
 
 self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
@@ -1005,67 +1134,32 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             mode = "idle";
             startTime = performance.now();
             break;
-        case "configure": {
-            playing = false;
-            const prevMode = mode;
-            const p = cmd.params;
-            setParamInt("population", p.population);
-            setParamInt("grid-size-x", p.gridSizeX);
-            setParamInt("grid-size-y", p.gridSizeY);
-            setParamInt("steps-per-gen", p.stepsPerGen);
-            setParamInt("max-genome-len", p.maxGenomeLen);
-            setParamInt("max-neurons", p.maxNeurons);
-            setParamFloat("point-mutation-rate", p.pointMutationRate);
-            setParamBool("sexual-reproduction", p.sexualReproduction);
-            setParamBool("choose-parents-by-fitness", p.chooseParentsByFitness);
-            setParamInt("los-range", p.losRange);
-            setParamInt("sensor-radius", p.sensorRadius);
-            setParamBool("enable-kill", p.enableKill);
-            setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
-            setBarriers(p.barriers, p.gridSizeX, p.gridSizeY);
-            setChallengeSpec(p.challenge);
-            currentChallenge = p.challenge;
-            call("biosim_wasm_init");
-            cacheBarrierCells();
-            // Skip the kinematic intro if the user was already watching the grid.
-            mode = prevMode === "idle" ? "idle" : "running";
-            startTime = performance.now();
-            postMessage({
-                type: "configured",
-                population: p.population,
-                gridSizeX: p.gridSizeX,
-                gridSizeY: p.gridSizeY,
-                stepsPerGen: p.stepsPerGen,
-            } satisfies WorkerEvent);
+        case "configure":
+            handleConfigure(cmd.params);
             break;
-        }
         case "play":
-            startTransitionIfNeeded();
-            playing = true;
-            postMessage(statusNow("running"));
-            playTick();
+            handlePlay();
             break;
         case "stop":
-            playing = false;
-            // mode intentionally unchanged — agents freeze at their current
-            // grid positions (idle-timeout return to kinematic is future work).
-            postMessage(statusNow("paused"));
+            handleStop();
             break;
         case "step":
             doStep();
             break;
         case "rewind":
-            playing = false;
-            call("biosim_wasm_rewind_generation");
-            postMessage(statusNow("paused"));
+            handleRewind();
+            break;
+        case "rewindConfigured":
+            handleRewindConfigured(cmd.params);
             break;
         case "nextGeneration":
             doNextGeneration();
             break;
+        case "nextGenerationConfigured":
+            handleNextGenerationConfigured(cmd.params);
+            break;
         case "clearGenom":
-            playing = false;
-            call("biosim_wasm_clear_genome");
-            postMessage(statusNow("idle"));
+            handleClearGenom();
             break;
         case "pickAgentAtCell": {
             if (!biosim || !layout) break;
