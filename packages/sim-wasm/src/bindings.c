@@ -262,7 +262,7 @@ exit:
 /* ── parameter setters ───────────────────────────────────────────────────── */
 
 /* Set a named integer parameter before the next biosim_wasm_init call.
- * Returns BIOSIM_OK, BIOSIM_ERR_NOTFOUND, or BIOSIM_ERR_TYPE.             */
+ * Returns BIOSIM_OK, BIOSIM_ERR_NOTFOUND, or BIOSIM_ERR_TYPE. */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_int(const char *name, int val) {
     params_mut_ensure();
     for (size_t i = 0U; i < PARAMS_COUNT; i++) {
@@ -277,7 +277,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_int(const char *name, int val) {
     return BIOSIM_ERR_NOTFOUND;
 }
 
-/* Set a named float parameter before the next biosim_wasm_init call.      */
+/* Set a named float parameter before the next biosim_wasm_init call. */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_float(const char *name, double val) {
     params_mut_ensure();
     for (size_t i = 0U; i < PARAMS_COUNT; i++) {
@@ -293,7 +293,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_float(const char *name, double va
 }
 
 /* Set a named boolean parameter before the next biosim_wasm_init call.
- * val: non-zero = true, 0 = false.                                        */
+ * val: non-zero = true, 0 = false. */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_bool(const char *name, int val) {
     params_mut_ensure();
     for (size_t i = 0U; i < PARAMS_COUNT; i++) {
@@ -311,7 +311,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_set_param_bool(const char *name, int val) {
 /* ── challenge setters ───────────────────────────────────────────────────── */
 
 /* Reset the challenge union and set the kind discriminant. Call this first
- * before any per-kind setter; it zeroes all union fields.                  */
+ * before any per-kind setter; it zeroes all union fields. */
 EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_kind(int32_t kind) {
     memset(&challenge, 0, sizeof(challenge));
     challenge.kind = (biosim_challenge_kind_t)kind;
@@ -368,7 +368,7 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_set_challenge_location_sequence(float radi
 
 /* ── barrier setters ─────────────────────────────────────────────────────── */
 
-/* Reset the barrier list. Call before adding a new set of barriers.        */
+/* Reset the barrier list. Call before adding a new set of barriers. */
 EMSCRIPTEN_KEEPALIVE void biosim_wasm_clear_barriers(void) {
     n_barriers = 0U;
 }
@@ -391,7 +391,7 @@ static int barriers_grow(void) {
  * pass -32768 (INT16_MIN = BIOSIM_BARRIER_POS_UNSET) for random placement.
  * length and width are in cells; pass 0.0 (BIOSIM_BARRIER_DIM_UNSET) for a
  * random dimension. Returns BIOSIM_OK or BIOSIM_ERR_NOMEM on allocation
- * failure.                                                                  */
+ * failure. */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
     int kind, int x, int y, float length, float width
 ) {
@@ -409,7 +409,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
     return BIOSIM_OK;
 }
 
-/* Number of barriers currently in the list.                                */
+/* Number of barriers currently in the list. */
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_n_barriers(void) {
     return n_barriers;
 }
