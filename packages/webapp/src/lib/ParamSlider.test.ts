@@ -35,6 +35,24 @@ describe("ParamSlider", () => {
         expect(screen.getByText("agents")).toBeTruthy();
     });
 
+    it("does NOT call onchange on input (only on commit)", async () => {
+        const onchange = vi.fn();
+        render(ParamSlider, {
+            props: {
+                label: "Population",
+                min: 100,
+                max: 10000,
+                step: 100,
+                value: 3000,
+                onchange,
+            },
+        });
+        await fireEvent.input(screen.getByLabelText("Population"), {
+            target: { value: "500" },
+        });
+        expect(onchange).not.toHaveBeenCalled();
+    });
+
     it("calls onchange when slider is committed", async () => {
         const onchange = vi.fn();
         render(ParamSlider, {
