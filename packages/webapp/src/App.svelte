@@ -506,6 +506,7 @@
         send({ type: "selectAgent", id: null });
         send({ type: "hoverAgent", id: null });
         activeTab = "sim";
+        brainExpanded = false;
     }
 
     function pixelToCell(
