@@ -414,12 +414,6 @@
         draftConfig = { ...($state.snapshot(lastPlayedConfig) as SimParams) };
     }
 
-    function handleClearGenom(): void {
-        workerGenomeMaxLenUsed = 0;
-        workerGenomeMaxNeuronsUsed = 0;
-        send({ type: "clearGenom" });
-    }
-
     function handleDialogRevertContinue(): void {
         handleRevert();
         showConfigChangeDialog = false;
@@ -496,6 +490,13 @@
             hasStarted = true;
             send({ type: "play" });
         }
+    }
+
+    function handleClearGenom(): void {
+        isGenComplete = false;
+        workerGenomeMaxLenUsed = 0;
+        workerGenomeMaxNeuronsUsed = 0;
+        send({ type: "clearGenom" });
     }
 
     // ── Agent selection ───────────────────────────────────────────────────────

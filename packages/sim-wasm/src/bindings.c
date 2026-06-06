@@ -177,7 +177,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
         return BIOSIM_ERR_INVALID;
     }
     snap.count = 0U;
-    return BIOSIM_OK;
+    return (int)spawn_generation();
 }
 
 /* Reproduce a new population from the saved survivors, using the same gen_rng

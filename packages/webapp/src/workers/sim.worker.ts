@@ -1135,7 +1135,7 @@ function handleConfigure(params: SimParams): void {
 function handleClearGenom(): void {
     playing = false;
     call("biosim_wasm_clear_genome");
-    postMessage(statusNow("idle"));
+    postMessage(statusNow("paused"));
 }
 
 // ── Message handler ───────────────────────────────────────────────────────────
