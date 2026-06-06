@@ -81,7 +81,7 @@ static bool initialized = false;
  * generation boundary.  Populated by biosim_generation_collect_survivors at
  * each generation boundary; consumed by biosim_generation_spawn.
  * snap.gen_rng captures sim.gen_rng before reproduction so that
- * biosim_wasm_rewind_generation can re-seed the same deterministic run. */
+ * biosim_wasm_rewind can re-seed the same deterministic run. */
 
 static biosim_survivor_snap_t snap = {0};
 
@@ -183,11 +183,31 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
 /* Reproduce a new population from the saved survivors, using the same gen_rng
  * seed as the original reproduction.  Thanks to determinism, calling this
  * after biosim_wasm_next_generation yields the same starting population. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind_generation(void) {
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind(void) {
     if (!initialized) {
         return BIOSIM_ERR_INVALID;
     }
-    sim.gen_rng = snap.gen_rng;
+    if (snap.count > 0U) {
+        sim.gen_rng = snap.gen_rng;
+    }
+    return (int)spawn_generation();
+}
+
+/* Reinitialise with the params already set via biosim_wasm_set_param_*,
+ * biosim_wasm_set_challenge_*, and biosim_wasm_add_barrier, then rewind:
+ * restore gen_rng and gen from snap so the population is deterministically
+ * reproduced from the same survivors as the last generation boundary.
+ * The internal spawn inside biosim_wasm_init is harmless — spawn clears the
+ * grid on entry, so a second spawn simply overwrites it. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind_configured(void) {
+    int rc = biosim_wasm_init();
+    if (rc != BIOSIM_OK) {
+        return rc;
+    }
+    if (snap.count > 0U) {
+        sim.gen_rng = snap.gen_rng;
+        sim.gen = snap.gen;
+    }
     return (int)spawn_generation();
 }
 
@@ -212,22 +232,6 @@ exit:
         BIOSIM_ERRORF("next generation failed (%s)", biosim_strerror(rc));
     }
     return (int)rc;
-}
-
-/* Reinitialise with the params already set via biosim_wasm_set_param_*,
- * biosim_wasm_set_challenge_*, and biosim_wasm_add_barrier, then rewind:
- * restore gen_rng and gen from snap so the population is deterministically
- * reproduced from the same survivors as the last generation boundary.
- * The internal spawn inside biosim_wasm_init is harmless — spawn clears the
- * grid on entry, so a second spawn simply overwrites it. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind_configured(void) {
-    int rc = biosim_wasm_init();
-    if (rc != BIOSIM_OK) {
-        return rc;
-    }
-    sim.gen_rng = snap.gen_rng;
-    sim.gen = snap.gen;
-    return (int)spawn_generation();
 }
 
 /* Collect survivors and census from the current sim, reinitialise with the

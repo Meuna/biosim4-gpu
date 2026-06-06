@@ -1057,7 +1057,7 @@ function handleStop(): void {
 
 function handleRewind(): void {
     playing = false;
-    call("biosim_wasm_rewind_generation");
+    call("biosim_wasm_rewind");
     postMessage(statusNow("paused"));
 }
 
