@@ -48,8 +48,6 @@
         {/if}
     </button>
 
-    <div class="dock__sep" aria-hidden="true"></div>
-
     <button
         class="dock__btn"
         disabled={running}
