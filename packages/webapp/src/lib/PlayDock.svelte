@@ -45,12 +45,15 @@
 </script>
 
 <div class="dock">
-    <DiscreteSlider
-        stops={SPEED_STOPS}
-        value={targetSpeed}
-        onChange={onSetSpeed}
-        ariaLabel="Simulation speed"
-    />
+    <div class="dock__speed">
+        <span class="dock__speed-label" aria-hidden="true">fps</span>
+        <DiscreteSlider
+            stops={SPEED_STOPS}
+            value={targetSpeed}
+            onChange={onSetSpeed}
+            ariaLabel="Simulation speed"
+        />
+    </div>
 
     <div class="dock__sep" aria-hidden="true"></div>
 
@@ -177,7 +180,7 @@
         background: var(--color-text);
         color: var(--color-surface);
         border-radius: var(--radius-pill);
-        padding: 0 var(--space-3);
+        margin: 0 var(--space-3);
         font-weight: 500;
     }
 
@@ -190,7 +193,7 @@
         width: 1px;
         height: 1.25rem;
         background: var(--color-border-subtle);
-        margin: 0 var(--space-2);
+        margin: 0 var(--space-3);
         flex-shrink: 0;
     }
 
@@ -218,5 +221,21 @@
 
     .dock__autoplay-group:hover .dock__autoplay-hint {
         opacity: 0.55;
+    }
+
+    .dock__speed {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        margin-right: var(--space-3);
+    }
+
+    .dock__speed-label {
+        font-family: var(--font-mono);
+        font-size: 0.625rem;
+        color: var(--color-text-muted);
+        letter-spacing: 0.04em;
+        padding-left: var(--space-2);
+        white-space: nowrap;
     }
 </style>
