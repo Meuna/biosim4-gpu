@@ -11,7 +11,7 @@ describe("EvolveOverlay", () => {
 
     it("displays the generation number", () => {
         render(EvolveOverlay, { geom: defaultGeom, gen: 42, stopping: false });
-        expect(screen.getByText("000042")).toBeTruthy();
+        expect(screen.getByText("Gen: 42")).toBeTruthy();
     });
 
     it("shows stop message when stopping", () => {

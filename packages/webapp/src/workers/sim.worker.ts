@@ -947,6 +947,7 @@ function startTransitionIfNeeded(): void {
 
 function animTick(): void {
     if (!ctx || !layout || !biosim) return;
+    if (freeRunning) return;
     const now = performance.now();
     const t = (now - startTime) / 1000;
 
@@ -1164,8 +1165,11 @@ function freeRunTick(): void {
 
 function handleStartFreeRun(): void {
     playing = false;
-    startTransitionIfNeeded();
+    if (mode === "idle" || mode === "transitioning-in") {
+        mode = "running";
+    }
     freeRunning = true;
+    clearCanvas();
     freeRunTick();
 }
 

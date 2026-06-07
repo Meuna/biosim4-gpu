@@ -17,7 +17,7 @@
     aria-live="polite"
 >
     <span class="evolve-overlay__label small-caps">Evolving</span>
-    <span class="evolve-overlay__gen">{String(gen).padStart(6, "0")}</span>
+    <span class="evolve-overlay__gen">Gen: {gen}</span>
     {#if stopping}
         <span class="evolve-overlay__stop">Stop request sent…</span>
     {/if}
@@ -32,7 +32,6 @@
         align-items: center;
         justify-content: center;
         gap: var(--space-3);
-        background: var(--color-surface);
     }
 
     .evolve-overlay__label {
