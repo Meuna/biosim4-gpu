@@ -134,7 +134,7 @@ describe("ParamSlider", () => {
         expect(screen.queryByRole("spinbutton")).toBeNull();
     });
 
-    it("clamps out-of-range values to [min, max]", async () => {
+    it("accepts out-of-range values without clamping", async () => {
         const onchange = vi.fn();
         render(ParamSlider, {
             props: {
@@ -152,7 +152,96 @@ describe("ParamSlider", () => {
         const input = screen.getByLabelText("Edit Population");
         await fireEvent.input(input, { target: { value: "99999" } });
         await fireEvent.keyDown(input, { key: "Enter" });
-        expect(onchange).toHaveBeenCalledWith(10000);
+        expect(onchange).toHaveBeenCalledWith(99999);
+    });
+
+    it("applies muted class to range input when value is above max", () => {
+        const { container } = render(ParamSlider, {
+            props: {
+                label: "Population",
+                min: 100,
+                max: 10000,
+                step: 100,
+                value: 99999,
+                onchange: vi.fn(),
+            },
+        });
+        const rangeInput = container.querySelector(".param-slider__range");
+        expect(
+            rangeInput?.classList.contains("param-slider__range--muted"),
+        ).toBe(true);
+    });
+
+    it("applies muted class to value button when value is above max", () => {
+        render(ParamSlider, {
+            props: {
+                label: "Population",
+                min: 100,
+                max: 10000,
+                step: 100,
+                value: 99999,
+                onchange: vi.fn(),
+            },
+        });
+        const btn = screen.getByRole("button", { name: "Edit Population" });
+        expect(btn.classList.contains("param-slider__val--muted")).toBe(true);
+    });
+
+    it("applies muted class to range input when value is below min", () => {
+        const { container } = render(ParamSlider, {
+            props: {
+                label: "Population",
+                min: 100,
+                max: 10000,
+                step: 100,
+                value: 1,
+                onchange: vi.fn(),
+            },
+        });
+        const rangeInput = container.querySelector(".param-slider__range");
+        expect(
+            rangeInput?.classList.contains("param-slider__range--muted"),
+        ).toBe(true);
+    });
+
+    it("does not apply muted class when value is within range", () => {
+        const { container } = render(ParamSlider, {
+            props: {
+                label: "Population",
+                min: 100,
+                max: 10000,
+                step: 100,
+                value: 3000,
+                onchange: vi.fn(),
+            },
+        });
+        const rangeInput = container.querySelector(".param-slider__range");
+        expect(
+            rangeInput?.classList.contains("param-slider__range--muted"),
+        ).toBe(false);
+    });
+
+    it("removes muted class after slider input with in-range value", async () => {
+        const { container } = render(ParamSlider, {
+            props: {
+                label: "Population",
+                min: 100,
+                max: 10000,
+                step: 100,
+                value: 99999,
+                onchange: vi.fn(),
+            },
+        });
+        const rangeInput = container.querySelector(
+            ".param-slider__range",
+        ) as HTMLInputElement;
+        expect(
+            rangeInput.classList.contains("param-slider__range--muted"),
+        ).toBe(true);
+        await fireEvent.input(rangeInput, { target: { value: "5000" } });
+        expect(
+            rangeInput.classList.contains("param-slider__range--muted"),
+        ).toBe(false);
     });
 
     it("uses custom format function for display", () => {

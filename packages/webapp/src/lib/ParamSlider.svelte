@@ -21,6 +21,8 @@
         localValue = value;
     });
 
+    const isMuted = $derived(localValue < min || localValue > max);
+
     let editing = $state(false);
     let editVal = $state("");
     let editInput = $state<HTMLInputElement | undefined>();
@@ -36,14 +38,14 @@
     }
 
     function startEdit(): void {
-        editVal = String(value);
+        editVal = String(localValue);
         editing = true;
     }
 
     function commitEdit(): void {
         const n = parseFloat(editVal);
         if (!isNaN(n)) {
-            onchange(Math.max(min, Math.min(max, n)));
+            onchange(n);
         }
         editing = false;
     }
@@ -62,6 +64,7 @@
         <input
             type="range"
             class="param-slider__range"
+            class:param-slider__range--muted={isMuted}
             {min}
             {max}
             {step}
@@ -78,8 +81,6 @@
             <input
                 type="number"
                 class="param-slider__edit"
-                {min}
-                {max}
                 {step}
                 bind:value={editVal}
                 bind:this={editInput}
@@ -94,6 +95,7 @@
             <button
                 type="button"
                 class="param-slider__val"
+                class:param-slider__val--muted={isMuted}
                 onclick={startEdit}
                 aria-label={"Edit " + label}
                 title="Click to edit"
@@ -153,6 +155,18 @@
     .param-slider__val:focus-visible {
         outline: 2px solid var(--color-accent);
         outline-offset: 2px;
+    }
+
+    .param-slider__val--muted {
+        color: var(--color-text-muted);
+    }
+
+    .param-slider__range--muted::-webkit-slider-thumb {
+        opacity: 0;
+    }
+
+    .param-slider__range--muted::-moz-range-thumb {
+        opacity: 0;
     }
 
     .param-slider__edit {
