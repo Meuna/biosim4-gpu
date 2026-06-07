@@ -59,7 +59,7 @@
 
     <button
         class="dock__btn dock__btn--primary"
-        disabled={(genComplete && !running) || (genomIncompatible && !running)}
+        disabled={(genComplete && !running) || genomIncompatible}
         onclick={onToggle}
         aria-label={running ? "Stop simulation" : "Play simulation"}
     >
@@ -87,6 +87,7 @@
     <div class="dock__autoplay-group">
         <button
             class="dock__btn"
+            disabled={genomIncompatible}
             onclick={(e) => onNextGen(e.ctrlKey)}
             aria-label="Advance one generation (Ctrl+click to auto play)"
         >
@@ -96,6 +97,7 @@
 
         <button
             class="dock__btn"
+            disabled={genomIncompatible}
             onclick={(e) => onRewind(e.ctrlKey)}
             aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
         >
