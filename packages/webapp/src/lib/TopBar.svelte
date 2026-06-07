@@ -5,6 +5,7 @@
         running,
         genComplete,
         genomIncompatible = false,
+        freeRunning,
         targetSpeed,
         onToggle,
         onStep,
@@ -12,10 +13,12 @@
         onRewind,
         onClearGenom,
         onSetSpeed,
+        onToggleFreeRun,
     }: {
         running: boolean;
         genComplete: boolean;
         genomIncompatible?: boolean;
+        freeRunning: boolean;
         targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
@@ -23,6 +26,7 @@
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
         onSetSpeed: (fps: number) => void;
+        onToggleFreeRun: () => void;
     } = $props();
 </script>
 
@@ -37,6 +41,7 @@
             {running}
             {genComplete}
             {genomIncompatible}
+            {freeRunning}
             {targetSpeed}
             {onToggle}
             {onStep}
@@ -44,6 +49,7 @@
             {onRewind}
             {onClearGenom}
             {onSetSpeed}
+            {onToggleFreeRun}
         />
     </div>
 

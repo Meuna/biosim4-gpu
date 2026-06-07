@@ -6,6 +6,7 @@
         History,
         Baby,
         Dna,
+        RefreshCw,
     } from "lucide-svelte";
     import ConfirmInline from "./ConfirmInline.svelte";
     import DiscreteSlider from "./DiscreteSlider.svelte";
@@ -21,6 +22,7 @@
         running,
         genComplete,
         genomIncompatible = false,
+        freeRunning,
         targetSpeed,
         onToggle,
         onStep,
@@ -28,10 +30,12 @@
         onRewind,
         onClearGenom,
         onSetSpeed,
+        onToggleFreeRun,
     }: {
         running: boolean;
         genComplete: boolean;
         genomIncompatible?: boolean;
+        freeRunning: boolean;
         targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
@@ -39,6 +43,7 @@
         onRewind: (autoPlay: boolean) => void;
         onClearGenom: () => void;
         onSetSpeed: (fps: number) => void;
+        onToggleFreeRun: () => void;
     } = $props();
 
     let clearConfirmOpen = $state(false);
@@ -59,7 +64,7 @@
 
     <button
         class="dock__btn dock__btn--primary"
-        disabled={(genComplete && !running) || genomIncompatible}
+        disabled={!running && (genComplete || genomIncompatible || freeRunning)}
         onclick={onToggle}
         aria-label={running ? "Stop simulation" : "Play simulation"}
     >
@@ -74,7 +79,7 @@
 
     <button
         class="dock__btn"
-        disabled={running}
+        disabled={running || freeRunning}
         onclick={onStep}
         aria-label="Step one simulation tick"
     >
@@ -87,7 +92,7 @@
     <div class="dock__autoplay-group">
         <button
             class="dock__btn"
-            disabled={genomIncompatible}
+            disabled={genomIncompatible || freeRunning}
             onclick={(e) => onNextGen(e.ctrlKey)}
             aria-label="Advance one generation (Ctrl+click to auto play)"
         >
@@ -97,7 +102,7 @@
 
         <button
             class="dock__btn"
-            disabled={genomIncompatible}
+            disabled={genomIncompatible || freeRunning}
             onclick={(e) => onRewind(e.ctrlKey)}
             aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
         >
@@ -135,6 +140,21 @@
             Clear Genom
         </button>
     {/if}
+
+    <div class="dock__sep" aria-hidden="true"></div>
+
+    <button
+        class="dock__btn dock__btn--evolve"
+        class:dock__btn--evolve-active={freeRunning}
+        disabled={running}
+        onclick={onToggleFreeRun}
+        aria-label={freeRunning
+            ? "Stop evolving"
+            : "Evolve: auto-advance generations"}
+    >
+        <span class="evolve-icon"><RefreshCw size={14} /></span>
+        Evolve
+    </button>
 </div>
 
 <style>
@@ -239,5 +259,24 @@
         letter-spacing: 0.04em;
         padding-left: var(--space-2);
         white-space: nowrap;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .dock__btn--evolve:hover:not(:disabled) .evolve-icon,
+    .dock__btn--evolve-active .evolve-icon {
+        animation: spin 1.2s linear infinite;
+    }
+
+    .dock__btn--evolve-active {
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-sm);
     }
 </style>

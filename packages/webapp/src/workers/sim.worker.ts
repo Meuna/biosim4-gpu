@@ -155,7 +155,9 @@ export type WorkerCmd =
     | { type: "selectAgent"; id: number | null }
     | { type: "hoverAgent"; id: number | null }
     | { type: "requestBrain"; id: number }
-    | { type: "setSpeed"; fps: number };
+    | { type: "setSpeed"; fps: number }
+    | { type: "startFreeRun" }
+    | { type: "stopFreeRun" };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -968,6 +970,7 @@ function startAnimLoop(): void {
 // ── Simulation control ────────────────────────────────────────────────────────
 
 let playing = false;
+let freeRunning = false;
 let targetFps = 0;
 let fpsWindow = createFpsWindow();
 
@@ -1138,6 +1141,39 @@ function handleClearGenom(): void {
     postMessage(statusNow("paused"));
 }
 
+function freeRunTick(): void {
+    if (!freeRunning) return;
+    call("biosim_wasm_do_gen");
+    const gen = call("biosim_wasm_census_gen");
+    const population = call("biosim_wasm_census_population");
+    const survivors = call("biosim_wasm_census_survivors");
+    const kills = call("biosim_wasm_census_kills");
+    const genomeMaxLenUsed = call("biosim_wasm_genome_max_len_used");
+    const genomeMaxNeuronsUsed = call("biosim_wasm_genome_max_neurons_used");
+    postMessage({
+        type: "census",
+        gen,
+        population,
+        survivors,
+        kills,
+        genomeMaxLenUsed,
+        genomeMaxNeuronsUsed,
+    } satisfies WorkerEvent);
+    setTimeout(freeRunTick, 0);
+}
+
+function handleStartFreeRun(): void {
+    playing = false;
+    startTransitionIfNeeded();
+    freeRunning = true;
+    freeRunTick();
+}
+
+function handleStopFreeRun(): void {
+    freeRunning = false;
+    postMessage(statusNow("paused"));
+}
+
 // ── Message handler ───────────────────────────────────────────────────────────
 
 self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
@@ -1174,6 +1210,12 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         case "clearGenom":
             handleClearGenom();
+            break;
+        case "startFreeRun":
+            handleStartFreeRun();
+            break;
+        case "stopFreeRun":
+            handleStopFreeRun();
             break;
         case "pickAgentAtCell": {
             if (!biosim || !layout) break;

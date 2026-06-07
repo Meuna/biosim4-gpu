@@ -5,6 +5,7 @@ const defaultProps = {
     running: false,
     genComplete: false,
     genomIncompatible: false,
+    freeRunning: false,
     targetSpeed: 0,
     onToggle: () => {},
     onStep: () => {},
@@ -12,6 +13,7 @@ const defaultProps = {
     onRewind: () => {},
     onClearGenom: () => {},
     onSetSpeed: () => {},
+    onToggleFreeRun: () => {},
 };
 
 describe("PlayDock", () => {
@@ -155,5 +157,62 @@ describe("PlayDock", () => {
         });
         fireEvent.click(screen.getByRole("button", { name: /rewind/i }));
         expect(called).toBe(true);
+    });
+
+    it("renders Evolve button", () => {
+        render(PlayDock, defaultProps);
+        expect(screen.getByRole("button", { name: /evolve/i })).toBeTruthy();
+    });
+
+    it("Evolve button shows idle aria-label when not freeRunning", () => {
+        render(PlayDock, defaultProps);
+        const btn = screen.getByRole("button", {
+            name: /evolve: auto-advance generations/i,
+        }) as HTMLButtonElement;
+        expect(btn).toBeTruthy();
+        expect(btn.disabled).toBe(false);
+    });
+
+    it("Evolve button shows active aria-label when freeRunning", () => {
+        render(PlayDock, { ...defaultProps, freeRunning: true });
+        expect(
+            screen.getByRole("button", { name: /stop evolving/i }),
+        ).toBeTruthy();
+    });
+
+    it("disables Evolve button when running", () => {
+        render(PlayDock, { ...defaultProps, running: true });
+        const btn = screen.getByRole("button", {
+            name: /evolve/i,
+        }) as HTMLButtonElement;
+        expect(btn.disabled).toBe(true);
+    });
+
+    it("calls onToggleFreeRun when Evolve button clicked", () => {
+        let called = false;
+        render(PlayDock, {
+            ...defaultProps,
+            onToggleFreeRun: () => {
+                called = true;
+            },
+        });
+        fireEvent.click(screen.getByRole("button", { name: /evolve/i }));
+        expect(called).toBe(true);
+    });
+
+    it("disables Step, Next Gen, and Rewind when freeRunning", () => {
+        render(PlayDock, { ...defaultProps, freeRunning: true });
+        const step = screen.getByRole("button", {
+            name: /step one simulation tick/i,
+        }) as HTMLButtonElement;
+        const nextGen = screen.getByRole("button", {
+            name: /advance one generation/i,
+        }) as HTMLButtonElement;
+        const rewind = screen.getByRole("button", {
+            name: /rewind/i,
+        }) as HTMLButtonElement;
+        expect(step.disabled).toBe(true);
+        expect(nextGen.disabled).toBe(true);
+        expect(rewind.disabled).toBe(true);
     });
 });

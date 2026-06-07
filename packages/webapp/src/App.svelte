@@ -224,6 +224,7 @@
     let isRunning = $state(false);
     let hasStarted = $state(false);
     let isGenComplete = $state(false);
+    let isFreeRunning = $state(false);
     const mode = $derived(
         isRunning ? "running" : hasStarted ? "paused" : "kinetic",
     ) as "kinetic" | "running" | "paused";
@@ -405,6 +406,10 @@
                 isRunning = false;
                 send({ type: "stop" });
             }
+            if (isFreeRunning) {
+                isFreeRunning = false;
+                send({ type: "stopFreeRun" });
+            }
             gridBlurred = true;
             showConfigChangeDialog = true;
         }
@@ -458,6 +463,18 @@
     function handleStep(): void {
         hasStarted = true;
         send({ type: "step" });
+    }
+
+    function handleToggleFreeRun(): void {
+        if (isFreeRunning) {
+            isFreeRunning = false;
+            send({ type: "stopFreeRun" });
+        } else {
+            isFreeRunning = true;
+            hasStarted = true;
+            isGenComplete = false;
+            send({ type: "startFreeRun" });
+        }
     }
 
     function handleNextGen(autoPlay: boolean): void {
@@ -614,6 +631,7 @@
         running={isRunning}
         genComplete={isGenComplete}
         {genomIncompatible}
+        freeRunning={isFreeRunning}
         {targetSpeed}
         onSetSpeed={handleSetSpeed}
         onToggle={handleToggle}
@@ -621,6 +639,7 @@
         onNextGen={handleNextGen}
         onRewind={handleRewind}
         onClearGenom={handleClearGenom}
+        onToggleFreeRun={handleToggleFreeRun}
     />
 
     <!-- z-index: 55/60 — config-change-while-running dialog -->
