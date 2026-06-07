@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Out-of-range values in `ParamSlider`** (gh-83) — sliders now accept and
+  display values outside their `[min, max]` range without clamping. An
+  out-of-range value enters a muted state: the value text dims and the slider
+  knob is hidden; clicking the slider rail exits the muted state by committing
+  an in-range value. This allows external configuration files that breach the
+  UI range to round-trip correctly.
 - **"Evolve" free-run mode** (gh-81) — new button in `PlayDock` (right of
   "Clear Genom") that continuously advances full generations (all steps +
   breeding + respawn) at maximum speed until stopped; button shows a spinning
