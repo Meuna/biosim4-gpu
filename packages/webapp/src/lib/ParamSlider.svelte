@@ -158,15 +158,12 @@
     }
 
     .param-slider__val--muted {
-        color: var(--color-text-muted);
+        color: var(--color-warn);
     }
 
-    .param-slider__range--muted::-webkit-slider-thumb {
-        opacity: 0;
-    }
-
-    .param-slider__range--muted::-moz-range-thumb {
-        opacity: 0;
+    .param-slider__range--muted {
+        accent-color: var(--color-warn);
+        opacity: 0.5;
     }
 
     .param-slider__edit {
