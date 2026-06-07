@@ -234,6 +234,18 @@ exit:
     return (int)rc;
 }
 
+/* Run a complete generation without yielding: loop all steps until gen is
+ * complete, then advance the generation boundary. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_gen(void) {
+    while (sim.step < sim.steps_per_gen) {
+        int rc = biosim_wasm_do_step();
+        if (rc != BIOSIM_OK) {
+            return rc;
+        }
+    }
+    return biosim_wasm_next_generation();
+}
+
 /* Collect survivors and census from the current sim, reinitialise with the
  * params already set via biosim_wasm_set_param_* / set_challenge / add_barrier,
  * then breed the next generation from those survivors.

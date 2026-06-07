@@ -17,6 +17,7 @@ All functions are called via `biosim.ccall(name, returnType, [], [])`.
 | `biosim_wasm_free` | `null` | Release simulation resources. |
 | `biosim_wasm_do_step` | `number` (status) | Run all agents for the current step, then finalize the step. |
 | `biosim_wasm_do_step_agent` | `number` (status) | Run one alive agent; auto-finalizes the step when the last agent is processed. |
+| `biosim_wasm_do_gen` | `number` (status) | Run all steps for the current generation, then advance the generation boundary. Equivalent to calling `biosim_wasm_do_step` until `biosim_wasm_is_gen_complete`, then `biosim_wasm_next_generation`. |
 | `biosim_wasm_next_generation` | `number` (status) | Run the generational boundary (challenge eval, reproduction, respawn). Only valid when `is_gen_complete` is true. |
 | `biosim_wasm_get_gen` | `number` | Current generation index. |
 | `biosim_wasm_get_step` | `number` | Current step index within the generation (0 – steps_per_gen). |
