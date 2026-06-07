@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **"Evolve" free-run mode** (gh-81) — new button in `PlayDock` (right of
+  "Clear Genom") that continuously advances full generations (all steps +
+  breeding + respawn) at maximum speed until stopped; button shows a spinning
+  `RefreshCw` icon while active; Play, Step, Next Gen and Rewind are disabled
+  during evolve. `sim-wasm` gains `biosim_wasm_do_gen` which runs all steps
+  then calls `biosim_wasm_next_generation`.
 - **Discrete speed selector in PlayDock** (gh-59) — custom 4-stop slider (1 fps · 25
   fps · 50 fps · ∞) placed left of the Play button throttles simulation playback speed;
   step-rate FPS is measured over 1-second windows in the worker and displayed live in
