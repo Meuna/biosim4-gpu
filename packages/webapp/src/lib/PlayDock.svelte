@@ -11,7 +11,7 @@
     import DiscreteSlider from "./DiscreteSlider.svelte";
 
     const SPEED_STOPS: { value: number; label: string; ariaLabel: string }[] = [
-        { value: 1, label: "1", ariaLabel: "1 fps" },
+        { value: 5, label: "5", ariaLabel: "5 fps" },
         { value: 25, label: "25", ariaLabel: "25 fps" },
         { value: 50, label: "50", ariaLabel: "50 fps" },
         { value: 0, label: ">>", ariaLabel: "Unlimited" },
