@@ -23,6 +23,7 @@
         genComplete,
         genomIncompatible = false,
         freeRunning,
+        freeRunStopping,
         targetSpeed,
         onToggle,
         onStep,
@@ -36,6 +37,7 @@
         genComplete: boolean;
         genomIncompatible?: boolean;
         freeRunning: boolean;
+        freeRunStopping: boolean;
         targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
@@ -146,7 +148,7 @@
     <button
         class="dock__btn dock__btn--evolve"
         class:dock__btn--evolve-active={freeRunning}
-        disabled={running}
+        disabled={running || freeRunStopping}
         onclick={onToggleFreeRun}
         aria-label={freeRunning
             ? "Stop evolving"

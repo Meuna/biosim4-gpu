@@ -5,6 +5,8 @@ const noOp = () => {};
 
 const defaultProps = {
     running: false,
+    freeRunning: false,
+    freeRunStopping: false,
     onToggle: noOp,
     onStep: noOp,
     onNextGen: noOp,

@@ -6,6 +6,7 @@
         genComplete,
         genomIncompatible = false,
         freeRunning,
+        freeRunStopping,
         targetSpeed,
         onToggle,
         onStep,
@@ -19,6 +20,7 @@
         genComplete: boolean;
         genomIncompatible?: boolean;
         freeRunning: boolean;
+        freeRunStopping: boolean;
         targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
@@ -42,6 +44,7 @@
             {genComplete}
             {genomIncompatible}
             {freeRunning}
+            {freeRunStopping}
             {targetSpeed}
             {onToggle}
             {onStep}

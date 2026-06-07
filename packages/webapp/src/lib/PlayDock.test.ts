@@ -6,6 +6,7 @@ const defaultProps = {
     genComplete: false,
     genomIncompatible: false,
     freeRunning: false,
+    freeRunStopping: false,
     targetSpeed: 0,
     onToggle: () => {},
     onStep: () => {},
@@ -198,6 +199,18 @@ describe("PlayDock", () => {
         });
         fireEvent.click(screen.getByRole("button", { name: /evolve/i }));
         expect(called).toBe(true);
+    });
+
+    it("disables Evolve button when freeRunStopping", () => {
+        render(PlayDock, {
+            ...defaultProps,
+            freeRunning: true,
+            freeRunStopping: true,
+        });
+        const btn = screen.getByRole("button", {
+            name: /stop evolving/i,
+        }) as HTMLButtonElement;
+        expect(btn.disabled).toBe(true);
     });
 
     it("disables Step, Next Gen, and Rewind when freeRunning", () => {

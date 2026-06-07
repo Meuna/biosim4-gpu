@@ -16,6 +16,7 @@
     import HoverCard from "./lib/HoverCard.svelte";
     import BrainExplorer from "./lib/BrainExplorer.svelte";
     import ConfigChangeDialog from "./lib/ConfigChangeDialog.svelte";
+    import EvolveOverlay from "./lib/EvolveOverlay.svelte";
     import type { BrainConn } from "./lib/brain";
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
 
@@ -116,6 +117,9 @@
             if (msg.state === "gen_complete") {
                 isRunning = false;
                 isGenComplete = true;
+            } else if (msg.state === "paused" && isFreeRunStopping) {
+                isFreeRunning = false;
+                isFreeRunStopping = false;
             }
         } else if (msg.type === "census") {
             currentGen = msg.gen;
@@ -225,6 +229,7 @@
     let hasStarted = $state(false);
     let isGenComplete = $state(false);
     let isFreeRunning = $state(false);
+    let isFreeRunStopping = $state(false);
     const mode = $derived(
         isRunning ? "running" : hasStarted ? "paused" : "kinetic",
     ) as "kinetic" | "running" | "paused";
@@ -407,7 +412,7 @@
                 send({ type: "stop" });
             }
             if (isFreeRunning) {
-                isFreeRunning = false;
+                isFreeRunStopping = true;
                 send({ type: "stopFreeRun" });
             }
             gridBlurred = true;
@@ -467,7 +472,7 @@
 
     function handleToggleFreeRun(): void {
         if (isFreeRunning) {
-            isFreeRunning = false;
+            isFreeRunStopping = true;
             send({ type: "stopFreeRun" });
         } else {
             isFreeRunning = true;
@@ -632,6 +637,7 @@
         genComplete={isGenComplete}
         {genomIncompatible}
         freeRunning={isFreeRunning}
+        freeRunStopping={isFreeRunStopping}
         {targetSpeed}
         onSetSpeed={handleSetSpeed}
         onToggle={handleToggle}
@@ -661,19 +667,28 @@
             blurred={gridBlurred}
         />
 
-        <!-- z-index: 15 — telemetry stats, top-right of grid -->
-        <TelemetryHUD
-            geom={gridGeom}
-            running={isRunning}
-            gen={currentGen}
-            step={currentStep}
-            {stepsPerGen}
-            pop={currentPop}
-            fps={measuredFps}
-        />
+        {#if isFreeRunning}
+            <!-- z-index: 10 — full-grid overlay during free-run -->
+            <EvolveOverlay
+                geom={gridGeom}
+                gen={currentGen}
+                stopping={isFreeRunStopping}
+            />
+        {:else}
+            <!-- z-index: 15 — telemetry stats, top-right of grid -->
+            <TelemetryHUD
+                geom={gridGeom}
+                running={isRunning}
+                gen={currentGen}
+                step={currentStep}
+                {stepsPerGen}
+                pop={currentPop}
+                fps={measuredFps}
+            />
 
-        <!-- z-index: 15 — survival sparkline, bottom-left -->
-        <HUD {survivalHistory} />
+            <!-- z-index: 15 — survival sparkline, bottom-left -->
+            <HUD {survivalHistory} />
+        {/if}
     {/if}
 
     <!-- Hamburger toggle — top-right, z-index: 30 -->
