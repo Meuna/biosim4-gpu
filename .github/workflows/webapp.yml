@@ -36,8 +36,11 @@ jobs:
   quality:
     runs-on: ubuntu-latest
 
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install dependencies
         run: |
@@ -45,25 +48,24 @@ jobs:
           sudo apt-get install -y cmake ninja-build clang-format clang-tidy
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@v2.2.0
         with:
           bun-version: '1.3.14'
 
       - name: Bootstrap vcpkg
         run: |
-          git clone https://github.com/microsoft/vcpkg.git "$HOME/vcpkg"
-          "$HOME/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
-          echo "VCPKG_ROOT=$HOME/vcpkg" >> $GITHUB_ENV
+          git clone https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
 
       - name: Cache vcpkg packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: vcpkg_installed
           key: vcpkg-webapp-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
           restore-keys: vcpkg-webapp-${{ runner.os }}-
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v15
         with:
           version: 'latest'
           actions-cache-folder: '.emsdk-cache'
