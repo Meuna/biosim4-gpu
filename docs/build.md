@@ -48,4 +48,32 @@ toolchain — does not share a build directory with the native tree.
 
 ## CI
 
-No CI workflows are configured yet.
+Two GitHub Actions workflows run the quality check sequence automatically on
+every pull request and on direct pushes to `main`. Each workflow is path-filtered
+so it only triggers when its relevant files change.
+
+| Workflow | File | Triggered by changes to |
+|---|---|---|
+| Native CI | `.github/workflows/native.yml` | `packages/core/**`, `packages/cfgparse/**`, `packages/sim-ref/**`, `packages/sim-gpu/**`, root CMake files, `.clang-*` |
+| Webapp CI | `.github/workflows/webapp.yml` | `packages/sim-wasm/**`, `packages/webapp/**`, `cmake/WebappDevWorkflow.cmake`, root CMake files, `.clang-*` |
+
+Both workflows run the same sequence: **configure → build → test → lint →
+format check**. The format check applies the formatter in place and then runs
+`git diff --exit-code` to fail if any file was not already formatted.
+
+### Native CI environment
+
+Installed via apt: `cmake`, `ninja-build`, `clang`, `clang-format`,
+`clang-tidy`, `pocl-opencl-icd` (CPU OpenCL runtime required by the GPU tests).
+vcpkg is cloned from GitHub and bootstrapped on the runner. `CC=clang` is set so
+`compile_commands.json` records clang invocations — keeping the build compiler
+consistent with clang-tidy's frontend. Uses the `ci` preset (Release + tests
+enabled). vcpkg packages are cached by `vcpkg.json` hash.
+
+### Webapp CI environment
+
+Installed via apt: `cmake`, `ninja-build`, `clang-format`, `clang-tidy`. Bun
+1.3.14 via `oven-sh/setup-bun` (cached automatically). Emscripten SDK via
+`mymindstorm/setup-emsdk` (cached in `.emsdk-cache/`). vcpkg cloned and
+bootstrapped for the `wasm32-emscripten` triplet (cached separately from the
+native triplet). Uses the `webapp` preset.

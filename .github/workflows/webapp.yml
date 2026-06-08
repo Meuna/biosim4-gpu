@@ -1,0 +1,86 @@
+name: Webapp CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/sim-wasm/**'
+      - 'packages/webapp/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'vcpkg.json'
+      - 'cmake/WebappDevWorkflow.cmake'
+      - '.clang-tidy'
+      - '.clang-format'
+      - '.github/workflows/webapp.yml'
+  pull_request:
+    paths:
+      - 'packages/sim-wasm/**'
+      - 'packages/webapp/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'vcpkg.json'
+      - 'cmake/WebappDevWorkflow.cmake'
+      - '.clang-tidy'
+      - '.clang-format'
+      - '.github/workflows/webapp.yml'
+
+concurrency:
+  group: webapp-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y cmake ninja-build clang-format clang-tidy
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - name: Bootstrap vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git "$HOME/vcpkg"
+          "$HOME/vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          echo "VCPKG_ROOT=$HOME/vcpkg" >> $GITHUB_ENV
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: vcpkg_installed
+          key: vcpkg-webapp-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-webapp-${{ runner.os }}-
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 'latest'
+          actions-cache-folder: '.emsdk-cache'
+
+      - name: Configure
+        run: cmake --preset webapp
+
+      - name: Build
+        run: cmake --build --preset webapp
+
+      - name: Test
+        run: bun run --cwd packages/webapp test
+
+      - name: Lint
+        run: cmake --build --preset webapp --target lint
+
+      - name: Format check
+        run: |
+          cmake --build --preset webapp --target format
+          git diff --exit-code

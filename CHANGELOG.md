@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **GitHub Actions CI** (gh-5) — two path-filtered workflows run the full
+  quality sequence (build → test → lint → format check) on every pull request
+  and on direct pushes to `main`. `native.yml` covers the native tree
+  (`core`, `cfgparse`, `sim-ref`, `sim-gpu`) using the `ci` preset with
+  `pocl-opencl-icd` for GPU tests. `webapp.yml` covers the webapp tree
+  (`sim-wasm`, `webapp`) using the `webapp` preset with Emscripten and Bun.
+  Both workflows cache vcpkg packages by `vcpkg.json` hash.
 - **Snapshot import/export** (gh-96) — webapp can now save and restore a full
   generation's survivor population. "Snapshot ↑" uploads a `.snap` file and
   instantly rewinds the sim to that generation; "Snapshot ↓" downloads
