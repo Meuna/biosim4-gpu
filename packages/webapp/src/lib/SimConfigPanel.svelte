@@ -55,6 +55,7 @@
                 </button>
             {/if}
         </div>
+        <p class="sim-config__subtitle">biosim4-gpu / OpenCL stepper</p>
         <div class="sim-config__io-row">
             <span class="small-caps sim-config__io-label">Conf</span>
             <button
@@ -71,7 +72,7 @@
             >
                 <Download size={14} />
             </button>
-            <span class="small-caps sim-config__io-label sim-config__io-snap"
+            <span class="small-caps sim-config__io-label"
                 >Snapshot</span
             >
             <button
@@ -91,7 +92,6 @@
                 <Download size={14} />
             </button>
         </div>
-        <p class="sim-config__subtitle">biosim4-gpu / OpenCL stepper</p>
     </div>
 
     <!-- sim.h ────────────────────────────────────────────────────────────── -->
@@ -440,9 +440,5 @@
 
     .sim-config__io-label {
         font-size: 0.625rem;
-    }
-
-    .sim-config__io-snap {
-        margin-left: auto;
     }
 </style>
