@@ -7,7 +7,7 @@
     import GridSizeControl from "./GridSizeControl.svelte";
     import ChallengeControl from "./ChallengeControl.svelte";
     import BarrierControl from "./BarrierControl.svelte";
-    import { TriangleAlert, Undo2 } from "lucide-svelte";
+    import { Download, FileUp, TriangleAlert, Undo2 } from "lucide-svelte";
 
     interface Props {
         draftConfig: SimParams;
@@ -17,6 +17,11 @@
         incompatibleFields?: string[];
         genomeMaxLenUsed?: number;
         genomeMaxNeuronsUsed?: number;
+        onConfUpload: () => void;
+        onConfDownload: () => void;
+        snapReady?: boolean;
+        onSnapUpload: () => void;
+        onSnapDownload: () => void;
     }
     const {
         draftConfig,
@@ -26,6 +31,11 @@
         incompatibleFields = [],
         genomeMaxLenUsed = 0,
         genomeMaxNeuronsUsed = 0,
+        onConfUpload,
+        onConfDownload,
+        snapReady = false,
+        onSnapUpload,
+        onSnapDownload,
     }: Props = $props();
 </script>
 
@@ -44,6 +54,42 @@
                     <Undo2 size={14} /> revert
                 </button>
             {/if}
+        </div>
+        <div class="sim-config__io-row">
+            <span class="small-caps sim-config__io-label">Conf</span>
+            <button
+                class="button button--utility"
+                onclick={onConfUpload}
+                aria-label="Upload config"
+            >
+                <FileUp size={14} />
+            </button>
+            <button
+                class="button button--utility"
+                onclick={onConfDownload}
+                aria-label="Download config"
+            >
+                <Download size={14} />
+            </button>
+            <span class="small-caps sim-config__io-label sim-config__io-snap"
+                >Snapshot</span
+            >
+            <button
+                class="button button--utility"
+                disabled={!snapReady}
+                onclick={onSnapUpload}
+                aria-label="Upload snapshot"
+            >
+                <FileUp size={14} />
+            </button>
+            <button
+                class="button button--utility"
+                disabled={!snapReady}
+                onclick={onSnapDownload}
+                aria-label="Download snapshot"
+            >
+                <Download size={14} />
+            </button>
         </div>
         <p class="sim-config__subtitle">biosim4-gpu / OpenCL stepper</p>
     </div>
@@ -383,5 +429,20 @@
 
     .sim-config__spacer--lg {
         height: var(--space-8);
+    }
+
+    .sim-config__io-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        margin-top: var(--space-2);
+    }
+
+    .sim-config__io-label {
+        font-size: 0.625rem;
+    }
+
+    .sim-config__io-snap {
+        margin-left: auto;
     }
 </style>

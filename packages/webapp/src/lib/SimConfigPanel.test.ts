@@ -28,6 +28,10 @@ function renderPanel(overrides?: Partial<Parameters<typeof render>[1]>) {
             isDirty: false,
             onDraftChange: vi.fn(),
             onRevert: vi.fn(),
+            onConfUpload: vi.fn(),
+            onConfDownload: vi.fn(),
+            onSnapUpload: vi.fn(),
+            onSnapDownload: vi.fn(),
             ...overrides?.props,
         },
     });
