@@ -8,15 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Snapshot import/export** (gh-96) — webapp can now save and restore a full
+  generation's survivor population. "Snapshot ↑" uploads a `.snap` file and
+  instantly rewinds the sim to that generation; "Snapshot ↓" downloads
+  `biosim.snap` after any generation completes. Both buttons are disabled until
+  the first generation boundary. The whole app surface accepts drag-and-drop of
+  a `.snap` file (alone, or paired with a `.toml` for a complete round-trip
+  restore). `sim-wasm` gains five new WASM exports:
+  `biosim_wasm_snapshot_export` / `_export_ptr` / `_export_size` (write
+  survivors to an `open_memstream` buffer) and
+  `biosim_wasm_snapshot_import_alloc` / `_import_commit` (copy bytes from JS
+  heap into `fmemopen`, parse, and call `spawn_generation`). `core` gains a
+  `biosim_snapshot_load_survivors_f` FILE* variant used by the import path.
+  The on-disk byte format is unchanged.
 - **TOML config import/export** (gh-96) — webapp can now save and restore
   simulation parameters. Two new buttons in the `SimConfigPanel` header
   (`Conf ↑` / `Conf ↓`) upload and download a `.toml` file; the whole app
   surface accepts drag-and-drop of `.toml` files. Parsing uses `smol-toml`;
   serialisation is a manual emitter that produces cfgparse-compatible output
   (`[simulation]`, `[genome]`, `[sensors]`, `[actions]`, `[challenge]`,
-  `[barriers]`). `Snapshot` buttons are present but disabled pending Pass B.
-  Parse errors surface as a transient error banner that auto-dismisses after
-  4 s.
+  `[barriers]`). Parse errors surface as a transient error banner that
+  auto-dismisses after 4 s.
 - **Out-of-range values in `ParamSlider`** (gh-83) — sliders now accept and
   display values outside their `[min, max]` range without clamping. An
   out-of-range value enters a muted state: the value text dims and the slider
