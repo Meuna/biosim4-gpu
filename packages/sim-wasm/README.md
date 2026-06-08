@@ -96,6 +96,45 @@ Call `biosim_wasm_clear_barriers` and `biosim_wasm_add_barrier` **before**
 
 Return code for `add_barrier`: `0` = OK, `4` = list full (`BIOSIM_ERR_INVALID`).
 
+## Snapshot import / export API
+
+These functions allow saving the current generation's survivor genome to memory
+and restoring it later (deterministic round-trip via `gen_rng`).
+
+**Export** (save to JS):
+
+| Function | Args | Return | Description |
+|---|---|---|---|
+| `biosim_wasm_snapshot_export` | — | `number` (status) | Serialise the current survivor snap to an in-memory buffer. Returns `BIOSIM_ERR_INVALID` when no survivors are available (before the first generation boundary). |
+| `biosim_wasm_snapshot_export_ptr` | — | `number` (uint32 pointer) | WASM heap pointer to the export buffer. Valid until the next `export` call. Read with `biosim.HEAPU8.slice(ptr, ptr + size)`. |
+| `biosim_wasm_snapshot_export_size` | — | `number` (uint32 bytes) | Byte length of the export buffer. |
+
+Typical export sequence:
+```js
+const rc = biosim.ccall('biosim_wasm_snapshot_export', 'number', [], []);
+if (rc !== 0) throw new Error(`export failed: ${rc}`);
+const ptr  = biosim.ccall('biosim_wasm_snapshot_export_ptr',  'number', [], []);
+const size = biosim.ccall('biosim_wasm_snapshot_export_size', 'number', [], []);
+const data = biosim.HEAPU8.slice(ptr, ptr + size); // independent copy
+```
+
+**Import** (restore from JS):
+
+| Function | Args | Return | Description |
+|---|---|---|---|
+| `biosim_wasm_snapshot_import_alloc` | `size: number` | `number` (uint32 pointer) | Allocate a WASM-side import buffer; returns its heap pointer (0 on OOM). JS writes the snapshot bytes here. |
+| `biosim_wasm_snapshot_import_commit` | — | `number` (status) | Parse the import buffer, load the last generation into snap, and call `spawn_generation`. Frees the import buffer on return. |
+
+Typical import sequence (call after `biosim_wasm_init` with matching params):
+```js
+const ptr = biosim.ccall('biosim_wasm_snapshot_import_alloc', 'number',
+                          ['number'], [data.byteLength]);
+if (ptr === 0) throw new Error('alloc failed');
+biosim.HEAPU8.set(data, ptr);
+const rc = biosim.ccall('biosim_wasm_snapshot_import_commit', 'number', [], []);
+if (rc !== 0) throw new Error(`import failed: ${rc}`);
+```
+
 ## Rendering / inspection queries
 
 These functions return byte offsets into the Emscripten heap. Access the

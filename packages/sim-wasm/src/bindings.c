@@ -85,6 +85,13 @@ static bool initialized = false;
 
 static biosim_survivor_snap_t snap = {0};
 
+/* Export buffer — populated by biosim_wasm_snapshot_export. */
+static char *snap_export_buf = NULL;
+static size_t snap_export_size = 0U;
+/* Import buffer — written by JS, consumed by biosim_wasm_snapshot_import_commit. */
+static uint8_t *snap_import_buf = NULL;
+static size_t snap_import_size = 0U;
+
 /* ── forward declarations ────────────────────────────────────────────────── */
 
 static biosim_status_t spawn_generation(void);
@@ -142,6 +149,12 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
     barriers = NULL;
     barriers_cap = 0U;
     n_barriers = 0U;
+    free(snap_export_buf);
+    snap_export_buf = NULL;
+    snap_export_size = 0U;
+    free(snap_import_buf);
+    snap_import_buf = NULL;
+    snap_import_size = 0U;
 }
 
 /* ── stepping ────────────────────────────────────────────────────────────── */
@@ -271,6 +284,84 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation_configured(void) {
 exit:
     if (rc != BIOSIM_OK) {
         BIOSIM_ERRORF("next generation configured failed (%s)", biosim_strerror(rc));
+    }
+    return (int)rc;
+}
+
+/* ── snapshot export ─────────────────────────────────────────────────────── */
+
+/* Write the current survivor snap to an in-memory buffer via open_memstream.
+ * Must be called after at least one generation boundary (snap.count > 0).
+ * Returns BIOSIM_ERR_INVALID when no survivors are available. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_export(void) {
+    if (!initialized || snap.count == 0U) {
+        return BIOSIM_ERR_INVALID;
+    }
+    free(snap_export_buf);
+    snap_export_buf = NULL;
+    snap_export_size = 0U;
+    FILE *f = open_memstream(&snap_export_buf, &snap_export_size);
+    if (f == NULL) {
+        return BIOSIM_ERR_IO;
+    }
+    biosim_status_t rc = biosim_snapshot_write_header(f, &sim);
+    if (rc == BIOSIM_OK) {
+        rc = biosim_snapshot_write_genome(f, &sim, &snap);
+    }
+    if (rc == BIOSIM_OK) {
+        rc = biosim_snapshot_finalize(f, 1U);
+    }
+    (void)fclose(f);
+    if (rc != BIOSIM_OK) {
+        free(snap_export_buf);
+        snap_export_buf = NULL;
+        snap_export_size = 0U;
+    }
+    return (int)rc;
+}
+
+/* Return the pointer to the export buffer (valid until the next export call). */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_export_ptr(void) {
+    return (uint32_t)(uintptr_t)snap_export_buf;
+}
+
+/* Return the byte size of the export buffer. */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_export_size(void) {
+    return (uint32_t)snap_export_size;
+}
+
+/* ── snapshot import ─────────────────────────────────────────────────────── */
+
+/* Allocate an import buffer of the given byte count and return its WASM
+ * pointer. JS writes the snapshot bytes here before calling commit.
+ * A previous buffer is freed on each call. Returns 0 on allocation failure. */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_import_alloc(uint32_t size) {
+    free(snap_import_buf);
+    snap_import_buf = (uint8_t *)malloc((size_t)size);
+    snap_import_size = (snap_import_buf != NULL) ? (size_t)size : 0U;
+    return (uint32_t)(uintptr_t)snap_import_buf;
+}
+
+/* Parse the import buffer, load survivors into snap, and spawn the next
+ * generation. Frees the import buffer on completion (success or failure). */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import_commit(void) {
+    if (snap_import_buf == NULL || !initialized) {
+        return BIOSIM_ERR_INVALID;
+    }
+    FILE *f = fmemopen(snap_import_buf, snap_import_size, "rb");
+    if (f == NULL) {
+        free(snap_import_buf);
+        snap_import_buf = NULL;
+        snap_import_size = 0U;
+        return BIOSIM_ERR_IO;
+    }
+    biosim_status_t rc = biosim_snapshot_load_survivors_f(f, &sim, &snap);
+    (void)fclose(f);
+    free(snap_import_buf);
+    snap_import_buf = NULL;
+    snap_import_size = 0U;
+    if (rc == BIOSIM_OK) {
+        rc = spawn_generation();
     }
     return (int)rc;
 }

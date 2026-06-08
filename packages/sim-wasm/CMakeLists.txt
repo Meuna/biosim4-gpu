@@ -1,5 +1,6 @@
 add_executable(biosim-wasm src/bindings.c)
 target_compile_features(biosim-wasm PRIVATE c_std_11)
+target_compile_definitions(biosim-wasm PRIVATE _GNU_SOURCE)
 target_link_libraries(biosim-wasm PRIVATE core)
 
 set_target_properties(biosim-wasm PROPERTIES
