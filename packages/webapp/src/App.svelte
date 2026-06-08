@@ -4,7 +4,6 @@
         WorkerEvent,
         AgentInfo,
         SimParams,
-        ChallengeSpec,
     } from "./workers/sim.worker";
     import TopBar from "./lib/TopBar.svelte";
     import GridView from "./lib/GridView.svelte";
@@ -19,31 +18,11 @@
     import EvolveOverlay from "./lib/EvolveOverlay.svelte";
     import type { BrainConn } from "./lib/brain";
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
-
-    // ── Config defaults (must match bindings.c s_params_mut) ────────────────
-    const DEFAULT_CHALLENGE: ChallengeSpec = {
-        kind: "x_band",
-        xMin: 0.5,
-        xMax: 1.0,
-        mirror: false,
-    };
-    const DEFAULTS: SimParams = {
-        population: 3000,
-        gridSizeX: 128,
-        gridSizeY: 128,
-        stepsPerGen: 300,
-        maxGenomeLen: 24,
-        maxNeurons: 5,
-        pointMutationRate: 0.001,
-        sexualReproduction: false,
-        chooseParentsByFitness: false,
-        losRange: 16,
-        sensorRadius: 2,
-        enableKill: false,
-        responsivenessCurveK: 2.0,
-        challenge: DEFAULT_CHALLENGE,
-        barriers: [],
-    };
+    import {
+        DEFAULTS,
+        simParamsToToml,
+        tomlToSimParams,
+    } from "./lib/tomlConfig";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -210,11 +189,11 @@
     // ── Draft / last-played config ───────────────────────────────────────────
     let draftConfig = $state<SimParams>({
         ...DEFAULTS,
-        challenge: { ...DEFAULT_CHALLENGE },
+        challenge: { ...DEFAULTS.challenge },
     });
     let lastPlayedConfig = $state<SimParams>({
         ...DEFAULTS,
-        challenge: { ...DEFAULT_CHALLENGE },
+        challenge: { ...DEFAULTS.challenge },
     });
     const isDirty = $derived(
         JSON.stringify($state.snapshot(draftConfig)) !==
@@ -596,9 +575,105 @@
     function handleSelectById(id: number): void {
         send({ type: "selectAgentById", id });
     }
+
+    // ── Config import / export ───────────────────────────────────────────────
+    let uploadInput = $state<HTMLInputElement | null>(null);
+    let confErrorMsg = $state<string | null>(null);
+
+    $effect(() => {
+        if (!confErrorMsg) return;
+        const t = setTimeout(() => {
+            confErrorMsg = null;
+        }, 4000);
+        return () => clearTimeout(t);
+    });
+
+    function handleConfDownload(): void {
+        const toml = simParamsToToml($state.snapshot(draftConfig) as SimParams);
+        const blob = new Blob([toml], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "biosim.toml";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function handleConfUpload(): void {
+        uploadInput?.click();
+    }
+
+    function applyTomlText(text: string): void {
+        try {
+            handleDraftChange(tomlToSimParams(text));
+            confErrorMsg = null;
+        } catch (err) {
+            confErrorMsg =
+                err instanceof Error ? err.message : "Failed to parse config";
+        }
+    }
+
+    function handleFileInputChange(
+        e: Event & { currentTarget: HTMLInputElement },
+    ): void {
+        const file = e.currentTarget.files?.[0];
+        if (!file) return;
+        e.currentTarget.value = "";
+        void file.text().then(
+            (text) => applyTomlText(text),
+            () => {
+                confErrorMsg = "Failed to read config file";
+            },
+        );
+    }
+
+    function handleSnapUpload(): void {
+        // Pass B
+    }
+
+    function handleSnapDownload(): void {
+        // Pass B
+    }
+
+    function handleDrop(e: DragEvent): void {
+        e.preventDefault();
+        const files = Array.from(e.dataTransfer?.files ?? []);
+        if (files.length > 2) {
+            confErrorMsg = "Drop at most 2 files (one .toml, one snapshot)";
+            return;
+        }
+        for (const file of files) {
+            if (file.name.endsWith(".toml")) {
+                void file.text().then(
+                    (text) => applyTomlText(text),
+                    () => {
+                        confErrorMsg = "Failed to read config file";
+                    },
+                );
+            }
+            // Non-toml files routed to snapshot handler (Pass B).
+        }
+    }
 </script>
 
-<div class="app-shell">
+<div
+    class="app-shell"
+    ondragover={(e) => e.preventDefault()}
+    ondrop={handleDrop}
+    role="application"
+>
+    <input
+        bind:this={uploadInput}
+        type="file"
+        accept=".toml"
+        style="display:none"
+        onchange={handleFileInputChange}
+    />
+
+    {#if confErrorMsg}
+        <div class="conf-error-banner" role="alert">{confErrorMsg}</div>
+    {/if}
+
     <!--
         Full-viewport canvas — sits at z-index 0.
         The worker renders kinetic sculpture + agents + grid interior on this surface.
@@ -718,6 +793,11 @@
                 genomeMaxNeuronsUsed={workerGenomeMaxNeuronsUsed}
                 onDraftChange={handleDraftChange}
                 onRevert={handleRevert}
+                onConfUpload={handleConfUpload}
+                onConfDownload={handleConfDownload}
+                snapReady={false}
+                onSnapUpload={handleSnapUpload}
+                onSnapDownload={handleSnapDownload}
             />
         {/snippet}
         {#snippet cell()}
@@ -891,5 +971,22 @@
         height: auto;
         flex: 1;
         min-height: 0;
+    }
+
+    .conf-error-banner {
+        position: fixed;
+        top: var(--space-4);
+        right: var(--space-4);
+        z-index: 90;
+        max-width: 26rem;
+        padding: var(--space-2) var(--space-4);
+        background: var(--color-surface-glass);
+        border: 1px solid var(--color-warn);
+        color: var(--color-warn);
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+        line-height: 1.4;
+        word-break: break-word;
+        backdrop-filter: blur(4px);
     }
 </style>
