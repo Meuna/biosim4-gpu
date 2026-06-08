@@ -687,6 +687,7 @@
             ondragover={(e) => e.preventDefault()}
             ondrop={handleDrop}
         >
+            <div class="drop-overlay__frame" aria-hidden="true"></div>
             <div class="drop-overlay__card">
                 <p class="drop-overlay__title">Drop files to load</p>
                 <ul class="drop-overlay__list">
@@ -1011,14 +1012,21 @@
     /* ── Drag-drop overlay ── */
     .drop-overlay {
         position: fixed;
-        inset: 0;
+        inset: 3.5rem 0 0;
         z-index: 100;
         display: flex;
         align-items: center;
         justify-content: center;
         background: color-mix(in srgb, var(--color-surface) 70%, transparent);
-        border: 3px dashed var(--color-accent-border);
         backdrop-filter: blur(2px);
+    }
+
+    .drop-overlay__frame {
+        position: absolute;
+        inset: var(--space-4);
+        border: 2px dashed var(--color-accent-border);
+        border-radius: var(--radius-md);
+        pointer-events: none;
     }
 
     .drop-overlay__card {
