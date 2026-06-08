@@ -16,7 +16,7 @@
 
 - **GPU pipeline**: K1–K5 complete — feedforward (sensors, nnet, actions, movement finalization), kill-marked grid cleanup, movement resolution, signal fade, and per-step challenge evaluation. Five-kernel per-step pipeline documented in [`docs/gpu-design.md`](docs/gpu-design.md). Generation loop (survivor selection, reproduction, respawn) pending.
 - **Visualization**: `viz` package not started; trace format not yet defined.
-- **CI/CD**: No `.github/` workflows.
+- **CI/CD**: Linux native CI and webapp CI complete (gh-5). Windows CI added (gh-106).
 - **Altruism challenge**: Placeholder — evaluator always returns `{false, 0.0f}`. Requires genome similarity computation not yet designed for GPU.
 - **Benchmark harness**: No `benchmarks/` directory.
 - **Developer tools**: No `tools/` directory (`snapshot-inspect`, `genome-dump`).

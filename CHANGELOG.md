@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Windows build** (gh-106) — two root causes fixed. First, `EmbedKernels.cmake`
+  now shards embedded kernel sources into adjacent C string literals of ≤ 8000
+  characters each; C compilers concatenate them at compile time, so MSVC's
+  string-literal token limit is never hit regardless of kernel size. Second,
+  CMake now fails at configure time with a clear error when a 32-bit Windows
+  toolchain is detected; only x64 is supported. A new GitHub Actions workflow
+  (`windows.yml`) runs configure → build → test on `windows-latest` with MSVC
+  to prevent future regressions.
+
 ### Added
 - **Snapshot import/export in `biosim-gpu`** (gh-104) — GPU simulator now
   supports `--snapshot-in`, `--snapshot-out`, and `--snapshot-interval`,

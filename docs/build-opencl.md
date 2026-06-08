@@ -39,11 +39,6 @@ sudo apt install pocl-opencl-icd
 Install the official NVIDIA or AMD GPU driver. The OpenCL ICD is bundled with
 the driver — no extra steps are needed.
 
-## GPU tests behavior
-
-The GPU tests gracefully `IGNORE` (not fail) when no OpenCL platform is found,
-so `ctest` passes in environments without a runtime.
-
 ## Building without GPU support
 
 To build without the GPU simulator entirely:
