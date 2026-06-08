@@ -7,6 +7,16 @@ project(biosim4-gpu
   DESCRIPTION "GPU port of biosim4 using OpenCL"
 )
 
+# 32-bit Windows is not supported: OpenCL ICDs ship x64-only on modern systems
+# and 32-bit atomics behave differently. Fail early with a clear message.
+if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 4)
+    message(FATAL_ERROR
+        "32-bit Windows builds are not supported. "
+        "Please open an x64 Visual Studio Developer Command Prompt "
+        "and re-run cmake --preset <name>."
+    )
+endif()
+
 # ── Language standard ──────────────────────────────────────────────────────────
 
 # Host code targets C11; C17 would also be acceptable (it is a bugfix release)

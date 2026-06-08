@@ -21,7 +21,11 @@ cmake --version
 If the system package is older than 3.28, install a newer one from
 [cmake.org](https://cmake.org/download/) or via `pip install cmake`.
 
-**Windows MSVC:**
+**Windows MSVC (x64 only):**
+
+Only x64 (64-bit) builds are supported on Windows. Always use an x64 Visual
+Studio Developer Command Prompt or the "x64 Native Tools Command Prompt for
+VS 2022". CMake will fail with a clear error if a 32-bit toolchain is detected.
 
 Install [Visual Studio](https://visualstudio.microsoft.com/) with the following
 workloads:
