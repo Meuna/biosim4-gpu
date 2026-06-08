@@ -108,6 +108,7 @@
             survivalHistory = [...survivalHistory.slice(-11), rate];
             workerGenomeMaxLenUsed = msg.genomeMaxLenUsed;
             workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
+            snapReady = true;
         } else if (msg.type === "rewindConfigured") {
             isGenComplete = false;
             currentGen = msg.gen;
@@ -138,6 +139,7 @@
             survivalHistory = [...survivalHistory.slice(-11), rate];
             workerGenomeMaxLenUsed = msg.genomeMaxLenUsed;
             workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
+            snapReady = true;
             if (pendingLastPlayedConfig !== null) {
                 lastPlayedConfig = pendingLastPlayedConfig;
                 pendingLastPlayedConfig = null;
@@ -168,6 +170,7 @@
             stepsPerGen = msg.stepsPerGen;
             workerGenomeMaxLenUsed = 0;
             workerGenomeMaxNeuronsUsed = 0;
+            snapReady = false;
             if (pendingLastPlayedConfig !== null) {
                 lastPlayedConfig = pendingLastPlayedConfig;
                 pendingLastPlayedConfig = null;
@@ -178,8 +181,36 @@
                 hasStarted = true;
                 send({ type: "play" });
             }
+        } else if (msg.type === "snapshotData") {
+            const blob = new Blob([msg.data], {
+                type: "application/octet-stream",
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "biosim.snap";
+            a.click();
+            URL.revokeObjectURL(url);
+        } else if (msg.type === "snapshotLoaded") {
+            isGenComplete = false;
+            currentGen = msg.gen;
+            currentStep = 0;
+            currentPop = msg.population;
+            gridSizeX = msg.gridSizeX;
+            gridSizeY = msg.gridSizeY;
+            stepsPerGen = msg.stepsPerGen;
+            hasStarted = true;
+            snapReady = true;
+            survivalHistory = [];
+            workerGenomeMaxLenUsed = 0;
+            workerGenomeMaxNeuronsUsed = 0;
+            if (pendingLastPlayedConfig !== null) {
+                lastPlayedConfig = pendingLastPlayedConfig;
+                pendingLastPlayedConfig = null;
+            }
+        } else if (msg.type === "error") {
+            confErrorMsg = msg.message;
         }
-        // "error" type is silently ignored in this phase; no UI for it yet.
     });
 
     function send(cmd: WorkerCmd): void {
@@ -226,6 +257,11 @@
     // Genome max values from the last census; reset to 0 after configure/clearGenom.
     let workerGenomeMaxLenUsed = $state(0);
     let workerGenomeMaxNeuronsUsed = $state(0);
+
+    // True once at least one generation boundary has been crossed (snap.count > 0).
+    let snapReady = $state(false);
+    // Bound to the hidden .snap file input element.
+    let snapUploadInput = $state<HTMLInputElement | null>(null);
 
     // ── Speed / FPS ──────────────────────────────────────────────────────────
     let targetSpeed = $state(0);
@@ -636,11 +672,34 @@
     }
 
     function handleSnapUpload(): void {
-        // Pass B
+        snapUploadInput?.click();
+    }
+
+    function handleSnapFileInputChange(
+        e: Event & { currentTarget: HTMLInputElement },
+    ): void {
+        const file = e.currentTarget.files?.[0];
+        if (!file) return;
+        e.currentTarget.value = "";
+        void file.arrayBuffer().then(
+            (buf) => {
+                worker.postMessage(
+                    {
+                        type: "loadSnapshot",
+                        params: $state.snapshot(draftConfig) as SimParams,
+                        data: new Uint8Array(buf),
+                    } satisfies WorkerCmd,
+                    [buf],
+                );
+            },
+            () => {
+                confErrorMsg = "Failed to read snapshot file";
+            },
+        );
     }
 
     function handleSnapDownload(): void {
-        // Pass B
+        worker.postMessage({ type: "exportSnapshot" } satisfies WorkerCmd);
     }
 
     function handleDrop(e: DragEvent): void {
@@ -651,16 +710,67 @@
             confErrorMsg = "Drop at most 2 files (one .toml, one snapshot)";
             return;
         }
-        for (const file of files) {
-            if (file.name.endsWith(".toml")) {
-                void file.text().then(
+        const tomlFile = files.find((f) => f.name.endsWith(".toml")) ?? null;
+        const snapFile = files.find((f) => !f.name.endsWith(".toml")) ?? null;
+
+        if (tomlFile && snapFile) {
+            // Read both in parallel; parse TOML first so loadSnapshot receives
+            // the correct params rather than stale draftConfig.
+            void Promise.all([tomlFile.text(), snapFile.arrayBuffer()]).then(
+                ([tomlText, snapBuf]) => {
+                    let params: SimParams;
+                    try {
+                        params = tomlToSimParams(tomlText);
+                        handleDraftChange(params);
+                        confErrorMsg = null;
+                    } catch (err) {
+                        confErrorMsg =
+                            err instanceof Error
+                                ? err.message
+                                : "Failed to parse config";
+                        return;
+                    }
+                    worker.postMessage(
+                        {
+                            type: "loadSnapshot",
+                            params,
+                            data: new Uint8Array(snapBuf),
+                        } satisfies WorkerCmd,
+                        [snapBuf],
+                    );
+                },
+                () => {
+                    confErrorMsg = "Failed to read files";
+                },
+            );
+        } else {
+            if (tomlFile) {
+                void tomlFile.text().then(
                     (text) => applyTomlText(text),
                     () => {
                         confErrorMsg = "Failed to read config file";
                     },
                 );
             }
-            // Non-toml files routed to snapshot handler (Pass B).
+            if (snapFile) {
+                void snapFile.arrayBuffer().then(
+                    (buf) => {
+                        worker.postMessage(
+                            {
+                                type: "loadSnapshot",
+                                params: $state.snapshot(
+                                    draftConfig,
+                                ) as SimParams,
+                                data: new Uint8Array(buf),
+                            } satisfies WorkerCmd,
+                            [buf],
+                        );
+                    },
+                    () => {
+                        confErrorMsg = "Failed to read snapshot file";
+                    },
+                );
+            }
         }
     }
 </script>
@@ -677,6 +787,13 @@
         accept=".toml"
         style="display:none"
         onchange={handleFileInputChange}
+    />
+    <input
+        bind:this={snapUploadInput}
+        type="file"
+        accept=".snap"
+        style="display:none"
+        onchange={handleSnapFileInputChange}
     />
 
     {#if isDragging}
@@ -695,10 +812,9 @@
                         <span class="drop-overlay__ext">.toml</span>
                         simulation config
                     </li>
-                    <li class="drop-overlay__item--pending">
+                    <li>
                         <span class="drop-overlay__ext">.snap</span>
                         population snapshot
-                        <span class="drop-overlay__note">(Pass B)</span>
                     </li>
                 </ul>
                 <p class="drop-overlay__limit">max 2 files at once</p>
@@ -831,7 +947,7 @@
                 onRevert={handleRevert}
                 onConfUpload={handleConfUpload}
                 onConfDownload={handleConfDownload}
-                snapReady={false}
+                {snapReady}
                 onSnapUpload={handleSnapUpload}
                 onSnapDownload={handleSnapDownload}
             />
@@ -1067,23 +1183,10 @@
         gap: var(--space-2);
     }
 
-    .drop-overlay__item--pending {
-        color: var(--color-text-muted);
-    }
-
     .drop-overlay__ext {
         font-weight: 700;
         color: var(--color-accent-text);
         min-width: 3.5rem;
-    }
-
-    .drop-overlay__item--pending .drop-overlay__ext {
-        color: var(--color-text-muted);
-    }
-
-    .drop-overlay__note {
-        font-size: var(--text-xs);
-        color: var(--color-text-muted);
     }
 
     .drop-overlay__limit {
