@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **TOML config import/export** (gh-96) — webapp can now save and restore
+  simulation parameters. Two new buttons in the `SimConfigPanel` header
+  (`Conf ↑` / `Conf ↓`) upload and download a `.toml` file; the whole app
+  surface accepts drag-and-drop of `.toml` files. Parsing uses `smol-toml`;
+  serialisation is a manual emitter that produces cfgparse-compatible output
+  (`[simulation]`, `[genome]`, `[sensors]`, `[actions]`, `[challenge]`,
+  `[barriers]`). `Snapshot` buttons are present but disabled pending Pass B.
+  Parse errors surface as a transient error banner that auto-dismisses after
+  4 s.
 - **Out-of-range values in `ParamSlider`** (gh-83) — sliders now accept and
   display values outside their `[min, max]` range without clamping. An
   out-of-range value enters a muted state: the value text dims and the slider
