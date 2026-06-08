@@ -157,7 +157,9 @@ export type WorkerCmd =
     | { type: "requestBrain"; id: number }
     | { type: "setSpeed"; fps: number }
     | { type: "startFreeRun" }
-    | { type: "stopFreeRun" };
+    | { type: "stopFreeRun" }
+    | { type: "exportSnapshot" }
+    | { type: "loadSnapshot"; params: SimParams; data: Uint8Array };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -214,7 +216,16 @@ export type WorkerEvent =
           conns: BrainConn[];
           neuronCount: number;
       }
-    | { type: "fps"; value: number };
+    | { type: "fps"; value: number }
+    | { type: "snapshotData"; data: Uint8Array }
+    | {
+          type: "snapshotLoaded";
+          gen: number;
+          population: number;
+          gridSizeX: number;
+          gridSizeY: number;
+          stepsPerGen: number;
+      };
 
 interface Layout {
     canvasW: number;
@@ -1142,6 +1153,71 @@ function handleClearGenom(): void {
     postMessage(statusNow("paused"));
 }
 
+function handleExportSnapshot(): void {
+    if (!biosim) return;
+    const rc = call("biosim_wasm_snapshot_export");
+    if (rc !== 0) {
+        postMessage({
+            type: "error",
+            message: "Snapshot export failed",
+        } satisfies WorkerEvent);
+        return;
+    }
+    const ptr = call("biosim_wasm_snapshot_export_ptr");
+    const size = call("biosim_wasm_snapshot_export_size");
+    const data = biosim.HEAPU8.slice(ptr, ptr + size);
+    postMessage({ type: "snapshotData", data } satisfies WorkerEvent, [
+        data.buffer,
+    ]);
+}
+
+function handleLoadSnapshot(params: SimParams, data: Uint8Array): void {
+    playing = false;
+    const prevMode = mode;
+    applyConfig(params);
+    const initRc = call("biosim_wasm_init");
+    if (initRc !== 0) {
+        postMessage({
+            type: "error",
+            message: "Snapshot load failed (init)",
+        } satisfies WorkerEvent);
+        return;
+    }
+    const ptr = biosim!.ccall(
+        "biosim_wasm_snapshot_import_alloc",
+        "number",
+        ["number"],
+        [data.byteLength],
+    );
+    if (ptr === 0) {
+        postMessage({
+            type: "error",
+            message: "Snapshot load failed (alloc)",
+        } satisfies WorkerEvent);
+        return;
+    }
+    biosim!.HEAPU8.set(data, ptr);
+    const commitRc = call("biosim_wasm_snapshot_import_commit");
+    if (commitRc !== 0) {
+        postMessage({
+            type: "error",
+            message: "Snapshot load failed (commit)",
+        } satisfies WorkerEvent);
+        return;
+    }
+    cacheBarrierCells();
+    mode = prevMode === "idle" ? "idle" : "running";
+    startTime = performance.now();
+    postMessage({
+        type: "snapshotLoaded",
+        gen: call("biosim_wasm_get_gen"),
+        population: call("biosim_wasm_get_population"),
+        gridSizeX: params.gridSizeX,
+        gridSizeY: params.gridSizeY,
+        stepsPerGen: params.stepsPerGen,
+    } satisfies WorkerEvent);
+}
+
 function freeRunTick(): void {
     if (!freeRunning) return;
     call("biosim_wasm_do_gen");
@@ -1220,6 +1296,12 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         case "stopFreeRun":
             handleStopFreeRun();
+            break;
+        case "exportSnapshot":
+            handleExportSnapshot();
+            break;
+        case "loadSnapshot":
+            handleLoadSnapshot(cmd.params, cmd.data);
             break;
         case "pickAgentAtCell": {
             if (!biosim || !layout) break;
