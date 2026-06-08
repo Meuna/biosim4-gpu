@@ -362,32 +362,6 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
 
 /* ── high-level read: restore ───────────────────────────────────────────── */
 
-/* Opens path, reads and validates the header, and runs all compat checks.
- * On success, sets *f_out to the open file positioned past the header and
- * *hdr_out to the parsed header. Caller must fclose *f_out. */
-static biosim_status_t restore_open(
-    const char *path, biosim_sim_t *sim, FILE **f_out, biosim_snap_header_t *hdr_out
-) {
-    FILE *f = fopen(path, "rb");
-    if (f == NULL) {
-        BIOSIM_ERRORF("cannot open '%s'", path);
-        return BIOSIM_ERR_IO;
-    }
-    biosim_status_t st = biosim_snapshot_read_header(f, hdr_out);
-    if (st != BIOSIM_OK) {
-        BIOSIM_ERRORF("header error '%s'", path);
-        (void)fclose(f);
-        return st;
-    }
-    st = check_compat(hdr_out, sim);
-    if (st != BIOSIM_OK) {
-        (void)fclose(f);
-        return st;
-    }
-    *f_out = f;
-    return BIOSIM_OK;
-}
-
 /*
  * Load a genome entry at the current file position into snap (row-major).
  * Mirrors load_genome but writes to snap instead of sim->genome.
@@ -592,14 +566,21 @@ static biosim_status_t snap_seek_last_entry(FILE *f, const biosim_snap_header_t 
     return BIOSIM_OK;
 }
 
-biosim_status_t biosim_snapshot_load_survivors(
-    const char *path, biosim_sim_t *sim, biosim_survivor_snap_t *snap
+biosim_status_t biosim_snapshot_load_survivors_f(
+    FILE *f, biosim_sim_t *sim, biosim_survivor_snap_t *snap
 ) {
-    FILE *f = NULL;
     biosim_snap_header_t hdr = {0};
+    uint32_t n_surv = 0U;
+    uint32_t gen_idx = 0U;
+    uint64_t gen_rng = 0U;
     biosim_status_t returncode = BIOSIM_OK;
 
-    returncode = restore_open(path, sim, &f, &hdr);
+    returncode = biosim_snapshot_read_header(f, &hdr);
+    if (returncode != BIOSIM_OK) {
+        BIOSIM_ERRORF("snapshot header read failed (%s)", biosim_strerror(returncode));
+        goto exit;
+    }
+    returncode = check_compat(&hdr, sim);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -609,19 +590,12 @@ biosim_status_t biosim_snapshot_load_survivors(
         goto exit;
     }
 
-    uint32_t n_surv = 0U;
-    uint32_t gen_idx = 0U;
-    uint64_t gen_rng = 0U;
-
     returncode = load_genome_into_snap(f, &hdr, sim, snap, &n_surv, &gen_idx, &gen_rng);
-    (void)fclose(f);
-    f = NULL;
-
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
     if (n_surv == 0U) {
-        BIOSIM_ERRORF("'%s' contains no survivors", path);
+        BIOSIM_ERRORF("snapshot contains no survivors");
         returncode = BIOSIM_ERR_INVALID;
         goto exit;
     }
@@ -632,25 +606,30 @@ biosim_status_t biosim_snapshot_load_survivors(
     snap->gen_rng = gen_rng;
 
 exit:
-    if (f != NULL) {
-        (void)fclose(f);
-    }
     if (returncode == BIOSIM_EOF) {
         if (hdr.generation_count > 0U) {
             BIOSIM_ERRORF(
-                "'%s': last generation (%u) is incomplete or corrupted",
-                path,
+                "last generation (%u) is incomplete or corrupted",
                 (unsigned)(hdr.generation_count - 1U)
             );
         } else {
-            BIOSIM_ERRORF("'%s': snapshot contains no complete generation", path);
+            BIOSIM_ERRORF("snapshot contains no complete generation");
         }
-    } else if (returncode != BIOSIM_OK) {
-        BIOSIM_ERRORF(
-            "'%s': snapshot load_survivors failed (%s)", path, biosim_strerror(returncode)
-        );
     }
     return returncode;
+}
+
+biosim_status_t biosim_snapshot_load_survivors(
+    const char *path, biosim_sim_t *sim, biosim_survivor_snap_t *snap
+) {
+    FILE *f = fopen(path, "rb");
+    if (f == NULL) {
+        BIOSIM_ERRORF("cannot open '%s'", path);
+        return BIOSIM_ERR_IO;
+    }
+    biosim_status_t rc = biosim_snapshot_load_survivors_f(f, sim, snap);
+    (void)fclose(f);
+    return rc;
 }
 
 /* ── high-level write: sessions ─────────────────────────────────────────── */

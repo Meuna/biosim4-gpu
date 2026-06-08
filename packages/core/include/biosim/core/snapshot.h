@@ -47,6 +47,19 @@ biosim_status_t biosim_snapshot_load_survivors(
     const char *path, biosim_sim_t *sim, biosim_survivor_snap_t *snap
 );
 
+/*
+ * FILE* variant of biosim_snapshot_load_survivors. f must be open for reading;
+ * the function seeks to byte 0 internally. Reads and validates the header,
+ * seeks to the last generation record, loads it into snap, and updates sim->gen
+ * and sim->gen_rng. Does NOT fclose f.
+ * Returns BIOSIM_ERR_INVALID on file, format, or fatal compat errors.
+ * Returns BIOSIM_ERR_NOMEM on allocation failure.
+ * Returns BIOSIM_EOF when no complete generation record is found.
+ */
+biosim_status_t biosim_snapshot_load_survivors_f(
+    FILE *f, biosim_sim_t *sim, biosim_survivor_snap_t *snap
+);
+
 /* ── output session ──────────────────────────────────────────────────────── */
 
 /*

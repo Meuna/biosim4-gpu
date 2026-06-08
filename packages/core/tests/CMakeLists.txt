@@ -52,7 +52,8 @@ add_executable(core-snapshot-tests test_snapshot.c)
 target_link_libraries(core-snapshot-tests PRIVATE core-sim-test-utils)
 target_compile_features(core-snapshot-tests PRIVATE c_std_11)
 target_compile_definitions(core-snapshot-tests PRIVATE
-    BIOSIM_TEST_TMPDIR="${CMAKE_CURRENT_BINARY_DIR}")
+    BIOSIM_TEST_TMPDIR="${CMAKE_CURRENT_BINARY_DIR}"
+    _GNU_SOURCE)
 add_test(NAME core-snapshot-tests COMMAND core-snapshot-tests)
 
 add_executable(core-params-tests test_params.c)

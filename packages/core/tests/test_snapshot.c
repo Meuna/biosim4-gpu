@@ -8,6 +8,7 @@
 #include "unity.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
 
@@ -414,6 +415,79 @@ void test_load_survivors_pop_file_smaller(void) {
     biosim_sim_free(&sim_read);
 }
 
+/* biosim_snapshot_load_survivors_f: write to tmpfile, seek back, call _f. */
+void test_load_survivors_f_roundtrip(void) {
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
+
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim2));
+    biosim_survivor_snap_t rsnap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors_f(f, &sim2, &rsnap));
+
+    TEST_ASSERT_EQUAL_UINT32(snap.count, rsnap.count);
+    TEST_ASSERT_EQUAL_UINT32(snap.gen, sim2.gen);
+    TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, sim2.gen_rng);
+    TEST_ASSERT_EQUAL_UINT32(snap.gen, rsnap.gen);
+    TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, rsnap.gen_rng);
+    for (uint32_t s = 0U; s < rsnap.count; s++) {
+        TEST_ASSERT_EQUAL_FLOAT(snap.scores[s], rsnap.scores[s]);
+        TEST_ASSERT_EQUAL_UINT16(snap.len[s], rsnap.len[s]);
+    }
+
+    (void)fclose(f);
+    biosim_survivor_snap_free(&rsnap);
+    biosim_sim_free(&sim2);
+}
+
+/* biosim_snapshot_load_survivors_f via fmemopen — validates the WASM import path. */
+void test_load_survivors_f_fmemopen(void) {
+    FILE *tmp = tmpfile();
+    TEST_ASSERT_NOT_NULL(tmp);
+
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(tmp, &sim));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(tmp, &sim, &snap));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(tmp, 1U));
+
+    (void)fseek(tmp, 0L, SEEK_END);
+    long file_size = ftell(tmp);
+    TEST_ASSERT_TRUE(file_size > 0);
+
+    char *buf = (char *)malloc((size_t)file_size);
+    TEST_ASSERT_NOT_NULL(buf);
+
+    (void)fseek(tmp, 0L, SEEK_SET);
+    TEST_ASSERT_EQUAL_size_t((size_t)file_size, fread(buf, 1U, (size_t)file_size, tmp));
+    (void)fclose(tmp);
+
+    FILE *mem = fmemopen(buf, (size_t)file_size, "rb");
+    TEST_ASSERT_NOT_NULL(mem);
+
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim2));
+    biosim_survivor_snap_t rsnap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors_f(mem, &sim2, &rsnap));
+
+    TEST_ASSERT_EQUAL_UINT32(snap.count, rsnap.count);
+    TEST_ASSERT_EQUAL_UINT32(snap.gen, sim2.gen);
+    TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, sim2.gen_rng);
+    TEST_ASSERT_EQUAL_UINT32(snap.gen, rsnap.gen);
+    TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, rsnap.gen_rng);
+    for (uint32_t s = 0U; s < rsnap.count; s++) {
+        TEST_ASSERT_EQUAL_FLOAT(snap.scores[s], rsnap.scores[s]);
+        TEST_ASSERT_EQUAL_UINT16(snap.len[s], rsnap.len[s]);
+    }
+
+    (void)fclose(mem);
+    free(buf);
+    biosim_survivor_snap_free(&rsnap);
+    biosim_sim_free(&sim2);
+}
+
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -429,5 +503,7 @@ int main(void) {
     RUN_TEST(test_load_survivors_pop_file_larger);
     RUN_TEST(test_load_survivors_pop_file_smaller);
     RUN_TEST(test_session_restore_identical_second_generation);
+    RUN_TEST(test_load_survivors_f_roundtrip);
+    RUN_TEST(test_load_survivors_f_fmemopen);
     return UNITY_END();
 }
