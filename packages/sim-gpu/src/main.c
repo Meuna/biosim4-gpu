@@ -73,6 +73,9 @@ static const biosim_param_entry_t sim_params[] = {
     {"exclude-border",            "challenge",  {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
     {"outer-r",                   "challenge",  {.f = 0.25},      PARAM_FLOAT,  false, true,  NULL,             NULL},
     {"inner-r",                   "challenge",  {.f = 0.012},     PARAM_FLOAT,  false, true,  NULL,             NULL},
+    {"in",                        "snapshot",   {.s = NULL},      PARAM_STRING, false, true,  NULL,             NULL},
+    {"out",                       "snapshot",   {.s = NULL},      PARAM_STRING, false, true,  NULL,             NULL},
+    {"interval",                  "snapshot",   {.i = 0},         PARAM_INT,    false, true,  NULL,             NULL},
     {"platform-index",            "opencl",     {.i = 0},         PARAM_INT,    false, true,  "platform",       NULL},
     {"device-index",              "opencl",     {.i = 0},         PARAM_INT,    false, true,  "device",         NULL},
 };
@@ -143,6 +146,29 @@ int main(int argc, char **argv) {
     returncode = biosim_sim_create(&sim, &p, &challenge, barriers, n_barriers);
     if (returncode != BIOSIM_OK) {
         goto exit;
+    }
+
+    /* ── apply snapshot-in if configured ────────────────────────────────── */
+
+    const char *snap_in_path = biosim_params_get_string(&p, "in");
+    const char *snap_out_path = biosim_params_get_string(&p, "out");
+    const int snap_interval = biosim_params_get_int(&p, "interval");
+
+    if (snap_in_path != NULL) {
+        returncode = biosim_snapshot_load_survivors(snap_in_path, &sim, &snap);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
+        }
+        sim.gen++; /* Convention: snapshots hold the generation of the survivors */
+    }
+
+    /* ── open snapshot-out session if configured ─────────────────────────── */
+
+    if (snap_out_path != NULL) {
+        returncode = biosim_snapshot_session_open(&sim, snap_out_path, snap_interval);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
+        }
     }
 
     uint32_t platform_idx = (uint32_t)biosim_params_get_int(&p, "platform-index");

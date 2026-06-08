@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Snapshot import/export in `biosim-gpu`** (gh-104) — GPU simulator now
+  supports `--snapshot-in`, `--snapshot-out`, and `--snapshot-interval`,
+  matching the reference simulator. Resume a run from a saved population or
+  checkpoint every N generations.
 - **GitHub Actions CI** (gh-5) — two path-filtered workflows run the full
   quality sequence (build → test → lint → format check) on every pull request
   and on direct pushes to `main`. `native.yml` covers the native tree
