@@ -308,7 +308,14 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_export(void) {
     if (rc == BIOSIM_OK) {
         rc = biosim_snapshot_write_genome(f, &sim, &snap);
     }
+    /* open_memstream reports size as the current stream position, not the buffer
+     * high-water mark. biosim_snapshot_finalize seeks back to offset 16 to patch
+     * the generation count, which would collapse the reported size to 20 bytes.
+     * Flush to capture the full size before finalize, then restore it below. */
+    size_t full_size = 0U;
     if (rc == BIOSIM_OK) {
+        (void)fflush(f);
+        full_size = snap_export_size;
         rc = biosim_snapshot_finalize(f, 1U);
     }
     (void)fclose(f);
@@ -316,6 +323,8 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_export(void) {
         free(snap_export_buf);
         snap_export_buf = NULL;
         snap_export_size = 0U;
+    } else {
+        snap_export_size = full_size;
     }
     return (int)rc;
 }
