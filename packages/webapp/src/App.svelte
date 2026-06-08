@@ -576,6 +576,14 @@
         send({ type: "selectAgentById", id });
     }
 
+    // ── Drag-drop overlay ────────────────────────────────────────────────────
+    let isDragging = $state(false);
+
+    function handleDragEnter(e: DragEvent): void {
+        if (!e.dataTransfer?.types.includes("Files")) return;
+        isDragging = true;
+    }
+
     // ── Config import / export ───────────────────────────────────────────────
     let uploadInput = $state<HTMLInputElement | null>(null);
     let confErrorMsg = $state<string | null>(null);
@@ -637,6 +645,7 @@
 
     function handleDrop(e: DragEvent): void {
         e.preventDefault();
+        isDragging = false;
         const files = Array.from(e.dataTransfer?.files ?? []);
         if (files.length > 2) {
             confErrorMsg = "Drop at most 2 files (one .toml, one snapshot)";
@@ -658,8 +667,8 @@
 
 <div
     class="app-shell"
+    ondragenter={handleDragEnter}
     ondragover={(e) => e.preventDefault()}
-    ondrop={handleDrop}
     role="application"
 >
     <input
@@ -669,6 +678,32 @@
         style="display:none"
         onchange={handleFileInputChange}
     />
+
+    {#if isDragging}
+        <div
+            class="drop-overlay"
+            aria-hidden="true"
+            ondragleave={() => (isDragging = false)}
+            ondragover={(e) => e.preventDefault()}
+            ondrop={handleDrop}
+        >
+            <div class="drop-overlay__card">
+                <p class="drop-overlay__title">Drop files to load</p>
+                <ul class="drop-overlay__list">
+                    <li>
+                        <span class="drop-overlay__ext">.toml</span>
+                        simulation config
+                    </li>
+                    <li class="drop-overlay__item--pending">
+                        <span class="drop-overlay__ext">.snap</span>
+                        population snapshot
+                        <span class="drop-overlay__note">(Pass B)</span>
+                    </li>
+                </ul>
+                <p class="drop-overlay__limit">max 2 files at once</p>
+            </div>
+        </div>
+    {/if}
 
     {#if confErrorMsg}
         <div class="conf-error-banner" role="alert">{confErrorMsg}</div>
@@ -971,6 +1006,84 @@
         height: auto;
         flex: 1;
         min-height: 0;
+    }
+
+    /* ── Drag-drop overlay ── */
+    .drop-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+        border: 3px dashed var(--color-accent-border);
+        backdrop-filter: blur(2px);
+    }
+
+    .drop-overlay__card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-6) var(--space-8);
+        background: var(--color-surface-glass);
+        border: 1px solid var(--color-accent-border);
+        border-radius: var(--radius-sm);
+    }
+
+    .drop-overlay__title {
+        font-family: var(--font-mono);
+        font-size: var(--text-base);
+        font-weight: 700;
+        color: var(--color-text);
+        margin: 0;
+        letter-spacing: -0.01em;
+    }
+
+    .drop-overlay__list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+    }
+
+    .drop-overlay__list li {
+        font-family: var(--font-mono);
+        font-size: var(--text-sm);
+        color: var(--color-text);
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .drop-overlay__item--pending {
+        color: var(--color-text-muted);
+    }
+
+    .drop-overlay__ext {
+        font-weight: 700;
+        color: var(--color-accent-text);
+        min-width: 3.5rem;
+    }
+
+    .drop-overlay__item--pending .drop-overlay__ext {
+        color: var(--color-text-muted);
+    }
+
+    .drop-overlay__note {
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+    }
+
+    .drop-overlay__limit {
+        font-family: var(--font-mono);
+        font-size: var(--text-xs);
+        color: var(--color-text-muted);
+        margin: 0;
+        letter-spacing: 0.05em;
     }
 
     .conf-error-banner {

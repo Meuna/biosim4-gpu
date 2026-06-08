@@ -72,9 +72,7 @@
             >
                 <Download size={14} />
             </button>
-            <span class="small-caps sim-config__io-label"
-                >Snapshot</span
-            >
+            <span class="small-caps sim-config__io-label">Snapshot</span>
             <button
                 class="button button--utility"
                 disabled={!snapReady}
