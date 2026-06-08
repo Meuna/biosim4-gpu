@@ -470,7 +470,7 @@ void test_feedforward_sensor_to_action_direct(void) {
 
     float sensor_vals[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
     float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
-    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, action_vals);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.0F, action_vals[0]);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, action_vals[1]);
@@ -489,7 +489,7 @@ void test_feedforward_sensor_neuron_action_chain(void) {
 
     float sensor_vals[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
     float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
-    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, action_vals);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), nnet.neuron_output[0 * CAP + AGENT_IDX]);
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, 0.0F, action_vals[0]);
@@ -508,11 +508,11 @@ void test_feedforward_neuron_state_carry(void) {
 
     float sv1[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
     float av1[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
-    biosim_nnet_feedforward(&nnet, AGENT_IDX, sv1, NUM_SENSORS, av1, NUM_ACTIONS);
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sv1, av1);
 
     float sv2[NUM_SENSORS] = {0.0F, 0.0F, 0.0F, 0.0F};
     float av2[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
-    biosim_nnet_feedforward(&nnet, AGENT_IDX, sv2, NUM_SENSORS, av2, NUM_ACTIONS);
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sv2, av2);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), av2[0]);
 }
@@ -531,7 +531,7 @@ void test_feedforward_undriven_neuron_defaults_to_half(void) {
 
     float sensor_vals[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
     float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
-    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, action_vals);
 
     TEST_ASSERT_EQUAL_FLOAT(0.5F, nnet.neuron_output[0 * CAP + AGENT_IDX]);
 }
@@ -548,7 +548,7 @@ void test_feedforward_multiple_sensors_sum_to_action(void) {
 
     float sensor_vals[NUM_SENSORS] = {1.0F, 1.0F, 0.0F, 0.0F};
     float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
-    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, action_vals);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, 1.5F, action_vals[0]);
     TEST_ASSERT_EQUAL_FLOAT(0.0F, action_vals[1]);
@@ -566,7 +566,7 @@ void test_feedforward_no_connections_noop(void) {
 
     float sensor_vals[NUM_SENSORS] = {0.5F, 0.5F, 0.5F, 0.5F};
     float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
-    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, NUM_SENSORS, action_vals, NUM_ACTIONS);
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, action_vals);
 
     for (uint8_t a = 0; a < NUM_ACTIONS; a++) {
         TEST_ASSERT_EQUAL_FLOAT(0.0F, action_vals[a]);

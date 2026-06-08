@@ -293,9 +293,7 @@ static void run_host_step_agent(uint32_t idx) {
     }
 
     memset(action_vals, 0, sizeof(action_vals));
-    biosim_nnet_feedforward(
-        n, idx, sensor_vals, BIOSIM_NUM_SENSORS, action_vals, BIOSIM_NUM_ACTIONS
-    );
+    biosim_nnet_feedforward(n, idx, sensor_vals, action_vals);
 
     a->dx_sum[idx] = 0.0F;
     a->dy_sum[idx] = 0.0F;

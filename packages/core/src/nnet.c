@@ -299,17 +299,12 @@ uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx) {
 /* ── feedforward ────────────────────────────────────────────────────────── */
 
 void biosim_nnet_feedforward(
-    biosim_nnet_t *n,
-    uint32_t idx,
-    const float *sensor_vals,
-    uint8_t num_sensors,
-    float *action_vals,
-    uint8_t num_actions
+    biosim_nnet_t *n, uint32_t idx, const float *sensor_vals, float *action_vals
 ) {
     assert(n != NULL);
     assert(idx < n->population);
-    assert(sensor_vals != NULL && num_sensors > 0);
-    assert(action_vals != NULL && num_actions > 0);
+    assert(sensor_vals != NULL);
+    assert(action_vals != NULL);
 
     uint32_t pop = n->population;
     uint16_t nconn = n->conn_length[idx];

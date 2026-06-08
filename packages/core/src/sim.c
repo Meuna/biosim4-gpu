@@ -164,9 +164,7 @@ void biosim_sim_step_agent(biosim_sim_t *sim, uint32_t i) {
     }
 
     memset(action_vals, 0, sizeof(action_vals));
-    biosim_nnet_feedforward(
-        &sim->nnet, i, sensor_vals, BIOSIM_NUM_SENSORS, action_vals, BIOSIM_NUM_ACTIONS
-    );
+    biosim_nnet_feedforward(&sim->nnet, i, sensor_vals, action_vals);
 
     sim->agents.dx_sum[i] = 0.0F;
     sim->agents.dy_sum[i] = 0.0F;

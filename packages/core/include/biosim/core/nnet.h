@@ -80,12 +80,7 @@ uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx);
  * Relies on the neuron-sink-before-action-sink ordering invariant established
  * by biosim_nnet_compile_slot. */
 void biosim_nnet_feedforward(
-    biosim_nnet_t *n,
-    uint32_t idx,
-    const float *sensor_vals,
-    uint8_t num_sensors,
-    float *action_vals,
-    uint8_t num_actions
+    biosim_nnet_t *n, uint32_t idx, const float *sensor_vals, float *action_vals
 );
 
 #endif /* BIOSIM_CORE_NNET_H */
