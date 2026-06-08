@@ -41,9 +41,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
+      - name: Set up MSVC x64 environment
+        shell: cmd
+        run: |
+          for /f "delims=" %%i in ('"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath') do set VS_PATH=%%i
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set >> %GITHUB_ENV%
 
       - name: Cache vcpkg packages
         uses: actions/cache@v5
