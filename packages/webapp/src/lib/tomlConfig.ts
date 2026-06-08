@@ -120,10 +120,7 @@ function serializeBarrier(
     gridSizeY: number,
 ): string[] {
     const gridMin = Math.min(gridSizeX, gridSizeY);
-    const lines: string[] = [
-        `[barrier-${index}]`,
-        `kind = "${b.kind}"`,
-    ];
+    const lines: string[] = [`[barrier-${index}]`, `kind = "${b.kind}"`];
     if (b.x !== null) {
         lines.push(`x = ${Math.round(b.x * (gridSizeX - 1))}`);
     }
@@ -179,11 +176,7 @@ export function simParamsToToml(params: SimParams): string {
 
     sections.push("", "[challenge]", ...serializeChallenge(params.challenge));
 
-    sections.push(
-        "",
-        "[barriers]",
-        `num-barriers = ${params.barriers.length}`,
-    );
+    sections.push("", "[barriers]", `num-barriers = ${params.barriers.length}`);
 
     for (let i = 0; i < params.barriers.length; i++) {
         sections.push(
@@ -202,7 +195,12 @@ export function simParamsToToml(params: SimParams): string {
 
 // ── Parser ────────────────────────────────────────────────────────────────────
 
-const VALID_BARRIER_KINDS = new Set<string>(["hbar", "vbar", "square", "circle"]);
+const VALID_BARRIER_KINDS = new Set<string>([
+    "hbar",
+    "vbar",
+    "square",
+    "circle",
+]);
 
 function parseBarrierKind(v: unknown): BarrierKind {
     return typeof v === "string" && VALID_BARRIER_KINDS.has(v)
@@ -223,12 +221,14 @@ function parseBarrier(
     const y = "y" in table ? numOf(table["y"], 0) / gy : null;
 
     // Accept both "length" and "radius" (circle alias) for the length field.
-    const rawLength = "length" in table
-        ? table["length"]
-        : "radius" in table
-          ? table["radius"]
-          : undefined;
-    const length = rawLength !== undefined ? numOf(rawLength, 0) / gridMin : null;
+    const rawLength =
+        "length" in table
+            ? table["length"]
+            : "radius" in table
+              ? table["radius"]
+              : undefined;
+    const length =
+        rawLength !== undefined ? numOf(rawLength, 0) / gridMin : null;
     const width = "width" in table ? numOf(table["width"], 0) / gridMin : null;
 
     return { kind: parseBarrierKind(table["kind"]), x, y, length, width };

@@ -147,7 +147,13 @@ describe("simParamsToToml / tomlToSimParams", () => {
                 gridSizeX: 64,
                 gridSizeY: 64,
                 barriers: [
-                    { kind: "hbar", x: 0.5, y: 0.25, length: 0.5, width: 0.03125 },
+                    {
+                        kind: "hbar",
+                        x: 0.5,
+                        y: 0.25,
+                        length: 0.5,
+                        width: 0.03125,
+                    },
                 ],
             };
             const r = roundTrip(p);
@@ -166,7 +172,13 @@ describe("simParamsToToml / tomlToSimParams", () => {
             const p: SimParams = {
                 ...DEFAULTS,
                 barriers: [
-                    { kind: "vbar", x: null, y: null, length: null, width: null },
+                    {
+                        kind: "vbar",
+                        x: null,
+                        y: null,
+                        length: null,
+                        width: null,
+                    },
                 ],
             };
             const r = roundTrip(p);
@@ -184,7 +196,15 @@ describe("simParamsToToml / tomlToSimParams", () => {
                 ...DEFAULTS,
                 gridSizeX: 128,
                 gridSizeY: 128,
-                barriers: [{ kind: "circle", x: 0.5, y: 0.5, length: 0.1, width: 0.05 }],
+                barriers: [
+                    {
+                        kind: "circle",
+                        x: 0.5,
+                        y: 0.5,
+                        length: 0.1,
+                        width: 0.05,
+                    },
+                ],
             };
             const toml = simParamsToToml(p);
             expect(toml).toContain("radius =");
@@ -199,8 +219,20 @@ describe("simParamsToToml / tomlToSimParams", () => {
                 gridSizeX: 64,
                 gridSizeY: 64,
                 barriers: [
-                    { kind: "hbar", x: 0.5, y: 0.25, length: 0.5, width: 0.03125 },
-                    { kind: "vbar", x: null, y: 0.75, length: 0.4, width: null },
+                    {
+                        kind: "hbar",
+                        x: 0.5,
+                        y: 0.25,
+                        length: 0.5,
+                        width: 0.03125,
+                    },
+                    {
+                        kind: "vbar",
+                        x: null,
+                        y: 0.75,
+                        length: 0.4,
+                        width: null,
+                    },
                 ],
             };
             const r = roundTrip(p);
