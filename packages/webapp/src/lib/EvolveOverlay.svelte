@@ -1,13 +1,20 @@
 <script lang="ts">
+    import type { SimState } from "./simState";
+
     let {
         geom,
         gen,
-        stopping,
+        simState,
     }: {
         geom: { x: number; y: number; w: number; h: number };
         gen: number;
-        stopping: boolean;
+        simState: SimState;
     } = $props();
+
+    const stopping = $derived(
+        simState === "FREE_RUN_STOPPING" ||
+            simState === "DIRTY_FREE_RUN_STOPPING",
+    );
 </script>
 
 <div

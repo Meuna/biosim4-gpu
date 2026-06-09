@@ -1,7 +1,9 @@
 <script lang="ts">
+    import type { SimState } from "./simState";
+
     let {
         geom,
-        mode,
+        simState,
         gridSizeX = 128,
         gridSizeY = 128,
         blurred = false,
@@ -14,7 +16,7 @@
             cx: number;
             cy: number;
         };
-        mode: "kinetic" | "running" | "paused";
+        simState: SimState;
         gridSizeX?: number;
         gridSizeY?: number;
         blurred?: boolean;
@@ -49,7 +51,7 @@
     >
 
     <!-- Idle overlay — visible only before simulation has ever been started -->
-    {#if mode === "kinetic"}
+    {#if simState === "WORKER_PENDING" || simState === "WORKER_READY"}
         <div class="idle-overlay" aria-label="Simulation not started">
             <p class="idle-overlay__hint small-caps">Awaiting initialization</p>
             <p class="idle-overlay__display">

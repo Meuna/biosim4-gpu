@@ -2,11 +2,8 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import PlayDock from "./PlayDock.svelte";
 
 const defaultProps = {
-    running: false,
-    genComplete: false,
+    simState: "WORKER_READY" as const,
     genomIncompatible: false,
-    freeRunning: false,
-    freeRunStopping: false,
     targetSpeed: 0,
     onToggle: () => {},
     onStep: () => {},
@@ -29,13 +26,26 @@ describe("PlayDock", () => {
     });
 
     it("shows Stop button when running", () => {
-        render(PlayDock, { ...defaultProps, running: true });
+        render(PlayDock, {
+            ...defaultProps,
+            simState: "STEPS_RUNNING" as const,
+        });
         expect(
             screen.getByRole("button", { name: /stop simulation/i }),
         ).toBeTruthy();
         expect(
             screen.queryByRole("button", { name: /play simulation/i }),
         ).toBeNull();
+    });
+
+    it("shows Stop button when dirty running", () => {
+        render(PlayDock, {
+            ...defaultProps,
+            simState: "DIRTY_STEPS_RUNNING" as const,
+        });
+        expect(
+            screen.getByRole("button", { name: /stop simulation/i }),
+        ).toBeTruthy();
     });
 
     it("renders Step, Next Gen, and Rewind buttons", () => {
@@ -111,7 +121,7 @@ describe("PlayDock", () => {
     it("does not disable Play button when genomIncompatible but running", () => {
         render(PlayDock, {
             ...defaultProps,
-            running: true,
+            simState: "STEPS_RUNNING" as const,
             genomIncompatible: true,
         });
         const btn = screen.getByRole("button", {
@@ -175,14 +185,20 @@ describe("PlayDock", () => {
     });
 
     it("Evolve button shows active aria-label when freeRunning", () => {
-        render(PlayDock, { ...defaultProps, freeRunning: true });
+        render(PlayDock, {
+            ...defaultProps,
+            simState: "FREE_RUNNING" as const,
+        });
         expect(
             screen.getByRole("button", { name: /stop evolving/i }),
         ).toBeTruthy();
     });
 
     it("disables Evolve button when running", () => {
-        render(PlayDock, { ...defaultProps, running: true });
+        render(PlayDock, {
+            ...defaultProps,
+            simState: "STEPS_RUNNING" as const,
+        });
         const btn = screen.getByRole("button", {
             name: /evolve/i,
         }) as HTMLButtonElement;
@@ -204,8 +220,7 @@ describe("PlayDock", () => {
     it("disables Evolve button when freeRunStopping", () => {
         render(PlayDock, {
             ...defaultProps,
-            freeRunning: true,
-            freeRunStopping: true,
+            simState: "FREE_RUN_STOPPING" as const,
         });
         const btn = screen.getByRole("button", {
             name: /stop evolving/i,
@@ -214,7 +229,10 @@ describe("PlayDock", () => {
     });
 
     it("disables Step, Next Gen, and Rewind when freeRunning", () => {
-        render(PlayDock, { ...defaultProps, freeRunning: true });
+        render(PlayDock, {
+            ...defaultProps,
+            simState: "FREE_RUNNING" as const,
+        });
         const step = screen.getByRole("button", {
             name: /step one simulation tick/i,
         }) as HTMLButtonElement;
@@ -227,5 +245,16 @@ describe("PlayDock", () => {
         expect(step.disabled).toBe(true);
         expect(nextGen.disabled).toBe(true);
         expect(rewind.disabled).toBe(true);
+    });
+
+    it("disables Play when generation complete", () => {
+        render(PlayDock, {
+            ...defaultProps,
+            simState: "GENERATION_ENDED" as const,
+        });
+        const btn = screen.getByRole("button", {
+            name: /play simulation/i,
+        }) as HTMLButtonElement;
+        expect(btn.disabled).toBe(true);
     });
 });

@@ -23,6 +23,17 @@
         simParamsToToml,
         tomlToSimParams,
     } from "./lib/tomlConfig";
+    import {
+        type SimState,
+        enterDirty,
+        exitDirty,
+        onWorkerReady,
+        onConfigured,
+        onGenComplete,
+        onFreeRunPaused,
+        onRewindOrNextGenDone,
+        onSnapshotLoaded,
+    } from "./lib/simState";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -76,6 +87,7 @@
                     } satisfies WorkerCmd,
                     [offscreen],
                 );
+                simState = onWorkerReady(simState);
                 workerReady = true;
                 // Send initial layout so the worker sizes the canvas and knows
                 // where the grid region lives on the full-viewport surface.
@@ -94,11 +106,9 @@
         } else if (msg.type === "status") {
             currentStep = msg.step;
             if (msg.state === "gen_complete") {
-                isRunning = false;
-                isGenComplete = true;
-            } else if (msg.state === "paused" && isFreeRunStopping) {
-                isFreeRunning = false;
-                isFreeRunStopping = false;
+                simState = onGenComplete(simState);
+            } else if (msg.state === "paused") {
+                simState = onFreeRunPaused(simState);
             }
         } else if (msg.type === "census") {
             currentGen = msg.gen;
@@ -110,7 +120,7 @@
             workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
             snapReady = true;
         } else if (msg.type === "rewindConfigured") {
-            isGenComplete = false;
+            simState = onRewindOrNextGenDone(simState);
             currentGen = msg.gen;
             currentStep = 0;
             currentPop = msg.population;
@@ -125,7 +135,7 @@
                 pendingLastPlayedConfig = null;
             }
         } else if (msg.type === "nextGenerationConfigured") {
-            isGenComplete = false;
+            simState = onRewindOrNextGenDone(simState);
             currentGen = msg.gen;
             currentStep = 0;
             currentPop = msg.population;
@@ -158,9 +168,7 @@
         } else if (msg.type === "fps") {
             measuredFps = msg.value;
         } else if (msg.type === "configured") {
-            isRunning = false;
-            hasStarted = false;
-            isGenComplete = false;
+            simState = onConfigured();
             currentGen = 0;
             currentStep = 0;
             survivalHistory = [];
@@ -177,8 +185,7 @@
             }
             if (pendingPlay) {
                 pendingPlay = false;
-                isRunning = true;
-                hasStarted = true;
+                simState = "STEPS_RUNNING";
                 send({ type: "play" });
             }
         } else if (msg.type === "snapshotData") {
@@ -192,14 +199,13 @@
             a.click();
             URL.revokeObjectURL(url);
         } else if (msg.type === "snapshotLoaded") {
-            isGenComplete = false;
+            simState = onSnapshotLoaded();
             currentGen = msg.gen;
             currentStep = 0;
             currentPop = msg.population;
             gridSizeX = msg.gridSizeX;
             gridSizeY = msg.gridSizeY;
             stepsPerGen = msg.stepsPerGen;
-            hasStarted = true;
             snapReady = true;
             survivalHistory = [];
             workerGenomeMaxLenUsed = 0;
@@ -234,15 +240,18 @@
     let pendingPlay = false;
     let pendingLastPlayedConfig: SimParams | null = null;
 
-    // ── Simulation state ─────────────────────────────────────────────────────
-    let isRunning = $state(false);
-    let hasStarted = $state(false);
-    let isGenComplete = $state(false);
-    let isFreeRunning = $state(false);
-    let isFreeRunStopping = $state(false);
-    const mode = $derived(
-        isRunning ? "running" : hasStarted ? "paused" : "kinetic",
-    ) as "kinetic" | "running" | "paused";
+    // ── Simulation state machine ─────────────────────────────────────────────
+    let simState = $state<SimState>("WORKER_PENDING");
+
+    // When isDirty changes, ask the state machine whether a dirty/clean
+    // transition is legal. enterDirty/exitDirty decide internally; this effect
+    // has no guard logic of its own.
+    // isDirty reads draftConfig + lastPlayedConfig; simState is not in that
+    // chain, so there is no self-trigger risk.
+    $effect(() => {
+        simState = isDirty ? enterDirty(simState) : exitDirty(simState);
+    });
+
     let currentGen = $state(0);
     let currentStep = $state(0);
     let currentPop = $state(3000);
@@ -268,7 +277,12 @@
     let measuredFps = $state<number | null>(null);
 
     $effect(() => {
-        if (!isRunning) measuredFps = null;
+        if (
+            simState !== "STEPS_RUNNING" &&
+            simState !== "DIRTY_STEPS_RUNNING"
+        ) {
+            measuredFps = null;
+        }
     });
 
     // Genome compatibility gate — true when draft would truncate live survivors.
@@ -300,8 +314,6 @@
     );
     let railOpen = $state(false);
     let activeTab = $state<"sim" | "cell">("sim");
-    let showConfigChangeDialog = $state(false);
-    let gridBlurred = $state(false);
 
     // ── Brain explorer ───────────────────────────────────────────────────────
     let brain = $state<{
@@ -343,12 +355,17 @@
         brain && brain.id === displayAgent?.id ? brain : null,
     );
 
-    // Open Cell tab automatically when an agent is selected or hovered.
+    // Open the Cell tab only when a new selection is made (null → non-null).
+    // Tracking the previous id prevents the effect from re-firing on every
+    // agentUpdated live-update message while the same agent is selected.
+    let prevDisplayAgentId: number | null = null;
     $effect(() => {
-        if (displayAgent !== null) {
+        const id = displayAgent?.id ?? null;
+        if (id !== null && prevDisplayAgentId === null) {
             railOpen = true;
             activeTab = "cell";
         }
+        prevDisplayAgentId = id;
     });
 
     // Clear hover state when Ctrl key is released.
@@ -417,22 +434,8 @@
     // ── Draft config callbacks ────────────────────────────────────────────────
     function handleDraftChange(params: SimParams): void {
         draftConfig = params;
-        if (
-            !isGenComplete &&
-            (isRunning || hasStarted) &&
-            !showConfigChangeDialog
-        ) {
-            if (isRunning) {
-                isRunning = false;
-                send({ type: "stop" });
-            }
-            if (isFreeRunning) {
-                isFreeRunStopping = true;
-                send({ type: "stopFreeRun" });
-            }
-            gridBlurred = true;
-            showConfigChangeDialog = true;
-        }
+        // The isDirty-sync effect will ask the state machine to enter the
+        // appropriate DIRTY_* state. The sim keeps running if it was running.
     }
 
     function handleRevert(): void {
@@ -441,37 +444,53 @@
 
     function handleDialogRevertContinue(): void {
         handleRevert();
-        showConfigChangeDialog = false;
-        gridBlurred = false;
-        isRunning = true;
-        hasStarted = true;
+        simState = "STEPS_RUNNING";
         send({ type: "play" });
     }
 
     function handleDialogRewind(): void {
-        showConfigChangeDialog = false;
-        gridBlurred = false;
         handleRewind(false);
     }
 
     // ── Play / pause / step / gen / reset ────────────────────────────────────
     function handleToggle(): void {
-        if (isRunning) {
-            isRunning = false;
+        if (
+            simState === "STEPS_RUNNING" ||
+            simState === "DIRTY_STEPS_RUNNING"
+        ) {
+            // Stop: dirty running enters the confirm dialog; clean just pauses.
+            simState =
+                simState === "DIRTY_STEPS_RUNNING"
+                    ? "DIRTY_CONFIRM"
+                    : "STEPS_PAUSED";
             send({ type: "stop" });
         } else if (genomIncompatible) {
             return;
-        } else if (isDirty) {
-            pendingPlay = true;
-            isGenComplete = false;
+        } else if (
+            simState === "GENERATION_SPAWNED" ||
+            simState === "STEPS_PAUSED"
+        ) {
+            simState = "STEPS_RUNNING";
+            send({ type: "play" });
+        } else if (
+            simState === "DIRTY_GENERATION_SPAWNED" ||
+            simState === "DIRTY_STEPS_PAUSED"
+        ) {
+            // Apply the dirty config then start.
             const snapshot = $state.snapshot(draftConfig) as SimParams;
             pendingLastPlayedConfig = snapshot;
+            pendingPlay = true;
             send({ type: "configure", params: snapshot });
-        } else {
-            isRunning = true;
-            hasStarted = true;
-            isGenComplete = false;
-            send({ type: "play" });
+        } else if (simState === "WORKER_READY") {
+            if (isDirty) {
+                const snapshot = $state.snapshot(draftConfig) as SimParams;
+                pendingLastPlayedConfig = snapshot;
+                pendingPlay = true;
+                send({ type: "configure", params: snapshot });
+            } else {
+                simState = "STEPS_RUNNING";
+                send({ type: "play" });
+            }
         }
     }
 
@@ -481,25 +500,30 @@
     }
 
     function handleStep(): void {
-        hasStarted = true;
+        if (simState === "WORKER_READY") simState = "STEPS_PAUSED";
         send({ type: "step" });
     }
 
     function handleToggleFreeRun(): void {
-        if (isFreeRunning) {
-            isFreeRunStopping = true;
+        if (simState === "FREE_RUNNING" || simState === "DIRTY_FREE_RUNNING") {
+            simState =
+                simState === "DIRTY_FREE_RUNNING"
+                    ? "DIRTY_FREE_RUN_STOPPING"
+                    : "FREE_RUN_STOPPING";
             send({ type: "stopFreeRun" });
         } else {
-            isFreeRunning = true;
-            hasStarted = true;
-            isGenComplete = false;
+            simState = isDirty ? "DIRTY_FREE_RUNNING" : "FREE_RUNNING";
             send({ type: "startFreeRun" });
         }
     }
 
     function handleNextGen(autoPlay: boolean): void {
-        isGenComplete = false;
-        hasStarted = true;
+        if (autoPlay) {
+            simState = isDirty ? "DIRTY_STEPS_RUNNING" : "STEPS_RUNNING";
+        } else {
+            simState = onRewindOrNextGenDone(simState);
+            currentStep = 0;
+        }
         if (isDirty) {
             const snapshot = $state.snapshot(draftConfig) as SimParams;
             pendingLastPlayedConfig = snapshot;
@@ -508,13 +532,15 @@
             send({ type: "nextGeneration" });
         }
         if (autoPlay) {
-            isRunning = true;
             send({ type: "play" });
         }
     }
 
     function handleRewind(autoPlay: boolean): void {
-        isGenComplete = false;
+        if (!autoPlay) {
+            simState = onRewindOrNextGenDone(simState);
+            currentStep = 0;
+        }
         if (isDirty) {
             const snapshot = $state.snapshot(draftConfig) as SimParams;
             pendingLastPlayedConfig = snapshot;
@@ -523,14 +549,12 @@
             send({ type: "rewind" });
         }
         if (autoPlay) {
-            isRunning = true;
-            hasStarted = true;
+            simState = isDirty ? "DIRTY_STEPS_RUNNING" : "STEPS_RUNNING";
             send({ type: "play" });
         }
     }
 
     function handleClearGenom(): void {
-        isGenComplete = false;
         workerGenomeMaxLenUsed = 0;
         workerGenomeMaxNeuronsUsed = 0;
         send({ type: "clearGenom" });
@@ -860,11 +884,8 @@
 
     <!-- z-index: 20 — fixed top bar (contains PlayDock inline) -->
     <TopBar
-        running={isRunning}
-        genComplete={isGenComplete}
+        {simState}
         {genomIncompatible}
-        freeRunning={isFreeRunning}
-        freeRunStopping={isFreeRunStopping}
         {targetSpeed}
         onSetSpeed={handleSetSpeed}
         onToggle={handleToggle}
@@ -877,7 +898,7 @@
 
     <!-- z-index: 55/60 — config-change-while-running dialog -->
     <ConfigChangeDialog
-        open={showConfigChangeDialog}
+        open={simState === "DIRTY_CONFIRM"}
         onRevertContinue={handleDialogRevertContinue}
         onRewind={handleDialogRewind}
     />
@@ -888,24 +909,20 @@
         <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
         <GridView
             geom={gridGeom}
-            {mode}
+            {simState}
             {gridSizeX}
             {gridSizeY}
-            blurred={gridBlurred}
+            blurred={simState === "DIRTY_CONFIRM"}
         />
 
-        {#if isFreeRunning}
+        {#if simState === "FREE_RUNNING" || simState === "DIRTY_FREE_RUNNING" || simState === "FREE_RUN_STOPPING" || simState === "DIRTY_FREE_RUN_STOPPING"}
             <!-- z-index: 10 — full-grid overlay during free-run -->
-            <EvolveOverlay
-                geom={gridGeom}
-                gen={currentGen}
-                stopping={isFreeRunStopping}
-            />
+            <EvolveOverlay geom={gridGeom} gen={currentGen} {simState} />
         {:else}
             <!-- z-index: 15 — telemetry stats, top-right of grid -->
             <TelemetryHUD
                 geom={gridGeom}
-                running={isRunning}
+                {simState}
                 gen={currentGen}
                 step={currentStep}
                 {stepsPerGen}

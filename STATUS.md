@@ -9,7 +9,7 @@
 | `sim-ref` | Complete | Single-threaded CPU reference simulator |
 | `sim-gpu` | In progress | K1–K5 complete: feedforward (sensors, nnet, actions), kill-marked grid cleanup, movement resolution, signal fade, challenge eval. Generation loop pending. |
 | `sim-wasm` | Feature-complete (scalar params + challenge + barriers + brain) | Stepper + parameter-setter bindings + challenge spec bindings + barrier list bindings + nnet buffer getters (gh-56, gh-64, gh-74). |
-| `webapp` | Partially wired | Config panel wired for all 14 scalar params, challenge spec, and barriers (gh-56, gh-64); agent brain explorer wired to live `nnet` data (gh-74). Preset loading and TOML export pending. |
+| `webapp` | Partially wired | Config panel wired for all 14 scalar params, challenge spec, and barriers (gh-56, gh-64); agent brain explorer wired to live `nnet` data (gh-74); simulation state machine refactored to a 15-state flat enum (gh-98). Preset loading and TOML export pending. |
 | `viz` | Not started | Depends on stepper trace format (not yet defined) |
 
 ## Missing or incomplete

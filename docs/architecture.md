@@ -388,6 +388,58 @@ Worker (`src/workers/sim.worker.ts`). CMake copies the WASM artifacts into
 static assets at `/wasm/`. The worker uses a `/* @vite-ignore */` dynamic
 import so Vite does not attempt to rebundle the pre-built Emscripten output.
 
+### Simulation state machine
+
+`src/lib/simState.ts` is the single source of truth for UI simulation state.
+It defines a 15-value flat string enum (`SimState`) that replaces the five
+boolean flags (`isRunning`, `hasStarted`, `isGenComplete`, `isFreeRunning`,
+`isFreeRunStopping`) that previously lived in `App.svelte`.
+
+```
+WORKER_PENDING → WORKER_READY → GENERATION_SPAWNED ↔ STEPS_RUNNING
+                                                    ↘ STEPS_PAUSED
+                                                    ↘ GENERATION_ENDED
+                              FREE_RUNNING ↔ FREE_RUN_STOPPING
+```
+
+Each clean state has a `DIRTY_*` mirror (e.g. `DIRTY_STEPS_RUNNING`) used
+when the draft config diverges from the last-played config while the sim is in
+that state. A fifteenth state, `DIRTY_CONFIRM`, is entered when the user clicks
+Stop while in `DIRTY_STEPS_RUNNING`; it is the only dirty state not
+automatically exited when the config reverts to clean.
+
+The module exports pure transition functions used by `App.svelte`:
+
+| Function | Trigger |
+|---|---|
+| `enterDirty(s)` | Called by the dirty-sync `$effect` when `isDirty` becomes true |
+| `exitDirty(s)` | Called by the dirty-sync `$effect` when `isDirty` becomes false |
+| `onWorkerReady(s)` | Worker sends `"ready"` message |
+| `onConfigured()` | Worker sends `"configured"` message |
+| `onGenComplete(s)` | Worker sends `"status: gen_complete"` |
+| `onFreeRunPaused(s)` | Worker sends `"status: paused"` during free run |
+| `onRewindOrNextGenDone(s)` | Worker sends `"rewindConfigured"` or `"nextGenerationConfigured"` |
+| `onSnapshotLoaded()` | Worker sends `"snapshotLoaded"` |
+
+`App.svelte` holds a single `let simState = $state<SimState>("WORKER_PENDING")`
+and a dirty-sync effect:
+
+```typescript
+$effect(() => {
+    simState = isDirty ? enterDirty(simState) : exitDirty(simState);
+});
+```
+
+`isDirty` is a `$derived` JSON comparison of `draftConfig` vs
+`lastPlayedConfig`; it does not read `simState`, so no self-trigger loop is
+possible. The transition functions decide internally whether the requested
+dirty/clean move is legal — e.g. `WORKER_READY` has no dirty equivalent and is
+returned unchanged by `enterDirty`.
+
+Components (`PlayDock`, `GridView`, `EvolveOverlay`, `TelemetryHUD`, `TopBar`)
+receive `simState: SimState` as a prop and implement their own button-enable
+and display logic with inline state comparisons rather than shared query helpers.
+
 ### Brain explorer
 
 `src/lib/BrainExplorer.svelte` renders an agent's neural network as a

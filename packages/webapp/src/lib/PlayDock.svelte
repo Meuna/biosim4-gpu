@@ -10,6 +10,7 @@
     } from "lucide-svelte";
     import ConfirmInline from "./ConfirmInline.svelte";
     import DiscreteSlider from "./DiscreteSlider.svelte";
+    import type { SimState } from "./simState";
 
     const SPEED_STOPS: { value: number; label: string; ariaLabel: string }[] = [
         { value: 5, label: "5", ariaLabel: "5 fps" },
@@ -19,11 +20,8 @@
     ];
 
     let {
-        running,
-        genComplete,
+        simState,
         genomIncompatible = false,
-        freeRunning,
-        freeRunStopping,
         targetSpeed,
         onToggle,
         onStep,
@@ -33,11 +31,8 @@
         onSetSpeed,
         onToggleFreeRun,
     }: {
-        running: boolean;
-        genComplete: boolean;
+        simState: SimState;
         genomIncompatible?: boolean;
-        freeRunning: boolean;
-        freeRunStopping: boolean;
         targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
@@ -47,6 +42,24 @@
         onSetSpeed: (fps: number) => void;
         onToggleFreeRun: () => void;
     } = $props();
+
+    const isRunning = $derived(
+        simState === "STEPS_RUNNING" || simState === "DIRTY_STEPS_RUNNING",
+    );
+    const isFreeRunning = $derived(
+        simState === "FREE_RUNNING" ||
+            simState === "DIRTY_FREE_RUNNING" ||
+            simState === "FREE_RUN_STOPPING" ||
+            simState === "DIRTY_FREE_RUN_STOPPING",
+    );
+    const isFreeRunStopping = $derived(
+        simState === "FREE_RUN_STOPPING" ||
+            simState === "DIRTY_FREE_RUN_STOPPING",
+    );
+    const isGenComplete = $derived(
+        simState === "GENERATION_ENDED" ||
+            simState === "DIRTY_GENERATION_ENDED",
+    );
 
     let clearConfirmOpen = $state(false);
 </script>
@@ -66,11 +79,12 @@
 
     <button
         class="dock__btn dock__btn--primary"
-        disabled={!running && (genComplete || genomIncompatible || freeRunning)}
+        disabled={!isRunning &&
+            (isGenComplete || genomIncompatible || isFreeRunning)}
         onclick={onToggle}
-        aria-label={running ? "Stop simulation" : "Play simulation"}
+        aria-label={isRunning ? "Stop simulation" : "Play simulation"}
     >
-        {#if running}
+        {#if isRunning}
             <Pause size={14} />
             Stop
         {:else}
@@ -81,7 +95,7 @@
 
     <button
         class="dock__btn"
-        disabled={running || freeRunning}
+        disabled={isRunning || isFreeRunning}
         onclick={onStep}
         aria-label="Step one simulation tick"
     >
@@ -94,7 +108,7 @@
     <div class="dock__autoplay-group">
         <button
             class="dock__btn"
-            disabled={genomIncompatible || freeRunning}
+            disabled={genomIncompatible || isFreeRunning}
             onclick={(e) => onNextGen(e.ctrlKey)}
             aria-label="Advance one generation (Ctrl+click to auto play)"
         >
@@ -104,7 +118,7 @@
 
         <button
             class="dock__btn"
-            disabled={genomIncompatible || freeRunning}
+            disabled={genomIncompatible || isFreeRunning}
             onclick={(e) => onRewind(e.ctrlKey)}
             aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
         >
@@ -147,10 +161,10 @@
 
     <button
         class="dock__btn dock__btn--evolve"
-        class:dock__btn--evolve-active={freeRunning}
-        disabled={running || freeRunStopping}
+        class:dock__btn--evolve-active={isFreeRunning}
+        disabled={isRunning || isFreeRunStopping}
         onclick={onToggleFreeRun}
-        aria-label={freeRunning
+        aria-label={isFreeRunning
             ? "Stop evolving"
             : "Evolve: auto-advance generations"}
     >

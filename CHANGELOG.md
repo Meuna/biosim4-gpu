@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **webapp simulation state machine** (gh-98) — replaced five boolean flags
+  (`isRunning`, `hasStarted`, `isGenComplete`, `isFreeRunning`,
+  `isFreeRunStopping`) in `App.svelte` with a single 15-value `SimState` flat
+  enum. Dirty-config state is now tracked inside the enum (`DIRTY_*` variants)
+  rather than with a separate `showConfigChangeDialog` flag. Components
+  (`PlayDock`, `GridView`, `EvolveOverlay`, `TelemetryHUD`, `TopBar`) receive
+  `simState` directly and implement their own enable/disable logic. The
+  dirty-config dialog no longer interrupts a running simulation — the sim
+  continues in `DIRTY_STEPS_RUNNING` and the dialog appears only when the user
+  explicitly stops. Fixed the agent-selection "twitchy rail" bug by tracking
+  the previous agent ID to detect null→non-null transitions only.
+
 ### Fixed
 - **Windows build** (gh-106) — two root causes fixed. First, `EmbedKernels.cmake`
   now shards embedded kernel sources into adjacent C string literals of ≤ 8000

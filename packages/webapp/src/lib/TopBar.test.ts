@@ -4,13 +4,13 @@ import TopBar from "./TopBar.svelte";
 const noOp = () => {};
 
 const defaultProps = {
-    running: false,
-    freeRunning: false,
-    freeRunStopping: false,
+    simState: "WORKER_READY" as const,
     onToggle: noOp,
     onStep: noOp,
     onNextGen: noOp,
     onRewind: noOp,
+    onClearGenom: noOp,
+    onToggleFreeRun: noOp,
     targetSpeed: 0,
     onSetSpeed: noOp,
 };
@@ -37,7 +37,7 @@ describe("TopBar", () => {
     });
 
     it("renders Stop button inside the topbar when running", () => {
-        render(TopBar, { ...defaultProps, running: true });
+        render(TopBar, { ...defaultProps, simState: "STEPS_RUNNING" as const });
         expect(
             screen.getByRole("button", { name: /stop simulation/i }),
         ).toBeTruthy();

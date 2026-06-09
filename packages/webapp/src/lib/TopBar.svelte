@@ -1,12 +1,10 @@
 <script lang="ts">
     import PlayDock from "./PlayDock.svelte";
+    import type { SimState } from "./simState";
 
     let {
-        running,
-        genComplete,
+        simState,
         genomIncompatible = false,
-        freeRunning,
-        freeRunStopping,
         targetSpeed,
         onToggle,
         onStep,
@@ -16,11 +14,8 @@
         onSetSpeed,
         onToggleFreeRun,
     }: {
-        running: boolean;
-        genComplete: boolean;
+        simState: SimState;
         genomIncompatible?: boolean;
-        freeRunning: boolean;
-        freeRunStopping: boolean;
         targetSpeed: number;
         onToggle: () => void;
         onStep: () => void;
@@ -40,11 +35,8 @@
 
     <div class="topbar__center">
         <PlayDock
-            {running}
-            {genComplete}
+            {simState}
             {genomIncompatible}
-            {freeRunning}
-            {freeRunStopping}
             {targetSpeed}
             {onToggle}
             {onStep}

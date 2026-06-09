@@ -1,7 +1,9 @@
 <script lang="ts">
+    import type { SimState } from "./simState";
+
     let {
         geom,
-        running,
+        simState,
         gen,
         step,
         stepsPerGen,
@@ -16,13 +18,17 @@
             cx: number;
             cy: number;
         };
-        running: boolean;
+        simState: SimState;
         gen: number;
         step: number;
         stepsPerGen: number;
         pop: number;
         fps?: number | null;
     } = $props();
+
+    const running = $derived(
+        simState === "STEPS_RUNNING" || simState === "DIRTY_STEPS_RUNNING",
+    );
 
     function pad3(n: number): string {
         return n.toString().padStart(3, "0");
