@@ -10,14 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **webapp simulation state machine** (gh-98) — replaced five boolean flags
   (`isRunning`, `hasStarted`, `isGenComplete`, `isFreeRunning`,
-  `isFreeRunStopping`) in `App.svelte` with a single 15-value `SimState` flat
-  enum. Dirty-config state is now tracked inside the enum (`DIRTY_*` variants)
-  rather than with a separate `showConfigChangeDialog` flag. Components
-  (`PlayDock`, `GridView`, `EvolveOverlay`, `TelemetryHUD`, `TopBar`) receive
-  `simState` directly and implement their own enable/disable logic. The
-  dirty-config dialog no longer interrupts a running simulation — the sim
-  continues in `DIRTY_STEPS_RUNNING` and the dialog appears only when the user
-  explicitly stops. Fixed the agent-selection "twitchy rail" bug by tracking
+  `isFreeRunStopping`) in `App.svelte` with a `SimMachine` class
+  (`src/lib/simMachine.svelte.ts`) owning a composite state: a 9-value
+  `SimPhase` enum plus a `dirty` flag derived from the draft vs last-played
+  config divergence. The machine owns every phase transition, the configs, the
+  genome-compatibility gate, and sends all lifecycle worker commands through
+  an injected `send`; `App.svelte` routes worker events into it and derives
+  its props from the machine's getters. Components (`PlayDock`, `GridView`,
+  `EvolveOverlay`, `TelemetryHUD`, `TopBar`) receive `phase` directly and
+  implement their own enable/disable logic. Editing the config no longer
+  interrupts a running simulation — dirtiness is orthogonal to the phase and
+  the config-change dialog (`CONFIRM`) appears only when the user explicitly
+  stops a dirty run. Fixed the agent-selection "twitchy rail" bug by tracking
   the previous agent ID to detect null→non-null transitions only.
 
 ### Fixed

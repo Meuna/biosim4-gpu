@@ -390,55 +390,56 @@ import so Vite does not attempt to rebundle the pre-built Emscripten output.
 
 ### Simulation state machine
 
-`src/lib/simState.ts` is the single source of truth for UI simulation state.
-It defines a 15-value flat string enum (`SimState`) that replaces the five
-boolean flags (`isRunning`, `hasStarted`, `isGenComplete`, `isFreeRunning`,
-`isFreeRunStopping`) that previously lived in `App.svelte`.
+`src/lib/simMachine.svelte.ts` defines the `SimMachine` class, the single
+source of truth for UI simulation state. The state is composite:
 
-```
-WORKER_PENDING → WORKER_READY → GENERATION_SPAWNED ↔ STEPS_RUNNING
-                                                    ↘ STEPS_PAUSED
-                                                    ↘ GENERATION_ENDED
-                              FREE_RUNNING ↔ FREE_RUN_STOPPING
-```
+- **`phase`** — a 9-value string enum (`SimPhase`) giving the simulation
+  lifecycle position:
 
-Each clean state has a `DIRTY_*` mirror (e.g. `DIRTY_STEPS_RUNNING`) used
-when the draft config diverges from the last-played config while the sim is in
-that state. A fifteenth state, `DIRTY_CONFIRM`, is entered when the user clicks
-Stop while in `DIRTY_STEPS_RUNNING`; it is the only dirty state not
-automatically exited when the config reverts to clean.
+  ```
+  WORKER_PENDING → WORKER_READY → GENERATION_SPAWNED ↔ STEPS_RUNNING ↔ CONFIRM
+                                                      ↘ STEPS_PAUSED
+                                                      ↘ GENERATION_ENDED
+                                FREE_RUNNING ↔ FREE_RUN_STOPPING
+  ```
 
-The module exports pure transition functions used by `App.svelte`:
+- **`dirty`** — a boolean `$derived` inside the machine from the divergence
+  (JSON comparison) of the draft config vs the config the worker last applied.
+  Dirtiness is orthogonal to the phase: editing the config never interrupts a
+  running or free-running sim.
 
-| Function | Trigger |
+The machine owns the draft and last-played configs, the genome-used counters
+from the last census (deriving the `genomIncompatible` play-gate), and sends
+every lifecycle worker command through a constructor-injected
+`send(cmd, transfer?)` callback. `App.svelte` creates one instance wired to
+`worker.postMessage`, routes state-relevant worker events into the machine,
+and derives all state props from its getters. UI-only data (telemetry counters,
+agent selection, layout) stays in `App.svelte`.
+
+Every phase transition happens inside a machine method:
+
+| Kind | Methods |
 |---|---|
-| `enterDirty(s)` | Called by the dirty-sync `$effect` when `isDirty` becomes true |
-| `exitDirty(s)` | Called by the dirty-sync `$effect` when `isDirty` becomes false |
-| `onWorkerReady(s)` | Worker sends `"ready"` message |
-| `onConfigured()` | Worker sends `"configured"` message |
-| `onGenComplete(s)` | Worker sends `"status: gen_complete"` |
-| `onFreeRunPaused(s)` | Worker sends `"status: paused"` during free run |
-| `onRewindOrNextGenDone(s)` | Worker sends `"rewindConfigured"` or `"nextGenerationConfigured"` |
-| `onSnapshotLoaded()` | Worker sends `"snapshotLoaded"` |
+| UX gestures | `toggle`, `step`, `toggleFreeRun`, `nextGen(autoPlay)`, `rewind(autoPlay)`, `confirmRevertContinue`, `confirmRewind`, `setDraft`, `revertDraft`, `clearGenom`, `loadSnapshot`, `exportSnapshot` |
+| Worker replies | `onWorkerReady`, `onConfigured`, `onGenComplete`, `onFreeRunPaused`, `onRewindConfigured`, `onNextGenerationConfigured`, `onSnapshotLoaded`, `onCensus` |
 
-`App.svelte` holds a single `let simState = $state<SimState>("WORKER_PENDING")`
-and a dirty-sync effect:
+Methods guard themselves: a gesture that is illegal in the current phase (or
+blocked by `genomIncompatible`) is a no-op, so the machine stays consistent
+even if a UI guard is missed. `CONFIRM` — the config-change dialog — is
+entered only by `toggle()` from a dirty `STEPS_RUNNING` and exited only by the
+two explicit `confirm*` methods.
 
-```typescript
-$effect(() => {
-    simState = isDirty ? enterDirty(simState) : exitDirty(simState);
-});
-```
-
-`isDirty` is a `$derived` JSON comparison of `draftConfig` vs
-`lastPlayedConfig`; it does not read `simState`, so no self-trigger loop is
-possible. The transition functions decide internally whether the requested
-dirty/clean move is legal — e.g. `WORKER_READY` has no dirty equivalent and is
-returned unchanged by `enterDirty`.
+Starting with a dirty draft sends `configure` and defers `play` until the
+worker's `configured` reply; this pending-apply context is private machine
+state, committed into the last-played config when the reply arrives
+(`FREE_RUN_STOPPING` is the one awaiting-reply condition modeled as a phase).
+The class deliberately contains no `$effect` — `dirty` is a `$derived`, so it
+can be instantiated and unit-tested outside a component with a recording
+`send` mock.
 
 Components (`PlayDock`, `GridView`, `EvolveOverlay`, `TelemetryHUD`, `TopBar`)
-receive `simState: SimState` as a prop and implement their own button-enable
-and display logic with inline state comparisons rather than shared query helpers.
+receive `phase: SimPhase` as a prop and implement their own button-enable
+and display logic with inline phase comparisons rather than shared query helpers.
 
 ### Brain explorer
 
