@@ -20,6 +20,7 @@
     import { simParamsToToml, tomlToSimParams } from "./lib/tomlConfig";
     import { SimMachine } from "./lib/simMachine.svelte";
     import { AgentFocus } from "./lib/agentFocus.svelte";
+    import { SimTelemetry } from "./lib/simTelemetry.svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -43,6 +44,13 @@
     // display agent, and every agent-related worker command. Worker replies and
     // UX gestures below delegate to it.
     const focus = new AgentFocus(send);
+
+    // ── Simulation-telemetry holder ──────────────────────────────────────────
+    // Owns the display-only counters (gen/step/pop), the survival sparkline,
+    // the active grid/steps parameters, and the snapshot-ready gate — all
+    // derived purely from worker replies. The third sibling alongside
+    // `SimMachine` and `AgentFocus`; it issues no commands, so takes no `send`.
+    const telemetry = new SimTelemetry();
 
     const workerReady = $derived(machine.phase !== "WORKER_PENDING");
 
@@ -86,12 +94,12 @@
                     gridY: gridGeom.y,
                     gridW: gridGeom.w,
                     gridH: gridGeom.h,
-                    gridCellsX: gridSizeX,
-                    gridCellsY: gridSizeY,
+                    gridCellsX: telemetry.gridSizeX,
+                    gridCellsY: telemetry.gridSizeY,
                 } satisfies WorkerCmd);
             }
         } else if (msg.type === "status") {
-            currentStep = msg.step;
+            telemetry.onStatus(msg.step);
             if (msg.state === "gen_complete") {
                 machine.onGenComplete();
             } else if (msg.state === "paused") {
@@ -99,38 +107,30 @@
             }
         } else if (msg.type === "census") {
             machine.onCensus(msg.genomeMaxLenUsed, msg.genomeMaxNeuronsUsed);
-            currentGen = msg.gen;
-            currentPop = msg.population;
-            const rate =
-                msg.population > 0 ? msg.survivors / msg.population : 0;
-            survivalHistory = [...survivalHistory.slice(-11), rate];
-            snapReady = true;
+            telemetry.onCensus(msg.gen, msg.population, msg.survivors);
         } else if (msg.type === "rewindConfigured") {
             machine.onRewindConfigured();
-            currentGen = msg.gen;
-            currentStep = 0;
-            currentPop = msg.population;
-            gridSizeX = msg.gridSizeX;
-            gridSizeY = msg.gridSizeY;
-            stepsPerGen = msg.stepsPerGen;
-            survivalHistory = [];
+            telemetry.onRewindConfigured(
+                msg.gen,
+                msg.population,
+                msg.gridSizeX,
+                msg.gridSizeY,
+                msg.stepsPerGen,
+            );
         } else if (msg.type === "nextGenerationConfigured") {
             machine.onNextGenerationConfigured(
                 msg.genomeMaxLenUsed,
                 msg.genomeMaxNeuronsUsed,
             );
-            currentGen = msg.gen;
-            currentStep = 0;
-            currentPop = msg.population;
-            gridSizeX = msg.gridSizeX;
-            gridSizeY = msg.gridSizeY;
-            stepsPerGen = msg.stepsPerGen;
-            const rate =
-                msg.censusPopulation > 0
-                    ? msg.survivors / msg.censusPopulation
-                    : 0;
-            survivalHistory = [...survivalHistory.slice(-11), rate];
-            snapReady = true;
+            telemetry.onNextGenerationConfigured(
+                msg.gen,
+                msg.population,
+                msg.gridSizeX,
+                msg.gridSizeY,
+                msg.stepsPerGen,
+                msg.censusPopulation,
+                msg.survivors,
+            );
         } else if (msg.type === "agentUpdated") {
             focus.update(msg.info);
         } else if (msg.type === "brainData") {
@@ -146,14 +146,12 @@
             measuredFps = msg.value;
         } else if (msg.type === "configured") {
             machine.onConfigured();
-            currentGen = 0;
-            currentStep = 0;
-            survivalHistory = [];
-            currentPop = msg.population;
-            gridSizeX = msg.gridSizeX;
-            gridSizeY = msg.gridSizeY;
-            stepsPerGen = msg.stepsPerGen;
-            snapReady = false;
+            telemetry.onConfigured(
+                msg.population,
+                msg.gridSizeX,
+                msg.gridSizeY,
+                msg.stepsPerGen,
+            );
         } else if (msg.type === "snapshotData") {
             const blob = new Blob([msg.data], {
                 type: "application/octet-stream",
@@ -166,14 +164,13 @@
             URL.revokeObjectURL(url);
         } else if (msg.type === "snapshotLoaded") {
             machine.onSnapshotLoaded();
-            currentGen = msg.gen;
-            currentStep = 0;
-            currentPop = msg.population;
-            gridSizeX = msg.gridSizeX;
-            gridSizeY = msg.gridSizeY;
-            stepsPerGen = msg.stepsPerGen;
-            snapReady = true;
-            survivalHistory = [];
+            telemetry.onSnapshotLoaded(
+                msg.gen,
+                msg.population,
+                msg.gridSizeX,
+                msg.gridSizeY,
+                msg.stepsPerGen,
+            );
         } else if (msg.type === "error") {
             confErrorMsg = msg.message;
         }
@@ -183,20 +180,9 @@
         worker.postMessage(cmd);
     }
 
-    // ── Telemetry ────────────────────────────────────────────────────────────
-    let currentGen = $state(0);
-    let currentStep = $state(0);
-    let currentPop = $state(3000);
-    let survivalHistory = $state<number[]>([]);
+    // Telemetry (gen/step/pop counters, survival sparkline, active grid/steps
+    // params, snapshot-ready gate) lives in the `telemetry` holder above.
 
-    // These reflect the active simulation parameters and are updated when the
-    // config panel applies a new configuration.
-    let stepsPerGen = $state(300);
-    let gridSizeX = $state(128);
-    let gridSizeY = $state(128);
-
-    // True once at least one generation boundary has been crossed (snap.count > 0).
-    let snapReady = $state(false);
     // Bound to the hidden .snap file input element.
     let snapUploadInput = $state<HTMLInputElement | null>(null);
 
@@ -305,11 +291,11 @@
         const railW = railOpen && viewportW > 760 ? RAIL_W : 0;
         const availW = viewportW - railW - PAD_SIDE * 2;
         const availH = viewportH - TOPBAR_H - PAD_TOP - PAD_BOTTOM;
-        const maxCells = Math.max(gridSizeX, gridSizeY);
+        const maxCells = Math.max(telemetry.gridSizeX, telemetry.gridSizeY);
         const maxDim = Math.max(140, Math.min(availW, availH, 760));
         const ppc = maxDim / maxCells;
-        const w = gridSizeX * ppc;
-        const h = gridSizeY * ppc;
+        const w = telemetry.gridSizeX * ppc;
+        const h = telemetry.gridSizeY * ppc;
         const x = PAD_SIDE + (availW - w) / 2;
         const y = TOPBAR_H + PAD_TOP + (availH - h) / 2;
         return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
@@ -327,8 +313,8 @@
             gridY: gridGeom.y,
             gridW: gridGeom.w,
             gridH: gridGeom.h,
-            gridCellsX: gridSizeX,
-            gridCellsY: gridSizeY,
+            gridCellsX: telemetry.gridSizeX,
+            gridCellsY: telemetry.gridSizeY,
         } satisfies WorkerCmd);
     });
 
@@ -345,12 +331,12 @@
 
     function handleNextGen(autoPlay: boolean): void {
         machine.nextGen(autoPlay);
-        if (!autoPlay) currentStep = 0;
+        if (!autoPlay) telemetry.resetStep();
     }
 
     function handleRewind(autoPlay: boolean): void {
         machine.rewind(autoPlay);
-        if (!autoPlay) currentStep = 0;
+        if (!autoPlay) telemetry.resetStep();
     }
 
     // ── Agent selection ───────────────────────────────────────────────────────
@@ -367,8 +353,12 @@
         if (px < gridGeom.x || px >= gridGeom.x + gridGeom.w) return null;
         if (py < gridGeom.y || py >= gridGeom.y + gridGeom.h) return null;
         return {
-            gx: Math.floor((px - gridGeom.x) / (gridGeom.w / gridSizeX)),
-            gy: Math.floor((py - gridGeom.y) / (gridGeom.h / gridSizeY)),
+            gx: Math.floor(
+                (px - gridGeom.x) / (gridGeom.w / telemetry.gridSizeX),
+            ),
+            gy: Math.floor(
+                (py - gridGeom.y) / (gridGeom.h / telemetry.gridSizeY),
+            ),
         };
     }
 
@@ -655,8 +645,8 @@
         <GridView
             geom={gridGeom}
             phase={machine.phase}
-            {gridSizeX}
-            {gridSizeY}
+            gridSizeX={telemetry.gridSizeX}
+            gridSizeY={telemetry.gridSizeY}
             blurred={machine.phase === "CONFIRM"}
         />
 
@@ -664,7 +654,7 @@
             <!-- z-index: 10 — full-grid overlay during free-run -->
             <EvolveOverlay
                 geom={gridGeom}
-                gen={currentGen}
+                gen={telemetry.gen}
                 phase={machine.phase}
             />
         {:else}
@@ -672,15 +662,15 @@
             <TelemetryHUD
                 geom={gridGeom}
                 phase={machine.phase}
-                gen={currentGen}
-                step={currentStep}
-                {stepsPerGen}
-                pop={currentPop}
+                gen={telemetry.gen}
+                step={telemetry.step}
+                stepsPerGen={telemetry.stepsPerGen}
+                pop={telemetry.pop}
                 fps={measuredFps}
             />
 
             <!-- z-index: 15 — survival sparkline, bottom-left -->
-            <HUD {survivalHistory} />
+            <HUD survivalHistory={telemetry.survivalHistory} />
         {/if}
     {/if}
 
@@ -713,7 +703,7 @@
                 onRevert={() => machine.revertDraft()}
                 onConfUpload={handleConfUpload}
                 onConfDownload={handleConfDownload}
-                {snapReady}
+                snapReady={telemetry.snapReady}
                 onSnapUpload={handleSnapUpload}
                 onSnapDownload={() => machine.exportSnapshot()}
             />

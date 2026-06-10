@@ -414,8 +414,9 @@ every lifecycle worker command through a constructor-injected
 `send(cmd, transfer?)` callback. `App.svelte` creates one instance wired to
 `worker.postMessage`, routes state-relevant worker events into the machine,
 and derives all state props from its getters. Agent inspection state lives in a
-separate `AgentFocus` controller (below); remaining UI-only data (telemetry
-counters, layout, rail/tab/brain toggles) stays in `App.svelte`.
+separate `AgentFocus` controller, and the display-only telemetry counters in a
+`SimTelemetry` holder (both below); remaining UI-only data (layout,
+rail/tab/brain toggles) stays in `App.svelte`.
 
 Every phase transition happens inside a machine method:
 
@@ -465,6 +466,26 @@ so the click handler can fall through to a normal cell pick.
 A single view-effect opens the rail on the Cell tab whenever `focus.displayId`
 changes to a distinct non-null id (re-opening even after a manual close); it
 reads controller state and writes only view state, so it cannot self-trigger.
+
+### Simulation telemetry
+
+`src/lib/simTelemetry.svelte.ts` defines the `SimTelemetry` class, the holder
+for the display-only presentation fields derived purely from worker replies:
+the `gen` / `step` / `pop` counters, the `survivalHistory` sparkline, the active
+`gridSizeX` / `gridSizeY` / `stepsPerGen` parameters, and the `snapReady`
+export gate. It is the third sibling alongside `SimMachine` and `AgentFocus`
+and follows the same private-`$state` / public-getter / intent-method pattern
+with no `$effect`, so it is unit-testable in isolation. Unlike the other two it
+issues no worker commands, so it takes no `send` callback.
+
+Worker replies call its `on*` methods — `onStatus`, `onCensus`, `onConfigured`,
+`onRewindConfigured`, `onNextGenerationConfigured`, `onSnapshotLoaded` — and the
+manual next-gen/rewind gestures call `resetStep`; the view reads `telemetry.gen`
+/ `telemetry.survivalHistory` / `telemetry.snapReady` etc. via getters. The
+centralized `App.svelte` dispatcher routes a single worker message to multiple
+owners, so events like `census` feed both `SimMachine` and `SimTelemetry`; the
+overlap is deliberate — telemetry is a separate owner, not folded into the
+deliberately-focused machine.
 
 ### Brain explorer
 

@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on agent selection/hover: it now opens whenever the displayed agent changes
   to a distinct id (re-opening even after a manual close), superseding the
   earlier null→non-null-only behavior.
+- **webapp simulation telemetry** (gh-113) — extracted the display-only
+  telemetry fields (`currentGen`/`currentStep`/`currentPop`, `survivalHistory`,
+  `gridSizeX`/`gridSizeY`/`stepsPerGen`, `snapReady`) out of loose `$state` in
+  `App.svelte` into a `SimTelemetry` holder (`src/lib/simTelemetry.svelte.ts`),
+  the third sibling alongside `SimMachine` and `AgentFocus`. App's worker
+  message handler now delegates through `telemetry.on*` intent methods instead
+  of assigning fields inline, and the view reads the values through getters.
+  The holder issues no worker commands (no `send`) and contains no `$effect`,
+  so it is unit-tested in isolation. Behaviour is unchanged.
 
 ### Fixed
 - **Windows build** (gh-106) — two root causes fixed. First, `EmbedKernels.cmake`
