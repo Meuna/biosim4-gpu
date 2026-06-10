@@ -413,8 +413,9 @@ from the last census (deriving the `genomIncompatible` play-gate), and sends
 every lifecycle worker command through a constructor-injected
 `send(cmd, transfer?)` callback. `App.svelte` creates one instance wired to
 `worker.postMessage`, routes state-relevant worker events into the machine,
-and derives all state props from its getters. UI-only data (telemetry counters,
-agent selection, layout) stays in `App.svelte`.
+and derives all state props from its getters. Agent inspection state lives in a
+separate `AgentFocus` controller (below); remaining UI-only data (telemetry
+counters, layout, rail/tab/brain toggles) stays in `App.svelte`.
 
 Every phase transition happens inside a machine method:
 
@@ -440,6 +441,30 @@ can be instantiated and unit-tested outside a component with a recording
 Components (`PlayDock`, `GridView`, `EvolveOverlay`, `TelemetryHUD`, `TopBar`)
 receive `phase: SimPhase` as a prop and implement their own button-enable
 and display logic with inline phase comparisons rather than shared query helpers.
+
+### Agent-focus controller
+
+`src/lib/agentFocus.svelte.ts` defines the `AgentFocus` class, the single
+authority for which agent is under inspection. It owns the focus triad
+`{ selected, hovered, lastHovered }` and exposes a `$derived` **display** agent
+with priority `hovered ?? lastHovered ?? selected` (a live Ctrl+hover wins, the
+sticky last-hover survives so a Ctrl+click can promote it to a selection, then
+the persistent click-selection). Like `SimMachine` it takes a constructor-
+injected `send` and contains no `$effect`, so it is unit-testable in isolation.
+
+Worker replies call `pick(info, reason)` / `miss(reason)` / `update(info)`; UX
+gestures call `promoteHoverToSelection`, `endHover`, `clearHover`,
+`clearSelection`, `navigate`, `shuffle`, `selectById`. Two guards matter:
+`update` (the per-step live feed) only applies while a selection still exists,
+closing a same-tick race where an in-flight `agentUpdated` could resurrect a
+just-cleared selection; and `promoteHoverToSelection` reports whether it acted
+so the click handler can fall through to a normal cell pick.
+
+`App.svelte` keeps the rail/tab/brain toggles as plain view state and reads
+`focus.display` / `focus.displayId` / `focus.hasSelection` / `focus.isSelected`.
+A single view-effect opens the rail on the Cell tab whenever `focus.displayId`
+changes to a distinct non-null id (re-opening even after a manual close); it
+reads controller state and writes only view state, so it cannot self-trigger.
 
 ### Brain explorer
 

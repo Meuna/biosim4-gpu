@@ -2,7 +2,6 @@
     import type {
         WorkerCmd,
         WorkerEvent,
-        AgentInfo,
         SimParams,
     } from "./workers/sim.worker";
     import TopBar from "./lib/TopBar.svelte";
@@ -20,6 +19,7 @@
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
     import { simParamsToToml, tomlToSimParams } from "./lib/tomlConfig";
     import { SimMachine } from "./lib/simMachine.svelte";
+    import { AgentFocus } from "./lib/agentFocus.svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -38,28 +38,20 @@
         worker.postMessage(cmd, transfer ?? []),
     );
 
+    // ── Agent-focus controller ───────────────────────────────────────────────
+    // Owns the focus triad { selected, hovered, lastHovered }, the derived
+    // display agent, and every agent-related worker command. Worker replies and
+    // UX gestures below delegate to it.
+    const focus = new AgentFocus(send);
+
     const workerReady = $derived(machine.phase !== "WORKER_PENDING");
 
     worker.addEventListener("message", (e: MessageEvent<WorkerEvent>) => {
         const msg = e.data;
         if (msg.type === "agentPicked") {
-            if (msg.reason === "click") {
-                selectedAgent = msg.info;
-                lastHoveredAgent = null;
-                send({ type: "selectAgent", id: msg.info.id });
-            } else {
-                hoveredAgent = msg.info;
-                lastHoveredAgent = msg.info;
-                send({ type: "hoverAgent", id: msg.info.id });
-            }
+            focus.pick(msg.info, msg.reason);
         } else if (msg.type === "agentMissed") {
-            if (msg.reason === "click") {
-                selectedAgent = null;
-                send({ type: "selectAgent", id: null });
-            } else {
-                hoveredAgent = null;
-                send({ type: "hoverAgent", id: null });
-            }
+            focus.miss(msg.reason);
         } else if (msg.type === "ready") {
             if (canvasEl) {
                 const offscreen = canvasEl.transferControlToOffscreen();
@@ -140,10 +132,10 @@
             survivalHistory = [...survivalHistory.slice(-11), rate];
             snapReady = true;
         } else if (msg.type === "agentUpdated") {
-            selectedAgent = msg.info;
+            focus.update(msg.info);
         } else if (msg.type === "brainData") {
             // Ignore brain payloads for an agent that is no longer displayed.
-            if (msg.id === displayAgent?.id) {
+            if (msg.id === focus.displayId) {
                 brain = {
                     id: msg.id,
                     conns: msg.conns,
@@ -219,14 +211,10 @@
     });
 
     // ── UI state ─────────────────────────────────────────────────────────────
-    let selectedAgent = $state<AgentInfo | null>(null);
-    let hoveredAgent = $state<AgentInfo | null>(null);
-    let lastHoveredAgent = $state<AgentInfo | null>(null);
+    // The agent-focus triad and its derived display agent live in `focus`
+    // (AgentFocus); this component only reads its getters.
     let mouseX = $state(0);
     let mouseY = $state(0);
-    const displayAgent = $derived(
-        hoveredAgent ?? lastHoveredAgent ?? selectedAgent,
-    );
     let railOpen = $state(false);
     let activeTab = $state<"sim" | "cell">("sim");
 
@@ -246,7 +234,7 @@
     // (writing it from the brainData handler would otherwise re-trigger this
     // effect into a request loop); `displayBrain` gates stale data instead.
     $effect(() => {
-        const id = displayAgent?.id ?? null;
+        const id = focus.displayId;
         if (id === null || !workerReady) {
             requestedBrainId = null;
             return;
@@ -267,16 +255,18 @@
 
     // The brain payload aligned with the currently displayed agent (or null).
     const displayBrain = $derived(
-        brain && brain.id === displayAgent?.id ? brain : null,
+        brain && brain.id === focus.displayId ? brain : null,
     );
 
-    // Open the Cell tab only when a new selection is made (null → non-null).
-    // Tracking the previous id prevents the effect from re-firing on every
-    // agentUpdated live-update message while the same agent is selected.
+    // Open the rail on the Cell tab whenever the displayed agent changes to a
+    // distinct one — including after a manual close. Tracking the previous id
+    // prevents re-firing on every agentUpdated live-update message while the
+    // same agent stays displayed. Reads `focus` (controller state) and writes
+    // only view state, so it cannot self-trigger.
     let prevDisplayAgentId: number | null = null;
     $effect(() => {
-        const id = displayAgent?.id ?? null;
-        if (id !== null && prevDisplayAgentId === null) {
+        const id = focus.displayId;
+        if (id !== null && id !== prevDisplayAgentId) {
             railOpen = true;
             activeTab = "cell";
         }
@@ -286,11 +276,7 @@
     // Clear hover state when Ctrl key is released.
     $effect(() => {
         function onKeyUp(e: KeyboardEvent): void {
-            if (e.key === "Control") {
-                hoveredAgent = null;
-                lastHoveredAgent = null;
-                send({ type: "hoverAgent", id: null });
-            }
+            if (e.key === "Control") focus.clearHover();
         }
         window.addEventListener("keyup", onKeyUp);
         return () => window.removeEventListener("keyup", onKeyUp);
@@ -369,11 +355,7 @@
 
     // ── Agent selection ───────────────────────────────────────────────────────
     function handleClearSelection(): void {
-        selectedAgent = null;
-        hoveredAgent = null;
-        lastHoveredAgent = null;
-        send({ type: "selectAgent", id: null });
-        send({ type: "hoverAgent", id: null });
+        focus.clearSelection();
         activeTab = "sim";
         brainExpanded = false;
     }
@@ -392,12 +374,7 @@
 
     function handleCanvasClick(e: MouseEvent): void {
         if (!workerReady) return;
-        if (e.ctrlKey && lastHoveredAgent !== null && hoveredAgent === null) {
-            selectedAgent = lastHoveredAgent;
-            lastHoveredAgent = null;
-            send({ type: "selectAgent", id: selectedAgent.id });
-            return;
-        }
+        if (e.ctrlKey && focus.promoteHoverToSelection()) return;
         const cell = pixelToCell(e.clientX, e.clientY);
         if (cell) send({ type: "pickAgentAtCell", ...cell, reason: "click" });
     }
@@ -407,10 +384,7 @@
         mouseX = e.clientX;
         mouseY = e.clientY;
         if (!e.ctrlKey || !workerReady) {
-            if (hoveredAgent !== null) {
-                hoveredAgent = null;
-                send({ type: "hoverAgent", id: null });
-            }
+            focus.endHover();
             return;
         }
         if (hoverRafPending) return;
@@ -426,21 +400,15 @@
     }
 
     function handleNavigate(dir: -1 | 1): void {
-        if (selectedAgent) {
-            send({
-                type: "navigateAgent",
-                fromId: selectedAgent.id,
-                direction: dir,
-            });
-        }
+        focus.navigate(dir);
     }
 
     function handleShuffle(): void {
-        send({ type: "randomAgent" });
+        focus.shuffle();
     }
 
     function handleSelectById(id: number): void {
-        send({ type: "selectAgentById", id });
+        focus.selectById(id);
     }
 
     // ── Drag-drop overlay ────────────────────────────────────────────────────
@@ -643,13 +611,10 @@
         class:brain-hidden={brainExpanded}
         onclick={handleCanvasClick}
         onmousemove={handleCanvasHover}
-        onmouseleave={() => {
-            if (hoveredAgent !== null) send({ type: "hoverAgent", id: null });
-            hoveredAgent = null;
-        }}
+        onmouseleave={() => focus.endHover()}
     ></canvas>
 
-    <HoverCard agent={hoveredAgent} x={mouseX} y={mouseY} />
+    <HoverCard agent={focus.hovered} x={mouseX} y={mouseY} />
 
     {#if workerReady && !brainExpanded}
         <div
@@ -734,7 +699,7 @@
     <RightRail
         open={railOpen}
         {activeTab}
-        hasSelection={displayAgent !== null}
+        hasSelection={focus.hasSelection}
         onTabChange={(t) => (activeTab = t)}
     >
         {#snippet sim()}
@@ -755,11 +720,9 @@
         {/snippet}
         {#snippet cell()}
             <CellPanel
-                agent={displayAgent}
+                agent={focus.display}
                 brain={displayBrain}
-                isSelected={selectedAgent !== null &&
-                    hoveredAgent === null &&
-                    lastHoveredAgent === null}
+                isSelected={focus.isSelected}
                 onClear={handleClearSelection}
                 onNavigate={handleNavigate}
                 onShuffle={handleShuffle}

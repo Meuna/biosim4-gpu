@@ -21,8 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   implement their own enable/disable logic. Editing the config no longer
   interrupts a running simulation — dirtiness is orthogonal to the phase and
   the config-change dialog (`CONFIRM`) appears only when the user explicitly
-  stops a dirty run. Fixed the agent-selection "twitchy rail" bug by tracking
-  the previous agent ID to detect null→non-null transitions only.
+  stops a dirty run.
+- **webapp agent-focus controller** (gh-98) — extracted the agent-inspection
+  state (`selectedAgent`/`hoveredAgent`/`lastHoveredAgent` and the derived
+  display agent) and all agent worker-commands from `App.svelte` into an
+  `AgentFocus` class (`src/lib/agentFocus.svelte.ts`), the single authority for
+  which agent is under inspection. The per-step live-update feed now guards
+  against resurrecting a just-cleared selection. The Cell rail again auto-opens
+  on agent selection/hover: it now opens whenever the displayed agent changes
+  to a distinct id (re-opening even after a manual close), superseding the
+  earlier null→non-null-only behavior.
 
 ### Fixed
 - **Windows build** (gh-106) — two root causes fixed. First, `EmbedKernels.cmake`
