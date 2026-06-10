@@ -26,7 +26,7 @@ describe("initial state", () => {
 describe("onStatus", () => {
     it("updates only the step counter", () => {
         const t = create();
-        t.onStatus(42);
+        t.onStatus({ step: 42 });
         expect(t.step).toBe(42);
         expect(t.snapReady).toBe(false);
     });
@@ -35,7 +35,7 @@ describe("onStatus", () => {
 describe("onCensus", () => {
     it("updates gen/pop, appends survival rate, and arms snapReady", () => {
         const t = create();
-        t.onCensus(5, 200, 50);
+        t.onCensus({ gen: 5, population: 200, survivors: 50 });
         expect(t.gen).toBe(5);
         expect(t.pop).toBe(200);
         expect(history(t)).toEqual([0.25]);
@@ -44,13 +44,14 @@ describe("onCensus", () => {
 
     it("guards a zero population with a 0 rate", () => {
         const t = create();
-        t.onCensus(1, 0, 0);
+        t.onCensus({ gen: 1, population: 0, survivors: 0 });
         expect(history(t)).toEqual([0]);
     });
 
     it("caps the sparkline at 12 entries", () => {
         const t = create();
-        for (let i = 0; i < 15; i++) t.onCensus(i, 100, i);
+        for (let i = 0; i < 15; i++)
+            t.onCensus({ gen: i, population: 100, survivors: i });
         const h = history(t);
         expect(h).toHaveLength(12);
         // Oldest kept entry is the 4th census (survivors=3), newest is the 15th.
@@ -62,8 +63,13 @@ describe("onCensus", () => {
 describe("onConfigured", () => {
     it("resets counters/history and disarms snapReady", () => {
         const t = create();
-        t.onCensus(9, 100, 80); // dirty the state first
-        t.onConfigured(1500, 64, 96, 250);
+        t.onCensus({ gen: 9, population: 100, survivors: 80 }); // dirty first
+        t.onConfigured({
+            population: 1500,
+            gridSizeX: 64,
+            gridSizeY: 96,
+            stepsPerGen: 250,
+        });
         expect(t.gen).toBe(0);
         expect(t.step).toBe(0);
         expect(history(t)).toEqual([]);
@@ -79,8 +85,14 @@ describe("onRewindConfigured", () => {
     it("sets gen/pop/grid, resets step and history", () => {
         const t = create();
         t.onConfigured(1500, 64, 96, 250);
-        t.onStatus(120);
-        t.onRewindConfigured(3, 2000, 32, 48, 400);
+        t.onStatus({ step: 120 });
+        t.onRewindConfigured({
+            gen: 3,
+            population: 2000,
+            gridSizeX: 32,
+            gridSizeY: 48,
+            stepsPerGen: 400,
+        });
         expect(t.gen).toBe(3);
         expect(t.step).toBe(0);
         expect(t.pop).toBe(2000);
@@ -92,8 +104,14 @@ describe("onRewindConfigured", () => {
 
     it("leaves snapReady untouched (preserves prior value)", () => {
         const t = create();
-        t.onCensus(2, 100, 50); // arms snapReady = true
-        t.onRewindConfigured(1, 100, 64, 64, 300);
+        t.onCensus({ gen: 2, population: 100, survivors: 50 }); // arms snapReady
+        t.onRewindConfigured({
+            gen: 1,
+            population: 100,
+            gridSizeX: 64,
+            gridSizeY: 64,
+            stepsPerGen: 300,
+        });
         expect(t.snapReady).toBe(true);
     });
 });
@@ -101,7 +119,15 @@ describe("onRewindConfigured", () => {
 describe("onNextGenerationConfigured", () => {
     it("uses the census population as the survival denominator", () => {
         const t = create();
-        t.onNextGenerationConfigured(4, 3000, 128, 128, 300, 160, 40);
+        t.onNextGenerationConfigured({
+            gen: 4,
+            population: 3000,
+            gridSizeX: 128,
+            gridSizeY: 128,
+            stepsPerGen: 300,
+            censusPopulation: 160,
+            survivors: 40,
+        });
         expect(t.gen).toBe(4);
         expect(t.step).toBe(0);
         expect(t.pop).toBe(3000);
@@ -111,7 +137,15 @@ describe("onNextGenerationConfigured", () => {
 
     it("guards a zero census population with a 0 rate", () => {
         const t = create();
-        t.onNextGenerationConfigured(1, 3000, 128, 128, 300, 0, 0);
+        t.onNextGenerationConfigured({
+            gen: 1,
+            population: 3000,
+            gridSizeX: 128,
+            gridSizeY: 128,
+            stepsPerGen: 300,
+            censusPopulation: 0,
+            survivors: 0,
+        });
         expect(history(t)).toEqual([0]);
     });
 });
@@ -119,8 +153,14 @@ describe("onNextGenerationConfigured", () => {
 describe("onSnapshotLoaded", () => {
     it("sets gen/pop/grid, arms snapReady, clears history", () => {
         const t = create();
-        t.onCensus(9, 100, 80);
-        t.onSnapshotLoaded(7, 1200, 80, 80, 500);
+        t.onCensus({ gen: 9, population: 100, survivors: 80 });
+        t.onSnapshotLoaded({
+            gen: 7,
+            population: 1200,
+            gridSizeX: 80,
+            gridSizeY: 80,
+            stepsPerGen: 500,
+        });
         expect(t.gen).toBe(7);
         expect(t.step).toBe(0);
         expect(t.pop).toBe(1200);
@@ -135,8 +175,8 @@ describe("onSnapshotLoaded", () => {
 describe("resetStep", () => {
     it("zeroes only the step counter", () => {
         const t = create();
-        t.onStatus(88);
-        t.onCensus(3, 100, 50);
+        t.onStatus({ step: 88 });
+        t.onCensus({ gen: 3, population: 100, survivors: 50 });
         t.resetStep();
         expect(t.step).toBe(0);
         expect(t.gen).toBe(3);

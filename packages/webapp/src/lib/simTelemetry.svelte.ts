@@ -8,6 +8,21 @@
 // callback. Worker replies call its `on*` intent methods; the view only reads
 // its getters. No `$effect` lives inside the class — methods mutate state
 // imperatively, keeping it unit-testable in isolation.
+//
+// The `on*` methods accept the relevant worker-reply payload as a single
+// object, typed by these holder-owned structural shapes rather than the
+// `WorkerEvent` union — so a narrowed `msg` satisfies them via structural
+// subtyping (extra fields it carries are simply ignored) without coupling the
+// holder to the worker wire protocol.
+
+// The grid/steps parameters echoed by every (re)configuration reply.
+type ConfigInfo = {
+    population: number;
+    gridSizeX: number;
+    gridSizeY: number;
+    stepsPerGen: number;
+};
+
 export class SimTelemetry {
     #gen = $state(0);
     #step = $state(0);
@@ -65,81 +80,62 @@ export class SimTelemetry {
 
     // ── Worker-reply intents ──────────────────────────────────────────────────
 
-    onStatus(step: number): void {
-        this.#step = step;
+    onStatus(e: { step: number }): void {
+        this.#step = e.step;
     }
 
-    onCensus(gen: number, population: number, survivors: number): void {
-        this.#gen = gen;
-        this.#pop = population;
-        this.#pushSurvival(survivors, population);
+    onCensus(e: { gen: number; population: number; survivors: number }): void {
+        this.#gen = e.gen;
+        this.#pop = e.population;
+        this.#pushSurvival(e.survivors, e.population);
         this.#snapReady = true;
     }
 
-    onConfigured(
-        population: number,
-        gridSizeX: number,
-        gridSizeY: number,
-        stepsPerGen: number,
-    ): void {
+    onConfigured(e: ConfigInfo): void {
         this.#gen = 0;
         this.#step = 0;
         this.#survivalHistory = [];
-        this.#pop = population;
-        this.#gridSizeX = gridSizeX;
-        this.#gridSizeY = gridSizeY;
-        this.#stepsPerGen = stepsPerGen;
+        this.#pop = e.population;
+        this.#gridSizeX = e.gridSizeX;
+        this.#gridSizeY = e.gridSizeY;
+        this.#stepsPerGen = e.stepsPerGen;
         this.#snapReady = false;
     }
 
-    onRewindConfigured(
-        gen: number,
-        population: number,
-        gridSizeX: number,
-        gridSizeY: number,
-        stepsPerGen: number,
-    ): void {
-        this.#gen = gen;
+    onRewindConfigured(e: ConfigInfo & { gen: number }): void {
+        this.#gen = e.gen;
         this.#step = 0;
-        this.#pop = population;
-        this.#gridSizeX = gridSizeX;
-        this.#gridSizeY = gridSizeY;
-        this.#stepsPerGen = stepsPerGen;
+        this.#pop = e.population;
+        this.#gridSizeX = e.gridSizeX;
+        this.#gridSizeY = e.gridSizeY;
+        this.#stepsPerGen = e.stepsPerGen;
         this.#survivalHistory = [];
     }
 
     onNextGenerationConfigured(
-        gen: number,
-        population: number,
-        gridSizeX: number,
-        gridSizeY: number,
-        stepsPerGen: number,
-        censusPopulation: number,
-        survivors: number,
+        e: ConfigInfo & {
+            gen: number;
+            censusPopulation: number;
+            survivors: number;
+        },
     ): void {
-        this.#gen = gen;
+        this.#gen = e.gen;
         this.#step = 0;
-        this.#pop = population;
-        this.#gridSizeX = gridSizeX;
-        this.#gridSizeY = gridSizeY;
-        this.#stepsPerGen = stepsPerGen;
-        this.#pushSurvival(survivors, censusPopulation);
+        this.#pop = e.population;
+        this.#gridSizeX = e.gridSizeX;
+        this.#gridSizeY = e.gridSizeY;
+        this.#stepsPerGen = e.stepsPerGen;
+        this.#pushSurvival(e.survivors, e.censusPopulation);
         this.#snapReady = true;
     }
 
-    onSnapshotLoaded(
-        gen: number,
-        population: number,
-        gridSizeX: number,
-        gridSizeY: number,
-        stepsPerGen: number,
-    ): void {
-        this.#gen = gen;
+    onSnapshotLoaded(e: ConfigInfo & { gen: number }): void {
+        this.#gen = e.gen;
         this.#step = 0;
-        this.#pop = population;
-        this.#gridSizeX = gridSizeX;
-        this.#gridSizeY = gridSizeY;
-        this.#stepsPerGen = stepsPerGen;
+        this.#pop = e.population;
+        this.#gridSizeX = e.gridSizeX;
+        this.#gridSizeY = e.gridSizeY;
+        this.#stepsPerGen = e.stepsPerGen;
         this.#snapReady = true;
         this.#survivalHistory = [];
     }

@@ -99,7 +99,7 @@
                 } satisfies WorkerCmd);
             }
         } else if (msg.type === "status") {
-            telemetry.onStatus(msg.step);
+            telemetry.onStatus(msg);
             if (msg.state === "gen_complete") {
                 machine.onGenComplete();
             } else if (msg.state === "paused") {
@@ -107,30 +107,16 @@
             }
         } else if (msg.type === "census") {
             machine.onCensus(msg.genomeMaxLenUsed, msg.genomeMaxNeuronsUsed);
-            telemetry.onCensus(msg.gen, msg.population, msg.survivors);
+            telemetry.onCensus(msg);
         } else if (msg.type === "rewindConfigured") {
             machine.onRewindConfigured();
-            telemetry.onRewindConfigured(
-                msg.gen,
-                msg.population,
-                msg.gridSizeX,
-                msg.gridSizeY,
-                msg.stepsPerGen,
-            );
+            telemetry.onRewindConfigured(msg);
         } else if (msg.type === "nextGenerationConfigured") {
             machine.onNextGenerationConfigured(
                 msg.genomeMaxLenUsed,
                 msg.genomeMaxNeuronsUsed,
             );
-            telemetry.onNextGenerationConfigured(
-                msg.gen,
-                msg.population,
-                msg.gridSizeX,
-                msg.gridSizeY,
-                msg.stepsPerGen,
-                msg.censusPopulation,
-                msg.survivors,
-            );
+            telemetry.onNextGenerationConfigured(msg);
         } else if (msg.type === "agentUpdated") {
             focus.update(msg.info);
         } else if (msg.type === "brainData") {
@@ -146,12 +132,7 @@
             measuredFps = msg.value;
         } else if (msg.type === "configured") {
             machine.onConfigured();
-            telemetry.onConfigured(
-                msg.population,
-                msg.gridSizeX,
-                msg.gridSizeY,
-                msg.stepsPerGen,
-            );
+            telemetry.onConfigured(msg);
         } else if (msg.type === "snapshotData") {
             const blob = new Blob([msg.data], {
                 type: "application/octet-stream",
@@ -164,13 +145,7 @@
             URL.revokeObjectURL(url);
         } else if (msg.type === "snapshotLoaded") {
             machine.onSnapshotLoaded();
-            telemetry.onSnapshotLoaded(
-                msg.gen,
-                msg.population,
-                msg.gridSizeX,
-                msg.gridSizeY,
-                msg.stepsPerGen,
-            );
+            telemetry.onSnapshotLoaded(msg);
         } else if (msg.type === "error") {
             confErrorMsg = msg.message;
         }
