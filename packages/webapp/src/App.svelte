@@ -18,31 +18,27 @@
     import EvolveOverlay from "./lib/EvolveOverlay.svelte";
     import type { BrainConn } from "./lib/brain";
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
-    import {
-        DEFAULTS,
-        simParamsToToml,
-        tomlToSimParams,
-    } from "./lib/tomlConfig";
-    import {
-        type SimState,
-        enterDirty,
-        exitDirty,
-        onWorkerReady,
-        onConfigured,
-        onGenComplete,
-        onFreeRunPaused,
-        onRewindOrNextGenDone,
-        onSnapshotLoaded,
-    } from "./lib/simState";
+    import { simParamsToToml, tomlToSimParams } from "./lib/tomlConfig";
+    import { SimMachine } from "./lib/simMachine.svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
-    let workerReady = $state(false);
 
     const worker = new Worker(
         new URL("./workers/sim.worker.ts", import.meta.url),
         { type: "module" },
     );
+
+    // ── Simulation state machine ─────────────────────────────────────────────
+    // Owns { phase, dirty }, the draft/last-played configs, the genome
+    // compatibility gate, and every lifecycle worker command. UX handlers and
+    // worker replies below delegate to it; the rest of this component only
+    // reads its getters.
+    const machine = new SimMachine((cmd, transfer) =>
+        worker.postMessage(cmd, transfer ?? []),
+    );
+
+    const workerReady = $derived(machine.phase !== "WORKER_PENDING");
 
     worker.addEventListener("message", (e: MessageEvent<WorkerEvent>) => {
         const msg = e.data;
@@ -87,8 +83,7 @@
                     } satisfies WorkerCmd,
                     [offscreen],
                 );
-                simState = onWorkerReady(simState);
-                workerReady = true;
+                machine.onWorkerReady();
                 // Send initial layout so the worker sizes the canvas and knows
                 // where the grid region lives on the full-viewport surface.
                 send({
@@ -106,21 +101,20 @@
         } else if (msg.type === "status") {
             currentStep = msg.step;
             if (msg.state === "gen_complete") {
-                simState = onGenComplete(simState);
+                machine.onGenComplete();
             } else if (msg.state === "paused") {
-                simState = onFreeRunPaused(simState);
+                machine.onFreeRunPaused();
             }
         } else if (msg.type === "census") {
+            machine.onCensus(msg.genomeMaxLenUsed, msg.genomeMaxNeuronsUsed);
             currentGen = msg.gen;
             currentPop = msg.population;
             const rate =
                 msg.population > 0 ? msg.survivors / msg.population : 0;
             survivalHistory = [...survivalHistory.slice(-11), rate];
-            workerGenomeMaxLenUsed = msg.genomeMaxLenUsed;
-            workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
             snapReady = true;
         } else if (msg.type === "rewindConfigured") {
-            simState = onRewindOrNextGenDone(simState);
+            machine.onRewindConfigured();
             currentGen = msg.gen;
             currentStep = 0;
             currentPop = msg.population;
@@ -128,14 +122,11 @@
             gridSizeY = msg.gridSizeY;
             stepsPerGen = msg.stepsPerGen;
             survivalHistory = [];
-            workerGenomeMaxLenUsed = 0;
-            workerGenomeMaxNeuronsUsed = 0;
-            if (pendingLastPlayedConfig !== null) {
-                lastPlayedConfig = pendingLastPlayedConfig;
-                pendingLastPlayedConfig = null;
-            }
         } else if (msg.type === "nextGenerationConfigured") {
-            simState = onRewindOrNextGenDone(simState);
+            machine.onNextGenerationConfigured(
+                msg.genomeMaxLenUsed,
+                msg.genomeMaxNeuronsUsed,
+            );
             currentGen = msg.gen;
             currentStep = 0;
             currentPop = msg.population;
@@ -147,13 +138,7 @@
                     ? msg.survivors / msg.censusPopulation
                     : 0;
             survivalHistory = [...survivalHistory.slice(-11), rate];
-            workerGenomeMaxLenUsed = msg.genomeMaxLenUsed;
-            workerGenomeMaxNeuronsUsed = msg.genomeMaxNeuronsUsed;
             snapReady = true;
-            if (pendingLastPlayedConfig !== null) {
-                lastPlayedConfig = pendingLastPlayedConfig;
-                pendingLastPlayedConfig = null;
-            }
         } else if (msg.type === "agentUpdated") {
             selectedAgent = msg.info;
         } else if (msg.type === "brainData") {
@@ -168,7 +153,7 @@
         } else if (msg.type === "fps") {
             measuredFps = msg.value;
         } else if (msg.type === "configured") {
-            simState = onConfigured();
+            machine.onConfigured();
             currentGen = 0;
             currentStep = 0;
             survivalHistory = [];
@@ -176,18 +161,7 @@
             gridSizeX = msg.gridSizeX;
             gridSizeY = msg.gridSizeY;
             stepsPerGen = msg.stepsPerGen;
-            workerGenomeMaxLenUsed = 0;
-            workerGenomeMaxNeuronsUsed = 0;
             snapReady = false;
-            if (pendingLastPlayedConfig !== null) {
-                lastPlayedConfig = pendingLastPlayedConfig;
-                pendingLastPlayedConfig = null;
-            }
-            if (pendingPlay) {
-                pendingPlay = false;
-                simState = "STEPS_RUNNING";
-                send({ type: "play" });
-            }
         } else if (msg.type === "snapshotData") {
             const blob = new Blob([msg.data], {
                 type: "application/octet-stream",
@@ -199,7 +173,7 @@
             a.click();
             URL.revokeObjectURL(url);
         } else if (msg.type === "snapshotLoaded") {
-            simState = onSnapshotLoaded();
+            machine.onSnapshotLoaded();
             currentGen = msg.gen;
             currentStep = 0;
             currentPop = msg.population;
@@ -208,12 +182,6 @@
             stepsPerGen = msg.stepsPerGen;
             snapReady = true;
             survivalHistory = [];
-            workerGenomeMaxLenUsed = 0;
-            workerGenomeMaxNeuronsUsed = 0;
-            if (pendingLastPlayedConfig !== null) {
-                lastPlayedConfig = pendingLastPlayedConfig;
-                pendingLastPlayedConfig = null;
-            }
         } else if (msg.type === "error") {
             confErrorMsg = msg.message;
         }
@@ -223,35 +191,7 @@
         worker.postMessage(cmd);
     }
 
-    // ── Draft / last-played config ───────────────────────────────────────────
-    let draftConfig = $state<SimParams>({
-        ...DEFAULTS,
-        challenge: { ...DEFAULTS.challenge },
-    });
-    let lastPlayedConfig = $state<SimParams>({
-        ...DEFAULTS,
-        challenge: { ...DEFAULTS.challenge },
-    });
-    const isDirty = $derived(
-        JSON.stringify($state.snapshot(draftConfig)) !==
-            JSON.stringify($state.snapshot(lastPlayedConfig)),
-    );
-    // Plain (non-reactive) — only read inside the worker message handler.
-    let pendingPlay = false;
-    let pendingLastPlayedConfig: SimParams | null = null;
-
-    // ── Simulation state machine ─────────────────────────────────────────────
-    let simState = $state<SimState>("WORKER_PENDING");
-
-    // When isDirty changes, ask the state machine whether a dirty/clean
-    // transition is legal. enterDirty/exitDirty decide internally; this effect
-    // has no guard logic of its own.
-    // isDirty reads draftConfig + lastPlayedConfig; simState is not in that
-    // chain, so there is no self-trigger risk.
-    $effect(() => {
-        simState = isDirty ? enterDirty(simState) : exitDirty(simState);
-    });
-
+    // ── Telemetry ────────────────────────────────────────────────────────────
     let currentGen = $state(0);
     let currentStep = $state(0);
     let currentPop = $state(3000);
@@ -263,10 +203,6 @@
     let gridSizeX = $state(128);
     let gridSizeY = $state(128);
 
-    // Genome max values from the last census; reset to 0 after configure/clearGenom.
-    let workerGenomeMaxLenUsed = $state(0);
-    let workerGenomeMaxNeuronsUsed = $state(0);
-
     // True once at least one generation boundary has been crossed (snap.count > 0).
     let snapReady = $state(false);
     // Bound to the hidden .snap file input element.
@@ -277,31 +213,10 @@
     let measuredFps = $state<number | null>(null);
 
     $effect(() => {
-        if (
-            simState !== "STEPS_RUNNING" &&
-            simState !== "DIRTY_STEPS_RUNNING"
-        ) {
+        if (machine.phase !== "STEPS_RUNNING") {
             measuredFps = null;
         }
     });
-
-    // Genome compatibility gate — true when draft would truncate live survivors.
-    const genomIncompatible = $derived(
-        (workerGenomeMaxLenUsed > 0 &&
-            draftConfig.maxGenomeLen < workerGenomeMaxLenUsed) ||
-            (workerGenomeMaxNeuronsUsed > 0 &&
-                draftConfig.maxNeurons < workerGenomeMaxNeuronsUsed),
-    );
-    const incompatibleFields = $derived<string[]>([
-        ...(workerGenomeMaxLenUsed > 0 &&
-        draftConfig.maxGenomeLen < workerGenomeMaxLenUsed
-            ? ["maxGenomeLen"]
-            : []),
-        ...(workerGenomeMaxNeuronsUsed > 0 &&
-        draftConfig.maxNeurons < workerGenomeMaxNeuronsUsed
-            ? ["maxNeurons"]
-            : []),
-    ]);
 
     // ── UI state ─────────────────────────────────────────────────────────────
     let selectedAgent = $state<AgentInfo | null>(null);
@@ -433,131 +348,23 @@
 
     // ── Draft config callbacks ────────────────────────────────────────────────
     function handleDraftChange(params: SimParams): void {
-        draftConfig = params;
-        // The isDirty-sync effect will ask the state machine to enter the
-        // appropriate DIRTY_* state. The sim keeps running if it was running.
+        machine.setDraft(params);
     }
 
-    function handleRevert(): void {
-        draftConfig = { ...($state.snapshot(lastPlayedConfig) as SimParams) };
-    }
-
-    function handleDialogRevertContinue(): void {
-        handleRevert();
-        simState = "STEPS_RUNNING";
-        send({ type: "play" });
-    }
-
-    function handleDialogRewind(): void {
-        handleRewind(false);
-    }
-
-    // ── Play / pause / step / gen / reset ────────────────────────────────────
-    function handleToggle(): void {
-        if (
-            simState === "STEPS_RUNNING" ||
-            simState === "DIRTY_STEPS_RUNNING"
-        ) {
-            // Stop: dirty running enters the confirm dialog; clean just pauses.
-            simState =
-                simState === "DIRTY_STEPS_RUNNING"
-                    ? "DIRTY_CONFIRM"
-                    : "STEPS_PAUSED";
-            send({ type: "stop" });
-        } else if (genomIncompatible) {
-            return;
-        } else if (
-            simState === "GENERATION_SPAWNED" ||
-            simState === "STEPS_PAUSED"
-        ) {
-            simState = "STEPS_RUNNING";
-            send({ type: "play" });
-        } else if (
-            simState === "DIRTY_GENERATION_SPAWNED" ||
-            simState === "DIRTY_STEPS_PAUSED"
-        ) {
-            // Apply the dirty config then start.
-            const snapshot = $state.snapshot(draftConfig) as SimParams;
-            pendingLastPlayedConfig = snapshot;
-            pendingPlay = true;
-            send({ type: "configure", params: snapshot });
-        } else if (simState === "WORKER_READY") {
-            if (isDirty) {
-                const snapshot = $state.snapshot(draftConfig) as SimParams;
-                pendingLastPlayedConfig = snapshot;
-                pendingPlay = true;
-                send({ type: "configure", params: snapshot });
-            } else {
-                simState = "STEPS_RUNNING";
-                send({ type: "play" });
-            }
-        }
-    }
-
+    // ── Play / pause / step / gen ────────────────────────────────────────────
     function handleSetSpeed(fps: number): void {
         targetSpeed = fps;
         send({ type: "setSpeed", fps } satisfies WorkerCmd);
     }
 
-    function handleStep(): void {
-        if (simState === "WORKER_READY") simState = "STEPS_PAUSED";
-        send({ type: "step" });
-    }
-
-    function handleToggleFreeRun(): void {
-        if (simState === "FREE_RUNNING" || simState === "DIRTY_FREE_RUNNING") {
-            simState =
-                simState === "DIRTY_FREE_RUNNING"
-                    ? "DIRTY_FREE_RUN_STOPPING"
-                    : "FREE_RUN_STOPPING";
-            send({ type: "stopFreeRun" });
-        } else {
-            simState = isDirty ? "DIRTY_FREE_RUNNING" : "FREE_RUNNING";
-            send({ type: "startFreeRun" });
-        }
-    }
-
     function handleNextGen(autoPlay: boolean): void {
-        if (autoPlay) {
-            simState = isDirty ? "DIRTY_STEPS_RUNNING" : "STEPS_RUNNING";
-        } else {
-            simState = onRewindOrNextGenDone(simState);
-            currentStep = 0;
-        }
-        if (isDirty) {
-            const snapshot = $state.snapshot(draftConfig) as SimParams;
-            pendingLastPlayedConfig = snapshot;
-            send({ type: "nextGenerationConfigured", params: snapshot });
-        } else {
-            send({ type: "nextGeneration" });
-        }
-        if (autoPlay) {
-            send({ type: "play" });
-        }
+        machine.nextGen(autoPlay);
+        if (!autoPlay) currentStep = 0;
     }
 
     function handleRewind(autoPlay: boolean): void {
-        if (!autoPlay) {
-            simState = onRewindOrNextGenDone(simState);
-            currentStep = 0;
-        }
-        if (isDirty) {
-            const snapshot = $state.snapshot(draftConfig) as SimParams;
-            pendingLastPlayedConfig = snapshot;
-            send({ type: "rewindConfigured", params: snapshot });
-        } else {
-            send({ type: "rewind" });
-        }
-        if (autoPlay) {
-            simState = isDirty ? "DIRTY_STEPS_RUNNING" : "STEPS_RUNNING";
-            send({ type: "play" });
-        }
-    }
-
-    function handleClearGenom(): void {
-        workerGenomeMaxLenUsed = 0;
-        workerGenomeMaxNeuronsUsed = 0;
-        send({ type: "clearGenom" });
+        machine.rewind(autoPlay);
+        if (!autoPlay) currentStep = 0;
     }
 
     // ── Agent selection ───────────────────────────────────────────────────────
@@ -657,7 +464,9 @@
     });
 
     function handleConfDownload(): void {
-        const toml = simParamsToToml($state.snapshot(draftConfig) as SimParams);
+        const toml = simParamsToToml(
+            $state.snapshot(machine.draftConfig) as SimParams,
+        );
         const blob = new Blob([toml], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
@@ -707,23 +516,12 @@
         e.currentTarget.value = "";
         void file.arrayBuffer().then(
             (buf) => {
-                worker.postMessage(
-                    {
-                        type: "loadSnapshot",
-                        params: $state.snapshot(draftConfig) as SimParams,
-                        data: new Uint8Array(buf),
-                    } satisfies WorkerCmd,
-                    [buf],
-                );
+                machine.loadSnapshot(new Uint8Array(buf));
             },
             () => {
                 confErrorMsg = "Failed to read snapshot file";
             },
         );
-    }
-
-    function handleSnapDownload(): void {
-        worker.postMessage({ type: "exportSnapshot" } satisfies WorkerCmd);
     }
 
     function handleDrop(e: DragEvent): void {
@@ -742,10 +540,8 @@
             // the correct params rather than stale draftConfig.
             void Promise.all([tomlFile.text(), snapFile.arrayBuffer()]).then(
                 ([tomlText, snapBuf]) => {
-                    let params: SimParams;
                     try {
-                        params = tomlToSimParams(tomlText);
-                        handleDraftChange(params);
+                        handleDraftChange(tomlToSimParams(tomlText));
                         confErrorMsg = null;
                     } catch (err) {
                         confErrorMsg =
@@ -754,14 +550,7 @@
                                 : "Failed to parse config";
                         return;
                     }
-                    worker.postMessage(
-                        {
-                            type: "loadSnapshot",
-                            params,
-                            data: new Uint8Array(snapBuf),
-                        } satisfies WorkerCmd,
-                        [snapBuf],
-                    );
+                    machine.loadSnapshot(new Uint8Array(snapBuf));
                 },
                 () => {
                     confErrorMsg = "Failed to read files";
@@ -779,16 +568,7 @@
             if (snapFile) {
                 void snapFile.arrayBuffer().then(
                     (buf) => {
-                        worker.postMessage(
-                            {
-                                type: "loadSnapshot",
-                                params: $state.snapshot(
-                                    draftConfig,
-                                ) as SimParams,
-                                data: new Uint8Array(buf),
-                            } satisfies WorkerCmd,
-                            [buf],
-                        );
+                        machine.loadSnapshot(new Uint8Array(buf));
                     },
                     () => {
                         confErrorMsg = "Failed to read snapshot file";
@@ -884,23 +664,23 @@
 
     <!-- z-index: 20 — fixed top bar (contains PlayDock inline) -->
     <TopBar
-        {simState}
-        {genomIncompatible}
+        phase={machine.phase}
+        genomIncompatible={machine.genomIncompatible}
         {targetSpeed}
         onSetSpeed={handleSetSpeed}
-        onToggle={handleToggle}
-        onStep={handleStep}
+        onToggle={() => machine.toggle()}
+        onStep={() => machine.step()}
         onNextGen={handleNextGen}
         onRewind={handleRewind}
-        onClearGenom={handleClearGenom}
-        onToggleFreeRun={handleToggleFreeRun}
+        onClearGenom={() => machine.clearGenom()}
+        onToggleFreeRun={() => machine.toggleFreeRun()}
     />
 
     <!-- z-index: 55/60 — config-change-while-running dialog -->
     <ConfigChangeDialog
-        open={simState === "DIRTY_CONFIRM"}
-        onRevertContinue={handleDialogRevertContinue}
-        onRewind={handleDialogRewind}
+        open={machine.phase === "CONFIRM"}
+        onRevertContinue={() => machine.confirmRevertContinue()}
+        onRewind={() => machine.confirmRewind()}
     />
 
     <!-- Grid stack — hidden while the brain explorer is expanded (it takes over
@@ -909,20 +689,24 @@
         <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
         <GridView
             geom={gridGeom}
-            {simState}
+            phase={machine.phase}
             {gridSizeX}
             {gridSizeY}
-            blurred={simState === "DIRTY_CONFIRM"}
+            blurred={machine.phase === "CONFIRM"}
         />
 
-        {#if simState === "FREE_RUNNING" || simState === "DIRTY_FREE_RUNNING" || simState === "FREE_RUN_STOPPING" || simState === "DIRTY_FREE_RUN_STOPPING"}
+        {#if machine.phase === "FREE_RUNNING" || machine.phase === "FREE_RUN_STOPPING"}
             <!-- z-index: 10 — full-grid overlay during free-run -->
-            <EvolveOverlay geom={gridGeom} gen={currentGen} {simState} />
+            <EvolveOverlay
+                geom={gridGeom}
+                gen={currentGen}
+                phase={machine.phase}
+            />
         {:else}
             <!-- z-index: 15 — telemetry stats, top-right of grid -->
             <TelemetryHUD
                 geom={gridGeom}
-                {simState}
+                phase={machine.phase}
                 gen={currentGen}
                 step={currentStep}
                 {stepsPerGen}
@@ -955,18 +739,18 @@
     >
         {#snippet sim()}
             <SimConfigPanel
-                {draftConfig}
-                {isDirty}
-                {incompatibleFields}
-                genomeMaxLenUsed={workerGenomeMaxLenUsed}
-                genomeMaxNeuronsUsed={workerGenomeMaxNeuronsUsed}
+                draftConfig={machine.draftConfig}
+                isDirty={machine.dirty}
+                incompatibleFields={machine.incompatibleFields}
+                genomeMaxLenUsed={machine.genomeMaxLenUsed}
+                genomeMaxNeuronsUsed={machine.genomeMaxNeuronsUsed}
                 onDraftChange={handleDraftChange}
-                onRevert={handleRevert}
+                onRevert={() => machine.revertDraft()}
                 onConfUpload={handleConfUpload}
                 onConfDownload={handleConfDownload}
                 {snapReady}
                 onSnapUpload={handleSnapUpload}
-                onSnapDownload={handleSnapDownload}
+                onSnapDownload={() => machine.exportSnapshot()}
             />
         {/snippet}
         {#snippet cell()}

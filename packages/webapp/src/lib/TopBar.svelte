@@ -1,9 +1,9 @@
 <script lang="ts">
     import PlayDock from "./PlayDock.svelte";
-    import type { SimState } from "./simState";
+    import type { SimPhase } from "./simMachine.svelte";
 
     let {
-        simState,
+        phase,
         genomIncompatible = false,
         targetSpeed,
         onToggle,
@@ -14,7 +14,7 @@
         onSetSpeed,
         onToggleFreeRun,
     }: {
-        simState: SimState;
+        phase: SimPhase;
         genomIncompatible?: boolean;
         targetSpeed: number;
         onToggle: () => void;
@@ -35,7 +35,7 @@
 
     <div class="topbar__center">
         <PlayDock
-            {simState}
+            {phase}
             {genomIncompatible}
             {targetSpeed}
             {onToggle}

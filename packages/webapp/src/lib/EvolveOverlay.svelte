@@ -1,20 +1,17 @@
 <script lang="ts">
-    import type { SimState } from "./simState";
+    import type { SimPhase } from "./simMachine.svelte";
 
     let {
         geom,
         gen,
-        simState,
+        phase,
     }: {
         geom: { x: number; y: number; w: number; h: number };
         gen: number;
-        simState: SimState;
+        phase: SimPhase;
     } = $props();
 
-    const stopping = $derived(
-        simState === "FREE_RUN_STOPPING" ||
-            simState === "DIRTY_FREE_RUN_STOPPING",
-    );
+    const stopping = $derived(phase === "FREE_RUN_STOPPING");
 </script>
 
 <div

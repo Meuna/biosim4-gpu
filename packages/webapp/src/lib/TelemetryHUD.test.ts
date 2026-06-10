@@ -7,7 +7,7 @@ describe("TelemetryHUD", () => {
     it("renders the Simulation telemetry aria-label", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
-            simState: "STEPS_PAUSED" as const,
+            phase: "STEPS_PAUSED" as const,
             gen: 0,
             step: 0,
             stepsPerGen: 300,
@@ -19,7 +19,7 @@ describe("TelemetryHUD", () => {
     it("renders all stat labels", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
-            simState: "STEPS_PAUSED" as const,
+            phase: "STEPS_PAUSED" as const,
             gen: 0,
             step: 0,
             stepsPerGen: 300,
@@ -34,7 +34,7 @@ describe("TelemetryHUD", () => {
     it("shows zero-padded gen and step values", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
-            simState: "STEPS_PAUSED" as const,
+            phase: "STEPS_PAUSED" as const,
             gen: 7,
             step: 42,
             stepsPerGen: 300,
@@ -47,7 +47,7 @@ describe("TelemetryHUD", () => {
     it("shows -- for fps when not running", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
-            simState: "STEPS_PAUSED" as const,
+            phase: "STEPS_PAUSED" as const,
             gen: 0,
             step: 0,
             stepsPerGen: 300,
@@ -59,7 +59,7 @@ describe("TelemetryHUD", () => {
     it("shows measured fps value when provided and running", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
-            simState: "STEPS_RUNNING" as const,
+            phase: "STEPS_RUNNING" as const,
             gen: 0,
             step: 0,
             stepsPerGen: 300,

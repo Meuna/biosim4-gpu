@@ -1,9 +1,9 @@
 <script lang="ts">
-    import type { SimState } from "./simState";
+    import type { SimPhase } from "./simMachine.svelte";
 
     let {
         geom,
-        simState,
+        phase,
         gen,
         step,
         stepsPerGen,
@@ -18,7 +18,7 @@
             cx: number;
             cy: number;
         };
-        simState: SimState;
+        phase: SimPhase;
         gen: number;
         step: number;
         stepsPerGen: number;
@@ -26,9 +26,7 @@
         fps?: number | null;
     } = $props();
 
-    const running = $derived(
-        simState === "STEPS_RUNNING" || simState === "DIRTY_STEPS_RUNNING",
-    );
+    const running = $derived(phase === "STEPS_RUNNING");
 
     function pad3(n: number): string {
         return n.toString().padStart(3, "0");

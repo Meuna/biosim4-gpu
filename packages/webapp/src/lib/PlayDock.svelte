@@ -10,7 +10,7 @@
     } from "lucide-svelte";
     import ConfirmInline from "./ConfirmInline.svelte";
     import DiscreteSlider from "./DiscreteSlider.svelte";
-    import type { SimState } from "./simState";
+    import type { SimPhase } from "./simMachine.svelte";
 
     const SPEED_STOPS: { value: number; label: string; ariaLabel: string }[] = [
         { value: 5, label: "5", ariaLabel: "5 fps" },
@@ -20,7 +20,7 @@
     ];
 
     let {
-        simState,
+        phase,
         genomIncompatible = false,
         targetSpeed,
         onToggle,
@@ -31,7 +31,7 @@
         onSetSpeed,
         onToggleFreeRun,
     }: {
-        simState: SimState;
+        phase: SimPhase;
         genomIncompatible?: boolean;
         targetSpeed: number;
         onToggle: () => void;
@@ -43,23 +43,12 @@
         onToggleFreeRun: () => void;
     } = $props();
 
-    const isRunning = $derived(
-        simState === "STEPS_RUNNING" || simState === "DIRTY_STEPS_RUNNING",
-    );
+    const isRunning = $derived(phase === "STEPS_RUNNING");
     const isFreeRunning = $derived(
-        simState === "FREE_RUNNING" ||
-            simState === "DIRTY_FREE_RUNNING" ||
-            simState === "FREE_RUN_STOPPING" ||
-            simState === "DIRTY_FREE_RUN_STOPPING",
+        phase === "FREE_RUNNING" || phase === "FREE_RUN_STOPPING",
     );
-    const isFreeRunStopping = $derived(
-        simState === "FREE_RUN_STOPPING" ||
-            simState === "DIRTY_FREE_RUN_STOPPING",
-    );
-    const isGenComplete = $derived(
-        simState === "GENERATION_ENDED" ||
-            simState === "DIRTY_GENERATION_ENDED",
-    );
+    const isFreeRunStopping = $derived(phase === "FREE_RUN_STOPPING");
+    const isGenComplete = $derived(phase === "GENERATION_ENDED");
 
     let clearConfirmOpen = $state(false);
 </script>

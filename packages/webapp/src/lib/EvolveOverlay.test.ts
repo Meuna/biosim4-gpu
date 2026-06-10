@@ -8,7 +8,7 @@ describe("EvolveOverlay", () => {
         render(EvolveOverlay, {
             geom: defaultGeom,
             gen: 0,
-            simState: "FREE_RUNNING" as const,
+            phase: "FREE_RUNNING" as const,
         });
         expect(screen.getByText(/evolving/i)).toBeTruthy();
     });
@@ -17,7 +17,7 @@ describe("EvolveOverlay", () => {
         render(EvolveOverlay, {
             geom: defaultGeom,
             gen: 42,
-            simState: "FREE_RUNNING" as const,
+            phase: "FREE_RUNNING" as const,
         });
         expect(screen.getByText("Gen: 42")).toBeTruthy();
     });
@@ -26,16 +26,7 @@ describe("EvolveOverlay", () => {
         render(EvolveOverlay, {
             geom: defaultGeom,
             gen: 7,
-            simState: "FREE_RUN_STOPPING" as const,
-        });
-        expect(screen.getByText(/stop request sent/i)).toBeTruthy();
-    });
-
-    it("shows stop message when DIRTY_FREE_RUN_STOPPING", () => {
-        render(EvolveOverlay, {
-            geom: defaultGeom,
-            gen: 7,
-            simState: "DIRTY_FREE_RUN_STOPPING" as const,
+            phase: "FREE_RUN_STOPPING" as const,
         });
         expect(screen.getByText(/stop request sent/i)).toBeTruthy();
     });
@@ -44,7 +35,7 @@ describe("EvolveOverlay", () => {
         render(EvolveOverlay, {
             geom: defaultGeom,
             gen: 7,
-            simState: "FREE_RUNNING" as const,
+            phase: "FREE_RUNNING" as const,
         });
         expect(screen.queryByText(/stop request sent/i)).toBeNull();
     });

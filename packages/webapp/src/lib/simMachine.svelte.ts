@@ -226,6 +226,7 @@ export class SimMachine {
     onConfigured(): void {
         this.#phase = "GENERATION_SPAWNED";
         this.#commitPendingConfig();
+        this.#resetGenomeUsed();
         if (this.#pendingPlay) {
             this.#pendingPlay = false;
             this.#phase = "STEPS_RUNNING";
@@ -243,15 +244,24 @@ export class SimMachine {
 
     onRewindConfigured(): void {
         this.#onSpawnConfigured();
+        this.#resetGenomeUsed();
     }
 
-    onNextGenerationConfigured(): void {
+    // The next-generation reply carries the census of the generation that just
+    // reproduced, so the counters are set rather than reset.
+    onNextGenerationConfigured(
+        genomeMaxLenUsed: number,
+        genomeMaxNeuronsUsed: number,
+    ): void {
         this.#onSpawnConfigured();
+        this.#genomeMaxLenUsed = genomeMaxLenUsed;
+        this.#genomeMaxNeuronsUsed = genomeMaxNeuronsUsed;
     }
 
     onSnapshotLoaded(): void {
         this.#phase = "STEPS_PAUSED";
         this.#commitPendingConfig();
+        this.#resetGenomeUsed();
     }
 
     onCensus(genomeMaxLenUsed: number, genomeMaxNeuronsUsed: number): void {
@@ -260,6 +270,11 @@ export class SimMachine {
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
+
+    #resetGenomeUsed(): void {
+        this.#genomeMaxLenUsed = 0;
+        this.#genomeMaxNeuronsUsed = 0;
+    }
 
     #snapshotDraft(): SimParams {
         return $state.snapshot(this.#draftConfig) as SimParams;

@@ -274,7 +274,7 @@ describe("nextGen / rewind", () => {
         expect(m.phase).toBe("GENERATION_SPAWNED");
         expect(sent).toEqual([{ type: "nextGenerationConfigured", params }]);
         expect(m.dirty).toBe(true); // not committed until the reply
-        m.onNextGenerationConfigured();
+        m.onNextGenerationConfigured(0, 0);
         expect(m.dirty).toBe(false);
         expect(m.phase).toBe("GENERATION_SPAWNED");
     });
@@ -298,7 +298,7 @@ describe("nextGen / rewind", () => {
         m.toggle();
         m.nextGen(false);
         expect(m.phase).toBe("STEPS_RUNNING");
-        m.onNextGenerationConfigured();
+        m.onNextGenerationConfigured(0, 0);
         expect(m.phase).toBe("STEPS_RUNNING");
     });
 
@@ -381,6 +381,29 @@ describe("genome compatibility", () => {
         m.onCensus(32, 0);
         m.setDraft(makeParams({ maxGenomeLen: 32 }));
         expect(m.genomIncompatible).toBe(false);
+    });
+
+    it("resets the counters on configure, rewind and snapshot load", () => {
+        for (const reply of [
+            (m: SimMachine) => m.onConfigured(),
+            (m: SimMachine) => m.onRewindConfigured(),
+            (m: SimMachine) => m.onSnapshotLoaded(),
+        ]) {
+            const { m } = create(makeParams({ maxGenomeLen: 24 }));
+            m.onCensus(32, 12);
+            reply(m);
+            expect(m.genomeMaxLenUsed).toBe(0);
+            expect(m.genomeMaxNeuronsUsed).toBe(0);
+            expect(m.genomIncompatible).toBe(false);
+        }
+    });
+
+    it("takes the counters from the next-generation reply", () => {
+        const { m } = create(makeParams({ maxGenomeLen: 24 }));
+        m.onNextGenerationConfigured(32, 12);
+        expect(m.genomeMaxLenUsed).toBe(32);
+        expect(m.genomeMaxNeuronsUsed).toBe(12);
+        expect(m.genomIncompatible).toBe(true);
     });
 
     it("clearGenom resets the counters and notifies the worker", () => {
