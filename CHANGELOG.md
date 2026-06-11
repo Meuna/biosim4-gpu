@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **documentation re-alignment** (gh-109) — re-aligned `README.md`,
+  `STATUS.md`, and `docs/architecture.md` with the current project. The README
+  leads with the webapp (logo header, placeholder hosted link and screenshot
+  slot, feature pitch, webapp + native-CLI getting-started); STATUS reports
+  `sim-gpu` running full generations end-to-end and the webapp/`sim-wasm` as
+  functional; the architecture's `sim-wasm` section is brought up to
+  native-section depth and the `webapp` section is trimmed and restructured
+  (state holders, a dedicated worker-protocol subsection). Dropped the obsolete
+  `viz` package references — the webapp is the visualizer.
 - **webapp App.svelte ↔ worker glue review** (gh-118) — snapshot import now
   affects only the population: `loadSnapshot` carries just the snapshot data
   (no config), and the worker imports survivors into the live, already-running
