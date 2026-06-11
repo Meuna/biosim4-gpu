@@ -125,9 +125,8 @@ trail so reviewers can track changes individually.
 
 - **Keep the changelog up-to-date.**
 
-- **Keep the documentation up-to-date.** When implementing a feature, update the
-  documentation so it describes the system as it exists after your change. Remove
-  any outdated statements.
+- **Keep the documentation up-to-date.** The documentation is NOT a changelog.
+  State how the project is; never state how it used to be.
 
 - **Each new source module needs a test module.**
   - _Native branch:_ when adding `packages/core/src/foo.c`, also add
