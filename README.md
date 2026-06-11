@@ -38,6 +38,17 @@ thing in a browser UI, so you can **design a run, watch it evolve, and inspect
 an individual agent's brain** — then hand the same configuration to the native
 CLI to power through generations at full speed.
 
+## Motivation
+
+The port is 100% AI-assisted, which is the main educational objective: for
+better or worse, I think AI is here to stay, and I want a hands-on (or
+hands-off) experience building complex software with it. The approach is
+documented in the [AI-development notes](docs/ai-development.md).
+
+The secondary motivations are also educational: GPU acceleration, and
+structuring a complex C program. Hopefully the project also accelerates the
+biosim4 simulator and unlocks playing with more advanced behaviours.
+
 ## Features
 
 - **GPU-accelerated evolution** — the per-step pipeline runs as OpenCL kernels;
@@ -97,17 +108,6 @@ cmake --build --preset debug
 
 See [`docs/usage.md`](docs/usage.md) for the full CLI reference (parameters,
 challenges, barriers, OpenCL device selection).
-
-## Motivation
-
-The port is 100% AI-assisted, which is the main educational objective: for
-better or worse, I think AI is here to stay, and I want a hands-on (or
-hands-off) experience building complex software with it. The approach is
-documented in the [AI-development notes](docs/ai-development.md).
-
-The secondary motivations are also educational: GPU acceleration, and
-structuring a complex C program. Hopefully the project also accelerates the
-biosim4 simulator and unlocks playing with more advanced behaviours.
 
 ## Repository map
 
