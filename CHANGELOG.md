@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **webapp App.svelte review** (gh-115) — extracted the config/snapshot
+  file-IO mechanics into `src/lib/fileTransfer.ts` (`pickFile`, `downloadBlob`,
+  `classifyDroppedFiles`): the picker uses a transient input instead of two
+  hidden `bind:this` elements, and the click and drag-drop paths share one load
+  flow. Reordered the worker message router into a `switch` keyed on `msg.type`,
+  ordered by lifecycle, with the bootstrap body extracted to `bootstrapCanvas()`.
+  Dropped the pure-delegation `handle*` wrappers in favour of inline calls to
+  the controller methods.
 - **webapp worker protocol cleanup** (gh-113) — split the single `status` worker
   reply (with its `state: idle|running|paused|gen_complete` discriminant) into
   three dedicated messages — `stepped`, `genComplete`, `paused` — so each event

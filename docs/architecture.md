@@ -482,10 +482,23 @@ Worker replies call its `on*` methods — `onStepped`, `onCensus`, `onConfigured
 `onRewindConfigured`, `onNextGenerationConfigured`, `onSnapshotLoaded` — and the
 manual next-gen/rewind gestures call `resetStep`; the view reads `telemetry.gen`
 / `telemetry.survivalHistory` / `telemetry.snapReady` etc. via getters. The
-centralized `App.svelte` dispatcher routes a single worker message to multiple
-owners, so events like `census` feed both `SimMachine` and `SimTelemetry`; the
-overlap is deliberate — telemetry is a separate owner, not folded into the
-deliberately-focused machine.
+centralized `App.svelte` dispatcher is a `switch` keyed on `msg.type`, ordered
+by lifecycle (bootstrap, then (re)configuration, per-step progress, agent focus,
+misc). It routes a single worker message to multiple owners, so events like
+`census` feed both `SimMachine` and `SimTelemetry`; the overlap is deliberate —
+telemetry is a separate owner, not folded into the deliberately-focused machine.
+
+### File transfer
+
+`src/lib/fileTransfer.ts` holds the browser file-IO helpers shared by the
+config/snapshot import-export flows: `pickFile(accept)` opens a native picker
+via a transient (never-mounted) `<input>` and resolves with the chosen `File`
+or `null` on cancel; `downloadBlob(filename, data, mime)` wraps the anchor
+download used by both the TOML and snapshot exports; and the pure
+`classifyDroppedFiles(files)` routes a drop into a `.toml` config and a snapshot,
+enforcing the "at most 2 files" rule. `App.svelte` keeps the orchestration (and
+the shared error banner) but the click and drag-drop paths converge on the same
+loaders.
 
 ### Brain explorer
 
