@@ -364,16 +364,14 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
 
 /*
  * Load a genome entry at the current file position into snap (row-major).
- * Mirrors load_genome but writes to snap instead of sim->genome.
- * pop_load = min(pop_file, sim->genome.population); excess entries are read
- * and discarded to advance the file position correctly.
+ * Excess entries are read and discarded to advance the file position correctly.
  * Sets snap->count = pop_load on success.
  */
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static biosim_status_t load_genome_into_snap(
     FILE *f,
     const biosim_snap_header_t *header,
-    const biosim_sim_t *sim,
+    uint32_t min_pop,
     biosim_survivor_snap_t *snap,
     uint32_t *n_survivors_out,
     uint32_t *gen_idx_out,
@@ -406,8 +404,7 @@ static biosim_status_t load_genome_into_snap(
         goto exit;
     }
 
-    const uint32_t pop_sim = sim->genome.population;
-    const uint32_t pop_load = pop_file < pop_sim ? pop_file : pop_sim;
+    const uint32_t pop_load = pop_file < min_pop ? pop_file : min_pop;
     const uint16_t g_max_len = header->genome_max_len;
 
     returncode = biosim_survivor_snap_grow(snap, pop_load, g_max_len);
@@ -567,7 +564,7 @@ static biosim_status_t snap_seek_last_entry(FILE *f, const biosim_snap_header_t 
 }
 
 biosim_status_t biosim_snapshot_load_survivors_f(
-    FILE *f, biosim_sim_t *sim, biosim_survivor_snap_t *snap
+    FILE *f, uint32_t min_pop, biosim_survivor_snap_t *snap
 ) {
     biosim_snap_header_t hdr = {0};
     uint32_t n_surv = 0U;
@@ -580,17 +577,13 @@ biosim_status_t biosim_snapshot_load_survivors_f(
         BIOSIM_ERRORF("snapshot header read failed (%s)", biosim_strerror(returncode));
         goto exit;
     }
-    returncode = check_compat(&hdr, sim);
-    if (returncode != BIOSIM_OK) {
-        goto exit;
-    }
 
     returncode = snap_seek_last_entry(f, &hdr);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode = load_genome_into_snap(f, &hdr, sim, snap, &n_surv, &gen_idx, &gen_rng);
+    returncode = load_genome_into_snap(f, &hdr, min_pop, snap, &n_surv, &gen_idx, &gen_rng);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -600,8 +593,6 @@ biosim_status_t biosim_snapshot_load_survivors_f(
         goto exit;
     }
 
-    sim->gen = gen_idx;
-    sim->gen_rng = gen_rng;
     snap->gen = gen_idx;
     snap->gen_rng = gen_rng;
 
@@ -627,7 +618,25 @@ biosim_status_t biosim_snapshot_load_survivors(
         BIOSIM_ERRORF("cannot open '%s'", path);
         return BIOSIM_ERR_IO;
     }
-    biosim_status_t rc = biosim_snapshot_load_survivors_f(f, sim, snap);
+
+    biosim_snap_header_t hdr = {0};
+    biosim_status_t rc = biosim_snapshot_read_header(f, &hdr);
+    if (rc != BIOSIM_OK) {
+        BIOSIM_ERRORF("snapshot header read failed (%s)", biosim_strerror(rc));
+        (void)fclose(f);
+        return rc;
+    }
+    rc = check_compat(&hdr, sim);
+    if (rc != BIOSIM_OK) {
+        (void)fclose(f);
+        return rc;
+    }
+
+    rc = biosim_snapshot_load_survivors_f(f, sim->genome.population, snap);
+    if (rc == BIOSIM_OK) {
+        sim->gen = snap->gen;
+        sim->gen_rng = snap->gen_rng;
+    }
     (void)fclose(f);
     return rc;
 }

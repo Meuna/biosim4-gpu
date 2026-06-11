@@ -88,7 +88,7 @@ static biosim_survivor_snap_t snap = {0};
 /* Export buffer — populated by biosim_wasm_snapshot_export. */
 static char *snap_export_buf = NULL;
 static size_t snap_export_size = 0U;
-/* Import buffer — written by JS, consumed by biosim_wasm_snapshot_import_commit. */
+/* Import buffer — written by JS, consumed by biosim_wasm_snapshot_import. */
 static uint8_t *snap_import_buf = NULL;
 static size_t snap_import_size = 0U;
 
@@ -202,6 +202,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind(void) {
     }
     if (snap.count > 0U) {
         sim.gen_rng = snap.gen_rng;
+        sim.gen = snap.gen;
     }
     return (int)spawn_generation();
 }
@@ -351,9 +352,10 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_import_alloc(uint32_t size) {
     return (uint32_t)(uintptr_t)snap_import_buf;
 }
 
-/* Parse the import buffer, load survivors into snap, and spawn the next
- * generation. Frees the import buffer on completion (success or failure). */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import_commit(void) {
+/* Parse the import buffer and load survivors into snap. Frees the import buffer
+ * on completion (success or failure). Does not spawn; the caller must invoke
+ * biosim_wasm_rewind to reproduce the population from the loaded survivors. */
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import(void) {
     if (snap_import_buf == NULL || !initialized) {
         return BIOSIM_ERR_INVALID;
     }
@@ -364,14 +366,11 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import_commit(void) {
         snap_import_size = 0U;
         return BIOSIM_ERR_IO;
     }
-    biosim_status_t rc = biosim_snapshot_load_survivors_f(f, &sim, &snap);
+    biosim_status_t rc = biosim_snapshot_load_survivors_f(f, sim.genome.population, &snap);
     (void)fclose(f);
     free(snap_import_buf);
     snap_import_buf = NULL;
     snap_import_size = 0U;
-    if (rc == BIOSIM_OK) {
-        rc = spawn_generation();
-    }
     return (int)rc;
 }
 

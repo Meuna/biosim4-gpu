@@ -36,7 +36,7 @@ void biosim_survivor_snap_free(biosim_survivor_snap_t *snap);
  * Open path, validate the header, run coherency checks (warns to stderr on
  * topology mismatches; fatal error on schema/catalogue mismatch), load the
  * last generation record into snap (growing it as needed), and update
- * sim->gen (set to the loaded generation index) and sim->gen_rng.
+ * sim->gen and sim->gen_rng from the loaded record.
  * The caller increments sim->gen if starting a new generation from the snap.
  * Does NOT call breed; the caller is responsible for calling
  * biosim_generation_spawn to produce the next population.
@@ -48,16 +48,18 @@ biosim_status_t biosim_snapshot_load_survivors(
 );
 
 /*
- * FILE* variant of biosim_snapshot_load_survivors. f must be open for reading;
- * the function seeks to byte 0 internally. Reads and validates the header,
- * seeks to the last generation record, loads it into snap, and updates sim->gen
- * and sim->gen_rng. Does NOT fclose f.
- * Returns BIOSIM_ERR_INVALID on file, format, or fatal compat errors.
+ * Low-level FILE* loader. f must be open for reading; the function seeks to
+ * byte 0 internally. Reads the header, seeks to the last generation record,
+ * and loads up to min_pop survivors into snap (growing it as needed).
+ * Sets snap->gen and snap->gen_rng from the loaded record.
+ * Does NOT perform coherency checks and does NOT update any sim fields.
+ * Does NOT fclose f.
+ * Returns BIOSIM_ERR_INVALID on file or format errors.
  * Returns BIOSIM_ERR_NOMEM on allocation failure.
  * Returns BIOSIM_EOF when no complete generation record is found.
  */
 biosim_status_t biosim_snapshot_load_survivors_f(
-    FILE *f, biosim_sim_t *sim, biosim_survivor_snap_t *snap
+    FILE *f, uint32_t min_pop, biosim_survivor_snap_t *snap
 );
 
 /* ── output session ──────────────────────────────────────────────────────── */

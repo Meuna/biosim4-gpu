@@ -624,7 +624,6 @@
                 onRevert={() => machine.revertDraft()}
                 onConfUpload={() => void importConfig()}
                 onConfDownload={handleConfDownload}
-                snapImportReady={workerReady}
                 snapReady={telemetry.snapReady}
                 onSnapUpload={() => void importSnapshot()}
                 onSnapDownload={() => machine.exportSnapshot()}

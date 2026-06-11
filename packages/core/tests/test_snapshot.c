@@ -415,7 +415,8 @@ void test_load_survivors_pop_file_smaller(void) {
     biosim_sim_free(&sim_read);
 }
 
-/* biosim_snapshot_load_survivors_f: write to tmpfile, seek back, call _f. */
+/* biosim_snapshot_load_survivors_f: write to tmpfile, seek back, call _f.
+ * _f does not update sim; only snap->gen / snap->gen_rng are set. */
 void test_load_survivors_f_roundtrip(void) {
     FILE *f = tmpfile();
     TEST_ASSERT_NOT_NULL(f);
@@ -427,11 +428,11 @@ void test_load_survivors_f_roundtrip(void) {
     biosim_sim_t sim2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim2));
     biosim_survivor_snap_t rsnap = {0};
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors_f(f, &sim2, &rsnap));
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK, biosim_snapshot_load_survivors_f(f, sim2.genome.population, &rsnap)
+    );
 
     TEST_ASSERT_EQUAL_UINT32(snap.count, rsnap.count);
-    TEST_ASSERT_EQUAL_UINT32(snap.gen, sim2.gen);
-    TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, sim2.gen_rng);
     TEST_ASSERT_EQUAL_UINT32(snap.gen, rsnap.gen);
     TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, rsnap.gen_rng);
     for (uint32_t s = 0U; s < rsnap.count; s++) {

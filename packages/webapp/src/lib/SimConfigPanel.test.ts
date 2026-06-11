@@ -115,28 +115,9 @@ describe("SimConfigPanel", () => {
         expect(updated.population).toBe(500);
     });
 
-    it("enables snapshot upload from snapImportReady, independent of snapReady", () => {
-        renderPanel({ props: { snapImportReady: true, snapReady: false } });
-        // Import is allowed once the sim is live, even before any survivors.
-        expect(
-            screen.getByLabelText("Upload snapshot").hasAttribute("disabled"),
-        ).toBe(false);
-        // Export still needs survivors.
-        expect(
-            screen.getByLabelText("Download snapshot").hasAttribute("disabled"),
-        ).toBe(true);
-    });
-
-    it("disables snapshot upload until snapImportReady", () => {
-        renderPanel({ props: { snapImportReady: false } });
-        expect(
-            screen.getByLabelText("Upload snapshot").hasAttribute("disabled"),
-        ).toBe(true);
-    });
-
-    it("calls onSnapUpload when the enabled upload button is clicked", async () => {
+    it("calls onSnapUpload when the upload button is clicked", async () => {
         const onSnapUpload = vi.fn();
-        renderPanel({ props: { snapImportReady: true, onSnapUpload } });
+        renderPanel({ props: { onSnapUpload } });
         await fireEvent.click(screen.getByLabelText("Upload snapshot"));
         expect(onSnapUpload).toHaveBeenCalledOnce();
     });

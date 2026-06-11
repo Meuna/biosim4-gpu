@@ -1156,10 +1156,11 @@ function handleExportSnapshot(): void {
     ]);
 }
 
-// Import survivors into the live (already-initialised) sim and spawn the next
-// generation. Affects only the population — never the config: the sim keeps its
-// current grid, challenge and genome limits, so a snapshot whose genomes exceed
-// those limits is rejected by import_commit (surfaced as an error banner).
+// Import survivors into the live (already-initialised) sim, then rewind to
+// spawn the next generation from them. Affects only the population — never the
+// config: the sim keeps its current grid, challenge and genome limits, so a
+// snapshot whose genomes exceed those limits is rejected by import (surfaced as
+// an error banner).
 function handleLoadSnapshot(data: Uint8Array): void {
     playing = false;
     const prevMode = mode;
@@ -1177,11 +1178,19 @@ function handleLoadSnapshot(data: Uint8Array): void {
         return;
     }
     biosim!.HEAPU8.set(data, ptr);
-    const commitRc = call("biosim_wasm_snapshot_import_commit");
-    if (commitRc !== 0) {
+    const importRc = call("biosim_wasm_snapshot_import");
+    if (importRc !== 0) {
         postMessage({
             type: "error",
-            message: "Snapshot load failed (commit)",
+            message: "Snapshot load failed (import)",
+        } satisfies WorkerEvent);
+        return;
+    }
+    const rewindRc = call("biosim_wasm_rewind");
+    if (rewindRc !== 0) {
+        postMessage({
+            type: "error",
+            message: "Snapshot load failed (rewind)",
         } satisfies WorkerEvent);
         return;
     }
