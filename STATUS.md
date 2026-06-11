@@ -5,25 +5,23 @@
 | Package | Status | Notes |
 |---------|--------|-------|
 | `core` | Complete | Simulation logic, genome, nnet, agents, grid, challenges, snapshot |
-| `params` | Complete | CLI/TOML/parameter management |
+| `cfgparse` | Complete | CLI/TOML/parameter management |
 | `sim-ref` | Complete | Single-threaded CPU reference simulator |
-| `sim-gpu` | In progress | K1–K5 complete: feedforward (sensors, nnet, actions), kill-marked grid cleanup, movement resolution, signal fade, challenge eval. Generation loop pending. |
-| `sim-wasm` | Feature-complete (scalar params + challenge + barriers + brain) | Stepper + parameter-setter bindings + challenge spec bindings + barrier list bindings + nnet buffer getters (gh-56, gh-64, gh-74). |
-| `webapp` | Partially wired | Config panel wired for all 14 scalar params, challenge spec, and barriers (gh-56, gh-64); agent brain explorer wired to live `nnet` data (gh-74); simulation state machine encapsulated in the `SimMachine` class (composite phase × dirty state, gh-98); snapshot import/export wired, with import loading survivors into the live sim independently of config (gh-118). Preset loading and TOML export pending. |
-| `viz` | Not started | Depends on stepper trace format (not yet defined) |
+| `sim-gpu` | Functional | Runs full generations end-to-end. The per-step pipeline (K1–K5: feedforward, kill-marked grid cleanup, movement resolution, signal fade, challenge eval) runs on the GPU; survivor selection and reproduction run host-side at the generation boundary. Snapshot import/export wired into the main loop. |
+| `sim-wasm` | Feature-complete | Lifecycle/stepping, by-name parameter setters, challenge-spec and barrier-list setters, snapshot import/export, and `nnet`/inspection buffer getters — the full surface the webapp drives. |
+| `webapp` | Functional | Config panel for all scalar params, challenge spec, and barriers; live canvas rendering with agent inspection and a brain explorer wired to live `nnet` data; the simulation lifecycle is encapsulated in the `SimMachine` state machine (composite phase × dirty); TOML config and snapshot import/export round-trip with the native CLI. |
 
 ## Missing or incomplete
 
-- **GPU pipeline**: K1–K5 complete — feedforward (sensors, nnet, actions, movement finalization), kill-marked grid cleanup, movement resolution, signal fade, and per-step challenge evaluation. Five-kernel per-step pipeline documented in [`docs/gpu-design.md`](docs/gpu-design.md). Generation loop (survivor selection, reproduction, respawn) pending.
-- **Visualization**: `viz` package not started; trace format not yet defined.
-- **CI/CD**: Linux native CI and webapp CI complete (gh-5). Windows CI added (gh-106).
-- **Altruism challenge**: Placeholder — evaluator always returns `{false, 0.0f}`. Requires genome similarity computation not yet designed for GPU.
-- **Benchmark harness**: No `benchmarks/` directory.
-- **Developer tools**: No `tools/` directory (`snapshot-inspect`, `genome-dump`).
+- **GPU-side reproduction**: the per-step pipeline (K1–K5) runs on the GPU, but survivor selection and reproduction run on the host at each generation boundary. Moving them onto the GPU is open — see the design questions below. The five-kernel per-step pipeline is documented in [`docs/gpu-design.md`](docs/gpu-design.md).
+- **CI/CD**: native, webapp, and Windows quality-check workflows run on GitHub Actions; there is no deployment or publish step, so the webapp is not yet hosted.
+- **Altruism challenge**: placeholder — the evaluator always returns `{false, 0.0f}`, and the `GENETIC_SIM_FWD` genome-similarity sensor stays commented out, pending a GPU-friendly similarity design.
+- **Benchmark harness**: no `benchmarks/` directory.
+- **Developer tools**: no `tools/` directory (`snapshot-inspect`, `genome-dump`).
 
 ## Open GPU design questions
 
-These were deferred from the initial GPU data-model design. Each requires a decision before the remaining `sim-gpu` kernel phases are implemented.
+These optimization decisions were deferred from the initial GPU data-model design. The per-step pipeline ships with a working baseline; each question concerns moving more work onto the GPU (reproduction, sorting, genome similarity) or hardening the existing kernels.
 
 1. **Genome-length divergence**: sort-then-iterate vs. uniform-loop-with-predicate — when does each win?
 
