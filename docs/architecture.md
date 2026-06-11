@@ -23,7 +23,6 @@ core (static lib — libc only)
         └── webapp (Svelte SPA — loads sim-wasm in a Web Worker)
 ```
 
-`viz` is designed but not yet implemented.
 See [`STATUS.md`](../STATUS.md).
 
 ## Build
@@ -366,179 +365,119 @@ See [`docs/gpu-design.md`](gpu-design.md) for the full kernel pipeline design.
 ## `sim-wasm`
 
 **Location:** `packages/sim-wasm/`  
-**Type:** Emscripten executable (output: `biosim.mjs` + `biosim.wasm`).
-Depends on `core`.
+**Type:** Emscripten ES6 module (output: `biosim.mjs` + `biosim.wasm`).  
+**Dependencies:** `core`.
 
-Exposes a minimal C API (`biosim_hello`) as an ES6 WebAssembly module built
-with `-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=worker`. The module is
-designed to run inside a Web Worker; `ccall`/`cwrap` are available at runtime.
+Compiles `core` to WebAssembly and exposes a flat C API to JavaScript. The
+single translation unit `src/bindings.c` wraps the `core` simulation behind
+`EMSCRIPTEN_KEEPALIVE` functions reached from JS via `ccall`/`cwrap`. Built with
+`-sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=worker`, the module loads inside the
+webapp's Web Worker. `BIOSIM_KEEPALIVE` expands to `EMSCRIPTEN_KEEPALIVE` under
+Emscripten and to nothing otherwise, so the bindings still compile natively.
 
-The public header `include/biosim_wasm.h` uses `BIOSIM_KEEPALIVE`
-(`EMSCRIPTEN_KEEPALIVE` when compiled under Emscripten, `/*empty*/` otherwise)
-so declarations remain valid in native builds.
+No structs cross the boundary: configuration is set field-by-field before
+`init`, and inspection getters return a WASM-heap pointer that JS reads through a
+typed-array view.
+
+| Group | Representative functions |
+|---|---|
+| Lifecycle & stepping | `biosim_wasm_init`, `_free`, `_do_step`, `_do_gen`, `_next_generation`, `_rewind`, `_clear_genome`, `_get_gen`/`_get_step`, `_is_gen_complete` |
+| Configuration (pre-init) | `biosim_wasm_set_param_int`/`_float`/`_bool` (by name) |
+| Challenge (pre-init) | `biosim_wasm_set_challenge_kind` + per-kind setters (`_disc`, `_corners`, `_x_band`, `_near_barrier`, …) |
+| Barriers (pre-init) | `biosim_wasm_clear_barriers`, `_add_barrier`, `_get_n_barriers` |
+| Snapshot I/O | export: `_snapshot_export`, `_snapshot_export_ptr`/`_size`; import: `_snapshot_import_alloc`, `_snapshot_import_commit` |
+| Render getters | per-agent heap arrays (`_get_loc_x_ptr`/`_loc_y_ptr`, `_alive_ptr`, `_last_move_dir_ptr`, `_grid_cells_ptr`, …) plus `_get_population`/`_size_x`/`_size_y` |
+| Brain getters | `_get_genome_conn_ptr`, `_get_genome_wgt_ptr`, `_get_conn_length_ptr`, `_get_neuron_count_ptr` (`slot * pop + id` stride) |
+| Census | `_census_gen`, `_census_population`, `_census_survivors`, `_census_kills` |
+
+The worker ↔ module call sequence is part of the webapp worker protocol (below).
 
 ## `webapp`
 
 **Location:** `packages/webapp/`  
-**Type:** Svelte 5 SPA built with Vite 6 and Bun.
+**Type:** Svelte 5 SPA built with Vite 6 and Bun.  
+**Dependencies:** `sim-wasm` (loaded at runtime).
 
-Loads `biosim.mjs` + `biosim.wasm` (produced by `sim-wasm`) inside a Web
-Worker (`src/workers/sim.worker.ts`). CMake copies the WASM artifacts into
-`public/wasm/` before every build or `dev` invocation; Vite serves them as
-static assets at `/wasm/`. The worker uses a `/* @vite-ignore */` dynamic
-import so Vite does not attempt to rebundle the pre-built Emscripten output.
+The browser front-end: configure a run, watch generations evolve on a canvas,
+inspect agents and their brains, and round-trip TOML configs and snapshots with
+the native CLI.
 
-### Simulation state machine
+The heavy work runs off the UI thread. `src/main.ts` mounts `App.svelte`, which
+owns the DOM, the canvas layout, and orchestration; a Web Worker
+(`src/workers/sim.worker.ts`) loads `biosim.mjs` + `biosim.wasm`, steps the
+simulation, and draws agents onto an `OffscreenCanvas`. CMake copies the WASM
+artifacts into `public/wasm/` before every build or `dev` run; the worker uses a
+`/* @vite-ignore */` dynamic import so Vite does not rebundle the Emscripten
+output.
 
-`src/lib/simMachine.svelte.ts` defines the `SimMachine` class, the single
-source of truth for UI simulation state. The state is composite:
+### State management
 
-- **`phase`** — a 9-value string enum (`SimPhase`) giving the simulation
-  lifecycle position:
+Three sibling `$state` holders, each a plain class with private `$state`, public
+getters, and intent methods, and **no `$effect`** — so each is unit-testable
+outside a component. `App.svelte` owns one of each, routes worker events into
+them, and derives view props from their getters.
 
-  ```
-  WORKER_PENDING → WORKER_READY → GENERATION_SPAWNED ↔ STEPS_RUNNING ↔ CONFIRM
-                                                      ↘ STEPS_PAUSED
-                                                      ↘ GENERATION_ENDED
-                                FREE_RUNNING ↔ FREE_RUN_STOPPING
-  ```
+| Holder | File | Owns |
+|---|---|---|
+| `SimMachine` | `simMachine.svelte.ts` | The simulation lifecycle: a composite `phase` (`SimPhase`, a 9-value enum) × `dirty` (`$derived` config divergence) state, the draft/last-played configs, and every lifecycle worker command. |
+| `AgentFocus` | `agentFocus.svelte.ts` | The inspection triad `{ selected, hovered, lastHovered }` and a `$derived` display agent with priority `hovered ?? lastHovered ?? selected`. |
+| `SimTelemetry` | `simTelemetry.svelte.ts` | Display-only fields from worker replies: `gen`/`step`/`pop`, the survival-rate sparkline, the active grid/steps params, and the snapshot-export gate. Issues no commands. |
 
-- **`dirty`** — a boolean `$derived` inside the machine from the divergence
-  (JSON comparison) of the draft config vs the config the worker last applied.
-  Dirtiness is orthogonal to the phase: editing the config never interrupts a
-  running or free-running sim.
+`SimMachine`'s `phase` moves only inside machine methods, and every gesture
+guards itself so an illegal transition is a no-op:
 
-The machine owns the draft and last-played configs, the genome-used counters
-from the last census (deriving the `genomIncompatible` play-gate), and sends
-every lifecycle worker command through a constructor-injected
-`send(cmd, transfer?)` callback. `App.svelte` creates one instance wired to
-`worker.postMessage`, routes state-relevant worker events into the machine,
-and derives all state props from its getters. Agent inspection state lives in a
-separate `AgentFocus` controller, and the display-only telemetry counters in a
-`SimTelemetry` holder (both below); remaining UI-only data (layout,
-rail/tab/brain toggles) stays in `App.svelte`.
+```
+WORKER_PENDING → WORKER_READY → GENERATION_SPAWNED ↔ STEPS_RUNNING ↔ CONFIRM
+                                                    ↘ STEPS_PAUSED
+                                                    ↘ GENERATION_ENDED
+                              FREE_RUNNING ↔ FREE_RUN_STOPPING
+```
 
-Every phase transition happens inside a machine method:
+`dirty` is orthogonal to `phase`: editing the config never interrupts a running
+sim. Starting from a dirty draft sends `configure` and defers `play` until the
+worker's `configured` reply. Components receive `phase` as a prop and compare it
+inline rather than through shared query helpers.
 
-| Kind | Methods |
+### Worker protocol
+
+`App.svelte` and the worker communicate through two discriminated unions defined
+in `sim.worker.ts` — `WorkerCmd` (UI → worker) and `WorkerEvent` (worker → UI),
+keyed on `type`. The `App.svelte` dispatcher is a `switch` that may route one
+event to several holders (e.g. `census` feeds both `SimMachine` and
+`SimTelemetry`).
+
+| Family | Commands → | ← Events |
+|---|---|---|
+| Lifecycle | `play`, `stop`, `step`, `reset`, `configure`, `nextGeneration`, `rewind`, `clearGenom`, `startFreeRun`, `stopFreeRun` | `ready`, `stepped`, `genComplete`, `paused`, `census`, `configured`, … |
+| Canvas | `canvas` (transfers an `OffscreenCanvas`), `layout` | — |
+| Agent | `pickAgentAtCell`, `selectAgent`, `hoverAgent`, `selectAgentById`, `navigateAgent`, `randomAgent` | `agentPicked`, `agentMissed`, `agentUpdated` |
+| Brain | `requestBrain` | `brainData` |
+| Playback | `setSpeed` (`fps` ∈ `0 \| 1 \| 25 \| 50`, `0` = unlimited) | `fps` (measured steps/s, ~1 Hz) |
+| Snapshot | `exportSnapshot`, `loadSnapshot` | `snapshotData`, `snapshotLoaded` |
+
+### `lib` modules
+
+| Module | Role |
 |---|---|
-| UX gestures | `toggle`, `step`, `toggleFreeRun`, `nextGen(autoPlay)`, `rewind(autoPlay)`, `confirmRevertContinue`, `confirmRewind`, `setDraft`, `revertDraft`, `clearGenom`, `loadSnapshot`, `exportSnapshot` |
-| Worker replies | `onWorkerReady`, `onConfigured`, `onGenComplete`, `onFreeRunPaused`, `onRewindConfigured`, `onNextGenerationConfigured`, `onSnapshotLoaded`, `onCensus` |
-
-Methods guard themselves: a gesture that is illegal in the current phase (or
-blocked by `genomIncompatible`) is a no-op, so the machine stays consistent
-even if a UI guard is missed. `CONFIRM` — the config-change dialog — is
-entered only by `toggle()` from a dirty `STEPS_RUNNING` and exited only by the
-two explicit `confirm*` methods.
-
-Starting with a dirty draft sends `configure` and defers `play` until the
-worker's `configured` reply; this pending-apply context is private machine
-state, committed into the last-played config when the reply arrives
-(`FREE_RUN_STOPPING` is the one awaiting-reply condition modeled as a phase).
-The class deliberately contains no `$effect` — `dirty` is a `$derived`, so it
-can be instantiated and unit-tested outside a component with a recording
-`send` mock.
-
-Components (`PlayDock`, `GridView`, `EvolveOverlay`, `TelemetryHUD`, `TopBar`)
-receive `phase: SimPhase` as a prop and implement their own button-enable
-and display logic with inline phase comparisons rather than shared query helpers.
-
-### Agent-focus controller
-
-`src/lib/agentFocus.svelte.ts` defines the `AgentFocus` class, the single
-authority for which agent is under inspection. It owns the focus triad
-`{ selected, hovered, lastHovered }` and exposes a `$derived` **display** agent
-with priority `hovered ?? lastHovered ?? selected` (a live Ctrl+hover wins, the
-sticky last-hover survives so a Ctrl+click can promote it to a selection, then
-the persistent click-selection). Like `SimMachine` it takes a constructor-
-injected `send` and contains no `$effect`, so it is unit-testable in isolation.
-
-Worker replies call `pick(info, reason)` / `miss(reason)` / `update(info)`; UX
-gestures call `promoteHoverToSelection`, `endHover`, `clearHover`,
-`clearSelection`, `navigate`, `shuffle`, `selectById`. Two guards matter:
-`update` (the per-step live feed) only applies while a selection still exists,
-closing a same-tick race where an in-flight `agentUpdated` could resurrect a
-just-cleared selection; and `promoteHoverToSelection` reports whether it acted
-so the click handler can fall through to a normal cell pick.
-
-`App.svelte` keeps the rail/tab/brain toggles as plain view state and reads
-`focus.display` / `focus.displayId` / `focus.hasSelection` / `focus.isSelected`.
-A single view-effect opens the rail on the Cell tab whenever `focus.displayId`
-changes to a distinct non-null id (re-opening even after a manual close); it
-reads controller state and writes only view state, so it cannot self-trigger.
-
-### Simulation telemetry
-
-`src/lib/simTelemetry.svelte.ts` defines the `SimTelemetry` class, the holder
-for the display-only presentation fields derived purely from worker replies:
-the `gen` / `step` / `pop` counters, the `survivalHistory` sparkline, the active
-`gridSizeX` / `gridSizeY` / `stepsPerGen` parameters, and the `snapReady`
-export gate. It is the third sibling alongside `SimMachine` and `AgentFocus`
-and follows the same private-`$state` / public-getter / intent-method pattern
-with no `$effect`, so it is unit-testable in isolation. Unlike the other two it
-issues no worker commands, so it takes no `send` callback.
-
-Worker replies call its `on*` methods — `onStepped`, `onCensus`, `onConfigured`,
-`onRewindConfigured`, `onNextGenerationConfigured`, `onSnapshotLoaded` — and the
-manual next-gen/rewind gestures call `resetStep`; the view reads `telemetry.gen`
-/ `telemetry.survivalHistory` / `telemetry.snapReady` etc. via getters. The
-centralized `App.svelte` dispatcher is a `switch` keyed on `msg.type`, ordered
-by lifecycle (bootstrap, then (re)configuration, per-step progress, agent focus,
-misc). It routes a single worker message to multiple owners, so events like
-`census` feed both `SimMachine` and `SimTelemetry`; the overlap is deliberate —
-telemetry is a separate owner, not folded into the deliberately-focused machine.
-
-### File transfer
-
-`src/lib/fileTransfer.ts` holds the browser file-IO helpers shared by the
-config/snapshot import-export flows: `pickFile(accept)` opens a native picker
-via a transient (never-mounted) `<input>` and resolves with the chosen `File`
-or `null` on cancel; `downloadBlob(filename, data, mime)` wraps the anchor
-download used by both the TOML and snapshot exports; and the pure
-`classifyDroppedFiles(files)` routes a drop into a `.toml` config and a snapshot,
-enforcing the "at most 2 files" rule. `App.svelte` keeps the orchestration (and
-the shared error banner) but the click and drag-drop paths converge on the same
-loaders.
+| `tomlConfig.ts` | Parse/serialize the `SimParams` config to/from TOML (round-trips with the CLI). |
+| `fileTransfer.ts` | Browser file IO: `pickFile`, `downloadBlob`, and the pure `classifyDroppedFiles` drop router. |
+| `brain.ts` | DOM-free decode layer: `unpackConn` mirrors the `gene.h` bit-layout; `SENSOR_LABELS`/`ACTION_LABELS` plus full-name tables for the UI. |
+| `kinematic.ts` | Interpolation helpers for smooth agent motion between steps. |
+| `playbackRate.ts` | Step-rate throttle and rolling FPS window (unit-testable without WASM). |
+| `agentFormat.ts` | Format agent fields (id, location, fingerprint) for display. |
 
 ### Brain explorer
 
-`src/lib/BrainExplorer.svelte` renders an agent's neural network as a
-force-directed graph (d3-force): sensors pinned on the left column, actions on
-the right, internal neurons relaxing as a cloud between them. Connections are
-directed (arrowheads trimmed to the node circumference, recurrent self-loops
-drawn as a curved arrow) and signed (blue = excitatory, red = inhibitory, width
-∝ |weight|); clicking a sense/action highlights its incident edges (others fade
-to 0.05 opacity), turns its ring emerald, and shows its full name as muted text
-(under the node in the expanded view, top-centre in the preview; neurons show
-nothing). The same component serves a docked `"preview"` (inside
-`CellPanel.svelte`, with an in-canvas expand button; the selected node grows for
-readability) and a `"full"` variant. Expanding **replaces the grid stack**:
-`App.svelte` hides the canvas/`GridView`/`HUD`/`PlayDock` and renders the brain
-in the main area (left of the rail, below the topbar) with the title, compact
-charge / link-distance sliders and synthesis line floating on the dotted
-background — no card chrome. d3's internal timer is stopped; ticks are driven by
-a self-cancelling `requestAnimationFrame` loop, and the knob reads are `untrack`ed
-so slider moves re-warm the layout in place instead of rebuilding it.
+`BrainExplorer.svelte` renders an agent's neural net as a d3-force graph —
+sensors on the left, actions on the right, internal neurons relaxing between
+them; connections are directed and signed (colour by sign, width ∝ |weight|).
+The same component serves a docked preview inside `CellPanel.svelte` and a full
+variant that replaces the grid stack. d3's internal timer is stopped; ticks run
+on a self-cancelling `requestAnimationFrame` loop so the layout re-warms in place
+when the charge/link sliders move.
 
-`src/lib/brain.ts` is the DOM-free decode layer: `unpackConn` mirrors the
-`gene.h` bit-layout (`[srcType:1][srcNum:7][sinkType:1][sinkNum:7]`, weight ÷
-`WEIGHT_SCALE`); `SENSOR_LABELS` / `ACTION_LABELS` give short in-node labels
-(a `"glyph:<name>"` entry renders an icon instead of text), `SENSOR_NAMES` /
-`ACTION_NAMES` give full names for the info card, and `brainSynthesis` counts the
-wired senses/actions. Per the gh-74 trade-off the connection genes are unpacked
-in the worker (TS), not in WASM, so the wasm/worker interface stays four plain
-pointer getters.
-
-The worker exposes the network over the message protocol: the UI sends
-`{ type: "requestBrain", id }`; the worker reads the `s_sim.nnet` heap buffers
-(`genome_conn`, `genome_wgt`, `conn_length`, `neuron_count`) with the
-`slot * pop + id` stride and replies `{ type: "brainData", id, conns,
-neuronCount }`. `App.svelte` requests the brain whenever the displayed agent
-changes and discards payloads whose `id` no longer matches.
-
-The worker protocol also carries two playback-speed entries: the UI sends
-`{ type: "setSpeed"; fps: number }` (where `fps` is `0 | 1 | 25 | 50` and `0`
-means unlimited) to throttle the simulation step rate; the worker replies with
-`{ type: "fps"; value: number }` at roughly one-second intervals, reporting the
-measured step-rate in steps per second. The throttle and FPS-window logic live
-in `src/lib/playbackRate.ts` so they can be unit-tested without loading WASM.
+Connection genes are decoded in the worker (TS) via `brain.ts`, not in WASM, so
+the module interface stays four plain pointer getters (`genome_conn`,
+`genome_wgt`, `conn_length`, `neuron_count`, read with the `slot * pop + id`
+stride). The UI sends `requestBrain` when the displayed agent changes and
+discards `brainData` whose `id` no longer matches.
