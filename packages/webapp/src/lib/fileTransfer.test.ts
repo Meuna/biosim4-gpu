@@ -44,11 +44,13 @@ describe("pickFile", () => {
     function withCapturedInput(): HTMLInputElement[] {
         const created: HTMLInputElement[] = [];
         const real = document.createElement.bind(document);
-        vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
-            const el = real(tag);
-            if (tag === "input") created.push(el as HTMLInputElement);
-            return el;
-        });
+        vi.spyOn(document, "createElement").mockImplementation(
+            (tag: string) => {
+                const el = real(tag);
+                if (tag === "input") created.push(el as HTMLInputElement);
+                return el;
+            },
+        );
         return created;
     }
 
