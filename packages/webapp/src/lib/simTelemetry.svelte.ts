@@ -80,7 +80,7 @@ export class SimTelemetry {
 
     // ── Worker-reply intents ──────────────────────────────────────────────────
 
-    onStatus(e: { step: number }): void {
+    onStepped(e: { step: number }): void {
         this.#step = e.step;
     }
 

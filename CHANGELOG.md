@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **webapp worker protocol cleanup** (gh-113) — split the single `status` worker
+  reply (with its `state: idle|running|paused|gen_complete` discriminant) into
+  three dedicated messages — `stepped`, `genComplete`, `paused` — so each event
+  maps to its own message type like the rest of the protocol; `SimTelemetry`'s
+  `onStatus` was renamed to `onStepped`. Also removed the grid-size round-trip:
+  the `layout` command no longer carries `gridCellsX/gridCellsY`, and the worker
+  reads grid dimensions straight from WASM (`biosim_wasm_get_size_x/y`), making
+  the sim the single source of truth instead of echoing the values back through
+  the UI.
 - **webapp simulation state machine** (gh-98) — replaced five boolean flags
   (`isRunning`, `hasStarted`, `isGenComplete`, `isFreeRunning`,
   `isFreeRunStopping`) in `App.svelte` with a `SimMachine` class

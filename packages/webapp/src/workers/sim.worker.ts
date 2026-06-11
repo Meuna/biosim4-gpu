@@ -140,8 +140,6 @@ export type WorkerCmd =
           gridY: number;
           gridW: number;
           gridH: number;
-          gridCellsX: number;
-          gridCellsY: number;
       }
     | {
           type: "pickAgentAtCell";
@@ -163,12 +161,9 @@ export type WorkerCmd =
 
 export type WorkerEvent =
     | { type: "ready" }
-    | {
-          type: "status";
-          state: "idle" | "running" | "paused" | "gen_complete";
-          gen: number;
-          step: number;
-      }
+    | { type: "stepped"; gen: number; step: number }
+    | { type: "genComplete"; gen: number; step: number }
+    | { type: "paused"; gen: number; step: number }
     | {
           type: "census";
           gen: number;
@@ -1005,12 +1000,9 @@ function applyConfig(p: SimParams): void {
     currentChallenge = p.challenge;
 }
 
-function statusNow(
-    state: "idle" | "running" | "paused" | "gen_complete",
-): WorkerEvent {
+function progress(type: "stepped" | "genComplete" | "paused"): WorkerEvent {
     return {
-        type: "status",
-        state,
+        type,
         gen: call("biosim_wasm_get_gen"),
         step: call("biosim_wasm_get_step"),
     };
@@ -1019,7 +1011,7 @@ function statusNow(
 function doStep(): void {
     startTransitionIfNeeded();
     call("biosim_wasm_do_step");
-    postMessage(statusNow("running"));
+    postMessage(progress("stepped"));
     notifySelectionUpdate();
 }
 
@@ -1047,12 +1039,12 @@ function playTick(): void {
     if (!playing) return;
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
-        postMessage(statusNow("gen_complete"));
+        postMessage(progress("genComplete"));
         return;
     }
     const tickStart = performance.now();
     call("biosim_wasm_do_step");
-    postMessage(statusNow("running"));
+    postMessage(progress("stepped"));
     notifySelectionUpdate();
     const elapsed = performance.now() - tickStart;
     const fpsReading = fpsWindow.tick(performance.now());
@@ -1061,7 +1053,7 @@ function playTick(): void {
     }
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
-        postMessage(statusNow("gen_complete"));
+        postMessage(progress("genComplete"));
     } else {
         setTimeout(playTick, stepDelay(targetFps, elapsed));
     }
@@ -1071,7 +1063,7 @@ function handlePlay(): void {
     startTransitionIfNeeded();
     fpsWindow = createFpsWindow();
     playing = true;
-    postMessage(statusNow("running"));
+    postMessage(progress("stepped"));
     playTick();
 }
 
@@ -1079,13 +1071,13 @@ function handleStop(): void {
     playing = false;
     // mode intentionally unchanged — agents freeze at their current
     // grid positions (idle-timeout return to kinematic is future work).
-    postMessage(statusNow("paused"));
+    postMessage(progress("paused"));
 }
 
 function handleRewind(): void {
     playing = false;
     call("biosim_wasm_rewind");
-    postMessage(statusNow("paused"));
+    postMessage(progress("paused"));
 }
 
 function handleRewindConfigured(params: SimParams): void {
@@ -1150,7 +1142,7 @@ function handleConfigure(params: SimParams): void {
 function handleClearGenom(): void {
     playing = false;
     call("biosim_wasm_clear_genome");
-    postMessage(statusNow("paused"));
+    postMessage(progress("paused"));
 }
 
 function handleExportSnapshot(): void {
@@ -1251,7 +1243,7 @@ function handleStartFreeRun(): void {
 
 function handleStopFreeRun(): void {
     freeRunning = false;
-    postMessage(statusNow("paused"));
+    postMessage(progress("paused"));
 }
 
 // ── Message handler ───────────────────────────────────────────────────────────
@@ -1400,6 +1392,9 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         }
         case "layout": {
+            // Grid cell counts come straight from the WASM sim (the source of
+            // truth, set by applyConfig), not from the command — the UI no
+            // longer round-trips grid dimensions back to the worker.
             layout = {
                 canvasW: cmd.canvasW,
                 canvasH: cmd.canvasH,
@@ -1407,8 +1402,8 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
                 gridY: cmd.gridY,
                 gridW: cmd.gridW,
                 gridH: cmd.gridH,
-                gridCellsX: cmd.gridCellsX,
-                gridCellsY: cmd.gridCellsY,
+                gridCellsX: call("biosim_wasm_get_size_x"),
+                gridCellsY: call("biosim_wasm_get_size_y"),
             };
             // Resizing the OffscreenCanvas clears its contents; animTick will
             // redraw on the next frame.

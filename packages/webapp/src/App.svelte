@@ -94,17 +94,16 @@
                     gridY: gridGeom.y,
                     gridW: gridGeom.w,
                     gridH: gridGeom.h,
-                    gridCellsX: telemetry.gridSizeX,
-                    gridCellsY: telemetry.gridSizeY,
                 } satisfies WorkerCmd);
             }
-        } else if (msg.type === "status") {
-            telemetry.onStatus(msg);
-            if (msg.state === "gen_complete") {
-                machine.onGenComplete();
-            } else if (msg.state === "paused") {
-                machine.onFreeRunPaused();
-            }
+        } else if (msg.type === "stepped") {
+            telemetry.onStepped(msg);
+        } else if (msg.type === "genComplete") {
+            telemetry.onStepped(msg);
+            machine.onGenComplete();
+        } else if (msg.type === "paused") {
+            telemetry.onStepped(msg);
+            machine.onFreeRunPaused();
         } else if (msg.type === "census") {
             machine.onCensus(msg.genomeMaxLenUsed, msg.genomeMaxNeuronsUsed);
             telemetry.onCensus(msg);
@@ -288,8 +287,6 @@
             gridY: gridGeom.y,
             gridW: gridGeom.w,
             gridH: gridGeom.h,
-            gridCellsX: telemetry.gridSizeX,
-            gridCellsY: telemetry.gridSizeY,
         } satisfies WorkerCmd);
     });
 

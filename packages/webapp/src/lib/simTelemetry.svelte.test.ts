@@ -23,10 +23,10 @@ describe("initial state", () => {
     });
 });
 
-describe("onStatus", () => {
+describe("onStepped", () => {
     it("updates only the step counter", () => {
         const t = create();
-        t.onStatus({ step: 42 });
+        t.onStepped({ step: 42 });
         expect(t.step).toBe(42);
         expect(t.snapReady).toBe(false);
     });
@@ -85,7 +85,7 @@ describe("onRewindConfigured", () => {
     it("sets gen/pop/grid, resets step and history", () => {
         const t = create();
         t.onConfigured(1500, 64, 96, 250);
-        t.onStatus({ step: 120 });
+        t.onStepped({ step: 120 });
         t.onRewindConfigured({
             gen: 3,
             population: 2000,
@@ -175,7 +175,7 @@ describe("onSnapshotLoaded", () => {
 describe("resetStep", () => {
     it("zeroes only the step counter", () => {
         const t = create();
-        t.onStatus({ step: 88 });
+        t.onStepped({ step: 88 });
         t.onCensus({ gen: 3, population: 100, survivors: 50 });
         t.resetStep();
         expect(t.step).toBe(0);

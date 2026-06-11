@@ -478,7 +478,7 @@ and follows the same private-`$state` / public-getter / intent-method pattern
 with no `$effect`, so it is unit-testable in isolation. Unlike the other two it
 issues no worker commands, so it takes no `send` callback.
 
-Worker replies call its `on*` methods — `onStatus`, `onCensus`, `onConfigured`,
+Worker replies call its `on*` methods — `onStepped`, `onCensus`, `onConfigured`,
 `onRewindConfigured`, `onNextGenerationConfigured`, `onSnapshotLoaded` — and the
 manual next-gen/rewind gestures call `resetStep`; the view reads `telemetry.gen`
 / `telemetry.survivalHistory` / `telemetry.snapReady` etc. via getters. The
