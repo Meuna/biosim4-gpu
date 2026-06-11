@@ -18,6 +18,11 @@
     import type { BrainConn } from "./lib/brain";
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
     import { simParamsToToml, tomlToSimParams } from "./lib/tomlConfig";
+    import {
+        pickFile,
+        downloadBlob,
+        classifyDroppedFiles,
+    } from "./lib/fileTransfer";
     import { SimMachine } from "./lib/simMachine.svelte";
     import { AgentFocus } from "./lib/agentFocus.svelte";
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
@@ -54,99 +59,120 @@
 
     const workerReady = $derived(machine.phase !== "WORKER_PENDING");
 
+    // Transfers the canvas to the worker and hands it the initial layout. Stays
+    // in-component: it closes over `canvasEl`, the viewport dims and `gridGeom`.
+    function bootstrapCanvas(): void {
+        if (!canvasEl) return;
+        const offscreen = canvasEl.transferControlToOffscreen();
+        // Read raw tokens directly (not via var() aliases) so getPropertyValue
+        // resolves to usable color strings.
+        const styles = getComputedStyle(document.documentElement);
+        const overlayColor = styles.getPropertyValue("--_border-subtle").trim();
+        const borderColor = styles
+            .getPropertyValue("--_challenge-border")
+            .trim();
+        const accentColor = styles.getPropertyValue("--_accent").trim();
+        worker.postMessage(
+            {
+                type: "canvas",
+                canvas: offscreen,
+                overlayColor,
+                borderColor,
+                accentColor,
+            } satisfies WorkerCmd,
+            [offscreen],
+        );
+        machine.onWorkerReady();
+        // Send initial layout so the worker sizes the canvas and knows where the
+        // grid region lives on the full-viewport surface.
+        send({
+            type: "layout",
+            canvasW: viewportW,
+            canvasH: viewportH,
+            gridX: gridGeom.x,
+            gridY: gridGeom.y,
+            gridW: gridGeom.w,
+            gridH: gridGeom.h,
+        } satisfies WorkerCmd);
+    }
+
+    // Routes worker replies to their owners. Ordered by lifecycle: bootstrap,
+    // then (re)configuration, per-step progress, agent focus, then misc.
     worker.addEventListener("message", (e: MessageEvent<WorkerEvent>) => {
         const msg = e.data;
-        if (msg.type === "agentPicked") {
-            focus.pick(msg.info, msg.reason);
-        } else if (msg.type === "agentMissed") {
-            focus.miss(msg.reason);
-        } else if (msg.type === "ready") {
-            if (canvasEl) {
-                const offscreen = canvasEl.transferControlToOffscreen();
-                // Read raw tokens directly (not via var() aliases) so
-                // getPropertyValue resolves to usable color strings.
-                const styles = getComputedStyle(document.documentElement);
-                const overlayColor = styles
-                    .getPropertyValue("--_border-subtle")
-                    .trim();
-                const borderColor = styles
-                    .getPropertyValue("--_challenge-border")
-                    .trim();
-                const accentColor = styles.getPropertyValue("--_accent").trim();
-                worker.postMessage(
-                    {
-                        type: "canvas",
-                        canvas: offscreen,
-                        overlayColor,
-                        borderColor,
-                        accentColor,
-                    } satisfies WorkerCmd,
-                    [offscreen],
+        switch (msg.type) {
+            case "ready":
+                bootstrapCanvas();
+                break;
+            case "configured":
+                machine.onConfigured();
+                telemetry.onConfigured(msg);
+                break;
+            case "census":
+                machine.onCensus(
+                    msg.genomeMaxLenUsed,
+                    msg.genomeMaxNeuronsUsed,
                 );
-                machine.onWorkerReady();
-                // Send initial layout so the worker sizes the canvas and knows
-                // where the grid region lives on the full-viewport surface.
-                send({
-                    type: "layout",
-                    canvasW: viewportW,
-                    canvasH: viewportH,
-                    gridX: gridGeom.x,
-                    gridY: gridGeom.y,
-                    gridW: gridGeom.w,
-                    gridH: gridGeom.h,
-                } satisfies WorkerCmd);
-            }
-        } else if (msg.type === "stepped") {
-            telemetry.onStepped(msg);
-        } else if (msg.type === "genComplete") {
-            telemetry.onStepped(msg);
-            machine.onGenComplete();
-        } else if (msg.type === "paused") {
-            telemetry.onStepped(msg);
-            machine.onFreeRunPaused();
-        } else if (msg.type === "census") {
-            machine.onCensus(msg.genomeMaxLenUsed, msg.genomeMaxNeuronsUsed);
-            telemetry.onCensus(msg);
-        } else if (msg.type === "rewindConfigured") {
-            machine.onRewindConfigured();
-            telemetry.onRewindConfigured(msg);
-        } else if (msg.type === "nextGenerationConfigured") {
-            machine.onNextGenerationConfigured(
-                msg.genomeMaxLenUsed,
-                msg.genomeMaxNeuronsUsed,
-            );
-            telemetry.onNextGenerationConfigured(msg);
-        } else if (msg.type === "agentUpdated") {
-            focus.update(msg.info);
-        } else if (msg.type === "brainData") {
-            // Ignore brain payloads for an agent that is no longer displayed.
-            if (msg.id === focus.displayId) {
-                brain = {
-                    id: msg.id,
-                    conns: msg.conns,
-                    neuronCount: msg.neuronCount,
-                };
-            }
-        } else if (msg.type === "fps") {
-            measuredFps = msg.value;
-        } else if (msg.type === "configured") {
-            machine.onConfigured();
-            telemetry.onConfigured(msg);
-        } else if (msg.type === "snapshotData") {
-            const blob = new Blob([msg.data], {
-                type: "application/octet-stream",
-            });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "biosim.snap";
-            a.click();
-            URL.revokeObjectURL(url);
-        } else if (msg.type === "snapshotLoaded") {
-            machine.onSnapshotLoaded();
-            telemetry.onSnapshotLoaded(msg);
-        } else if (msg.type === "error") {
-            confErrorMsg = msg.message;
+                telemetry.onCensus(msg);
+                break;
+            case "rewindConfigured":
+                machine.onRewindConfigured();
+                telemetry.onRewindConfigured(msg);
+                break;
+            case "nextGenerationConfigured":
+                machine.onNextGenerationConfigured(
+                    msg.genomeMaxLenUsed,
+                    msg.genomeMaxNeuronsUsed,
+                );
+                telemetry.onNextGenerationConfigured(msg);
+                break;
+            case "snapshotLoaded":
+                machine.onSnapshotLoaded();
+                telemetry.onSnapshotLoaded(msg);
+                break;
+            case "stepped":
+                telemetry.onStepped(msg);
+                break;
+            case "genComplete":
+                telemetry.onStepped(msg);
+                machine.onGenComplete();
+                break;
+            case "paused":
+                telemetry.onStepped(msg);
+                machine.onFreeRunPaused();
+                break;
+            case "agentPicked":
+                focus.pick(msg.info, msg.reason);
+                break;
+            case "agentMissed":
+                focus.miss(msg.reason);
+                break;
+            case "agentUpdated":
+                focus.update(msg.info);
+                break;
+            case "brainData":
+                // Ignore brain payloads for an agent no longer displayed.
+                if (msg.id === focus.displayId) {
+                    brain = {
+                        id: msg.id,
+                        conns: msg.conns,
+                        neuronCount: msg.neuronCount,
+                    };
+                }
+                break;
+            case "fps":
+                measuredFps = msg.value;
+                break;
+            case "snapshotData":
+                downloadBlob(
+                    "biosim.snap",
+                    msg.data,
+                    "application/octet-stream",
+                );
+                break;
+            case "error":
+                confErrorMsg = msg.message;
+                break;
         }
     });
 
@@ -156,9 +182,6 @@
 
     // Telemetry (gen/step/pop counters, survival sparkline, active grid/steps
     // params, snapshot-ready gate) lives in the `telemetry` holder above.
-
-    // Bound to the hidden .snap file input element.
-    let snapUploadInput = $state<HTMLInputElement | null>(null);
 
     // ── Speed / FPS ──────────────────────────────────────────────────────────
     let targetSpeed = $state(0);
@@ -290,11 +313,6 @@
         } satisfies WorkerCmd);
     });
 
-    // ── Draft config callbacks ────────────────────────────────────────────────
-    function handleDraftChange(params: SimParams): void {
-        machine.setDraft(params);
-    }
-
     // ── Play / pause / step / gen ────────────────────────────────────────────
     function handleSetSpeed(fps: number): void {
         targetSpeed = fps;
@@ -361,18 +379,6 @@
         });
     }
 
-    function handleNavigate(dir: -1 | 1): void {
-        focus.navigate(dir);
-    }
-
-    function handleShuffle(): void {
-        focus.shuffle();
-    }
-
-    function handleSelectById(id: number): void {
-        focus.selectById(id);
-    }
-
     // ── Drag-drop overlay ────────────────────────────────────────────────────
     let isDragging = $state(false);
 
@@ -382,7 +388,6 @@
     }
 
     // ── Config import / export ───────────────────────────────────────────────
-    let uploadInput = $state<HTMLInputElement | null>(null);
     let confErrorMsg = $state<string | null>(null);
 
     $effect(() => {
@@ -397,22 +402,14 @@
         const toml = simParamsToToml(
             $state.snapshot(machine.draftConfig) as SimParams,
         );
-        const blob = new Blob([toml], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "biosim.toml";
-        a.click();
-        URL.revokeObjectURL(url);
+        downloadBlob("biosim.toml", toml, "text/plain");
     }
 
-    function handleConfUpload(): void {
-        uploadInput?.click();
-    }
-
+    // Parses TOML text into the draft config, surfacing a parse error in the
+    // banner. The single sink the picker and the drag-drop paths both feed.
     function applyTomlText(text: string): void {
         try {
-            handleDraftChange(tomlToSimParams(text));
+            machine.setDraft(tomlToSimParams(text));
             confErrorMsg = null;
         } catch (err) {
             confErrorMsg =
@@ -420,58 +417,49 @@
         }
     }
 
-    function handleFileInputChange(
-        e: Event & { currentTarget: HTMLInputElement },
-    ): void {
-        const file = e.currentTarget.files?.[0];
-        if (!file) return;
-        e.currentTarget.value = "";
-        void file.text().then(
-            (text) => applyTomlText(text),
-            () => {
-                confErrorMsg = "Failed to read config file";
-            },
-        );
+    // ── Config / snapshot loaders (shared by picker + drag-drop) ──────────────
+    function loadConfigFile(file: File): Promise<void> {
+        return file.text().then(applyTomlText, () => {
+            confErrorMsg = "Failed to read config file";
+        });
     }
 
-    function handleSnapUpload(): void {
-        snapUploadInput?.click();
-    }
-
-    function handleSnapFileInputChange(
-        e: Event & { currentTarget: HTMLInputElement },
-    ): void {
-        const file = e.currentTarget.files?.[0];
-        if (!file) return;
-        e.currentTarget.value = "";
-        void file.arrayBuffer().then(
-            (buf) => {
-                machine.loadSnapshot(new Uint8Array(buf));
-            },
+    function loadSnapshotFile(file: File): Promise<void> {
+        return file.arrayBuffer().then(
+            (buf) => machine.loadSnapshot(new Uint8Array(buf)),
             () => {
                 confErrorMsg = "Failed to read snapshot file";
             },
         );
     }
 
+    async function importConfig(): Promise<void> {
+        const file = await pickFile(".toml");
+        if (file) await loadConfigFile(file);
+    }
+
+    async function importSnapshot(): Promise<void> {
+        const file = await pickFile(".snap");
+        if (file) await loadSnapshotFile(file);
+    }
+
     function handleDrop(e: DragEvent): void {
         e.preventDefault();
         isDragging = false;
-        const files = Array.from(e.dataTransfer?.files ?? []);
-        if (files.length > 2) {
-            confErrorMsg = "Drop at most 2 files (one .toml, one snapshot)";
+        const { toml, snap, error } = classifyDroppedFiles(
+            Array.from(e.dataTransfer?.files ?? []),
+        );
+        if (error) {
+            confErrorMsg = error;
             return;
         }
-        const tomlFile = files.find((f) => f.name.endsWith(".toml")) ?? null;
-        const snapFile = files.find((f) => !f.name.endsWith(".toml")) ?? null;
-
-        if (tomlFile && snapFile) {
+        if (toml && snap) {
             // Read both in parallel; parse TOML first so loadSnapshot receives
             // the correct params rather than stale draftConfig.
-            void Promise.all([tomlFile.text(), snapFile.arrayBuffer()]).then(
+            void Promise.all([toml.text(), snap.arrayBuffer()]).then(
                 ([tomlText, snapBuf]) => {
                     try {
-                        handleDraftChange(tomlToSimParams(tomlText));
+                        machine.setDraft(tomlToSimParams(tomlText));
                         confErrorMsg = null;
                     } catch (err) {
                         confErrorMsg =
@@ -486,26 +474,10 @@
                     confErrorMsg = "Failed to read files";
                 },
             );
-        } else {
-            if (tomlFile) {
-                void tomlFile.text().then(
-                    (text) => applyTomlText(text),
-                    () => {
-                        confErrorMsg = "Failed to read config file";
-                    },
-                );
-            }
-            if (snapFile) {
-                void snapFile.arrayBuffer().then(
-                    (buf) => {
-                        machine.loadSnapshot(new Uint8Array(buf));
-                    },
-                    () => {
-                        confErrorMsg = "Failed to read snapshot file";
-                    },
-                );
-            }
+            return;
         }
+        if (toml) void loadConfigFile(toml);
+        if (snap) void loadSnapshotFile(snap);
     }
 </script>
 
@@ -515,21 +487,6 @@
     ondragover={(e) => e.preventDefault()}
     role="application"
 >
-    <input
-        bind:this={uploadInput}
-        type="file"
-        accept=".toml"
-        style="display:none"
-        onchange={handleFileInputChange}
-    />
-    <input
-        bind:this={snapUploadInput}
-        type="file"
-        accept=".snap"
-        style="display:none"
-        onchange={handleSnapFileInputChange}
-    />
-
     {#if isDragging}
         <div
             class="drop-overlay"
@@ -671,12 +628,12 @@
                 incompatibleFields={machine.incompatibleFields}
                 genomeMaxLenUsed={machine.genomeMaxLenUsed}
                 genomeMaxNeuronsUsed={machine.genomeMaxNeuronsUsed}
-                onDraftChange={handleDraftChange}
+                onDraftChange={(p) => machine.setDraft(p)}
                 onRevert={() => machine.revertDraft()}
-                onConfUpload={handleConfUpload}
+                onConfUpload={() => void importConfig()}
                 onConfDownload={handleConfDownload}
                 snapReady={telemetry.snapReady}
-                onSnapUpload={handleSnapUpload}
+                onSnapUpload={() => void importSnapshot()}
                 onSnapDownload={() => machine.exportSnapshot()}
             />
         {/snippet}
@@ -686,9 +643,9 @@
                 brain={displayBrain}
                 isSelected={focus.isSelected}
                 onClear={handleClearSelection}
-                onNavigate={handleNavigate}
-                onShuffle={handleShuffle}
-                onSelectById={handleSelectById}
+                onNavigate={(dir) => focus.navigate(dir)}
+                onShuffle={() => focus.shuffle()}
+                onSelectById={(id) => focus.selectById(id)}
                 onExpandBrain={() => (brainExpanded = true)}
             />
         {/snippet}
