@@ -151,19 +151,20 @@ describe("onNextGenerationConfigured", () => {
 });
 
 describe("onSnapshotLoaded", () => {
-    it("sets gen/pop/grid, arms snapReady, clears history", () => {
+    it("sets gen/pop, arms snapReady, clears history, keeps grid/steps", () => {
         const t = create();
-        t.onCensus({ gen: 9, population: 100, survivors: 80 });
-        t.onSnapshotLoaded({
-            gen: 7,
-            population: 1200,
+        t.onConfigured({
+            population: 1000,
             gridSizeX: 80,
             gridSizeY: 80,
             stepsPerGen: 500,
         });
+        t.onCensus({ gen: 9, population: 100, survivors: 80 });
+        t.onSnapshotLoaded({ gen: 7, population: 1200 });
         expect(t.gen).toBe(7);
         expect(t.step).toBe(0);
         expect(t.pop).toBe(1200);
+        // Import affects only the population — grid/steps keep their live values.
         expect(t.gridSizeX).toBe(80);
         expect(t.gridSizeY).toBe(80);
         expect(t.stepsPerGen).toBe(500);

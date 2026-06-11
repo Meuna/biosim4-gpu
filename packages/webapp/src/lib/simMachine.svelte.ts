@@ -206,11 +206,13 @@ export class SimMachine {
         this.#send({ type: "clearGenom" });
     }
 
+    // Import survivors into the live sim. Carries only the population data —
+    // never config: the worker imports into whatever the sim is currently
+    // configured with, leaving grid/challenge/genome limits untouched.
     loadSnapshot(data: Uint8Array): void {
-        this.#send(
-            { type: "loadSnapshot", params: this.#snapshotDraft(), data },
-            [data.buffer as ArrayBuffer],
-        );
+        this.#send({ type: "loadSnapshot", data }, [
+            data.buffer as ArrayBuffer,
+        ]);
     }
 
     exportSnapshot(): void {

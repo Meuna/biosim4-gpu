@@ -157,7 +157,7 @@ export type WorkerCmd =
     | { type: "startFreeRun" }
     | { type: "stopFreeRun" }
     | { type: "exportSnapshot" }
-    | { type: "loadSnapshot"; params: SimParams; data: Uint8Array };
+    | { type: "loadSnapshot"; data: Uint8Array };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -213,14 +213,7 @@ export type WorkerEvent =
       }
     | { type: "fps"; value: number }
     | { type: "snapshotData"; data: Uint8Array }
-    | {
-          type: "snapshotLoaded";
-          gen: number;
-          population: number;
-          gridSizeX: number;
-          gridSizeY: number;
-          stepsPerGen: number;
-      };
+    | { type: "snapshotLoaded"; gen: number; population: number };
 
 interface Layout {
     canvasW: number;
@@ -1163,18 +1156,13 @@ function handleExportSnapshot(): void {
     ]);
 }
 
-function handleLoadSnapshot(params: SimParams, data: Uint8Array): void {
+// Import survivors into the live (already-initialised) sim and spawn the next
+// generation. Affects only the population — never the config: the sim keeps its
+// current grid, challenge and genome limits, so a snapshot whose genomes exceed
+// those limits is rejected by import_commit (surfaced as an error banner).
+function handleLoadSnapshot(data: Uint8Array): void {
     playing = false;
     const prevMode = mode;
-    applyConfig(params);
-    const initRc = call("biosim_wasm_init");
-    if (initRc !== 0) {
-        postMessage({
-            type: "error",
-            message: "Snapshot load failed (init)",
-        } satisfies WorkerEvent);
-        return;
-    }
     const ptr = biosim!.ccall(
         "biosim_wasm_snapshot_import_alloc",
         "number",
@@ -1197,16 +1185,12 @@ function handleLoadSnapshot(params: SimParams, data: Uint8Array): void {
         } satisfies WorkerEvent);
         return;
     }
-    cacheBarrierCells();
     mode = prevMode === "idle" ? "idle" : "running";
     startTime = performance.now();
     postMessage({
         type: "snapshotLoaded",
         gen: call("biosim_wasm_get_gen"),
         population: call("biosim_wasm_get_population"),
-        gridSizeX: params.gridSizeX,
-        gridSizeY: params.gridSizeY,
-        stepsPerGen: params.stepsPerGen,
     } satisfies WorkerEvent);
 }
 
@@ -1293,8 +1277,12 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             handleExportSnapshot();
             break;
         case "loadSnapshot":
-            handleLoadSnapshot(cmd.params, cmd.data);
+            handleLoadSnapshot(cmd.data);
             break;
+        // Pick commands only *query* the heap and reply with agentPicked/
+        // agentMissed — they never mutate selection. The main thread routes the
+        // reply through AgentFocus and echoes back selectAgent/hoverAgent (the
+        // sole writers of selectedAgentId/hoveredAgentId; see App.svelte).
         case "pickAgentAtCell": {
             if (!biosim || !layout) break;
             const W = layout.gridCellsX;
@@ -1367,6 +1355,8 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         case "setSpeed":
             targetFps = cmd.fps;
             break;
+        // Sole writers of the worker's selection state (set by AgentFocus on the
+        // main thread — pick replies and UX gestures both funnel through here).
         case "selectAgent":
             selectedAgentId = cmd.id;
             break;

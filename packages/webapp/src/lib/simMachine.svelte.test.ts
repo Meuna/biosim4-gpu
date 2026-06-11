@@ -430,14 +430,14 @@ describe("draft config", () => {
 });
 
 describe("snapshots", () => {
-    it("loadSnapshot sends the current draft params and transfers the buffer", () => {
+    it("loadSnapshot sends only the population data and transfers the buffer", () => {
         const { m, sent, transfers } = create();
         m.onWorkerReady();
-        const params = makeParams({ population: DEFAULTS.population + 1 });
-        m.setDraft(params);
+        // A draft edit must not ride along: import affects only the population.
+        m.setDraft(makeParams({ population: DEFAULTS.population + 1 }));
         const data = new Uint8Array([1, 2, 3]);
         m.loadSnapshot(data);
-        expect(sent).toEqual([{ type: "loadSnapshot", params, data }]);
+        expect(sent).toEqual([{ type: "loadSnapshot", data }]);
         expect(transfers[0]).toEqual([data.buffer]);
     });
 

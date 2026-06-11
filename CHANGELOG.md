@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **webapp App.svelte ↔ worker glue review** (gh-118) — snapshot import now
+  affects only the population: `loadSnapshot` carries just the snapshot data
+  (no config), and the worker imports survivors into the live, already-running
+  sim instead of re-applying config and re-initialising the world. The snapshot
+  *upload* button is gated on the worker being ready rather than on
+  `snapReady` (which still gates *download*), so a snapshot can be imported into
+  a fresh session before any generation has run; an incompatible genome is
+  surfaced through the existing error banner. Also documented the agent-selection
+  round-trip and its single-writer invariant inline in `App.svelte` and
+  `sim.worker.ts` (no behavioural change to selection).
 - **webapp App.svelte review** (gh-115) — extracted the config/snapshot
   file-IO mechanics into `src/lib/fileTransfer.ts` (`pickFile`, `downloadBlob`,
   `classifyDroppedFiles`): the picker uses a transient input instead of two

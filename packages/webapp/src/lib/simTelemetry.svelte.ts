@@ -129,13 +129,12 @@ export class SimTelemetry {
         this.#snapReady = true;
     }
 
-    onSnapshotLoaded(e: ConfigInfo & { gen: number }): void {
+    // A snapshot import replaces only the population: grid/steps keep their live
+    // values, so only the counters and the snapshot gate are refreshed.
+    onSnapshotLoaded(e: { gen: number; population: number }): void {
         this.#gen = e.gen;
         this.#step = 0;
         this.#pop = e.population;
-        this.#gridSizeX = e.gridSizeX;
-        this.#gridSizeY = e.gridSizeY;
-        this.#stepsPerGen = e.stepsPerGen;
         this.#snapReady = true;
         this.#survivalHistory = [];
     }

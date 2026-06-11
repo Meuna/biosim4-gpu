@@ -141,6 +141,18 @@
                 telemetry.onStepped(msg);
                 machine.onFreeRunPaused();
                 break;
+            // Agent selection — a 4-leg round-trip with a single-writer rule:
+            //   1. canvas click/hover → send pickAgentAtCell{gx,gy,reason}
+            //      (only the main thread knows pixel→cell geometry)
+            //   2. worker reads the WASM heap → agentPicked{info,reason} |
+            //      agentMissed{reason} (only the worker can read the heap)
+            //   3. focus.pick/miss → send selectAgent|hoverAgent{id} — the SOLE
+            //      writer of the worker's selectedAgentId/hoveredAgentId
+            //   4. each step → agentUpdated{info} feeds focus.update (selected)
+            // `AgentFocus` is the sole authority on the selected/hovered/sticky
+            // triad (see agentFocus.svelte.ts); the worker only mirrors which id
+            // to highlight and feed. Keeping selection writes on leg 3 alone is
+            // why the pick reply does not set worker state directly.
             case "agentPicked":
                 focus.pick(msg.info, msg.reason);
                 break;
@@ -453,29 +465,9 @@
             confErrorMsg = error;
             return;
         }
-        if (toml && snap) {
-            // Read both in parallel; parse TOML first so loadSnapshot receives
-            // the correct params rather than stale draftConfig.
-            void Promise.all([toml.text(), snap.arrayBuffer()]).then(
-                ([tomlText, snapBuf]) => {
-                    try {
-                        machine.setDraft(tomlToSimParams(tomlText));
-                        confErrorMsg = null;
-                    } catch (err) {
-                        confErrorMsg =
-                            err instanceof Error
-                                ? err.message
-                                : "Failed to parse config";
-                        return;
-                    }
-                    machine.loadSnapshot(new Uint8Array(snapBuf));
-                },
-                () => {
-                    confErrorMsg = "Failed to read files";
-                },
-            );
-            return;
-        }
+        // Config and snapshot are independent: the .toml updates the draft
+        // config, the .snap imports survivors into the live sim. A dropped pair
+        // just runs both.
         if (toml) void loadConfigFile(toml);
         if (snap) void loadSnapshotFile(snap);
     }
@@ -632,6 +624,7 @@
                 onRevert={() => machine.revertDraft()}
                 onConfUpload={() => void importConfig()}
                 onConfDownload={handleConfDownload}
+                snapImportReady={workerReady}
                 snapReady={telemetry.snapReady}
                 onSnapUpload={() => void importSnapshot()}
                 onSnapDownload={() => machine.exportSnapshot()}

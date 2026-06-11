@@ -19,6 +19,8 @@
         genomeMaxNeuronsUsed?: number;
         onConfUpload: () => void;
         onConfDownload: () => void;
+        // Import is allowed as soon as the sim is live; export needs survivors.
+        snapImportReady?: boolean;
         snapReady?: boolean;
         onSnapUpload: () => void;
         onSnapDownload: () => void;
@@ -33,6 +35,7 @@
         genomeMaxNeuronsUsed = 0,
         onConfUpload,
         onConfDownload,
+        snapImportReady = false,
         snapReady = false,
         onSnapUpload,
         onSnapDownload,
@@ -75,7 +78,7 @@
             <span class="small-caps sim-config__io-label">Snapshot</span>
             <button
                 class="button button--utility"
-                disabled={!snapReady}
+                disabled={!snapImportReady}
                 onclick={onSnapUpload}
                 aria-label="Upload snapshot"
             >
