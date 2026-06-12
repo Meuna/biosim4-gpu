@@ -127,7 +127,7 @@
                 telemetry.onNextGenerationConfigured(msg);
                 break;
             case "snapshotLoaded":
-                machine.onSnapshotLoaded();
+                machine.onSnapshotLoaded(msg.requiredGenomeLen);
                 telemetry.onSnapshotLoaded(msg);
                 break;
             case "stepped":
@@ -455,9 +455,19 @@
         if (file) await loadSnapshotFile(file);
     }
 
+    // Config and snapshot are both unaffordable during free-run.
+    const uploadsDisabled = $derived(
+        machine.phase === "FREE_RUNNING" ||
+            machine.phase === "FREE_RUN_STOPPING",
+    );
+
     function handleDrop(e: DragEvent): void {
         e.preventDefault();
         isDragging = false;
+        if (uploadsDisabled) {
+            confErrorMsg = "Stop the evolution run before loading files";
+            return;
+        }
         const { toml, snap, error } = classifyDroppedFiles(
             Array.from(e.dataTransfer?.files ?? []),
         );
@@ -627,6 +637,7 @@
                 snapReady={telemetry.snapReady}
                 onSnapUpload={() => void importSnapshot()}
                 onSnapDownload={() => machine.exportSnapshot()}
+                {uploadsDisabled}
             />
         {/snippet}
         {#snippet cell()}

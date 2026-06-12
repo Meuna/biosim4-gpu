@@ -347,6 +347,22 @@ biosim_status_t biosim_generation_breed(biosim_sim_t *sim, const biosim_survivor
     const bool by_fitness = sim->choose_parents_by_fitness;
     const uint32_t pop = sim->agents.population;
 
+    /* Reject survivors whose genomes exceed the live genome capacity before
+     * touching the grid: restore_genome_slot would otherwise write past
+     * genome->conn/wgt. This is the hard net behind callers' compatibility
+     * checks (snapshot.c check_compat for the CLI, the webapp UX gate); a direct
+     * load of an oversized snapshot lands here instead of overflowing. */
+    for (uint32_t s = 0U; s < n_survivors; s++) {
+        if (snap->len[s] > sim->genome.max_len) {
+            BIOSIM_ERRORF(
+                "survivor genome length %u exceeds genome max length %u",
+                (unsigned)snap->len[s],
+                (unsigned)sim->genome.max_len
+            );
+            return BIOSIM_ERR_INVALID;
+        }
+    }
+
     uint32_t *snap_order = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 

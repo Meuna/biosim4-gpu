@@ -23,6 +23,8 @@
         snapReady?: boolean;
         onSnapUpload: () => void;
         onSnapDownload: () => void;
+        // Config/snapshot uploads are unaffordable during free-run.
+        uploadsDisabled?: boolean;
     }
     const {
         draftConfig,
@@ -37,6 +39,7 @@
         snapReady = false,
         onSnapUpload,
         onSnapDownload,
+        uploadsDisabled = false,
     }: Props = $props();
 </script>
 
@@ -61,6 +64,7 @@
             <span class="small-caps sim-config__io-label">Conf</span>
             <button
                 class="button button--utility"
+                disabled={uploadsDisabled}
                 onclick={onConfUpload}
                 aria-label="Upload config"
             >
@@ -76,6 +80,7 @@
             <span class="small-caps sim-config__io-label">Snapshot</span>
             <button
                 class="button button--utility"
+                disabled={uploadsDisabled}
                 onclick={onSnapUpload}
                 aria-label="Upload snapshot"
             >

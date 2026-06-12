@@ -374,6 +374,19 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import(void) {
     return (int)rc;
 }
 
+/* Return the longest genome length among the currently loaded survivors (0 when
+ * none). The webapp compares this against the live maxGenomeLen to decide
+ * whether breeding from the loaded snapshot is compatible with the config. */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_loaded_max_len(void) {
+    uint32_t max = 0U;
+    for (uint32_t s = 0U; s < snap.count; s++) {
+        if ((uint32_t)snap.len[s] > max) {
+            max = (uint32_t)snap.len[s];
+        }
+    }
+    return max;
+}
+
 /* ── parameter setters ───────────────────────────────────────────────────── */
 
 /* Set a named integer parameter before the next biosim_wasm_init call.

@@ -206,11 +206,25 @@ export class SimMachine {
         this.#send({ type: "clearGenom" });
     }
 
-    // Import survivors into the live sim. Carries only the population data —
-    // never config: the worker imports into whatever the sim is currently
-    // configured with, leaving grid/challenge/genome limits untouched.
+    // Drop a snapshot into the sim. Every drop lands in GENERATION_SPAWNED.
+    // When the drop interrupts a mid-generation run, the worker rewinds the live
+    // snap first (spawn 1) so the grid shows a clean generation; the dropped
+    // survivors are then loaded but NOT bred — onSnapshotLoaded() decides whether
+    // to breed from them (spawn 2) once it knows the snapshot/config
+    // compatibility. Rejected during free-run / before the worker is ready.
     loadSnapshot(data: Uint8Array): void {
-        this.#send({ type: "loadSnapshot", data }, [
+        if (
+            this.#phase === "WORKER_PENDING" ||
+            this.#phase === "FREE_RUNNING" ||
+            this.#phase === "FREE_RUN_STOPPING" ||
+            this.#phase === "CONFIRM"
+        ) {
+            return;
+        }
+        const rewindFirst =
+            this.#phase === "STEPS_RUNNING" || this.#phase === "STEPS_PAUSED";
+        this.#phase = "GENERATION_SPAWNED";
+        this.#send({ type: "loadSnapshot", data, rewindFirst }, [
             data.buffer as ArrayBuffer,
         ]);
     }
@@ -260,10 +274,23 @@ export class SimMachine {
         this.#genomeMaxNeuronsUsed = genomeMaxNeuronsUsed;
     }
 
-    onSnapshotLoaded(): void {
-        this.#phase = "STEPS_PAUSED";
-        this.#commitPendingConfig();
-        this.#resetGenomeUsed();
+    // Reply to a snapshot drop: the dropped survivors are loaded into snap but
+    // not yet bred. `requiredGenomeLen` is the longest loaded genome; feeding it
+    // into the genome gate makes the draft-based #genomIncompatible derivation
+    // the single source of truth. Compatible → breed from the snapshot now
+    // (spawn 2, riding a dirty draft on rewindConfigured). Incompatible → stay
+    // put with the gate firing; the user raises maxGenomeLen (or clearGenom),
+    // then the normal Play/Rewind commit breeds from the still-loaded snap.
+    onSnapshotLoaded(requiredGenomeLen: number): void {
+        this.#phase = "GENERATION_SPAWNED";
+        // Feed the snapshot's longest genome into the genome gate (neurons are
+        // remapped on compile, never a capacity hazard). The draft-based
+        // #genomIncompatible derivation then drives the config-panel hint.
+        this.#genomeMaxLenUsed = requiredGenomeLen;
+        this.#genomeMaxNeuronsUsed = 0;
+        if (this.#draftConfig.maxGenomeLen >= requiredGenomeLen) {
+            this.#respawn("rewind", false);
+        }
     }
 
     onCensus(genomeMaxLenUsed: number, genomeMaxNeuronsUsed: number): void {

@@ -157,7 +157,7 @@ export type WorkerCmd =
     | { type: "startFreeRun" }
     | { type: "stopFreeRun" }
     | { type: "exportSnapshot" }
-    | { type: "loadSnapshot"; data: Uint8Array };
+    | { type: "loadSnapshot"; data: Uint8Array; rewindFirst: boolean };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -213,7 +213,12 @@ export type WorkerEvent =
       }
     | { type: "fps"; value: number }
     | { type: "snapshotData"; data: Uint8Array }
-    | { type: "snapshotLoaded"; gen: number; population: number };
+    | {
+          type: "snapshotLoaded";
+          gen: number;
+          population: number;
+          requiredGenomeLen: number;
+      };
 
 interface Layout {
     canvasW: number;
@@ -1156,14 +1161,20 @@ function handleExportSnapshot(): void {
     ]);
 }
 
-// Import survivors into the live (already-initialised) sim, then rewind to
-// spawn the next generation from them. Affects only the population — never the
-// config: the sim keeps its current grid, challenge and genome limits, so a
-// snapshot whose genomes exceed those limits is rejected by import (surfaced as
-// an error banner).
-function handleLoadSnapshot(data: Uint8Array): void {
+// Stage a dropped snapshot. This is spawn 1 + load only — it never breeds from
+// the dropped survivors. `rewindFirst` (set when the drop interrupted a
+// mid-generation run) rewinds the *live* snap first so the grid shows a clean
+// generation-start population (spawn 1) before import overwrites `snap`. The
+// dropped file is then loaded into `snap`; the machine decides whether to breed
+// from it (spawn 2) based on snapshot/config compatibility, so this never
+// rewinds the dropped survivors itself. Affects only the population — never the
+// config.
+function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
     playing = false;
     const prevMode = mode;
+    if (rewindFirst) {
+        call("biosim_wasm_rewind"); // spawn 1: rewind the live snap
+    }
     const ptr = biosim!.ccall(
         "biosim_wasm_snapshot_import_alloc",
         "number",
@@ -1186,20 +1197,13 @@ function handleLoadSnapshot(data: Uint8Array): void {
         } satisfies WorkerEvent);
         return;
     }
-    const rewindRc = call("biosim_wasm_rewind");
-    if (rewindRc !== 0) {
-        postMessage({
-            type: "error",
-            message: "Snapshot load failed (rewind)",
-        } satisfies WorkerEvent);
-        return;
-    }
     mode = prevMode === "idle" ? "idle" : "running";
     startTime = performance.now();
     postMessage({
         type: "snapshotLoaded",
         gen: call("biosim_wasm_get_gen"),
         population: call("biosim_wasm_get_population"),
+        requiredGenomeLen: call("biosim_wasm_snapshot_loaded_max_len"),
     } satisfies WorkerEvent);
 }
 
@@ -1286,7 +1290,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             handleExportSnapshot();
             break;
         case "loadSnapshot":
-            handleLoadSnapshot(cmd.data);
+            handleLoadSnapshot(cmd.data, cmd.rewindFirst);
             break;
         // Pick commands only *query* the heap and reply with agentPicked/
         // agentMissed — they never mutate selection. The main thread routes the

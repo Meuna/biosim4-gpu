@@ -123,16 +123,21 @@ const data = biosim.HEAPU8.slice(ptr, ptr + size); // independent copy
 | Function | Args | Return | Description |
 |---|---|---|---|
 | `biosim_wasm_snapshot_import_alloc` | `size: number` | `number` (uint32 pointer) | Allocate a WASM-side import buffer; returns its heap pointer (0 on OOM). JS writes the snapshot bytes here. |
-| `biosim_wasm_snapshot_import_commit` | — | `number` (status) | Parse the import buffer, load the last generation into snap, and call `spawn_generation`. Frees the import buffer on return. |
+| `biosim_wasm_snapshot_import` | — | `number` (status) | Parse the import buffer and load the last generation's survivors into snap. Does **not** spawn — call `biosim_wasm_rewind` (or `_rewind_configured`) to breed from them. Frees the import buffer on return. |
+| `biosim_wasm_snapshot_loaded_max_len` | — | `number` (uint32) | Longest genome length among the loaded survivors (0 when none). Compare against the live `max-genome-len` to decide whether breeding is compatible before rewinding. |
 
-Typical import sequence (call after `biosim_wasm_init` with matching params):
+Typical import sequence (call after `biosim_wasm_init`):
 ```js
 const ptr = biosim.ccall('biosim_wasm_snapshot_import_alloc', 'number',
                           ['number'], [data.byteLength]);
 if (ptr === 0) throw new Error('alloc failed');
 biosim.HEAPU8.set(data, ptr);
-const rc = biosim.ccall('biosim_wasm_snapshot_import_commit', 'number', [], []);
+const rc = biosim.ccall('biosim_wasm_snapshot_import', 'number', [], []);
 if (rc !== 0) throw new Error(`import failed: ${rc}`);
+// Survivors are loaded but not yet bred. Verify compatibility, then spawn:
+const need = biosim.ccall('biosim_wasm_snapshot_loaded_max_len', 'number', [], []);
+// ... if need <= current max-genome-len:
+biosim.ccall('biosim_wasm_rewind', 'number', [], []);
 ```
 
 ## Rendering / inspection queries

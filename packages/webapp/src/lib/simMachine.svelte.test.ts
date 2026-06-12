@@ -73,12 +73,13 @@ describe("toggle", () => {
 
     it("plays from GENERATION_SPAWNED and STEPS_PAUSED when clean", () => {
         for (const setup of [
-            (m: SimMachine) => m.onConfigured(),
-            (m: SimMachine) => m.onSnapshotLoaded(),
+            (m: SimMachine) => m.onConfigured(), // -> GENERATION_SPAWNED
+            (m: SimMachine) => m.step(), // WORKER_READY -> STEPS_PAUSED
         ]) {
             const { m, sent } = create();
             m.onWorkerReady();
             setup(m);
+            sent.length = 0;
             m.toggle();
             expect(m.phase).toBe("STEPS_RUNNING");
             expect(types(sent)).toEqual(["play"]);
@@ -383,11 +384,10 @@ describe("genome compatibility", () => {
         expect(m.genomIncompatible).toBe(false);
     });
 
-    it("resets the counters on configure, rewind and snapshot load", () => {
+    it("resets the counters on configure and rewind", () => {
         for (const reply of [
             (m: SimMachine) => m.onConfigured(),
             (m: SimMachine) => m.onRewindConfigured(),
-            (m: SimMachine) => m.onSnapshotLoaded(),
         ]) {
             const { m } = create(makeParams({ maxGenomeLen: 24 }));
             m.onCensus(32, 12);
@@ -430,22 +430,95 @@ describe("draft config", () => {
 });
 
 describe("snapshots", () => {
-    it("loadSnapshot sends only the population data and transfers the buffer", () => {
+    it("loadSnapshot transfers the buffer and lands in GENERATION_SPAWNED", () => {
         const { m, sent, transfers } = create();
         m.onWorkerReady();
-        // A draft edit must not ride along: import affects only the population.
+        // A draft edit must not ride along the load command itself.
         m.setDraft(makeParams({ population: DEFAULTS.population + 1 }));
         const data = new Uint8Array([1, 2, 3]);
         m.loadSnapshot(data);
-        expect(sent).toEqual([{ type: "loadSnapshot", data }]);
+        expect(sent).toEqual([
+            { type: "loadSnapshot", data, rewindFirst: false },
+        ]);
         expect(transfers[0]).toEqual([data.buffer]);
+        expect(m.phase).toBe("GENERATION_SPAWNED");
     });
 
-    it("onSnapshotLoaded pauses the sim", () => {
-        const { m } = create();
+    it("loadSnapshot sets rewindFirst when interrupting a run", () => {
+        for (const [setup, rewindFirst] of [
+            [(m: SimMachine) => m.toggle(), true], // STEPS_RUNNING
+            [(m: SimMachine) => m.step(), true], // STEPS_PAUSED
+            [(m: SimMachine) => m.onConfigured(), false], // GENERATION_SPAWNED
+        ] as const) {
+            const { m, sent } = create();
+            m.onWorkerReady();
+            setup(m);
+            sent.length = 0;
+            m.loadSnapshot(new Uint8Array([1]));
+            expect(sent[0]).toMatchObject({
+                type: "loadSnapshot",
+                rewindFirst,
+            });
+        }
+    });
+
+    it("loadSnapshot is rejected before ready and during free-run", () => {
+        const pending = create();
+        pending.m.loadSnapshot(new Uint8Array([1])); // WORKER_PENDING
+        expect(pending.sent).toEqual([]);
+
+        const free = create();
+        free.m.onWorkerReady();
+        free.m.toggleFreeRun(); // FREE_RUNNING
+        free.sent.length = 0;
+        free.m.loadSnapshot(new Uint8Array([1]));
+        expect(free.sent).toEqual([]);
+    });
+
+    it("onSnapshotLoaded breeds spawn 2 when the snapshot fits the draft", () => {
+        const { m, sent } = create(makeParams({ maxGenomeLen: 64 }));
         m.onWorkerReady();
-        m.onSnapshotLoaded();
-        expect(m.phase).toBe("STEPS_PAUSED");
+        m.loadSnapshot(new Uint8Array([1]));
+        sent.length = 0;
+        m.onSnapshotLoaded(40);
+        expect(m.phase).toBe("GENERATION_SPAWNED");
+        expect(m.genomIncompatible).toBe(false);
+        expect(types(sent)).toEqual(["rewind"]); // spawn 2
+    });
+
+    it("onSnapshotLoaded rides a dirty draft on rewindConfigured", () => {
+        const { m, sent } = create(makeParams({ maxGenomeLen: 64 }));
+        m.onWorkerReady();
+        m.setDraft(makeParams({ maxGenomeLen: 64, population: 222 }));
+        m.loadSnapshot(new Uint8Array([1]));
+        sent.length = 0;
+        m.onSnapshotLoaded(40);
+        expect(types(sent)).toEqual(["rewindConfigured"]);
+    });
+
+    it("onSnapshotLoaded holds and fires the gate when too large", () => {
+        const { m, sent } = create(makeParams({ maxGenomeLen: 24 }));
+        m.onWorkerReady();
+        m.loadSnapshot(new Uint8Array([1]));
+        sent.length = 0;
+        m.onSnapshotLoaded(40);
+        expect(m.phase).toBe("GENERATION_SPAWNED");
+        expect(m.genomIncompatible).toBe(true);
+        expect(m.incompatibleFields).toContain("maxGenomeLen");
+        expect(sent).toEqual([]); // no spawn 2
+    });
+
+    it("raising maxGenomeLen clears the gate, then Rewind breeds the snapshot", () => {
+        const { m, sent } = create(makeParams({ maxGenomeLen: 24 }));
+        m.onWorkerReady();
+        m.loadSnapshot(new Uint8Array([1]));
+        m.onSnapshotLoaded(40);
+        expect(m.genomIncompatible).toBe(true);
+        m.setDraft(makeParams({ maxGenomeLen: 40 }));
+        expect(m.genomIncompatible).toBe(false);
+        sent.length = 0;
+        m.rewind(false);
+        expect(types(sent)).toEqual(["rewindConfigured"]);
     });
 
     it("exportSnapshot sends the export command", () => {

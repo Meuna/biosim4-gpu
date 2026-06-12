@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **snapshot-load UX rework** (gh-114) — dropping a snapshot now always lands in
+  `GENERATION_SPAWNED` through a "double spawn": a rewind of the live population
+  (spawn 1, when a mid-generation run is interrupted) followed by breeding from
+  the dropped survivors (spawn 2). Spawn 2 fires automatically only when the
+  snapshot's genomes fit the current `maxGenomeLen`; otherwise the existing
+  genome-incompatibility gate fires (config-panel hint + `clearGenom`) and the
+  user raises the limit, after which Play or Rewind breeds from the still-loaded
+  snapshot. `biosim_generation_breed` now rejects survivors whose genome length
+  exceeds the live genome capacity (returns `BIOSIM_ERR_INVALID` and logs,
+  instead of overflowing the genome buffers). Config and snapshot uploads (drag
+  drop and panel buttons) are disabled during free-run.
 - **documentation re-alignment** (gh-109) — re-aligned `README.md`,
   `STATUS.md`, and `docs/architecture.md` with the current project. The README
   leads with the webapp (logo header, placeholder hosted link and screenshot

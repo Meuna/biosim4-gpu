@@ -72,6 +72,40 @@ void test_breed_produces_full_population(void) {
     biosim_sim_free(&sim);
 }
 
+/*
+ * A survivor whose genome length exceeds the live genome capacity must be
+ * rejected by breed before the grid is cleared — no overflow, population intact.
+ */
+void test_breed_rejects_oversized_genome(void) {
+    biosim_sim_t sim;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim));
+
+    biosim_survivor_snap_t snap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_collect_survivors(&sim, &snap));
+    TEST_ASSERT_TRUE(snap.count > 0U);
+
+    uint32_t alive_before = 0U;
+    for (uint32_t i = 0U; i < sim.agents.population; i++) {
+        if (sim.agents.alive[i]) {
+            alive_before++;
+        }
+    }
+
+    snap.len[0] = (uint16_t)(sim.genome.max_len + 1U);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_INVALID, biosim_generation_breed(&sim, &snap));
+
+    uint32_t alive_after = 0U;
+    for (uint32_t i = 0U; i < sim.agents.population; i++) {
+        if (sim.agents.alive[i]) {
+            alive_after++;
+        }
+    }
+    TEST_ASSERT_EQUAL_UINT32(alive_before, alive_after);
+
+    biosim_survivor_snap_free(&snap);
+    biosim_sim_free(&sim);
+}
+
 void test_spawn_with_survivors_breeds(void) {
     biosim_sim_t sim;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim));
@@ -246,6 +280,7 @@ int main(void) {
     RUN_TEST(test_breed_produces_full_population);
     RUN_TEST(test_breed_fitness_biased);
     RUN_TEST(test_breed_sexual_reproduction);
+    RUN_TEST(test_breed_rejects_oversized_genome);
     RUN_TEST(test_spawn_with_survivors_breeds);
     RUN_TEST(test_spawn_with_zero_survivors_init_random);
     RUN_TEST(test_full_generation_cycle);
