@@ -22,7 +22,7 @@ static const biosim_param_entry_t params[] = {
     {"grid-size-y",               "simulation", {.i = 128},   PARAM_INT,   false, true, NULL, NULL},
     {"steps-per-gen",             "simulation", {.i = 300},   PARAM_INT,   false, true, NULL, NULL},
     {"max-generations",           "simulation", {.i = 1000},  PARAM_INT,   false, true, NULL, NULL},
-    {"max-genome-len",            "genome",     {.i = 24},    PARAM_INT,   false, true, NULL, NULL},
+    {"max-genes",            "genome",     {.i = 24},    PARAM_INT,   false, true, NULL, NULL},
     {"max-neurons",               "genome",     {.i = 5},     PARAM_INT,   false, true, NULL, NULL},
     {"point-mutation-rate",       "genome",     {.f = 0.001}, PARAM_FLOAT, false, true, NULL, NULL},
     {"sexual-reproduction",       "genome",     {.b = false}, PARAM_BOOL,  false, true, NULL, NULL},
@@ -637,11 +637,11 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_neuron_count_ptr(void) {
  * webapp's compatibility gate compares a draft config against these to detect
  * when a config change would truncate the current population's genome. */
 
-EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_max_conn(void) {
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_max_genes(void) {
     if (!initialized) {
         return 0U;
     }
-    return (uint32_t)sim.nnet.max_conn;
+    return (uint32_t)sim.nnet.max_genes;
 }
 
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_max_neurons(void) {
@@ -653,8 +653,8 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_max_neurons(void) {
 
 /* Same but used to check imported snapshots */
 
-EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_conn(void) {
-    return (uint32_t)snap.genome_max_len;
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_genes(void) {
+    return (uint32_t)snap.max_genes;
 }
 
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_neurons(void) {

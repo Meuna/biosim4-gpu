@@ -12,7 +12,7 @@ export const DEFAULTS: SimParams = {
     gridSizeX: 128,
     gridSizeY: 128,
     stepsPerGen: 300,
-    maxGenomeLen: 24,
+    maxGenes: 24,
     maxNeurons: 5,
     pointMutationRate: 0.001,
     sexualReproduction: false,
@@ -153,7 +153,7 @@ export function simParamsToToml(params: SimParams): string {
     sections.push(
         "",
         "[genome]",
-        `max-genome-len            = ${params.maxGenomeLen}`,
+        `max-genes            = ${params.maxGenes}`,
         `max-neurons               = ${params.maxNeurons}`,
         `point-mutation-rate       = ${tomlFloat(params.pointMutationRate)}`,
         `sexual-reproduction       = ${params.sexualReproduction}`,
@@ -322,7 +322,7 @@ export function tomlToSimParams(toml: string): SimParams {
         gridSizeX,
         gridSizeY,
         stepsPerGen: numOf(sim["steps-per-gen"], DEFAULTS.stepsPerGen),
-        maxGenomeLen: numOf(genome["max-genome-len"], DEFAULTS.maxGenomeLen),
+        maxGenes: numOf(genome["max-genes"], DEFAULTS.maxGenes),
         maxNeurons: numOf(genome["max-neurons"], DEFAULTS.maxNeurons),
         pointMutationRate: numOf(
             genome["point-mutation-rate"],

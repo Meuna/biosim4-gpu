@@ -122,7 +122,7 @@ describe("toggle", () => {
     });
 
     it("is gated by genomIncompatible for play but not for stop", () => {
-        const { m, sent } = create(makeParams({ maxGenomeLen: 24 }));
+        const { m, sent } = create(makeParams({ maxGenes: 24 }));
         m.onWorkerReady();
         m.toggle();
         m.onCensus(32, 0);
@@ -305,7 +305,7 @@ describe("nextGen / rewind", () => {
 
     it("is gated by genomIncompatible", () => {
         const { m, sent } = toEnded();
-        m.setDraft(makeParams({ maxGenomeLen: 24 }));
+        m.setDraft(makeParams({ maxGenes: 24 }));
         m.onCensus(32, 0);
         m.nextGen(false);
         m.rewind(false);
@@ -369,18 +369,18 @@ describe("CONFIRM flow", () => {
 
 describe("genome compatibility", () => {
     it("flags each truncating field reported by the census", () => {
-        const { m } = create(makeParams({ maxGenomeLen: 24, maxNeurons: 8 }));
+        const { m } = create(makeParams({ maxGenes: 24, maxNeurons: 8 }));
         m.onCensus(32, 12);
         expect(m.genomIncompatible).toBe(true);
-        expect(m.incompatibleFields).toEqual(["maxGenomeLen", "maxNeurons"]);
+        expect(m.incompatibleFields).toEqual(["maxGenes", "maxNeurons"]);
         expect(m.requiredGenomeLen).toBe(32);
         expect(m.requiredNeurons).toBe(12);
     });
 
     it("clears when the draft is raised above the census values", () => {
-        const { m } = create(makeParams({ maxGenomeLen: 24 }));
+        const { m } = create(makeParams({ maxGenes: 24 }));
         m.onCensus(32, 0);
-        m.setDraft(makeParams({ maxGenomeLen: 32 }));
+        m.setDraft(makeParams({ maxGenes: 32 }));
         expect(m.genomIncompatible).toBe(false);
     });
 
@@ -389,7 +389,7 @@ describe("genome compatibility", () => {
             (m: SimMachine) => m.onConfigured(),
             (m: SimMachine) => m.onRewindConfigured(),
         ]) {
-            const { m } = create(makeParams({ maxGenomeLen: 24 }));
+            const { m } = create(makeParams({ maxGenes: 24 }));
             m.onCensus(32, 12);
             reply(m);
             expect(m.requiredGenomeLen).toBe(0);
@@ -399,7 +399,7 @@ describe("genome compatibility", () => {
     });
 
     it("takes the counters from the next-generation reply", () => {
-        const { m } = create(makeParams({ maxGenomeLen: 24 }));
+        const { m } = create(makeParams({ maxGenes: 24 }));
         m.onNextGenerationConfigured(32, 12);
         expect(m.requiredGenomeLen).toBe(32);
         expect(m.requiredNeurons).toBe(12);
@@ -407,7 +407,7 @@ describe("genome compatibility", () => {
     });
 
     it("clearGenom resets the counters and notifies the worker", () => {
-        const { m, sent } = create(makeParams({ maxGenomeLen: 24 }));
+        const { m, sent } = create(makeParams({ maxGenes: 24 }));
         m.onCensus(32, 12);
         m.clearGenom();
         expect(m.genomIncompatible).toBe(false);
@@ -417,7 +417,7 @@ describe("genome compatibility", () => {
     });
 
     it("clearGenom lands a respawn-eligible phase in GENERATION_SPAWNED", () => {
-        const { m } = create(makeParams({ maxGenomeLen: 24 }));
+        const { m } = create(makeParams({ maxGenes: 24 }));
         m.onWorkerReady();
         m.toggle(); // -> STEPS_RUNNING
         m.onGenComplete(); // -> GENERATION_ENDED
@@ -496,7 +496,7 @@ describe("snapshots", () => {
     });
 
     it("onSnapshotLoaded breeds spawn 2 when the snapshot fits the draft", () => {
-        const { m, sent } = create(makeParams({ maxGenomeLen: 64 }));
+        const { m, sent } = create(makeParams({ maxGenes: 64 }));
         m.onWorkerReady();
         m.loadSnapshot(new Uint8Array([1]));
         sent.length = 0;
@@ -507,9 +507,9 @@ describe("snapshots", () => {
     });
 
     it("onSnapshotLoaded rides a dirty draft on rewindConfigured", () => {
-        const { m, sent } = create(makeParams({ maxGenomeLen: 64 }));
+        const { m, sent } = create(makeParams({ maxGenes: 64 }));
         m.onWorkerReady();
-        m.setDraft(makeParams({ maxGenomeLen: 64, population: 222 }));
+        m.setDraft(makeParams({ maxGenes: 64, population: 222 }));
         m.loadSnapshot(new Uint8Array([1]));
         sent.length = 0;
         m.onSnapshotLoaded(40, 0);
@@ -517,21 +517,19 @@ describe("snapshots", () => {
     });
 
     it("onSnapshotLoaded holds and fires the gate when too large", () => {
-        const { m, sent } = create(makeParams({ maxGenomeLen: 24 }));
+        const { m, sent } = create(makeParams({ maxGenes: 24 }));
         m.onWorkerReady();
         m.loadSnapshot(new Uint8Array([1]));
         sent.length = 0;
         m.onSnapshotLoaded(40, 0);
         expect(m.phase).toBe("GENERATION_SPAWNED");
         expect(m.genomIncompatible).toBe(true);
-        expect(m.incompatibleFields).toContain("maxGenomeLen");
+        expect(m.incompatibleFields).toContain("maxGenes");
         expect(sent).toEqual([]); // no spawn 2
     });
 
     it("onSnapshotLoaded holds and fires the neuron gate when too many neurons", () => {
-        const { m, sent } = create(
-            makeParams({ maxGenomeLen: 64, maxNeurons: 5 }),
-        );
+        const { m, sent } = create(makeParams({ maxGenes: 64, maxNeurons: 5 }));
         m.onWorkerReady();
         m.loadSnapshot(new Uint8Array([1]));
         sent.length = 0;
@@ -539,32 +537,30 @@ describe("snapshots", () => {
         expect(m.phase).toBe("GENERATION_SPAWNED");
         expect(m.genomIncompatible).toBe(true);
         expect(m.incompatibleFields).toContain("maxNeurons");
-        expect(m.incompatibleFields).not.toContain("maxGenomeLen");
+        expect(m.incompatibleFields).not.toContain("maxGenes");
         expect(sent).toEqual([]); // no spawn 2
     });
 
     it("raising maxNeurons clears the gate, then Rewind breeds the snapshot", () => {
-        const { m, sent } = create(
-            makeParams({ maxGenomeLen: 64, maxNeurons: 5 }),
-        );
+        const { m, sent } = create(makeParams({ maxGenes: 64, maxNeurons: 5 }));
         m.onWorkerReady();
         m.loadSnapshot(new Uint8Array([1]));
         m.onSnapshotLoaded(40, 8);
         expect(m.genomIncompatible).toBe(true);
-        m.setDraft(makeParams({ maxGenomeLen: 64, maxNeurons: 8 }));
+        m.setDraft(makeParams({ maxGenes: 64, maxNeurons: 8 }));
         expect(m.genomIncompatible).toBe(false);
         sent.length = 0;
         m.rewind(false);
         expect(types(sent)).toEqual(["rewindConfigured"]);
     });
 
-    it("raising maxGenomeLen clears the gate, then Rewind breeds the snapshot", () => {
-        const { m, sent } = create(makeParams({ maxGenomeLen: 24 }));
+    it("raising maxGenes clears the gate, then Rewind breeds the snapshot", () => {
+        const { m, sent } = create(makeParams({ maxGenes: 24 }));
         m.onWorkerReady();
         m.loadSnapshot(new Uint8Array([1]));
         m.onSnapshotLoaded(40, 0);
         expect(m.genomIncompatible).toBe(true);
-        m.setDraft(makeParams({ maxGenomeLen: 40 }));
+        m.setDraft(makeParams({ maxGenes: 40 }));
         expect(m.genomIncompatible).toBe(false);
         sent.length = 0;
         m.rewind(false);

@@ -8,7 +8,7 @@ const DEFAULTS: SimParams = {
     gridSizeX: 128,
     gridSizeY: 128,
     stepsPerGen: 300,
-    maxGenomeLen: 24,
+    maxGenes: 24,
     maxNeurons: 5,
     pointMutationRate: 0.001,
     sexualReproduction: false,

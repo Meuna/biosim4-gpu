@@ -12,7 +12,7 @@ describe("simParamsToToml / tomlToSimParams", () => {
         expect(result.gridSizeX).toBe(DEFAULTS.gridSizeX);
         expect(result.gridSizeY).toBe(DEFAULTS.gridSizeY);
         expect(result.stepsPerGen).toBe(DEFAULTS.stepsPerGen);
-        expect(result.maxGenomeLen).toBe(DEFAULTS.maxGenomeLen);
+        expect(result.maxGenes).toBe(DEFAULTS.maxGenes);
         expect(result.maxNeurons).toBe(DEFAULTS.maxNeurons);
         expect(result.pointMutationRate).toBeCloseTo(
             DEFAULTS.pointMutationRate,
@@ -251,7 +251,7 @@ population = 500
 unknown-future-key = 42
 
 [genome]
-max-genome-len = 12
+max-genes = 12
 
 [sensors]
 [actions]
@@ -263,7 +263,7 @@ num-barriers = 0
         expect(() => tomlToSimParams(toml)).not.toThrow();
         const r = tomlToSimParams(toml);
         expect(r.population).toBe(500);
-        expect(r.maxGenomeLen).toBe(12);
+        expect(r.maxGenes).toBe(12);
     });
 
     it("missing sections fall back to DEFAULTS", () => {
@@ -285,7 +285,7 @@ num-barriers = 0
         expect(r.population).toBe(200);
         expect(r.gridSizeX).toBe(DEFAULTS.gridSizeX);
         expect(r.stepsPerGen).toBe(DEFAULTS.stepsPerGen);
-        expect(r.maxGenomeLen).toBe(DEFAULTS.maxGenomeLen);
+        expect(r.maxGenes).toBe(DEFAULTS.maxGenes);
     });
 
     it("malformed TOML throws", () => {

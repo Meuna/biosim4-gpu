@@ -157,22 +157,22 @@
     <div
         class="sim-config__field-wrap"
         class:sim-config__field-wrap--invalid={incompatibleFields.includes(
-            "maxGenomeLen",
+            "maxGenes",
         )}
     >
         <ParamSlider
-            label="Max genome length"
+            label="Max genes"
             hint="genes / agent"
             min={4}
             max={64}
             step={1}
-            value={draftConfig.maxGenomeLen}
+            value={draftConfig.maxGenes}
             disabled={changeDisabled}
             onchange={(v) => {
-                onDraftChange({ ...draftConfig, maxGenomeLen: v });
+                onDraftChange({ ...draftConfig, maxGenes: v });
             }}
         />
-        {#if incompatibleFields.includes("maxGenomeLen")}
+        {#if incompatibleFields.includes("maxGenes")}
             <p class="sim-config__incompat-hint">
                 <TriangleAlert size={12} style="display: inline-block;" />
                 Current genomes need at least {requiredGenomeLen} — increase to re-enable

@@ -101,7 +101,7 @@ export interface SimParams {
     gridSizeX: number;
     gridSizeY: number;
     stepsPerGen: number;
-    maxGenomeLen: number;
+    maxGenes: number;
     maxNeurons: number;
     pointMutationRate: number;
     sexualReproduction: boolean;
@@ -985,7 +985,7 @@ function applyConfig(p: SimParams): void {
     setParamInt("grid-size-x", p.gridSizeX);
     setParamInt("grid-size-y", p.gridSizeY);
     setParamInt("steps-per-gen", p.stepsPerGen);
-    setParamInt("max-genome-len", p.maxGenomeLen);
+    setParamInt("max-genes", p.maxGenes);
     setParamInt("max-neurons", p.maxNeurons);
     setParamFloat("point-mutation-rate", p.pointMutationRate);
     setParamBool("sexual-reproduction", p.sexualReproduction);
@@ -1068,7 +1068,7 @@ function handleNextGenerationConfigured(params: SimParams): void {
         censusPopulation: call("biosim_wasm_census_population"),
         survivors: call("biosim_wasm_census_survivors"),
         kills: call("biosim_wasm_census_kills"),
-        requiredGenomeLen: call("biosim_wasm_get_max_conn"),
+        requiredGenomeLen: call("biosim_wasm_get_max_genes"),
         requiredNeurons: call("biosim_wasm_get_max_neurons"),
         gridSizeX: params.gridSizeX,
         gridSizeY: params.gridSizeY,
@@ -1160,7 +1160,7 @@ function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
         type: "snapshotLoaded",
         gen: call("biosim_wasm_get_gen"),
         population: call("biosim_wasm_get_population"),
-        requiredGenomeLen: call("biosim_wasm_snapshot_max_conn"),
+        requiredGenomeLen: call("biosim_wasm_snapshot_max_genes"),
         requiredNeurons: call("biosim_wasm_snapshot_max_neurons"),
     } satisfies WorkerEvent);
 }
@@ -1213,7 +1213,7 @@ function doNextGeneration(): void {
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
     const kills = call("biosim_wasm_census_kills");
-    const requiredGenomeLen = call("biosim_wasm_get_max_conn");
+    const requiredGenomeLen = call("biosim_wasm_get_max_genes");
     const requiredNeurons = call("biosim_wasm_get_max_neurons");
     postMessage({
         type: "census",
@@ -1233,7 +1233,7 @@ function freeRunTick(): void {
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
     const kills = call("biosim_wasm_census_kills");
-    const requiredGenomeLen = call("biosim_wasm_get_max_conn");
+    const requiredGenomeLen = call("biosim_wasm_get_max_genes");
     const requiredNeurons = call("biosim_wasm_get_max_neurons");
     postMessage({
         type: "census",

@@ -59,14 +59,14 @@ export class SimMachine {
     // the loaded snapshot's originating caps), which would truncate live genomes.
     #genomIncompatible = $derived(
         (this.#requiredGenomeLen > 0 &&
-            this.#draftConfig.maxGenomeLen < this.#requiredGenomeLen) ||
+            this.#draftConfig.maxGenes < this.#requiredGenomeLen) ||
             (this.#requiredNeurons > 0 &&
                 this.#draftConfig.maxNeurons < this.#requiredNeurons),
     );
     #incompatibleFields = $derived<string[]>([
         ...(this.#requiredGenomeLen > 0 &&
-        this.#draftConfig.maxGenomeLen < this.#requiredGenomeLen
-            ? ["maxGenomeLen"]
+        this.#draftConfig.maxGenes < this.#requiredGenomeLen
+            ? ["maxGenes"]
             : []),
         ...(this.#requiredNeurons > 0 &&
         this.#draftConfig.maxNeurons < this.#requiredNeurons
@@ -286,7 +286,7 @@ export class SimMachine {
     // #genomIncompatible derivation the single source of truth. Compatible →
     // breed from the snapshot now (spawn 2, riding a dirty draft on
     // rewindConfigured). Incompatible → stay put with the gate firing; the user
-    // raises maxGenomeLen / maxNeurons (or clearGenom), then the normal
+    // raises maxGenes / maxNeurons (or clearGenom), then the normal
     // Play/Rewind commit breeds from the still-loaded snap.
     onSnapshotLoaded(requiredGenomeLen: number, requiredNeurons: number): void {
         this.#phase = "GENERATION_SPAWNED";
@@ -296,7 +296,7 @@ export class SimMachine {
         this.#requiredGenomeLen = requiredGenomeLen;
         this.#requiredNeurons = requiredNeurons;
         if (
-            this.#draftConfig.maxGenomeLen >= requiredGenomeLen &&
+            this.#draftConfig.maxGenes >= requiredGenomeLen &&
             this.#draftConfig.maxNeurons >= requiredNeurons
         ) {
             this.#respawn("rewind", false);
