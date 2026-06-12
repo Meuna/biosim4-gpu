@@ -466,7 +466,7 @@ event to several holders (e.g. `census` feeds both `SimMachine` and
 | `brain.ts` | DOM-free decode layer: `unpackConn` mirrors the `gene.h` bit-layout; `SENSOR_LABELS`/`ACTION_LABELS` plus full-name tables for the UI. |
 | `kinematic.ts` | Interpolation helpers for smooth agent motion between steps. |
 | `playbackRate.ts` | Step-rate throttle and rolling FPS window (unit-testable without WASM). |
-| `agentFormat.ts` | Format agent fields (id, location, fingerprint) for display. |
+| `headings.ts` | `HEADINGS`: compass-direction labels indexed by an agent's heading (0–7). |
 
 ### Brain explorer
 

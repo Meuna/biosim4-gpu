@@ -8,7 +8,7 @@
     } from "lucide-svelte";
     import type { AgentInfo } from "../workers/sim.worker";
     import type { BrainConn } from "./brain";
-    import { HEADINGS } from "./agentFormat";
+    import { HEADINGS } from "./headings";
     import BrainExplorer from "./BrainExplorer.svelte";
 
     let {

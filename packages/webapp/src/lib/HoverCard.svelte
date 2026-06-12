@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { AgentInfo } from "../workers/sim.worker";
-    import { HEADINGS } from "./agentFormat";
+    import { HEADINGS } from "./headings";
 
     let {
         agent,

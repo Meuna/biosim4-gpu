@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HEADINGS } from "./agentFormat";
+import { HEADINGS } from "./headings";
 
 describe("HEADINGS", () => {
     it("has 8 compass directions", () => {

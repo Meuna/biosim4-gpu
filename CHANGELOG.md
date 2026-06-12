@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **renamed the webapp `agentFormat` module to `headings`** (gh-126) — the
+  module only ever held the `HEADINGS` compass-label array and never grew the
+  broader agent-formatting role its name implied. It is renamed to `headings.ts`
+  (matching its sole `HEADINGS` export) along with its test; no behavioural
+  change.
 - **unified the genome-cap naming under `max_genes`** (gh-127) — the two names
   for the same concept (the genome-size cap: `biosim_genome_t.max_len` and
   `biosim_nnet_t.max_conn`, both seeded from `sim->genome_max_len`) collapse into
