@@ -23,8 +23,8 @@
         snapReady?: boolean;
         onSnapUpload: () => void;
         onSnapDownload: () => void;
-        // Config/snapshot uploads are unaffordable during free-run.
-        uploadsDisabled?: boolean;
+        // No changes are unaffordable during free-run.
+        changeDisabled?: boolean;
     }
     const {
         draftConfig,
@@ -39,7 +39,7 @@
         snapReady = false,
         onSnapUpload,
         onSnapDownload,
-        uploadsDisabled = false,
+        changeDisabled = false,
     }: Props = $props();
 </script>
 
@@ -64,7 +64,7 @@
             <span class="small-caps sim-config__io-label">Conf</span>
             <button
                 class="button button--utility"
-                disabled={uploadsDisabled}
+                disabled={changeDisabled}
                 onclick={onConfUpload}
                 aria-label="Upload config"
             >
@@ -80,7 +80,7 @@
             <span class="small-caps sim-config__io-label">Snapshot</span>
             <button
                 class="button button--utility"
-                disabled={uploadsDisabled}
+                disabled={changeDisabled}
                 onclick={onSnapUpload}
                 aria-label="Upload snapshot"
             >
@@ -110,6 +110,7 @@
         max={10000}
         step={100}
         value={draftConfig.population}
+        disabled={changeDisabled}
         onchange={(v) => {
             onDraftChange({ ...draftConfig, population: v });
         }}
@@ -122,6 +123,7 @@
         max={1000}
         step={10}
         value={draftConfig.stepsPerGen}
+        disabled={changeDisabled}
         onchange={(v) => {
             onDraftChange({ ...draftConfig, stepsPerGen: v });
         }}
@@ -138,6 +140,7 @@
     <GridSizeControl
         gridSizeX={draftConfig.gridSizeX}
         gridSizeY={draftConfig.gridSizeY}
+        disabled={changeDisabled}
         onchange={(x, y) => {
             onDraftChange({ ...draftConfig, gridSizeX: x, gridSizeY: y });
         }}
@@ -164,6 +167,7 @@
             max={64}
             step={1}
             value={draftConfig.maxGenomeLen}
+            disabled={changeDisabled}
             onchange={(v) => {
                 onDraftChange({ ...draftConfig, maxGenomeLen: v });
             }}
@@ -188,6 +192,7 @@
             max={20}
             step={1}
             value={draftConfig.maxNeurons}
+            disabled={changeDisabled}
             onchange={(v) => {
                 onDraftChange({ ...draftConfig, maxNeurons: v });
             }}
@@ -208,6 +213,7 @@
         step={0.0001}
         value={draftConfig.pointMutationRate}
         format={(v) => v.toFixed(4)}
+        disabled={changeDisabled}
         onchange={(v) => {
             onDraftChange({ ...draftConfig, pointMutationRate: v });
         }}
@@ -219,6 +225,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={draftConfig.sexualReproduction}
+                disabled={changeDisabled}
                 onchange={(e) => {
                     onDraftChange({
                         ...draftConfig,
@@ -238,6 +245,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={draftConfig.chooseParentsByFitness}
+                disabled={changeDisabled}
                 onchange={(e) => {
                     onDraftChange({
                         ...draftConfig,
@@ -266,6 +274,7 @@
         max={32}
         step={1}
         value={draftConfig.losRange}
+        disabled={changeDisabled}
         onchange={(v) => {
             onDraftChange({ ...draftConfig, losRange: v });
         }}
@@ -278,6 +287,7 @@
         max={16}
         step={1}
         value={draftConfig.sensorRadius}
+        disabled={changeDisabled}
         onchange={(v) => {
             onDraftChange({ ...draftConfig, sensorRadius: v });
         }}
@@ -289,6 +299,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={draftConfig.enableKill}
+                disabled={changeDisabled}
                 onchange={(e) => {
                     onDraftChange({
                         ...draftConfig,
@@ -309,6 +320,7 @@
         step={0.1}
         value={draftConfig.responsivenessCurveK}
         format={(v) => v.toFixed(1)}
+        disabled={changeDisabled}
         onchange={(v) => {
             onDraftChange({ ...draftConfig, responsivenessCurveK: v });
         }}
@@ -324,6 +336,7 @@
 
     <ChallengeControl
         value={draftConfig.challenge}
+        disabled={changeDisabled}
         onchange={(spec) => {
             onDraftChange({ ...draftConfig, challenge: spec });
         }}
@@ -348,6 +361,7 @@
     <BarrierControl
         value={draftConfig.barriers}
         challengeKind={draftConfig.challenge.kind}
+        disabled={changeDisabled}
         onchange={(b) => {
             onDraftChange({ ...draftConfig, barriers: b });
         }}

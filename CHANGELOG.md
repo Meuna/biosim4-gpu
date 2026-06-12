@@ -17,8 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   user raises the limit, after which Play or Rewind breeds from the still-loaded
   snapshot. `biosim_generation_breed` now rejects survivors whose genome length
   exceeds the live genome capacity (returns `BIOSIM_ERR_INVALID` and logs,
-  instead of overflowing the genome buffers). Config and snapshot uploads (drag
-  drop and panel buttons) are disabled during free-run.
+  instead of overflowing the genome buffers). Every config control — config and
+  snapshot uploads (drag-drop and panel buttons), all parameter sliders, the
+  challenge and barrier editors, and grid presets — is disabled during free-run,
+  since no configuration change is affordable while the run owns the population.
 - **documentation re-alignment** (gh-109) — re-aligned `README.md`,
   `STATUS.md`, and `docs/architecture.md` with the current project. The README
   leads with the webapp (logo header, placeholder hosted link and screenshot

@@ -6,9 +6,10 @@
 
     interface Props {
         value: ChallengeSpec;
+        disabled?: boolean;
         onchange: (spec: ChallengeSpec) => void;
     }
-    const { value, onchange }: Props = $props();
+    const { value, disabled = false, onchange }: Props = $props();
 
     // Human-readable labels for each challenge kind, in dropdown order.
     const KINDS: { kind: ChallengeSpec["kind"]; label: string }[] = [
@@ -88,6 +89,7 @@
         id="challenge-kind"
         class="challenge-control__select"
         value={value.kind}
+        {disabled}
         onchange={handleKindChange}
         aria-label="Challenge kind"
     >
@@ -108,6 +110,7 @@
         step={0.01}
         value={value.xMin}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ xMin: v })}
     />
     <ParamSlider
@@ -118,6 +121,7 @@
         step={0.01}
         value={value.xMax}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ xMax: v })}
     />
     <div class="field-row toggle-row">
@@ -126,6 +130,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={value.mirror}
+                {disabled}
                 onchange={(e) =>
                     emit({ mirror: (e.target as HTMLInputElement).checked })}
                 aria-label="Mirror"
@@ -144,6 +149,7 @@
         step={0.01}
         value={value.x}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ x: v })}
     />
     <ParamSlider
@@ -154,6 +160,7 @@
         step={0.01}
         value={value.y}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ y: v })}
     />
     <ParamSlider
@@ -164,6 +171,7 @@
         step={0.01}
         value={value.radius}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ radius: v })}
     />
     <div class="field-row toggle-row">
@@ -172,6 +180,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={value.weighted}
+                {disabled}
                 onchange={(e) =>
                     emit({ weighted: (e.target as HTMLInputElement).checked })}
                 aria-label="Weighted"
@@ -190,6 +199,7 @@
         step={0.01}
         value={value.radius}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ radius: v })}
     />
     <div class="field-row toggle-row">
@@ -198,6 +208,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={value.weighted}
+                {disabled}
                 onchange={(e) =>
                     emit({ weighted: (e.target as HTMLInputElement).checked })}
                 aria-label="Weighted"
@@ -216,6 +227,7 @@
         step={0.01}
         value={value.radius}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ radius: v })}
     />
     <ParamSlider
@@ -225,6 +237,7 @@
         max={20}
         step={1}
         value={value.minN}
+        {disabled}
         onchange={(v) => emit({ minN: v })}
     />
     <ParamSlider
@@ -234,6 +247,7 @@
         max={20}
         step={1}
         value={value.maxN}
+        {disabled}
         onchange={(v) => emit({ maxN: v })}
     />
     <div class="field-row toggle-row">
@@ -242,6 +256,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={value.excludeBorder}
+                {disabled}
                 onchange={(e) =>
                     emit({
                         excludeBorder: (e.target as HTMLInputElement).checked,
@@ -262,6 +277,7 @@
         step={0.01}
         value={value.x}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ x: v })}
     />
     <ParamSlider
@@ -272,6 +288,7 @@
         step={0.01}
         value={value.y}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ y: v })}
     />
     <ParamSlider
@@ -282,6 +299,7 @@
         step={0.01}
         value={value.outerR}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ outerR: v })}
     />
     <ParamSlider
@@ -292,6 +310,7 @@
         step={0.01}
         value={value.innerR}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ innerR: v })}
     />
     <ParamSlider
@@ -301,6 +320,7 @@
         max={20}
         step={1}
         value={value.minN}
+        {disabled}
         onchange={(v) => emit({ minN: v })}
     />
     <ParamSlider
@@ -310,6 +330,7 @@
         max={20}
         step={1}
         value={value.maxN}
+        {disabled}
         onchange={(v) => emit({ maxN: v })}
     />
     <div class="field-row toggle-row">
@@ -318,6 +339,7 @@
                 type="checkbox"
                 class="toggle-checkbox"
                 checked={value.weighted}
+                {disabled}
                 onchange={(e) =>
                     emit({ weighted: (e.target as HTMLInputElement).checked })}
                 aria-label="Weighted"
@@ -336,6 +358,7 @@
         step={0.01}
         value={value.radius}
         format={(v) => v.toFixed(2)}
+        {disabled}
         onchange={(v) => emit({ radius: v })}
     />
 {/if}

@@ -11,9 +11,15 @@
     interface Props {
         value: BarrierSpec[];
         challengeKind?: ChallengeSpec["kind"];
+        disabled?: boolean;
         onchange: (barriers: BarrierSpec[]) => void;
     }
-    const { value, challengeKind, onchange }: Props = $props();
+    const {
+        value,
+        challengeKind,
+        disabled = false,
+        onchange,
+    }: Props = $props();
 
     const KINDS: { kind: BarrierKind; label: string }[] = [
         { kind: "hbar", label: "Horizontal bar" },
@@ -99,6 +105,7 @@
     <div class="barrier-control__item">
         <button
             class="barrier-control__collapse-trigger"
+            {disabled}
             onclick={() => toggleCollapse(i)}
             aria-label={`Toggle barrier ${i + 1}`}
             aria-expanded={!collapsed[i]}
@@ -118,6 +125,7 @@
                 <select
                     class="barrier-control__select"
                     value={barrier.kind}
+                    {disabled}
                     onchange={(e) =>
                         patchBarrier(i, {
                             kind: (e.target as HTMLSelectElement)
@@ -137,6 +145,7 @@
                 </select>
                 <button
                     class="button button--ghost barrier-control__small-button"
+                    {disabled}
                     onclick={() => shuffleBarrier(i)}
                     aria-label={`Shuffle barrier ${i + 1}`}
                 >
@@ -144,6 +153,7 @@
                 </button>
                 <button
                     class="button button--ghost barrier-control__small-button"
+                    {disabled}
                     onclick={() => removeBarrier(i)}
                     aria-label={`Remove barrier ${i + 1}`}
                 >
@@ -160,6 +170,7 @@
                 step={0.01}
                 value={barrier.x ?? 0.5}
                 format={(v) => v.toFixed(2)}
+                {disabled}
                 onchange={(v) => patchBarrier(i, { x: v })}
             />
 
@@ -172,6 +183,7 @@
                 step={0.01}
                 value={barrier.y ?? 0.5}
                 format={(v) => v.toFixed(2)}
+                {disabled}
                 onchange={(v) => patchBarrier(i, { y: v })}
             />
 
@@ -184,6 +196,7 @@
                 step={0.01}
                 value={barrier.length ?? 0.25}
                 format={(v) => v.toFixed(2)}
+                {disabled}
                 onchange={(v) => patchBarrier(i, { length: v })}
             />
 
@@ -197,6 +210,7 @@
                     step={0.005}
                     value={barrier.width ?? DEFAULT_BARRIER.width!}
                     format={(v) => v.toFixed(3)}
+                    {disabled}
                     onchange={(v) => patchBarrier(i, { width: v })}
                 />
             {/if}
@@ -207,6 +221,7 @@
 <div class="field-row">
     <button
         class="button button--ghost barrier-control__add"
+        {disabled}
         onclick={addBarrier}
         aria-label="Add barrier"
     >

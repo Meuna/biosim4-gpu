@@ -121,4 +121,19 @@ describe("SimConfigPanel", () => {
         await fireEvent.click(screen.getByLabelText("Upload snapshot"));
         expect(onSnapUpload).toHaveBeenCalledOnce();
     });
+
+    it("disables uploads and config controls when changeDisabled", () => {
+        renderPanel({ props: { changeDisabled: true } });
+        expect(
+            (screen.getByLabelText("Upload config") as HTMLButtonElement)
+                .disabled,
+        ).toBe(true);
+        expect(
+            (screen.getByLabelText("Upload snapshot") as HTMLButtonElement)
+                .disabled,
+        ).toBe(true);
+        expect(
+            (screen.getByLabelText("Population") as HTMLInputElement).disabled,
+        ).toBe(true);
+    });
 });

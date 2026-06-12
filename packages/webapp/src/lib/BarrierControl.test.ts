@@ -148,6 +148,24 @@ describe("BarrierControl", () => {
         expect(screen.queryByLabelText("Barrier 1 kind")).toBeTruthy();
     });
 
+    it("disables the add button and per-barrier controls when disabled", () => {
+        render(BarrierControl, {
+            props: { value: [defaultHbar], disabled: true, onchange: vi.fn() },
+        });
+        expect(
+            (screen.getByLabelText("Add barrier") as HTMLButtonElement)
+                .disabled,
+        ).toBe(true);
+        expect(
+            (screen.getByLabelText("Barrier 1 kind") as HTMLSelectElement)
+                .disabled,
+        ).toBe(true);
+        expect(
+            (screen.getByLabelText("Remove barrier 1") as HTMLButtonElement)
+                .disabled,
+        ).toBe(true);
+    });
+
     it("shows warning when near_barrier challenge has no barriers", () => {
         render(BarrierControl, {
             props: {

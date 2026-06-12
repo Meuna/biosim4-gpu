@@ -455,8 +455,8 @@
         if (file) await loadSnapshotFile(file);
     }
 
-    // Config and snapshot are both unaffordable during free-run.
-    const uploadsDisabled = $derived(
+    // No changes are unaffordable during free-run.
+    const changeDisabled = $derived(
         machine.phase === "FREE_RUNNING" ||
             machine.phase === "FREE_RUN_STOPPING",
     );
@@ -464,7 +464,7 @@
     function handleDrop(e: DragEvent): void {
         e.preventDefault();
         isDragging = false;
-        if (uploadsDisabled) {
+        if (changeDisabled) {
             confErrorMsg = "Stop the evolution run before loading files";
             return;
         }
@@ -637,7 +637,7 @@
                 snapReady={telemetry.snapReady}
                 onSnapUpload={() => void importSnapshot()}
                 onSnapDownload={() => machine.exportSnapshot()}
-                {uploadsDisabled}
+                {changeDisabled}
             />
         {/snippet}
         {#snippet cell()}

@@ -9,9 +9,15 @@
     interface Props {
         gridSizeX: number;
         gridSizeY: number;
+        disabled?: boolean;
         onchange: (x: number, y: number) => void;
     }
-    const { gridSizeX, gridSizeY, onchange }: Props = $props();
+    const {
+        gridSizeX,
+        gridSizeY,
+        disabled = false,
+        onchange,
+    }: Props = $props();
 
     const PRESETS = [64, 128, 192, 256] as const;
 
@@ -27,6 +33,7 @@
             class="button button--pill {isPresetActive(s)
                 ? 'button--filled'
                 : 'button--ghost'}"
+            {disabled}
             onclick={() => onchange(s, s)}
             aria-pressed={isPresetActive(s)}
         >
@@ -42,6 +49,7 @@
     max={512}
     step={1}
     value={gridSizeX}
+    {disabled}
     onchange={(v) => onchange(v, gridSizeY)}
 />
 <ParamSlider
@@ -50,6 +58,7 @@
     max={512}
     step={1}
     value={gridSizeY}
+    {disabled}
     onchange={(v) => onchange(gridSizeX, v)}
 />
 

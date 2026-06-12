@@ -11,10 +11,20 @@
         step: number;
         value: number;
         format?: (val: number) => string;
+        disabled?: boolean;
         onchange: (val: number) => void;
     }
-    const { label, hint, min, max, step, value, format, onchange }: Props =
-        $props();
+    const {
+        label,
+        hint,
+        min,
+        max,
+        step,
+        value,
+        format,
+        disabled = false,
+        onchange,
+    }: Props = $props();
 
     let localValue = $state<number>(0);
     $effect(() => {
@@ -76,6 +86,7 @@
                 onchange(parseFloat((e.target as HTMLInputElement).value));
             }}
             aria-label={label}
+            {disabled}
         />
         {#if editing}
             <input
@@ -99,6 +110,7 @@
                 onclick={startEdit}
                 aria-label={"Edit " + label}
                 title="Click to edit"
+                {disabled}
             >
                 {display(localValue)}
             </button>

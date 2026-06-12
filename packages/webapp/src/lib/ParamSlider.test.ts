@@ -244,6 +244,30 @@ describe("ParamSlider", () => {
         ).toBe(false);
     });
 
+    it("disables the range input and value button when disabled", () => {
+        render(ParamSlider, {
+            props: {
+                label: "Population",
+                min: 100,
+                max: 10000,
+                step: 100,
+                value: 3000,
+                disabled: true,
+                onchange: vi.fn(),
+            },
+        });
+        expect(
+            (screen.getByLabelText("Population") as HTMLInputElement).disabled,
+        ).toBe(true);
+        expect(
+            (
+                screen.getByRole("button", {
+                    name: "Edit Population",
+                }) as HTMLButtonElement
+            ).disabled,
+        ).toBe(true);
+    });
+
     it("uses custom format function for display", () => {
         render(ParamSlider, {
             props: {

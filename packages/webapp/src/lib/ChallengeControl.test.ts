@@ -90,6 +90,26 @@ describe("ChallengeControl", () => {
         }
     });
 
+    it("disables the kind dropdown, sliders and toggles when disabled", () => {
+        render(ChallengeControl, {
+            props: { value: defaultXBand, disabled: true, onchange: vi.fn() },
+        });
+        expect(
+            (screen.getByLabelText("Challenge kind") as HTMLSelectElement)
+                .disabled,
+        ).toBe(true);
+        expect(
+            (screen.getByLabelText("X min") as HTMLInputElement).disabled,
+        ).toBe(true);
+        expect(
+            (
+                screen.getByRole("checkbox", {
+                    name: "Mirror",
+                }) as HTMLInputElement
+            ).disabled,
+        ).toBe(true);
+    });
+
     it("calls onchange when mirror checkbox is toggled on", async () => {
         const onchange = vi.fn<[ChallengeSpec], void>();
         render(ChallengeControl, {

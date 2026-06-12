@@ -80,4 +80,25 @@ describe("GridSizeControl", () => {
         });
         expect(onchange).toHaveBeenCalledWith(128, 64);
     });
+
+    it("disables preset pills and sliders when disabled", () => {
+        render(GridSizeControl, {
+            props: {
+                gridSizeX: 128,
+                gridSizeY: 128,
+                disabled: true,
+                onchange: vi.fn(),
+            },
+        });
+        expect(
+            (screen.getByRole("button", { name: "64" }) as HTMLButtonElement)
+                .disabled,
+        ).toBe(true);
+        expect(
+            (screen.getByLabelText("Width (X)") as HTMLInputElement).disabled,
+        ).toBe(true);
+        expect(
+            (screen.getByLabelText("Height (Y)") as HTMLInputElement).disabled,
+        ).toBe(true);
+    });
 });
