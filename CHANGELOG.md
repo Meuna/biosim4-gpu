@@ -135,6 +135,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so it is unit-tested in isolation. Behaviour is unchanged.
 
 ### Fixed
+- **`x_band` mirror no longer covers the whole grid** (gh-68) — the previous
+  `mirror = true` semantics added the reflected band `[(1−x_max)·W, (1−x_min)·W)`
+  to the survival region, so a band touching the centre (e.g. `x_min = 0.5`,
+  `x_max = 1.0`) unioned with its mirror to span the entire grid and every agent
+  survived. `mirror` now inverts the band instead: agents survive *outside*
+  `[x_min·W, x_max·W)`, giving a well-defined complementary survival region.
 - **Windows build** (gh-106) — two root causes fixed. First, `EmbedKernels.cmake`
   now shards embedded kernel sources into adjacent C string literals of ≤ 8000
   characters each; C compilers concatenate them at compile time, so MSVC's

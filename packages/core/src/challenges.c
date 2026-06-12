@@ -41,8 +41,8 @@ static biosim_challenge_result_t eval_x_band(
     float x_max = spec->x_band.x_max;
 
     r.passed = in_x_band(loc_x, size_x, x_min, x_max);
-    if (!r.passed && spec->x_band.mirror) {
-        r.passed = in_x_band(loc_x, size_x, 1.0F - x_max, 1.0F - x_min);
+    if (spec->x_band.mirror) {
+        r.passed = !r.passed;
     }
     if (r.passed) {
         r.score = 1.0F;

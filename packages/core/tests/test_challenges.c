@@ -63,25 +63,28 @@ void test_xband_right_half_fail(void) {
     TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
+/* mirror = true inverts the band: agents survive *outside* [x_min·W, x_max·W). */
+/* Here W = 128 and the band is the centre [0.375·W, 0.625·W) = [48, 80).      */
+
 void test_xband_mirror_left_pass(void) {
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_X_BAND;
-    s.x_band.x_min = 0.0F;
-    s.x_band.x_max = 0.125F;
+    s.x_band.x_min = 0.375F;
+    s.x_band.x_max = 0.625F;
     s.x_band.mirror = true;
     sim.agents.loc_x[0] = 0;
     TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
-    sim.agents.loc_x[0] = 15;
+    sim.agents.loc_x[0] = 47;
     TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 
 void test_xband_mirror_right_pass(void) {
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_X_BAND;
-    s.x_band.x_min = 0.0F;
-    s.x_band.x_max = 0.125F;
+    s.x_band.x_min = 0.375F;
+    s.x_band.x_max = 0.625F;
     s.x_band.mirror = true;
-    sim.agents.loc_x[0] = 112;
+    sim.agents.loc_x[0] = 80;
     TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
     sim.agents.loc_x[0] = 127;
     TEST_ASSERT_TRUE(biosim_challenge_eval(&s, 0, &sim).passed);
@@ -90,12 +93,12 @@ void test_xband_mirror_right_pass(void) {
 void test_xband_mirror_center_fail(void) {
     biosim_challenge_spec_t s;
     s.kind = BIOSIM_CHALLENGE_X_BAND;
-    s.x_band.x_min = 0.0F;
-    s.x_band.x_max = 0.125F;
+    s.x_band.x_min = 0.375F;
+    s.x_band.x_max = 0.625F;
     s.x_band.mirror = true;
-    sim.agents.loc_x[0] = 17;
+    sim.agents.loc_x[0] = 48;
     TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
-    sim.agents.loc_x[0] = 111;
+    sim.agents.loc_x[0] = 79;
     TEST_ASSERT_FALSE(biosim_challenge_eval(&s, 0, &sim).passed);
 }
 

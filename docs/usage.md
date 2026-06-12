@@ -198,7 +198,7 @@ where W is the grid width.
 kind   = "x_band"
 x-min  = 0.5     # fraction of grid width — left edge of survival band
 x-max  = 1.0     # fraction of grid width — right edge of survival band
-mirror = false   # if true, the mirrored band [(1−x_max)·W, (1−x_min)·W) also passes
+mirror = false   # if true, the band is inverted: agents survive *outside* [x_min·W, x_max·W)
 ```
 
 #### `disc`
