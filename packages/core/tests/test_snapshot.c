@@ -140,6 +140,9 @@ void test_genome_roundtrip_single_record(void) {
     TEST_ASSERT_EQUAL_UINT64(sim.gen_rng, sim2.gen_rng);
     TEST_ASSERT_EQUAL_UINT32(snap.gen, rsnap.gen);
     TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, rsnap.gen_rng);
+    /* The originating config's caps are restored from the file header. */
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_len, rsnap.genome_max_len);
+    TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, rsnap.max_neurons);
     for (uint32_t s = 0U; s < n_surv; s++) {
         TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
         TEST_ASSERT_EQUAL_UINT16(sim.genome.len[survivors[s]], rsnap.len[s]);

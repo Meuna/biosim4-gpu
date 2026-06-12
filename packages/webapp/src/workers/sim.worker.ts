@@ -170,8 +170,8 @@ export type WorkerEvent =
           population: number;
           survivors: number;
           kills: number;
-          genomeMaxLenUsed: number;
-          genomeMaxNeuronsUsed: number;
+          requiredGenomeLen: number;
+          requiredNeurons: number;
       }
     | {
           type: "configured";
@@ -198,8 +198,8 @@ export type WorkerEvent =
           censusPopulation: number;
           survivors: number;
           kills: number;
-          genomeMaxLenUsed: number;
-          genomeMaxNeuronsUsed: number;
+          requiredGenomeLen: number;
+          requiredNeurons: number;
       }
     | { type: "error"; message: string }
     | { type: "agentPicked"; reason: "click" | "hover"; info: AgentInfo }
@@ -218,6 +218,7 @@ export type WorkerEvent =
           gen: number;
           population: number;
           requiredGenomeLen: number;
+          requiredNeurons: number;
       };
 
 interface Layout {
@@ -1020,16 +1021,16 @@ function doNextGeneration(): void {
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
     const kills = call("biosim_wasm_census_kills");
-    const genomeMaxLenUsed = call("biosim_wasm_genome_max_len_used");
-    const genomeMaxNeuronsUsed = call("biosim_wasm_genome_max_neurons_used");
+    const requiredGenomeLen = call("biosim_wasm_get_max_conn");
+    const requiredNeurons = call("biosim_wasm_get_max_neurons");
     postMessage({
         type: "census",
         gen,
         population,
         survivors,
         kills,
-        genomeMaxLenUsed,
-        genomeMaxNeuronsUsed,
+        requiredGenomeLen,
+        requiredNeurons,
     } satisfies WorkerEvent);
 }
 
@@ -1111,8 +1112,8 @@ function handleNextGenerationConfigured(params: SimParams): void {
         censusPopulation: call("biosim_wasm_census_population"),
         survivors: call("biosim_wasm_census_survivors"),
         kills: call("biosim_wasm_census_kills"),
-        genomeMaxLenUsed: call("biosim_wasm_genome_max_len_used"),
-        genomeMaxNeuronsUsed: call("biosim_wasm_genome_max_neurons_used"),
+        requiredGenomeLen: call("biosim_wasm_get_max_conn"),
+        requiredNeurons: call("biosim_wasm_get_max_neurons"),
         gridSizeX: params.gridSizeX,
         gridSizeY: params.gridSizeY,
         stepsPerGen: params.stepsPerGen,
@@ -1203,7 +1204,8 @@ function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
         type: "snapshotLoaded",
         gen: call("biosim_wasm_get_gen"),
         population: call("biosim_wasm_get_population"),
-        requiredGenomeLen: call("biosim_wasm_snapshot_loaded_max_len"),
+        requiredGenomeLen: call("biosim_wasm_snapshot_max_conn"),
+        requiredNeurons: call("biosim_wasm_snapshot_max_neurons"),
     } satisfies WorkerEvent);
 }
 
@@ -1214,16 +1216,16 @@ function freeRunTick(): void {
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
     const kills = call("biosim_wasm_census_kills");
-    const genomeMaxLenUsed = call("biosim_wasm_genome_max_len_used");
-    const genomeMaxNeuronsUsed = call("biosim_wasm_genome_max_neurons_used");
+    const requiredGenomeLen = call("biosim_wasm_get_max_conn");
+    const requiredNeurons = call("biosim_wasm_get_max_neurons");
     postMessage({
         type: "census",
         gen,
         population,
         survivors,
         kills,
-        genomeMaxLenUsed,
-        genomeMaxNeuronsUsed,
+        requiredGenomeLen,
+        requiredNeurons,
     } satisfies WorkerEvent);
     setTimeout(freeRunTick, 0);
 }

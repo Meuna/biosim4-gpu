@@ -15,8 +15,8 @@
         onDraftChange: (params: SimParams) => void;
         onRevert: () => void;
         incompatibleFields?: string[];
-        genomeMaxLenUsed?: number;
-        genomeMaxNeuronsUsed?: number;
+        requiredGenomeLen?: number;
+        requiredNeurons?: number;
         onConfUpload: () => void;
         onConfDownload: () => void;
         // Import is allowed as soon as the sim is live; export needs survivors.
@@ -32,8 +32,8 @@
         onDraftChange,
         onRevert,
         incompatibleFields = [],
-        genomeMaxLenUsed = 0,
-        genomeMaxNeuronsUsed = 0,
+        requiredGenomeLen = 0,
+        requiredNeurons = 0,
         onConfUpload,
         onConfDownload,
         snapReady = false,
@@ -174,7 +174,8 @@
         />
         {#if incompatibleFields.includes("maxGenomeLen")}
             <p class="sim-config__incompat-hint">
-                Survivors use up to {genomeMaxLenUsed} — increase to re-enable play.
+                Current genomes need at least {requiredGenomeLen} — increase to re-enable
+                play.
             </p>
         {/if}
     </div>
@@ -199,7 +200,7 @@
         />
         {#if incompatibleFields.includes("maxNeurons")}
             <p class="sim-config__incompat-hint">
-                Survivors use up to {genomeMaxNeuronsUsed} — increase to re-enable
+                Current genomes need at least {requiredNeurons} — increase to re-enable
                 play.
             </p>
         {/if}

@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **snapshot-import neuron check** (gh-114) — the snapshot/config compatibility
+  gate now also guards the neuron cap, not just the genome length: a snapshot
+  whose originating `max-neurons` exceeds the live config now holds in
+  `GENERATION_SPAWNED` with the gate firing (config-panel hint on `maxNeurons`)
+  instead of breeding incompatibly. `biosim_survivor_snap_t` now carries the
+  originating config's `genome_max_len` / `max_neurons` (captured during survivor
+  collection, restored from the file header on load). The three scanning WASM
+  bindings (`_snapshot_loaded_max_len`, `_genome_max_len_used`,
+  `_genome_max_neurons_used`) are replaced by trivial getters
+  `_snapshot_max_conn` / `_snapshot_max_neurons` (loaded snapshot's caps) and
+  `_get_max_conn` / `_get_max_neurons` (live config's caps). The length gate now
+  compares against the config cap rather than the longest genome actually in use.
 - **snapshot-load UX rework** (gh-114) — dropping a snapshot now always lands in
   `GENERATION_SPAWNED` through a "double spawn": a rewind of the live population
   (spawn 1, when a mid-generation run is interrupted) followed by breeding from

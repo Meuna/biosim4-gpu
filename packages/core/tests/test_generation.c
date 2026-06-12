@@ -40,6 +40,10 @@ void test_collect_survivors_sets_genome_data(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_generation_collect_survivors(&sim, &snap));
     TEST_ASSERT_GREATER_THAN_UINT32(0U, snap.count);
 
+    /* The originating config's caps are captured from the sim. */
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_len, snap.genome_max_len);
+    TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, snap.max_neurons);
+
     for (uint32_t s = 0U; s < snap.count; s++) {
         TEST_ASSERT_TRUE(snap.len[s] > 0U);
         TEST_ASSERT_TRUE(snap.len[s] <= sim.genome.max_len);

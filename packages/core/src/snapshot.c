@@ -79,6 +79,8 @@ void biosim_survivor_snap_free(biosim_survivor_snap_t *snap) {
     snap->stride_cap = 0U;
     snap->gen = 0U;
     snap->gen_rng = 0U;
+    snap->genome_max_len = 0U;
+    snap->max_neurons = 0U;
 }
 
 /* ── file-format constants ───────────────────────────────────────────────── */
@@ -595,6 +597,8 @@ biosim_status_t biosim_snapshot_load_survivors_f(
 
     snap->gen = gen_idx;
     snap->gen_rng = gen_rng;
+    snap->genome_max_len = hdr.genome_max_len;
+    snap->max_neurons = hdr.max_neurons;
 
 exit:
     if (returncode == BIOSIM_EOF) {

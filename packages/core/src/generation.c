@@ -28,6 +28,8 @@ biosim_status_t biosim_generation_collect_survivors(
 
     snap->gen = sim->gen;
     snap->gen_rng = sim->gen_rng;
+    snap->genome_max_len = sim->genome.max_len;
+    snap->max_neurons = sim->nnet.max_neurons;
 
     temp_idx = malloc((size_t)pop * sizeof(uint32_t));
     if (temp_idx == NULL) {

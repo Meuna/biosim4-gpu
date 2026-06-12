@@ -374,17 +374,17 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import(void) {
     return (int)rc;
 }
 
-/* Return the longest genome length among the currently loaded survivors (0 when
- * none). The webapp compares this against the live maxGenomeLen to decide
- * whether breeding from the loaded snapshot is compatible with the config. */
-EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_loaded_max_len(void) {
-    uint32_t max = 0U;
-    for (uint32_t s = 0U; s < snap.count; s++) {
-        if ((uint32_t)snap.len[s] > max) {
-            max = (uint32_t)snap.len[s];
-        }
-    }
-    return max;
+/* Return the genome-length cap of the loaded snapshot's originating config. The
+ * webapp compares this against the live maxGenomeLen to decide whether breeding
+ * from the loaded snapshot is compatible with the current config. */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_conn(void) {
+    return (uint32_t)snap.genome_max_len;
+}
+
+/* Return the neuron cap of the loaded snapshot's originating config. Paired with
+ * biosim_wasm_snapshot_max_conn for the snapshot/config compatibility gate. */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_neurons(void) {
+    return (uint32_t)snap.max_neurons;
 }
 
 /* ── parameter setters ───────────────────────────────────────────────────── */
@@ -652,35 +652,21 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_neuron_count_ptr(void) {
     return (uint32_t)(uintptr_t)sim.nnet.neuron_count;
 }
 
-/* ── genome size queries ─────────────────────────────────────────────────────
- * Scan alive agents for the maximum genome length / neuron count in use.
- * Used by Sub-plan D's compatibility gate to detect when a config change
- * would truncate the current population's genome. */
+/* ── genome capacity queries ─────────────────────────────────────────────────
+ * Return the live config's genome-length / neuron caps (0 before init). The
+ * webapp's compatibility gate compares a draft config against these to detect
+ * when a config change would truncate the current population's genome. */
 
-EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_genome_max_len_used(void) {
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_max_conn(void) {
     if (!initialized) {
         return 0U;
     }
-    uint32_t max = 0U;
-    const uint32_t pop = sim.agents.population;
-    for (uint32_t i = 0U; i < pop; i++) {
-        if (sim.agents.alive[i] && (uint32_t)sim.genome.len[i] > max) {
-            max = (uint32_t)sim.genome.len[i];
-        }
-    }
-    return max;
+    return (uint32_t)sim.nnet.max_conn;
 }
 
-EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_genome_max_neurons_used(void) {
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_max_neurons(void) {
     if (!initialized) {
         return 0U;
     }
-    uint32_t max = 0U;
-    const uint32_t pop = sim.agents.population;
-    for (uint32_t i = 0U; i < pop; i++) {
-        if (sim.agents.alive[i] && (uint32_t)sim.nnet.neuron_count[i] > max) {
-            max = (uint32_t)sim.nnet.neuron_count[i];
-        }
-    }
-    return max;
+    return (uint32_t)sim.nnet.max_neurons;
 }

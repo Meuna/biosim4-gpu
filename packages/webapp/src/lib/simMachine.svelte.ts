@@ -35,8 +35,8 @@ export class SimMachine {
     #phase = $state<SimPhase>("WORKER_PENDING");
     #draftConfig = $state<SimParams>(structuredClone(DEFAULTS));
     #lastPlayedConfig = $state<SimParams>(structuredClone(DEFAULTS));
-    #genomeMaxLenUsed = $state(0);
-    #genomeMaxNeuronsUsed = $state(0);
+    #requiredGenomeLen = $state(0);
+    #requiredNeurons = $state(0);
 
     // Pending context for an in-flight configure / configured-respawn command:
     // committed (or acted upon) when the worker reply arrives.
@@ -54,21 +54,22 @@ export class SimMachine {
             JSON.stringify($state.snapshot(this.#lastPlayedConfig)),
     );
 
-    // Genome compatibility gate — true when the draft would truncate live
-    // survivors reported by the last census.
+    // Genome compatibility gate — true when the draft's genome/neuron caps fall
+    // below the required caps (the running config's caps from the last census, or
+    // the loaded snapshot's originating caps), which would truncate live genomes.
     #genomIncompatible = $derived(
-        (this.#genomeMaxLenUsed > 0 &&
-            this.#draftConfig.maxGenomeLen < this.#genomeMaxLenUsed) ||
-            (this.#genomeMaxNeuronsUsed > 0 &&
-                this.#draftConfig.maxNeurons < this.#genomeMaxNeuronsUsed),
+        (this.#requiredGenomeLen > 0 &&
+            this.#draftConfig.maxGenomeLen < this.#requiredGenomeLen) ||
+            (this.#requiredNeurons > 0 &&
+                this.#draftConfig.maxNeurons < this.#requiredNeurons),
     );
     #incompatibleFields = $derived<string[]>([
-        ...(this.#genomeMaxLenUsed > 0 &&
-        this.#draftConfig.maxGenomeLen < this.#genomeMaxLenUsed
+        ...(this.#requiredGenomeLen > 0 &&
+        this.#draftConfig.maxGenomeLen < this.#requiredGenomeLen
             ? ["maxGenomeLen"]
             : []),
-        ...(this.#genomeMaxNeuronsUsed > 0 &&
-        this.#draftConfig.maxNeurons < this.#genomeMaxNeuronsUsed
+        ...(this.#requiredNeurons > 0 &&
+        this.#draftConfig.maxNeurons < this.#requiredNeurons
             ? ["maxNeurons"]
             : []),
     ]);
@@ -99,12 +100,12 @@ export class SimMachine {
         return this.#incompatibleFields;
     }
 
-    get genomeMaxLenUsed(): number {
-        return this.#genomeMaxLenUsed;
+    get requiredGenomeLen(): number {
+        return this.#requiredGenomeLen;
     }
 
-    get genomeMaxNeuronsUsed(): number {
-        return this.#genomeMaxNeuronsUsed;
+    get requiredNeurons(): number {
+        return this.#requiredNeurons;
     }
 
     // ── UX methods ───────────────────────────────────────────────────────────
@@ -201,8 +202,8 @@ export class SimMachine {
     }
 
     clearGenom(): void {
-        this.#genomeMaxLenUsed = 0;
-        this.#genomeMaxNeuronsUsed = 0;
+        this.#requiredGenomeLen = 0;
+        this.#requiredNeurons = 0;
         this.#send({ type: "clearGenom" });
     }
 
@@ -242,7 +243,7 @@ export class SimMachine {
     onConfigured(): void {
         this.#phase = "GENERATION_SPAWNED";
         this.#commitPendingConfig();
-        this.#resetGenomeUsed();
+        this.#resetGenomeRequired();
         if (this.#pendingPlay) {
             this.#pendingPlay = false;
             this.#phase = "STEPS_RUNNING";
@@ -260,49 +261,53 @@ export class SimMachine {
 
     onRewindConfigured(): void {
         this.#onSpawnConfigured();
-        this.#resetGenomeUsed();
+        this.#resetGenomeRequired();
     }
 
-    // The next-generation reply carries the census of the generation that just
-    // reproduced, so the counters are set rather than reset.
+    // The next-generation reply carries the live config's genome/neuron caps, so
+    // the counters are set rather than reset.
     onNextGenerationConfigured(
-        genomeMaxLenUsed: number,
-        genomeMaxNeuronsUsed: number,
+        requiredGenomeLen: number,
+        requiredNeurons: number,
     ): void {
         this.#onSpawnConfigured();
-        this.#genomeMaxLenUsed = genomeMaxLenUsed;
-        this.#genomeMaxNeuronsUsed = genomeMaxNeuronsUsed;
+        this.#requiredGenomeLen = requiredGenomeLen;
+        this.#requiredNeurons = requiredNeurons;
     }
 
     // Reply to a snapshot drop: the dropped survivors are loaded into snap but
-    // not yet bred. `requiredGenomeLen` is the longest loaded genome; feeding it
-    // into the genome gate makes the draft-based #genomIncompatible derivation
-    // the single source of truth. Compatible → breed from the snapshot now
-    // (spawn 2, riding a dirty draft on rewindConfigured). Incompatible → stay
-    // put with the gate firing; the user raises maxGenomeLen (or clearGenom),
-    // then the normal Play/Rewind commit breeds from the still-loaded snap.
-    onSnapshotLoaded(requiredGenomeLen: number): void {
+    // not yet bred. `requiredGenomeLen` / `requiredNeurons` are the snapshot's
+    // originating caps; feeding them into the gate makes the draft-based
+    // #genomIncompatible derivation the single source of truth. Compatible →
+    // breed from the snapshot now (spawn 2, riding a dirty draft on
+    // rewindConfigured). Incompatible → stay put with the gate firing; the user
+    // raises maxGenomeLen / maxNeurons (or clearGenom), then the normal
+    // Play/Rewind commit breeds from the still-loaded snap.
+    onSnapshotLoaded(requiredGenomeLen: number, requiredNeurons: number): void {
         this.#phase = "GENERATION_SPAWNED";
-        // Feed the snapshot's longest genome into the genome gate (neurons are
-        // remapped on compile, never a capacity hazard). The draft-based
-        // #genomIncompatible derivation then drives the config-panel hint.
-        this.#genomeMaxLenUsed = requiredGenomeLen;
-        this.#genomeMaxNeuronsUsed = 0;
-        if (this.#draftConfig.maxGenomeLen >= requiredGenomeLen) {
+        // Feed the snapshot's genome-length and neuron caps into the gate; the
+        // draft-based #genomIncompatible derivation then drives the config-panel
+        // hint and the compatible-path auto-respawn below.
+        this.#requiredGenomeLen = requiredGenomeLen;
+        this.#requiredNeurons = requiredNeurons;
+        if (
+            this.#draftConfig.maxGenomeLen >= requiredGenomeLen &&
+            this.#draftConfig.maxNeurons >= requiredNeurons
+        ) {
             this.#respawn("rewind", false);
         }
     }
 
-    onCensus(genomeMaxLenUsed: number, genomeMaxNeuronsUsed: number): void {
-        this.#genomeMaxLenUsed = genomeMaxLenUsed;
-        this.#genomeMaxNeuronsUsed = genomeMaxNeuronsUsed;
+    onCensus(requiredGenomeLen: number, requiredNeurons: number): void {
+        this.#requiredGenomeLen = requiredGenomeLen;
+        this.#requiredNeurons = requiredNeurons;
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    #resetGenomeUsed(): void {
-        this.#genomeMaxLenUsed = 0;
-        this.#genomeMaxNeuronsUsed = 0;
+    #resetGenomeRequired(): void {
+        this.#requiredGenomeLen = 0;
+        this.#requiredNeurons = 0;
     }
 
     #snapshotDraft(): SimParams {

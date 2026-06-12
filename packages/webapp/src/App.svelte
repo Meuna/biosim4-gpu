@@ -109,10 +109,7 @@
                 telemetry.onConfigured(msg);
                 break;
             case "census":
-                machine.onCensus(
-                    msg.genomeMaxLenUsed,
-                    msg.genomeMaxNeuronsUsed,
-                );
+                machine.onCensus(msg.requiredGenomeLen, msg.requiredNeurons);
                 telemetry.onCensus(msg);
                 break;
             case "rewindConfigured":
@@ -121,13 +118,16 @@
                 break;
             case "nextGenerationConfigured":
                 machine.onNextGenerationConfigured(
-                    msg.genomeMaxLenUsed,
-                    msg.genomeMaxNeuronsUsed,
+                    msg.requiredGenomeLen,
+                    msg.requiredNeurons,
                 );
                 telemetry.onNextGenerationConfigured(msg);
                 break;
             case "snapshotLoaded":
-                machine.onSnapshotLoaded(msg.requiredGenomeLen);
+                machine.onSnapshotLoaded(
+                    msg.requiredGenomeLen,
+                    msg.requiredNeurons,
+                );
                 telemetry.onSnapshotLoaded(msg);
                 break;
             case "stepped":
@@ -628,8 +628,8 @@
                 draftConfig={machine.draftConfig}
                 isDirty={machine.dirty}
                 incompatibleFields={machine.incompatibleFields}
-                genomeMaxLenUsed={machine.genomeMaxLenUsed}
-                genomeMaxNeuronsUsed={machine.genomeMaxNeuronsUsed}
+                requiredGenomeLen={machine.requiredGenomeLen}
+                requiredNeurons={machine.requiredNeurons}
                 onDraftChange={(p) => machine.setDraft(p)}
                 onRevert={() => machine.revertDraft()}
                 onConfUpload={() => void importConfig()}
