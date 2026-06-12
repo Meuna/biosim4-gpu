@@ -1007,57 +1007,6 @@ function progress(type: "stepped" | "genComplete" | "paused"): WorkerEvent {
     };
 }
 
-function doStep(): void {
-    startTransitionIfNeeded();
-    call("biosim_wasm_do_step");
-    postMessage(progress("stepped"));
-    notifySelectionUpdate();
-}
-
-function doNextGeneration(): void {
-    startTransitionIfNeeded();
-    call("biosim_wasm_next_generation");
-    const gen = call("biosim_wasm_census_gen");
-    const population = call("biosim_wasm_census_population");
-    const survivors = call("biosim_wasm_census_survivors");
-    const kills = call("biosim_wasm_census_kills");
-    const requiredGenomeLen = call("biosim_wasm_get_max_conn");
-    const requiredNeurons = call("biosim_wasm_get_max_neurons");
-    postMessage({
-        type: "census",
-        gen,
-        population,
-        survivors,
-        kills,
-        requiredGenomeLen,
-        requiredNeurons,
-    } satisfies WorkerEvent);
-}
-
-function playTick(): void {
-    if (!playing) return;
-    if (call("biosim_wasm_is_gen_complete")) {
-        playing = false;
-        postMessage(progress("genComplete"));
-        return;
-    }
-    const tickStart = performance.now();
-    call("biosim_wasm_do_step");
-    postMessage(progress("stepped"));
-    notifySelectionUpdate();
-    const elapsed = performance.now() - tickStart;
-    const fpsReading = fpsWindow.tick(performance.now());
-    if (fpsReading !== null) {
-        postMessage({ type: "fps", value: fpsReading } satisfies WorkerEvent);
-    }
-    if (call("biosim_wasm_is_gen_complete")) {
-        playing = false;
-        postMessage(progress("genComplete"));
-    } else {
-        setTimeout(playTick, stepDelay(targetFps, elapsed));
-    }
-}
-
 function handlePlay(): void {
     startTransitionIfNeeded();
     fpsWindow = createFpsWindow();
@@ -1071,6 +1020,13 @@ function handleStop(): void {
     // mode intentionally unchanged — agents freeze at their current
     // grid positions (idle-timeout return to kinematic is future work).
     postMessage(progress("paused"));
+}
+
+function handleStep(): void {
+    startTransitionIfNeeded();
+    call("biosim_wasm_do_step");
+    postMessage(progress("stepped"));
+    notifySelectionUpdate();
 }
 
 function handleRewind(): void {
@@ -1209,6 +1165,67 @@ function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
     } satisfies WorkerEvent);
 }
 
+function handleStartFreeRun(): void {
+    playing = false;
+    if (mode === "idle" || mode === "transitioning-in") {
+        mode = "running";
+    }
+    freeRunning = true;
+    clearCanvas();
+    freeRunTick();
+}
+
+function handleStopFreeRun(): void {
+    freeRunning = false;
+    postMessage(progress("paused"));
+}
+
+// ── Handler helpers ───────────────────────────────────────────────────────────
+
+function playTick(): void {
+    if (!playing) return;
+    if (call("biosim_wasm_is_gen_complete")) {
+        playing = false;
+        postMessage(progress("genComplete"));
+        return;
+    }
+    const tickStart = performance.now();
+    call("biosim_wasm_do_step");
+    postMessage(progress("stepped"));
+    notifySelectionUpdate();
+    const elapsed = performance.now() - tickStart;
+    const fpsReading = fpsWindow.tick(performance.now());
+    if (fpsReading !== null) {
+        postMessage({ type: "fps", value: fpsReading } satisfies WorkerEvent);
+    }
+    if (call("biosim_wasm_is_gen_complete")) {
+        playing = false;
+        postMessage(progress("genComplete"));
+    } else {
+        setTimeout(playTick, stepDelay(targetFps, elapsed));
+    }
+}
+
+function doNextGeneration(): void {
+    startTransitionIfNeeded();
+    call("biosim_wasm_next_generation");
+    const gen = call("biosim_wasm_census_gen");
+    const population = call("biosim_wasm_census_population");
+    const survivors = call("biosim_wasm_census_survivors");
+    const kills = call("biosim_wasm_census_kills");
+    const requiredGenomeLen = call("biosim_wasm_get_max_conn");
+    const requiredNeurons = call("biosim_wasm_get_max_neurons");
+    postMessage({
+        type: "census",
+        gen,
+        population,
+        survivors,
+        kills,
+        requiredGenomeLen,
+        requiredNeurons,
+    } satisfies WorkerEvent);
+}
+
 function freeRunTick(): void {
     if (!freeRunning) return;
     call("biosim_wasm_do_gen");
@@ -1228,21 +1245,6 @@ function freeRunTick(): void {
         requiredNeurons,
     } satisfies WorkerEvent);
     setTimeout(freeRunTick, 0);
-}
-
-function handleStartFreeRun(): void {
-    playing = false;
-    if (mode === "idle" || mode === "transitioning-in") {
-        mode = "running";
-    }
-    freeRunning = true;
-    clearCanvas();
-    freeRunTick();
-}
-
-function handleStopFreeRun(): void {
-    freeRunning = false;
-    postMessage(progress("paused"));
 }
 
 // ── Message handler ───────────────────────────────────────────────────────────
@@ -1265,7 +1267,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             handleStop();
             break;
         case "step":
-            doStep();
+            handleStep();
             break;
         case "rewind":
             handleRewind();

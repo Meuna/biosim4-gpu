@@ -387,7 +387,7 @@ typed-array view.
 | Configuration (pre-init) | `biosim_wasm_set_param_int`/`_float`/`_bool` (by name) |
 | Challenge (pre-init) | `biosim_wasm_set_challenge_kind` + per-kind setters (`_disc`, `_corners`, `_x_band`, `_near_barrier`, …) |
 | Barriers (pre-init) | `biosim_wasm_clear_barriers`, `_add_barrier`, `_get_n_barriers` |
-| Snapshot I/O | export: `_snapshot_export`, `_snapshot_export_ptr`/`_size`; import: `_snapshot_import_alloc`, `_snapshot_import`, `_snapshot_max_conn`/`_snapshot_max_neurons` (loaded snapshot's genome/neuron caps, for the config-compatibility gate) |
+| Snapshot I/O | export: `_snapshot_export`, `_snapshot_export_ptr`/`_size`; import: `_snapshot_import_alloc`, `_snapshot_import`, `_snapshot_max_conn`/`_snapshot_max_neurons` |
 | Render getters | per-agent heap arrays (`_get_loc_x_ptr`/`_loc_y_ptr`, `_alive_ptr`, `_last_move_dir_ptr`, `_grid_cells_ptr`, …) plus `_get_population`/`_size_x`/`_size_y` |
 | Brain getters | `_get_genome_conn_ptr`, `_get_genome_wgt_ptr`, `_get_conn_length_ptr`, `_get_neuron_count_ptr` (`slot * pop + id` stride) |
 | Census | `_census_gen`, `_census_population`, `_census_survivors`, `_census_kills` |

@@ -157,18 +157,6 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
     snap_import_size = 0U;
 }
 
-/* ── stepping ────────────────────────────────────────────────────────────── */
-
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_step(void) {
-    for (uint32_t i = 0U; i < sim.agents.population; i++) {
-        if (sim.agents.alive[i]) {
-            biosim_sim_step_agent(&sim, i);
-        }
-    }
-    biosim_sim_next_step(&sim);
-    return BIOSIM_OK;
-}
-
 /* ── generation operations ───────────────────────────────────────────────── */
 
 /* Populate the grid for a new generation run via core's spawn logic.
@@ -194,8 +182,8 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_clear_genome(void) {
 }
 
 /* Reproduce a new population from the saved survivors, using the same gen_rng
- * seed as the original reproduction.  Thanks to determinism, calling this
- * after biosim_wasm_next_generation yields the same starting population. */
+ * seed as the original reproduction. Thanks to determinism, calling this
+ * after biosim_wasm_do_step yields the same starting population. */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind(void) {
     if (!initialized) {
         return BIOSIM_ERR_INVALID;
@@ -207,12 +195,9 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind(void) {
     return (int)spawn_generation();
 }
 
-/* Reinitialise with the params already set via biosim_wasm_set_param_*,
- * biosim_wasm_set_challenge_*, and biosim_wasm_add_barrier, then rewind:
- * restore gen_rng and gen from snap so the population is deterministically
- * reproduced from the same survivors as the last generation boundary.
- * The internal spawn inside biosim_wasm_init is harmless — spawn clears the
- * grid on entry, so a second spawn simply overwrites it. */
+/* Same as biosim_wasm_rewind but also reinitialise with the params already
+ * set via biosim_wasm_set_param_*, biosim_wasm_set_challenge_*, and
+ * biosim_wasm_add_barrier */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind_configured(void) {
     int rc = biosim_wasm_init();
     if (rc != BIOSIM_OK) {
@@ -226,8 +211,8 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_rewind_configured(void) {
 }
 
 /* Advance one generation: collect survivors, take census, then spawn the next
- * population (breed from survivors, or randomise if none passed the challenge),
- * then advance the generation counter. */
+ * population (which breed if possible or randomise) then advance the
+ * generation counter. */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation(void) {
     biosim_status_t rc = biosim_generation_collect_survivors(&sim, &snap);
     if (rc != BIOSIM_OK) {
@@ -248,23 +233,9 @@ exit:
     return (int)rc;
 }
 
-/* Run a complete generation without yielding: loop all steps until gen is
- * complete, then advance the generation boundary. */
-EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_gen(void) {
-    while (sim.step < sim.steps_per_gen) {
-        int rc = biosim_wasm_do_step();
-        if (rc != BIOSIM_OK) {
-            return rc;
-        }
-    }
-    return biosim_wasm_next_generation();
-}
-
-/* Collect survivors and census from the current sim, reinitialise with the
- * params already set via biosim_wasm_set_param_* / set_challenge / add_barrier,
- * then breed the next generation from those survivors.
- * biosim_wasm_init zeroes last_census, so save and restore it around the call
- * so that biosim_wasm_census_*() return valid data after this function. */
+/* Same as biosim_wasm_next_generation but also reinitialise with the params
+ * already set via biosim_wasm_set_param_*, biosim_wasm_set_challenge_*, and
+ * biosim_wasm_add_barrier */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_next_generation_configured(void) {
     biosim_status_t rc = biosim_generation_collect_survivors(&sim, &snap);
     if (rc != BIOSIM_OK) {
@@ -287,6 +258,28 @@ exit:
         BIOSIM_ERRORF("next generation configured failed (%s)", biosim_strerror(rc));
     }
     return (int)rc;
+}
+
+/* ── stepping ────────────────────────────────────────────────────────────── */
+
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_step(void) {
+    for (uint32_t i = 0U; i < sim.agents.population; i++) {
+        if (sim.agents.alive[i]) {
+            biosim_sim_step_agent(&sim, i);
+        }
+    }
+    biosim_sim_next_step(&sim);
+    return BIOSIM_OK;
+}
+
+EMSCRIPTEN_KEEPALIVE int biosim_wasm_do_gen(void) {
+    while (sim.step < sim.steps_per_gen) {
+        int rc = biosim_wasm_do_step();
+        if (rc != BIOSIM_OK) {
+            return rc;
+        }
+    }
+    return biosim_wasm_next_generation();
 }
 
 /* ── snapshot export ─────────────────────────────────────────────────────── */
@@ -372,19 +365,6 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import(void) {
     snap_import_buf = NULL;
     snap_import_size = 0U;
     return (int)rc;
-}
-
-/* Return the genome-length cap of the loaded snapshot's originating config. The
- * webapp compares this against the live maxGenomeLen to decide whether breeding
- * from the loaded snapshot is compatible with the current config. */
-EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_conn(void) {
-    return (uint32_t)snap.genome_max_len;
-}
-
-/* Return the neuron cap of the loaded snapshot's originating config. Paired with
- * biosim_wasm_snapshot_max_conn for the snapshot/config compatibility gate. */
-EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_neurons(void) {
-    return (uint32_t)snap.max_neurons;
 }
 
 /* ── parameter setters ───────────────────────────────────────────────────── */
@@ -669,4 +649,14 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_max_neurons(void) {
         return 0U;
     }
     return (uint32_t)sim.nnet.max_neurons;
+}
+
+/* Same but used to check imported snapshots */
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_conn(void) {
+    return (uint32_t)snap.genome_max_len;
+}
+
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_snapshot_max_neurons(void) {
+    return (uint32_t)snap.max_neurons;
 }
