@@ -133,17 +133,17 @@ it to disk; `biosim_snapshot_load_survivors` deserialises it back.
 
 ```c
 typedef struct {
-    uint16_t *conn;      /* compact row-major: survivor s, gene j → s*stride_cap+j */
-    int16_t  *wgt;       /* same layout as conn */
-    uint16_t *len;       /* genome length per survivor */
-    float    *scores;    /* challenge score per survivor */
-    uint32_t  count;     /* live survivor count */
-    uint32_t  pop_cap;   /* allocated survivor slots (grows on demand) */
-    uint16_t  stride_cap;/* allocated columns per survivor (>= max genome len) */
-    uint32_t  gen;       /* generation index at collection time */
-    uint64_t  gen_rng;   /* sim RNG state before breed — sufficient to replay */
-    uint16_t  max_genes; /* genome-length cap of the originating config */
-    uint8_t   max_neurons;    /* neuron cap of the originating config */
+    uint16_t *conn;        /* compact row-major: survivor s, gene j → s*stride_cap+j */
+    int16_t  *wgt;         /* same layout as conn */
+    uint16_t *len;         /* genome length per survivor */
+    float    *scores;      /* challenge score per survivor */
+    uint32_t  count;       /* live survivor count */
+    uint32_t  pop_cap;     /* allocated survivor slots (grows on demand) */
+    uint16_t  stride_cap;  /* allocated columns per survivor (>= max genome len) */
+    uint32_t  gen;         /* generation index at collection time */
+    uint64_t  gen_rng;     /* sim RNG state before breed — sufficient to replay */
+    uint16_t  max_genes;   /* genome-length cap of the originating config */
+    uint8_t   max_neurons; /* neuron cap of the originating config */
 } biosim_survivor_snap_t;
 ```
 
