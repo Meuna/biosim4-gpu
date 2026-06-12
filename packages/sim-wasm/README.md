@@ -59,7 +59,7 @@ biosim.ccall('biosim_wasm_init', 'number', [], []);
 | `grid-size-y` | int | 128 |
 | `steps-per-gen` | int | 300 |
 | `max-generations` | int | 1000 |
-| `max-genome-len` | int | 24 |
+| `max-genes` | int | 24 |
 | `max-neurons` | int | 5 |
 | `point-mutation-rate` | float | 0.001 |
 | `sexual-reproduction` | bool | false |
@@ -124,7 +124,7 @@ const data = biosim.HEAPU8.slice(ptr, ptr + size); // independent copy
 |---|---|---|---|
 | `biosim_wasm_snapshot_import_alloc` | `size: number` | `number` (uint32 pointer) | Allocate a WASM-side import buffer; returns its heap pointer (0 on OOM). JS writes the snapshot bytes here. |
 | `biosim_wasm_snapshot_import` | — | `number` (status) | Parse the import buffer and load the last generation's survivors into snap. Does **not** spawn — call `biosim_wasm_rewind` (or `_rewind_configured`) to breed from them. Frees the import buffer on return. |
-| `biosim_wasm_snapshot_max_conn` | — | `number` (uint32) | Genome-length cap of the loaded snapshot's originating config. Compare against the live `max-genome-len` to decide whether breeding is compatible before rewinding. |
+| `biosim_wasm_snapshot_max_genes` | — | `number` (uint32) | Genome-length cap of the loaded snapshot's originating config. Compare against the live `max-genes` to decide whether breeding is compatible before rewinding. |
 | `biosim_wasm_snapshot_max_neurons` | — | `number` (uint32) | Neuron cap of the loaded snapshot's originating config. Compare against the live `max-neurons` for the same compatibility decision. |
 
 Typical import sequence (call after `biosim_wasm_init`):
@@ -136,9 +136,9 @@ biosim.HEAPU8.set(data, ptr);
 const rc = biosim.ccall('biosim_wasm_snapshot_import', 'number', [], []);
 if (rc !== 0) throw new Error(`import failed: ${rc}`);
 // Survivors are loaded but not yet bred. Verify compatibility, then spawn:
-const needLen = biosim.ccall('biosim_wasm_snapshot_max_conn', 'number', [], []);
+const needLen = biosim.ccall('biosim_wasm_snapshot_max_genes', 'number', [], []);
 const needNeurons = biosim.ccall('biosim_wasm_snapshot_max_neurons', 'number', [], []);
-// ... if needLen <= current max-genome-len && needNeurons <= current max-neurons:
+// ... if needLen <= current max-genes && needNeurons <= current max-neurons:
 biosim.ccall('biosim_wasm_rewind', 'number', [], []);
 ```
 

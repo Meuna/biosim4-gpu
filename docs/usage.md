@@ -112,13 +112,13 @@ file (`--config`) → CLI flags. Each layer overrides the previous.
 
 | CLI flag | TOML `[genome]` key | Default | Description |
 |----------|---------------------|---------|-------------|
-| `--max-genome-len <n>` | `max-genome-len` | 24 | Maximum genome length (genes per agent) |
+| `--max-genes <n>` | `max-genes` | 24 | Maximum genes per agent |
 | `--max-neurons <n>` | `max-neurons` | 5 | Maximum hidden neurons per agent |
 | `--point-mut-rate <f>` | `point-mutation-rate` | 0.001 | Per-gene point mutation probability |
 | `--genome-sexual-reproduction` | `sexual-reproduction` | false | Two-parent crossover instead of single-parent copy |
 | `--genome-choose-parents-by-fitness` | `choose-parents-by-fitness` | false | Bias parent selection toward higher-score survivors |
 
-> **Performance note:** `max-genome-len` and `max-neurons` set fixed
+> **Performance note:** `max-genes` and `max-neurons` set fixed
 > allocation sizes for all agents. Larger values increase memory and
 > feedforward compute proportionally.
 
@@ -155,7 +155,7 @@ steps-per-gen   = 300
 max-generations = 1000
 
 [genome]
-max-genome-len            = 24
+max-genes            = 24
 max-neurons               = 5
 point-mutation-rate       = 0.001
 sexual-reproduction       = false

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **unified the genome-cap naming under `max_genes`** (gh-127) — the two names
+  for the same concept (the genome-size cap: `biosim_genome_t.max_len` and
+  `biosim_nnet_t.max_conn`, both seeded from `sim->genome_max_len`) collapse into
+  a single `max_genes` field. The snapshot-header and `biosim_survivor_snap_t`
+  `genome_max_len` field, and the WASM caps exports, follow suit:
+  `_get_max_conn` → `_get_max_genes`, `_snapshot_max_conn` → `_snapshot_max_genes`.
+  **Breaking config change:** the user-facing parameter `max-genome-len` is
+  renamed to `max-genes` (TOML `[genome]` key, `--max-genes` CLI flag, webapp
+  `maxGenes` field) — existing `.toml` configs and CLI scripts using
+  `max-genome-len` must be updated. The active-count concept (`genome.len`,
+  `conn_length`, on-disk `genome_length`) is unchanged. No file-format change.
 - **snapshot load no longer truncates to the live population** (gh-123) — the
   growable `biosim_survivor_snap_t` container makes the old population cap
   obsolete, so `biosim_snapshot_load_survivors_f` drops its `min_pop` argument

@@ -117,7 +117,7 @@ typedef struct {
 /* gene slot j of agent i is at index  j * population + i             */
 typedef struct {
     uint32_t  population;
-    uint16_t  max_len;
+    uint16_t  max_genes;
     uint16_t *conn; /* [gene_slot * population + agent_idx] */
     int16_t  *wgt;  /* [gene_slot * population + agent_idx] */
     uint16_t *len;  /* [agent_idx] active gene count */
@@ -142,7 +142,7 @@ typedef struct {
     uint16_t  stride_cap;/* allocated columns per survivor (>= max genome len) */
     uint32_t  gen;       /* generation index at collection time */
     uint64_t  gen_rng;   /* sim RNG state before breed — sufficient to replay */
-    uint16_t  genome_max_len; /* genome-length cap of the originating config */
+    uint16_t  max_genes; /* genome-length cap of the originating config */
     uint8_t   max_neurons;    /* neuron cap of the originating config */
 } biosim_survivor_snap_t;
 ```
@@ -387,7 +387,7 @@ typed-array view.
 | Configuration (pre-init) | `biosim_wasm_set_param_int`/`_float`/`_bool` (by name) |
 | Challenge (pre-init) | `biosim_wasm_set_challenge_kind` + per-kind setters (`_disc`, `_corners`, `_x_band`, `_near_barrier`, …) |
 | Barriers (pre-init) | `biosim_wasm_clear_barriers`, `_add_barrier`, `_get_n_barriers` |
-| Snapshot I/O | export: `_snapshot_export`, `_snapshot_export_ptr`/`_size`; import: `_snapshot_import_alloc`, `_snapshot_import`, `_snapshot_max_conn`/`_snapshot_max_neurons` |
+| Snapshot I/O | export: `_snapshot_export`, `_snapshot_export_ptr`/`_size`; import: `_snapshot_import_alloc`, `_snapshot_import`, `_snapshot_max_genes`/`_snapshot_max_neurons` |
 | Render getters | per-agent heap arrays (`_get_loc_x_ptr`/`_loc_y_ptr`, `_alive_ptr`, `_last_move_dir_ptr`, `_grid_cells_ptr`, …) plus `_get_population`/`_size_x`/`_size_y` |
 | Brain getters | `_get_genome_conn_ptr`, `_get_genome_wgt_ptr`, `_get_conn_length_ptr`, `_get_neuron_count_ptr` (`slot * pop + id` stride) |
 | Census | `_census_gen`, `_census_population`, `_census_survivors`, `_census_kills` |

@@ -75,14 +75,14 @@ Total fixed per-agent footprint: ~40 bytes/agent. At `N = 4096`: ~160 KiB before
 
 ```c
 // Two parallel buffers, gene-slot-major (transposed):
-uint16_t genome_conn[GENOME_MAX_LEN * N];  // [gene_slot * N + agent]
-int16_t  genome_wgt [GENOME_MAX_LEN * N];
+uint16_t genome_conn[MAX_GENES * N];  // [gene_slot * N + agent]
+int16_t  genome_wgt [MAX_GENES * N];
 
 uint8_t  genome_length[N];  // actual active gene count per agent
 ```
 
 Transposed layout guarantees that all work-items reading gene `j` access
-contiguous memory (coalesced). Padding waste: at `GENOME_MAX_LEN = 256`,
+contiguous memory (coalesced). Padding waste: at `MAX_GENES = 256`,
 `N = 4096`, 4 bytes/gene → 4 MiB total; even 50% padding waste is negligible.
 
 Agents sorted by descending `genome_length` after each generation boundary
@@ -93,8 +93,8 @@ reduces warp divergence in the genome-iteration loop.
 Compiled connections stored in the same transposed SoA layout as the genome:
 
 ```c
-uint16_t conn_packed[MAX_CONN * N];   // src/sink packed bits
-int16_t  conn_weight[MAX_CONN * N];
+uint16_t conn_packed[MAX_GENES * N];   // src/sink packed bits
+int16_t  conn_weight[MAX_GENES * N];
 uint16_t conn_length[N];
 
 float    neuron_output[MAX_NEURONS * N];  // transposed: [neuron_k * N + agent]
@@ -208,25 +208,24 @@ At the end of each generation the host:
 Keeping the boundary on the host means the GPU refactoring does not require
 rewriting reproduction logic.
 
-Data transfer at `N = 4096`, `GENOME_MAX_LEN = 256`: ~4 MiB per direction per
+Data transfer at `N = 4096`, `MAX_GENES = 256`: ~4 MiB per direction per
 generation. Over PCIe Gen4 (~16 GB/s): ~0.5 ms — negligible versus a
 generation's worth of sim.steps.
 
 ## Memory budget
 
-For `N = 4096`, `SIZE_X = SIZE_Y = 128`, `GENOME_MAX_LEN = 256`, `MAX_NEURONS = 32`,
-`MAX_CONN = 512`:
+For `N = 4096`, `SIZE_X = SIZE_Y = 128`, `MAX_GENES = 256`, `MAX_NEURONS = 32`:
 
 | Buffer | Size |
 |--------|------|
 | Per-agent fixed fields | ~160 KiB |
 | Genome | 4 MiB |
-| Neural net connections | 8 MiB |
+| Neural net connections | 4 MiB |
 | Neuron outputs | 512 KiB |
 | Neuron driven flags | 128 KiB |
 | Grid | 64 KiB |
 | Signal | 64 KiB |
 | Transient desired_x / desired_y | 32 KiB |
-| **Total** | **~13 MiB** |
+| **Total** | **~9 MiB** |
 
-Scaling `N` to 65,536 yields ~200 MiB — trivial on any modern 4 GiB+ GPU.
+Scaling `N` to 65,536 yields ~140 MiB — trivial on any modern 4 GiB+ GPU.

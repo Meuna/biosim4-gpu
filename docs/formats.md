@@ -29,7 +29,7 @@ The format is binary, little-endian throughout.
 | 6 | 2 | schema_version | `BIOSIM_IO_SCHEMA_VERSION` (from `io_defs.h`) |
 | 8 | 2 | num_sensors | `BIOSIM_NUM_SENSORS` at write time |
 | 10 | 2 | num_actions | `BIOSIM_NUM_ACTIONS` at write time |
-| 12 | 2 | genome_max_len | `sim->genome.max_len` at write time |
+| 12 | 2 | max_genes | `sim->genome.max_genes` at write time |
 | 14 | 1 | max_neurons | `sim->nnet.max_neurons` at write time |
 | 15 | 1 | reserved | zero |
 | 16 | 4 | generation_count | number of records; 0 = unknown / streaming |
@@ -42,7 +42,7 @@ corrupt gene interpretation.
 
 ### Generation record
 
-Let `n = n_survivors` and `L = genome_max_len` (from file header).
+Let `n = n_survivors` and `L = max_genes` (from file header).
 
 | Offset | Size | Field | Type | Notes |
 |--------|------|-------|------|-------|
@@ -64,7 +64,7 @@ yields a deterministic replay.
 
 ### Approximate sizes
 
-At defaults (pop = 3000, 750 survivors at 25%, `genome_max_len = 24`):
+At defaults (pop = 3000, 750 survivors at 25%, `max_genes = 24`):
 - ~75 KB per generation record
 - 1000 generations at interval 1 → ~72 MB; at interval 10 → ~7.2 MB
 
@@ -97,7 +97,7 @@ grid-size-x     = 128
 ...
 
 [genome]
-max-genome-len  = 24
+max-genes  = 24
 ...
 
 [sensors]
