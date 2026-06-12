@@ -20,7 +20,7 @@ biosim_status_t biosim_generation_collect_survivors(
 ) {
     const uint32_t pop = sim->agents.population;
     const biosim_genome_t *genome = &sim->genome;
-    const uint16_t g_max_len = genome->max_len;
+    const uint16_t max_genes = genome->max_genes;
 
     uint32_t *temp_idx = NULL;
     float *temp_scores = NULL;
@@ -28,7 +28,7 @@ biosim_status_t biosim_generation_collect_survivors(
 
     snap->gen = sim->gen;
     snap->gen_rng = sim->gen_rng;
-    snap->genome_max_len = sim->genome.max_len;
+    snap->max_genes = sim->genome.max_genes;
     snap->max_neurons = sim->nnet.max_neurons;
 
     temp_idx = malloc((size_t)pop * sizeof(uint32_t));
@@ -56,7 +56,7 @@ biosim_status_t biosim_generation_collect_survivors(
         n++;
     }
 
-    returncode = biosim_survivor_snap_grow(snap, n, g_max_len);
+    returncode = biosim_survivor_snap_grow(snap, n, max_genes);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -108,7 +108,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
     biosim_grid_t *grid = &sim->grid;
 
     const uint32_t pop = agents->population;
-    const uint16_t g_max_len = genome->max_len;
+    const uint16_t max_genes = genome->max_genes;
     const uint8_t los_range = sim->los_range;
 
     clear_agents_from_grid(sim);
@@ -119,7 +119,7 @@ biosim_status_t biosim_generation_init_random(biosim_sim_t *sim) {
 
     for (uint32_t i = 0; i < pop; i++) {
         uint16_t rand_len =
-            (uint16_t)(1U + (uint16_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)g_max_len));
+            (uint16_t)(1U + (uint16_t)(biosim_rng_next(&sim->gen_rng) % (uint64_t)max_genes));
         biosim_genome_init_slot(genome, i, rand_len, &sim->gen_rng);
 
         returncode =
@@ -166,7 +166,7 @@ static void restore_genome_slot(
  * Single-point crossover from snap rows snap_pa and snap_pb into a live
  * genome slot.  Mirrors biosim_genome_crossover semantics: crossover point k
  * in [0, min(len_a, len_b)]; child gets genes [0..k) from pa and [k..len_b)
- * from pb; child len = pb len (capped at max_len).
+ * from pb; child len = pb len (capped at max_genes).
  */
 static void crossover_from_snapshot(
     biosim_genome_t *genome,
@@ -182,8 +182,8 @@ static void crossover_from_snapshot(
     const uint32_t len_b = snap->len[snap_pb];
     const uint32_t min_len = len_a < len_b ? len_a : len_b;
     const uint32_t k = (uint32_t)(biosim_rng_next(rng) % ((uint64_t)min_len + 1ULL));
-    const uint32_t max_len = (uint32_t)genome->max_len;
-    const uint32_t child_len = len_b < max_len ? len_b : max_len;
+    const uint32_t max_genes = (uint32_t)genome->max_genes;
+    const uint32_t child_len = len_b < max_genes ? len_b : max_genes;
 
     for (uint32_t j = 0U; j < k; j++) {
         genome->conn[(size_t)j * pop + dst] = snap->conn[(size_t)snap_pa * stride + j];
@@ -355,11 +355,11 @@ biosim_status_t biosim_generation_breed(biosim_sim_t *sim, const biosim_survivor
      * checks (snapshot.c check_compat for the CLI, the webapp UX gate); a direct
      * load of an oversized snapshot lands here instead of overflowing. */
     for (uint32_t s = 0U; s < n_survivors; s++) {
-        if (snap->len[s] > sim->genome.max_len) {
+        if (snap->len[s] > sim->genome.max_genes) {
             BIOSIM_ERRORF(
-                "survivor genome length %u exceeds genome max length %u",
+                "survivor genome length %u exceeds max genes %u",
                 (unsigned)snap->len[s],
-                (unsigned)sim->genome.max_len
+                (unsigned)sim->genome.max_genes
             );
             return BIOSIM_ERR_INVALID;
         }

@@ -17,7 +17,7 @@ static const biosim_param_entry_t k_test_params[] = {
     {"population",                NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
     {"grid-size-x",               NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
     {"grid-size-y",               NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
-    {"max-genome-len",            NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
+    {"max-genes",            NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
     {"max-neurons",               NULL,  {.i = 2},     PARAM_INT,   false, true, NULL, NULL},
     {"los-range",                 NULL,  {.i = 4},     PARAM_INT,   false, true, NULL, NULL},
     {"steps-per-gen",             NULL,  {.i = 1},     PARAM_INT,   false, true, NULL, NULL},
@@ -41,7 +41,7 @@ biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg) {
     (void)biosim_params_set_int(&p, "population", (int)cfg->population);
     (void)biosim_params_set_int(&p, "grid-size-x", (int)cfg->size_x);
     (void)biosim_params_set_int(&p, "grid-size-y", (int)cfg->size_y);
-    (void)biosim_params_set_int(&p, "max-genome-len", (int)cfg->genome_max_len);
+    (void)biosim_params_set_int(&p, "max-genes", (int)cfg->max_genes);
     (void)biosim_params_set_int(&p, "max-neurons", (int)cfg->max_neurons);
     (void)biosim_params_set_int(&p, "los-range", (int)cfg->los_range);
     (void)biosim_params_set_int(&p, "steps-per-gen", (int)cfg->steps_per_gen);
@@ -69,7 +69,7 @@ biosim_status_t sim_test_make_8x8(biosim_sim_t *sim) {
             .population = 4U,
             .size_x = 8,
             .size_y = 8,
-            .genome_max_len = 4U,
+            .max_genes = 4U,
             .max_neurons = 2U,
             .los_range = 4U,
             .steps_per_gen = 1U,
@@ -88,7 +88,7 @@ biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
             .population = 64U,
             .size_x = 32,
             .size_y = 32,
-            .genome_max_len = 24U,
+            .max_genes = 24U,
             .max_neurons = 3U,
             .los_range = 8U,
             .steps_per_gen = 16U,
@@ -119,7 +119,7 @@ biosim_status_t sim_test_make_128x128(biosim_sim_t *sim) {
             .population = 3000U,
             .size_x = 128,
             .size_y = 128,
-            .genome_max_len = 24U,
+            .max_genes = 24U,
             .max_neurons = 5U,
             .los_range = 8U,
             .steps_per_gen = 16U,
@@ -179,7 +179,7 @@ void assert_grid_equal(const biosim_grid_t *a, const biosim_grid_t *b) {
 void assert_genome_slice_equal(
     const biosim_genome_t *a, const biosim_genome_t *b, uint32_t n_agents
 ) {
-    TEST_ASSERT_EQUAL_UINT16(a->max_len, b->max_len);
+    TEST_ASSERT_EQUAL_UINT16(a->max_genes, b->max_genes);
     const uint32_t pop_a = a->population;
     const uint32_t pop_b = b->population;
     for (uint32_t s = 0U; s < n_agents; s++) {
@@ -201,7 +201,7 @@ void assert_genome_equal(const biosim_genome_t *a, const biosim_genome_t *b) {
 
 void assert_nnet_equal(const biosim_nnet_t *a, const biosim_nnet_t *b) {
     TEST_ASSERT_EQUAL_UINT32(a->population, b->population);
-    TEST_ASSERT_EQUAL_UINT16(a->max_conn, b->max_conn);
+    TEST_ASSERT_EQUAL_UINT16(a->max_genes, b->max_genes);
     TEST_ASSERT_EQUAL_UINT8(a->max_neurons, b->max_neurons);
     const uint32_t pop = a->population;
     for (uint32_t s = 0U; s < pop; s++) {

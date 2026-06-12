@@ -53,7 +53,7 @@ biosim_status_t biosim_sim_create(
     sim->population = (uint32_t)biosim_params_get_int(p, "population");
     sim->size_x = biosim_params_get_int(p, "grid-size-x");
     sim->size_y = biosim_params_get_int(p, "grid-size-y");
-    sim->genome_max_len = (uint16_t)biosim_params_get_int(p, "max-genome-len");
+    sim->max_genes = (uint16_t)biosim_params_get_int(p, "max-genes");
     sim->max_neurons = (uint8_t)biosim_params_get_int(p, "max-neurons");
     sim->los_range = (uint8_t)biosim_params_get_int(p, "los-range");
     sim->steps_per_gen = (uint32_t)biosim_params_get_int(p, "steps-per-gen");
@@ -78,13 +78,12 @@ biosim_status_t biosim_sim_create(
         goto exit;
     }
 
-    returncode = biosim_genome_create(sim->population, sim->genome_max_len, &sim->genome);
+    returncode = biosim_genome_create(sim->population, sim->max_genes, &sim->genome);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
-    returncode =
-        biosim_nnet_create(sim->population, sim->genome_max_len, sim->max_neurons, &sim->nnet);
+    returncode = biosim_nnet_create(sim->population, sim->max_genes, sim->max_neurons, &sim->nnet);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }

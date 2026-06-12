@@ -23,7 +23,7 @@ static biosim_status_t build_snap_from_agents(
     uint32_t n_surv,
     biosim_survivor_snap_t *snap
 ) {
-    biosim_status_t st = biosim_survivor_snap_grow(snap, n_surv, sim->genome.max_len);
+    biosim_status_t st = biosim_survivor_snap_grow(snap, n_surv, sim->genome.max_genes);
     if (st != BIOSIM_OK) {
         return st;
     }
@@ -94,7 +94,7 @@ void test_read_header_roundtrip(void) {
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_IO_SCHEMA_VERSION, hdr.schema_version);
     TEST_ASSERT_EQUAL_UINT16((uint16_t)BIOSIM_NUM_SENSORS, hdr.num_sensors);
     TEST_ASSERT_EQUAL_UINT16((uint16_t)BIOSIM_NUM_ACTIONS, hdr.num_actions);
-    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_len, hdr.genome_max_len);
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_genes, hdr.max_genes);
     TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, hdr.max_neurons);
     TEST_ASSERT_EQUAL_UINT32(0U, hdr.generation_count); /* finalize not called */
 
@@ -141,7 +141,7 @@ void test_genome_roundtrip_single_record(void) {
     TEST_ASSERT_EQUAL_UINT32(snap.gen, rsnap.gen);
     TEST_ASSERT_EQUAL_UINT64(snap.gen_rng, rsnap.gen_rng);
     /* The originating config's caps are restored from the file header. */
-    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_len, rsnap.genome_max_len);
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_genes, rsnap.max_genes);
     TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, rsnap.max_neurons);
     for (uint32_t s = 0U; s < n_surv; s++) {
         TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
@@ -335,7 +335,7 @@ void test_load_survivors_pop_file_larger(void) {
                 .population = 6U,
                 .size_x = 4,
                 .size_y = 4,
-                .genome_max_len = 4U,
+                .max_genes = 4U,
                 .max_neurons = 2U,
                 .los_range = 4U,
                 .steps_per_gen = 1U,
@@ -397,7 +397,7 @@ void test_load_survivors_pop_file_smaller(void) {
                 .population = 6U,
                 .size_x = 4,
                 .size_y = 4,
-                .genome_max_len = 4U,
+                .max_genes = 4U,
                 .max_neurons = 2U,
                 .los_range = 4U,
                 .steps_per_gen = 1U,

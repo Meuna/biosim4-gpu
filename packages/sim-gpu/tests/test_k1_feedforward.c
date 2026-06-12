@@ -125,7 +125,7 @@ static void fixture_setup(void) {
     memcpy(init_osc_period, a->osc_period, (size_t)pop * sizeof(uint16_t));
     memcpy(init_los_range, a->los_range, (size_t)pop * sizeof(uint8_t));
     const biosim_nnet_t *n = &sim.nnet;
-    const uint16_t mc = n->max_conn;
+    const uint16_t mc = n->max_genes;
     const uint8_t mn = n->max_neurons;
     size_t grid_size = (size_t)sim.size_x * (size_t)sim.size_y;
 

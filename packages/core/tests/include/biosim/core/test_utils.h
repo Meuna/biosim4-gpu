@@ -19,7 +19,7 @@ typedef struct {
     uint32_t population;
     int32_t size_x;
     int32_t size_y;
-    uint16_t genome_max_len;
+    uint16_t max_genes;
     uint8_t max_neurons;
     uint8_t los_range;
     uint32_t steps_per_gen;
@@ -37,9 +37,9 @@ typedef struct {
 biosim_status_t sim_test_create(biosim_sim_t *sim, const sim_test_scn_t *cfg);
 
 /* ── named presets ──────────────────────────────────────────────────────────
- * 8x8:     pop=4,    genome_max_len=4,  max_neurons=2, steps=1.
- * 32x32:   pop=64,   genome_max_len=24, max_neurons=3, 16 steps/gen, mutation.
- * 128x128: pop=3000, genome_max_len=24, max_neurons=5, 16 steps/gen, mutation, barriers. */
+ * 8x8:     pop=4,    max_genes=4,  max_neurons=2, steps=1.
+ * 32x32:   pop=64,   max_genes=24, max_neurons=3, 16 steps/gen, mutation.
+ * 128x128: pop=3000, max_genes=24, max_neurons=5, 16 steps/gen, mutation, barriers. */
 biosim_status_t sim_test_make_8x8(biosim_sim_t *sim);
 biosim_status_t sim_test_make_32x32(biosim_sim_t *sim);
 biosim_status_t sim_test_make_128x128(biosim_sim_t *sim);

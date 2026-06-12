@@ -17,7 +17,7 @@ void setUp(void) {
                 .population = 1U,
                 .size_x = 128,
                 .size_y = 128,
-                .genome_max_len = 8U,
+                .max_genes = 8U,
                 .max_neurons = 3U,
                 .los_range = 8U,
                 .steps_per_gen = 300U,

@@ -13,14 +13,14 @@
 
 /*
  * Grow snap to hold at least n_survivors entries each with at least
- * g_max_len columns.  Uses a doubling policy on each dimension independently.
+ * max_genes columns.  Uses a doubling policy on each dimension independently.
  * Tolerates zero-initialised snap (first-time alloc).
  * n_survivors == 0 is a no-op.
  * On realloc failure, the partially-grown snap is left intact; the caller
  * must free it with biosim_survivor_snap_free.
  */
 biosim_status_t biosim_survivor_snap_grow(
-    biosim_survivor_snap_t *snap, uint32_t n_survivors, uint16_t g_max_len
+    biosim_survivor_snap_t *snap, uint32_t n_survivors, uint16_t max_genes
 );
 
 /*

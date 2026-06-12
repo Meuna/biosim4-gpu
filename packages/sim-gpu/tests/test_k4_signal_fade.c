@@ -36,7 +36,7 @@ static void fixture_setup(void) {
             .population = 4U,
             .size_x = 8,
             .size_y = 8,
-            .genome_max_len = 2U,
+            .max_genes = 2U,
             .max_neurons = 1U,
             .los_range = 4U,
             .steps_per_gen = 100U,

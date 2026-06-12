@@ -79,7 +79,7 @@ typedef struct {
     int32_t size_x;
     int32_t size_y;
     size_t signal_len;
-    uint16_t max_conn;
+    uint16_t max_genes;
     uint8_t max_neurons;
     uint32_t n_barrier_ctrs;
 } biosim_gpu_pipeline_t;

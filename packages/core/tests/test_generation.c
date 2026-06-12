@@ -41,12 +41,12 @@ void test_collect_survivors_sets_genome_data(void) {
     TEST_ASSERT_GREATER_THAN_UINT32(0U, snap.count);
 
     /* The originating config's caps are captured from the sim. */
-    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_len, snap.genome_max_len);
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_genes, snap.max_genes);
     TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, snap.max_neurons);
 
     for (uint32_t s = 0U; s < snap.count; s++) {
         TEST_ASSERT_TRUE(snap.len[s] > 0U);
-        TEST_ASSERT_TRUE(snap.len[s] <= sim.genome.max_len);
+        TEST_ASSERT_TRUE(snap.len[s] <= sim.genome.max_genes);
         TEST_ASSERT_TRUE(snap.scores[s] >= 0.0F);
         TEST_ASSERT_TRUE(snap.scores[s] <= 1.0F);
     }
@@ -95,7 +95,7 @@ void test_breed_rejects_oversized_genome(void) {
         }
     }
 
-    snap.len[0] = (uint16_t)(sim.genome.max_len + 1U);
+    snap.len[0] = (uint16_t)(sim.genome.max_genes + 1U);
     TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_INVALID, biosim_generation_breed(&sim, &snap));
 
     uint32_t alive_after = 0U;
@@ -187,7 +187,7 @@ void test_breed_fitness_biased(void) {
                 .population = 4U,
                 .size_x = 4,
                 .size_y = 4,
-                .genome_max_len = 4U,
+                .max_genes = 4U,
                 .max_neurons = 2U,
                 .los_range = 4U,
                 .steps_per_gen = 1U,
@@ -228,7 +228,7 @@ void test_breed_sexual_reproduction(void) {
                 .population = 4U,
                 .size_x = 4,
                 .size_y = 4,
-                .genome_max_len = 4U,
+                .max_genes = 4U,
                 .max_neurons = 2U,
                 .los_range = 4U,
                 .steps_per_gen = 1U,

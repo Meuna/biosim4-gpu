@@ -3,13 +3,13 @@
 #include "biosim/core/status.h"
 #include "unity.h"
 
-#define CAP         4U
-#define MAX_CONN    16U
-#define MAX_NEURONS 8U
-#define MAX_GENES   8U
-#define NUM_SENSORS 4U
-#define NUM_ACTIONS 4U
-#define AGENT_IDX   0U
+#define CAP              4U
+#define NNET_MAX_GENES   16U
+#define MAX_NEURONS      8U
+#define GENOME_MAX_GENES 8U
+#define NUM_SENSORS      4U
+#define NUM_ACTIONS      4U
+#define AGENT_IDX        0U
 
 static biosim_nnet_t nnet;
 static biosim_genome_t genome;
@@ -22,8 +22,8 @@ static void set_gene(
 }
 
 void setUp(void) {
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_create(CAP, MAX_CONN, MAX_NEURONS, &nnet));
-    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_create(CAP, MAX_GENES, &genome));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_create(CAP, NNET_MAX_GENES, MAX_NEURONS, &nnet));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_genome_create(CAP, GENOME_MAX_GENES, &genome));
 }
 
 void tearDown(void) {
@@ -50,7 +50,7 @@ void test_create_pointers_non_null(void) {
 
 void test_create_metadata_stored(void) {
     TEST_ASSERT_EQUAL_UINT32(CAP, nnet.population);
-    TEST_ASSERT_EQUAL_UINT16(MAX_CONN, nnet.max_conn);
+    TEST_ASSERT_EQUAL_UINT16(NNET_MAX_GENES, nnet.max_genes);
     TEST_ASSERT_EQUAL_UINT8(MAX_NEURONS, nnet.max_neurons);
 }
 
@@ -385,8 +385,8 @@ void test_adjacent_agents_independent(void) {
 
 /* ── overflow guard ─────────────────────────────────────────────────────── */
 
-void test_max_conn_not_exceeded(void) {
-    /* Create nnet with max_conn=2; genome has 4 SENSOR→ACTION genes that
+void test_max_genes_not_exceeded(void) {
+    /* Create nnet with max_genes=2; genome has 4 SENSOR→ACTION genes that
      * all survive culling.  conn_length must be capped at 2. */
     biosim_nnet_t small;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_nnet_create(CAP, 2, MAX_NEURONS, &small));
@@ -604,7 +604,7 @@ int main(void) {
     RUN_TEST(test_transposed_conn_indexing);
     RUN_TEST(test_transposed_neuron_indexing);
     RUN_TEST(test_adjacent_agents_independent);
-    RUN_TEST(test_max_conn_not_exceeded);
+    RUN_TEST(test_max_genes_not_exceeded);
     RUN_TEST(test_fingerprint_compiled_nnet_deterministic);
     RUN_TEST(test_fingerprint_differs_for_different_nnets);
     RUN_TEST(test_fingerprint_phenotypic_equivalence);

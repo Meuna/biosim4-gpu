@@ -9,7 +9,7 @@
 /* ── survivor snap lifecycle ─────────────────────────────────────────────── */
 
 biosim_status_t biosim_survivor_snap_grow(
-    biosim_survivor_snap_t *snap, uint32_t n_survivors, uint16_t g_max_len
+    biosim_survivor_snap_t *snap, uint32_t n_survivors, uint16_t max_genes
 ) {
     if (n_survivors == 0U) {
         return BIOSIM_OK;
@@ -22,9 +22,9 @@ biosim_status_t biosim_survivor_snap_grow(
         uint32_t doubled = snap->pop_cap == 0U ? n_survivors : snap->pop_cap * 2U;
         new_pop = doubled >= n_survivors ? doubled : n_survivors;
     }
-    if (g_max_len > snap->stride_cap) {
-        uint16_t doubled = snap->stride_cap == 0U ? g_max_len : (uint16_t)(snap->stride_cap * 2U);
-        new_stride = doubled >= g_max_len ? doubled : g_max_len;
+    if (max_genes > snap->stride_cap) {
+        uint16_t doubled = snap->stride_cap == 0U ? max_genes : (uint16_t)(snap->stride_cap * 2U);
+        new_stride = doubled >= max_genes ? doubled : max_genes;
     }
 
     if (new_pop == snap->pop_cap && new_stride == snap->stride_cap) {
@@ -79,7 +79,7 @@ void biosim_survivor_snap_free(biosim_survivor_snap_t *snap) {
     snap->stride_cap = 0U;
     snap->gen = 0U;
     snap->gen_rng = 0U;
-    snap->genome_max_len = 0U;
+    snap->max_genes = 0U;
     snap->max_neurons = 0U;
 }
 
@@ -94,11 +94,11 @@ static const uint32_t snap_gen_count_offset = 16U;
 /* Fixed-size portion of every generation entry (bytes). */
 static const uint32_t snap_gen_fixed_bytes = 24U;
 
-/* Total size (bytes) of a generation entry with n survivors and genome_max_len genes. */
-static uint64_t gen_entry_bytes(uint32_t n, uint16_t genome_max_len) {
+/* Total size (bytes) of a generation entry with n survivors and max_genes genes. */
+static uint64_t gen_entry_bytes(uint32_t n, uint16_t max_genes) {
     return (uint64_t)snap_gen_fixed_bytes + (uint64_t)n * 2U /* genome_length */
-           + (uint64_t)n * (uint64_t)genome_max_len * 2U     /* genome_conn   */
-           + (uint64_t)n * (uint64_t)genome_max_len * 2U     /* genome_wgt    */
+           + (uint64_t)n * (uint64_t)max_genes * 2U          /* genome_conn   */
+           + (uint64_t)n * (uint64_t)max_genes * 2U          /* genome_wgt    */
            + (uint64_t)n * 4U;                               /* score         */
 }
 
@@ -146,7 +146,7 @@ biosim_status_t biosim_snapshot_write_header(FILE *f, const biosim_sim_t *sim) {
     if (!write_u16(f, (uint16_t)BIOSIM_NUM_ACTIONS)) {
         return BIOSIM_ERR_IO;
     }
-    if (!write_u16(f, sim->genome.max_len)) {
+    if (!write_u16(f, sim->genome.max_genes)) {
         return BIOSIM_ERR_IO;
     }
     if (!write_u8(f, sim->nnet.max_neurons)) {
@@ -168,14 +168,14 @@ biosim_status_t biosim_snapshot_write_genome(
     FILE *f, const biosim_sim_t *sim, const biosim_survivor_snap_t *snap
 ) {
     const uint32_t n_survivors = snap->count;
-    const uint16_t genome_max_len = sim->genome.max_len;
+    const uint16_t max_genes = sim->genome.max_genes;
     const uint16_t stride = snap->stride_cap;
 
     /* alloc start here, free on exit label */
     uint16_t *row = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
-    if (!write_u64(f, gen_entry_bytes(n_survivors, genome_max_len))) {
+    if (!write_u64(f, gen_entry_bytes(n_survivors, max_genes))) {
         returncode = BIOSIM_ERR_IO;
         goto exit;
     }
@@ -209,10 +209,10 @@ biosim_status_t biosim_snapshot_write_genome(
 
     /*
      * genome_conn: one gene slot at a time across all survivors.
-     * Iterate j up to genome_max_len (not stride_cap) to match the on-disk
-     * format width, which is set from sim->genome.max_len at session open.
+     * Iterate j up to max_genes (not stride_cap) to match the on-disk
+     * format width, which is set from sim->genome.max_genes at session open.
      */
-    for (uint16_t j = 0U; j < genome_max_len; j++) {
+    for (uint16_t j = 0U; j < max_genes; j++) {
         for (uint32_t s = 0U; s < n_survivors; s++) {
             row[s] = snap->conn[(size_t)s * stride + j];
         }
@@ -223,7 +223,7 @@ biosim_status_t biosim_snapshot_write_genome(
     }
 
     /* genome_wgt: int16_t stored as uint16_t bits */
-    for (uint16_t j = 0U; j < genome_max_len; j++) {
+    for (uint16_t j = 0U; j < max_genes; j++) {
         for (uint32_t s = 0U; s < n_survivors; s++) {
             uint16_t bits;
             (void)memcpy(&bits, &snap->wgt[(size_t)s * stride + j], sizeof(bits));
@@ -286,7 +286,7 @@ biosim_status_t biosim_snapshot_read_header(FILE *f, biosim_snap_header_t *heade
     if (!read_u16(f, &header_out->num_actions)) {
         return biosim_io_status(f);
     }
-    if (!read_u16(f, &header_out->genome_max_len)) {
+    if (!read_u16(f, &header_out->max_genes)) {
         return biosim_io_status(f);
     }
     if (fread(&header_out->max_neurons, 1U, 1U, f) != 1U) {
@@ -339,13 +339,13 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
         return BIOSIM_ERR_INVALID;
     }
 
-    if (sim->genome.max_len < hdr->genome_max_len) {
+    if (sim->genome.max_genes < hdr->max_genes) {
         BIOSIM_ERRORF(
-            "file genome-max-len=%u exceeds current %u;"
-            " use --max-genome-len %u or larger",
-            (unsigned)hdr->genome_max_len,
-            (unsigned)sim->genome.max_len,
-            (unsigned)hdr->genome_max_len
+            "file max-genes=%u exceeds current %u;"
+            " use --max-genes %u or larger",
+            (unsigned)hdr->max_genes,
+            (unsigned)sim->genome.max_genes,
+            (unsigned)hdr->max_genes
         );
         return BIOSIM_ERR_INVALID;
     }
@@ -404,9 +404,9 @@ static biosim_status_t load_genome_into_snap(
         goto exit;
     }
 
-    const uint16_t g_max_len = header->genome_max_len;
+    const uint16_t max_genes = header->max_genes;
 
-    returncode = biosim_survivor_snap_grow(snap, pop_file, g_max_len);
+    returncode = biosim_survivor_snap_grow(snap, pop_file, max_genes);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -426,8 +426,8 @@ static biosim_status_t load_genome_into_snap(
     }
     for (uint32_t s = 0U; s < pop_file; s++) {
         uint16_t g_len = row[s];
-        if (g_len > g_max_len) {
-            BIOSIM_ERRORF("corrupted file (genome length %u > max length %u)", g_len, g_max_len);
+        if (g_len > max_genes) {
+            BIOSIM_ERRORF("corrupted file (genome length %u > max genes %u)", g_len, max_genes);
             returncode = BIOSIM_ERR_INVALID;
             goto exit;
         }
@@ -435,7 +435,7 @@ static biosim_status_t load_genome_into_snap(
     }
 
     /* genome_conn: row-major into snap */
-    for (uint16_t j = 0U; j < g_max_len; j++) {
+    for (uint16_t j = 0U; j < max_genes; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
             returncode = biosim_io_status(f);
             goto exit;
@@ -446,7 +446,7 @@ static biosim_status_t load_genome_into_snap(
     }
 
     /* genome_wgt: int16_t stored as uint16_t bits */
-    for (uint16_t j = 0U; j < g_max_len; j++) {
+    for (uint16_t j = 0U; j < max_genes; j++) {
         if (fread(row, sizeof(uint16_t), pop_file, f) != pop_file) {
             returncode = biosim_io_status(f);
             goto exit;
@@ -586,7 +586,7 @@ biosim_status_t biosim_snapshot_load_survivors_f(FILE *f, biosim_survivor_snap_t
 
     snap->gen = gen_idx;
     snap->gen_rng = gen_rng;
-    snap->genome_max_len = hdr.genome_max_len;
+    snap->max_genes = hdr.max_genes;
     snap->max_neurons = hdr.max_neurons;
 
 exit:

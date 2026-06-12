@@ -14,14 +14,14 @@
  * This layout coalesces reads when all work-items walk gene slot j in lock-step. */
 typedef struct {
     uint32_t population; /* number of agent slots (N) */
-    uint16_t max_len;    /* genes allocated per agent slot (GENOME_MAX_LEN) */
+    uint16_t max_genes;  /* genes allocated per agent slot (MAX_GENES) */
     uint16_t *conn;      /* packed connectivity [gene_slot * population + agent_idx] */
     int16_t *wgt;        /* raw signed weight  [gene_slot * population + agent_idx] */
     uint16_t *len;       /* active gene count per agent [agent_idx] */
 } biosim_genome_t;
 
 /* Lifecycle */
-biosim_status_t biosim_genome_create(uint32_t population, uint16_t max_len, biosim_genome_t *out);
+biosim_status_t biosim_genome_create(uint32_t population, uint16_t max_genes, biosim_genome_t *out);
 void biosim_genome_free(biosim_genome_t *g);
 
 /* Slot operations */

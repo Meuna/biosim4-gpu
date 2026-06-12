@@ -43,7 +43,7 @@ static biosim_status_t kernel_buffers_create(
     const biosim_agents_t *a = &sim->agents;
     const biosim_nnet_t *n = &sim->nnet;
     const uint32_t pop = sim->population;
-    const uint16_t max_conn = n->max_conn;
+    const uint16_t max_genes = n->max_genes;
     const uint8_t max_neurons = n->max_neurons;
 
     biosim_status_t returncode = BIOSIM_OK;
@@ -80,8 +80,8 @@ static biosim_status_t kernel_buffers_create(
     MKBUF_RW(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     MKBUF_RW(responsiveness, a->responsiveness, sizeof(float), pop);
     MKBUF_RW(los_range, a->los_range, sizeof(uint8_t), pop);
-    MKBUF_RO(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)max_conn * pop);
-    MKBUF_RO(conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)max_conn * pop);
+    MKBUF_RO(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)max_genes * pop);
+    MKBUF_RO(conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)max_genes * pop);
     MKBUF_RO(conn_length, n->conn_length, sizeof(uint16_t), pop);
     MKBUF_RW(neuron_output, n->neuron_output, sizeof(float), (size_t)max_neurons * pop);
     MKBUF_RO(neuron_driven, n->neuron_driven, sizeof(uint8_t), (size_t)max_neurons * pop);
@@ -278,7 +278,7 @@ biosim_status_t biosim_gpu_pipeline_create(
     out->size_x = sim->size_x;
     out->size_y = sim->size_y;
     out->signal_len = sim->signal_len;
-    out->max_conn = sim->nnet.max_conn;
+    out->max_genes = sim->nnet.max_genes;
     out->max_neurons = sim->nnet.max_neurons;
     out->n_barrier_ctrs = sim->n_barrier_ctrs;
 
@@ -481,8 +481,8 @@ biosim_status_t biosim_gpu_pipeline_sync_from_host(
     WRITE_BUF(last_move_dir, a->last_move_dir, sizeof(uint8_t), pop);
     WRITE_BUF(responsiveness, a->responsiveness, sizeof(float), pop);
     WRITE_BUF(los_range, a->los_range, sizeof(uint8_t), pop);
-    WRITE_BUF(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)p->max_conn * pop);
-    WRITE_BUF(conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)p->max_conn * pop);
+    WRITE_BUF(conn_packed, n->genome_conn, sizeof(uint16_t), (size_t)p->max_genes * pop);
+    WRITE_BUF(conn_weight, n->genome_wgt, sizeof(int16_t), (size_t)p->max_genes * pop);
     WRITE_BUF(conn_length, n->conn_length, sizeof(uint16_t), pop);
     WRITE_BUF(neuron_output, n->neuron_output, sizeof(float), (size_t)p->max_neurons * pop);
     WRITE_BUF(neuron_driven, n->neuron_driven, sizeof(uint8_t), (size_t)p->max_neurons * pop);

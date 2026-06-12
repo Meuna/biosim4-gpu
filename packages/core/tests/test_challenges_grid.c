@@ -31,7 +31,7 @@ void setUp(void) {
                 .population = 10U,
                 .size_x = 64,
                 .size_y = 64,
-                .genome_max_len = 8U,
+                .max_genes = 8U,
                 .max_neurons = 3U,
                 .los_range = 8U,
             }

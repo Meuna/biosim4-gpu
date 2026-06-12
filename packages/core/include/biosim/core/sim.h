@@ -32,12 +32,12 @@ typedef struct {
     uint32_t max_generations; /* number of generation loops */
 
     /* ── allocation-time configuration ─────────────────────────────────────── */
-    uint32_t population;     /* agent count */
-    int32_t size_x;          /* grid width */
-    int32_t size_y;          /* grid height */
-    uint16_t genome_max_len; /* maximum genome length (genes per agent) */
-    uint8_t max_neurons;     /* maximum hidden-neuron count per agent */
-    uint8_t los_range;       /* default long-probe sensor range (cells) */
+    uint32_t population; /* agent count */
+    int32_t size_x;      /* grid width */
+    int32_t size_y;      /* grid height */
+    uint16_t max_genes;  /* maximum genome length (genes per agent) */
+    uint8_t max_neurons; /* maximum hidden-neuron count per agent */
+    uint8_t los_range;   /* default long-probe sensor range (cells) */
 
     /* ── runtime configuration ──────────────────────────────────────────────── */
     uint32_t steps_per_gen;

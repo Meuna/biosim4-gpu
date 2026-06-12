@@ -8,17 +8,17 @@
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_nnet_create(
-    uint32_t population, uint16_t max_conn, uint8_t max_neurons, biosim_nnet_t *out
+    uint32_t population, uint16_t max_genes, uint8_t max_neurons, biosim_nnet_t *out
 ) {
     assert(out != NULL);
-    assert(population > 0 && max_conn > 0 && max_neurons > 0);
+    assert(population > 0 && max_genes > 0 && max_neurons > 0);
 
     memset(out, 0, sizeof(*out));
     out->population = population;
-    out->max_conn = max_conn;
+    out->max_genes = max_genes;
     out->max_neurons = max_neurons;
 
-    size_t conn_slots = (size_t)max_conn * (size_t)population;
+    size_t conn_slots = (size_t)max_genes * (size_t)population;
     size_t neuron_slots = (size_t)max_neurons * (size_t)population;
 
     /* alloc start here, free on exit label */
@@ -156,7 +156,7 @@ static uint16_t emit_neuron_sink(
     uint16_t out_slot
 ) {
     uint32_t pop = n->population;
-    for (uint16_t j = 0; j < gene_count && out_slot < n->max_conn; j++) {
+    for (uint16_t j = 0; j < gene_count && out_slot < n->max_genes; j++) {
         if (genes[j].sink_type != BIOSIM_GENE_NEURON) {
             continue;
         }
@@ -188,7 +188,7 @@ static uint16_t emit_action_sink(
     uint16_t out_slot
 ) {
     uint32_t pop = n->population;
-    for (uint16_t j = 0; j < gene_count && out_slot < n->max_conn; j++) {
+    for (uint16_t j = 0; j < gene_count && out_slot < n->max_genes; j++) {
         if (genes[j].sink_type != BIOSIM_GENE_IO) {
             continue;
         }
