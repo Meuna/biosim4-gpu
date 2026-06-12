@@ -415,6 +415,26 @@ describe("genome compatibility", () => {
         expect(m.requiredNeurons).toBe(0);
         expect(types(sent)).toEqual(["clearGenom"]);
     });
+
+    it("clearGenom lands a respawn-eligible phase in GENERATION_SPAWNED", () => {
+        const { m } = create(makeParams({ maxGenomeLen: 24 }));
+        m.onWorkerReady();
+        m.toggle(); // -> STEPS_RUNNING
+        m.onGenComplete(); // -> GENERATION_ENDED
+        m.onCensus(32, 12);
+        expect(m.genomIncompatible).toBe(true);
+        m.clearGenom();
+        expect(m.phase).toBe("GENERATION_SPAWNED");
+        expect(m.genomIncompatible).toBe(false);
+    });
+
+    it("clearGenom does not move a non-respawnable phase", () => {
+        const { m } = create();
+        m.onWorkerReady();
+        m.toggleFreeRun(); // -> FREE_RUNNING
+        m.clearGenom();
+        expect(m.phase).toBe("FREE_RUNNING");
+    });
 });
 
 describe("draft config", () => {

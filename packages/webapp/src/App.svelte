@@ -129,6 +129,12 @@
                     msg.requiredNeurons,
                 );
                 telemetry.onSnapshotLoaded(msg);
+                // Surface the config panel so the incompatible-field hint
+                // explains why the lifecycle buttons greyed out.
+                if (machine.genomIncompatible) {
+                    railOpen = true;
+                    activeTab = "sim";
+                }
                 break;
             case "stepped":
                 telemetry.onStepped(msg);

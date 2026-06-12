@@ -247,4 +247,32 @@ describe("PlayDock", () => {
         }) as HTMLButtonElement;
         expect(btn.disabled).toBe(true);
     });
+
+    it("shows the spent Ended label when generation complete", () => {
+        render(PlayDock, {
+            ...defaultProps,
+            phase: "GENERATION_ENDED" as const,
+        });
+        const btn = screen.getByRole("button", {
+            name: /play simulation/i,
+        }) as HTMLButtonElement;
+        expect(btn.textContent).toContain("End");
+        expect(btn.classList.contains("dock__btn--spent")).toBe(true);
+    });
+
+    it("disables Step when genomIncompatible", () => {
+        render(PlayDock, { ...defaultProps, genomIncompatible: true });
+        const btn = screen.getByRole("button", {
+            name: /step one simulation tick/i,
+        }) as HTMLButtonElement;
+        expect(btn.disabled).toBe(true);
+    });
+
+    it("disables Evolve when genomIncompatible", () => {
+        render(PlayDock, { ...defaultProps, genomIncompatible: true });
+        const btn = screen.getByRole("button", {
+            name: /evolve/i,
+        }) as HTMLButtonElement;
+        expect(btn.disabled).toBe(true);
+    });
 });

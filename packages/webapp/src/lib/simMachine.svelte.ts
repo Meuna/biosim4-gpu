@@ -201,9 +201,14 @@ export class SimMachine {
         ) as SimParams;
     }
 
+    // Drop the genome/neuron cap gate. The worker pauses and clears the live
+    // genome; clearing the obstruction lands the machine back in a fresh
+    // GENERATION_SPAWNED so Play/Next Gen/Rewind become affordable again — but
+    // only from a respawn-eligible phase (never free-run / confirm / pending).
     clearGenom(): void {
         this.#requiredGenomeLen = 0;
         this.#requiredNeurons = 0;
+        if (this.#canRespawn()) this.#phase = "GENERATION_SPAWNED";
         this.#send({ type: "clearGenom" });
     }
 

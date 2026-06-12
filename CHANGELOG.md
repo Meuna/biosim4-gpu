@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **snapshot/config affordance polish** (gh-114) — loading an incompatible
+  snapshot now auto-opens the config panel (sim tab) so the incompatible-field
+  hint explains the greyed-out controls; **Step** and **Evolve** join Play /
+  Next Gen / Rewind in being disabled while the genome-compatibility gate
+  fires; **Clear Genom** now lands the machine back in `GENERATION_SPAWNED`
+  (from any respawn-eligible phase), re-enabling Play once the gate clears; and
+  at `GENERATION_ENDED` the Play button turns into a hollow "spent" pill
+  (flag icon, **End** label, same footprint) so a finished generation reads
+  distinctly from a blocked-by-incompatible-config state.
 - **snapshot-import neuron check** (gh-114) — the snapshot/config compatibility
   gate now also guards the neuron cap, not just the genome length: a snapshot
   whose originating `max-neurons` exceeds the live config now holds in

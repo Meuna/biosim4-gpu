@@ -7,6 +7,7 @@
         Baby,
         Dna,
         RefreshCw,
+        Flag,
     } from "lucide-svelte";
     import ConfirmInline from "./ConfirmInline.svelte";
     import DiscreteSlider from "./DiscreteSlider.svelte";
@@ -68,6 +69,7 @@
 
     <button
         class="dock__btn dock__btn--primary"
+        class:dock__btn--spent={isGenComplete}
         disabled={!isRunning &&
             (isGenComplete || genomIncompatible || isFreeRunning)}
         onclick={onToggle}
@@ -76,6 +78,9 @@
         {#if isRunning}
             <Pause size={14} />
             Stop
+        {:else if isGenComplete}
+            <Flag size={14} />
+            End
         {:else}
             <Play size={14} />
             Play
@@ -84,7 +89,7 @@
 
     <button
         class="dock__btn"
-        disabled={isRunning || isFreeRunning}
+        disabled={isRunning || isFreeRunning || genomIncompatible}
         onclick={onStep}
         aria-label="Step one simulation tick"
     >
@@ -151,7 +156,7 @@
     <button
         class="dock__btn dock__btn--evolve"
         class:dock__btn--evolve-active={isFreeRunning}
-        disabled={isRunning || isFreeRunStopping}
+        disabled={isRunning || isFreeRunStopping || genomIncompatible}
         onclick={onToggleFreeRun}
         aria-label={isFreeRunning
             ? "Stop evolving"
@@ -213,6 +218,18 @@
 
     .dock__btn--primary:hover:not(:disabled) {
         background: var(--color-text-muted);
+        opacity: 1;
+    }
+
+    /* The generation is spent: a hollow, low-contrast pill of the SAME
+       footprint as the filled primary (no border there, so a subtle border
+       here keeps the size identical). Distinct from the dim filled look the
+       incompatible-config case keeps via the default :disabled opacity. */
+    .dock__btn--spent,
+    .dock__btn--spent:disabled {
+        background: transparent;
+        color: var(--color-text-muted);
+        border: 1px solid var(--color-border-subtle);
         opacity: 1;
     }
 
