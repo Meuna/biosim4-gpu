@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **`sim-wasm` drops the explicit `EXPORTED_FUNCTIONS` list** (gh-101) — all
+  exported functions are already marked `EMSCRIPTEN_KEEPALIVE`, which is
+  sufficient to prevent dead-code elimination; the now-stale CMake list is
+  removed.
 - **renamed the webapp `agentFormat` module to `headings`** (gh-126) — the
   module only ever held the `HEADINGS` compass-label array and never grew the
   broader agent-formatting role its name implied. It is renamed to `headings.ts`
