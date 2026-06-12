@@ -320,7 +320,8 @@ void test_load_last_no_complete_gen(void) {
     biosim_sim_free(&sim2);
 }
 
-/* load_survivors with pop_file (6) > pop_sim (4): snap->count must equal pop_sim. */
+/* load_survivors with pop_file (6) > pop_sim (4): the growable snap loads every
+ * survivor, so snap->count must equal pop_file (no truncation to pop_sim). */
 void test_load_survivors_pop_file_larger(void) {
     static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_load_surv_large.bsm4";
     (void)remove(path);
@@ -364,7 +365,7 @@ void test_load_survivors_pop_file_larger(void) {
     biosim_survivor_snap_t rsnap = {0};
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim_read, &rsnap));
 
-    TEST_ASSERT_EQUAL_UINT32(4U, rsnap.count); /* truncated to pop_sim */
+    TEST_ASSERT_EQUAL_UINT32(6U, rsnap.count); /* all pop_file entries loaded */
     for (uint32_t s = 0U; s < rsnap.count; s++) {
         TEST_ASSERT_EQUAL_FLOAT(scores[s], rsnap.scores[s]);
     }
@@ -431,9 +432,7 @@ void test_load_survivors_f_roundtrip(void) {
     biosim_sim_t sim2;
     TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim2));
     biosim_survivor_snap_t rsnap = {0};
-    TEST_ASSERT_EQUAL_INT(
-        BIOSIM_OK, biosim_snapshot_load_survivors_f(f, sim2.genome.population, &rsnap)
-    );
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors_f(f, &rsnap));
 
     TEST_ASSERT_EQUAL_UINT32(snap.count, rsnap.count);
     TEST_ASSERT_EQUAL_UINT32(snap.gen, rsnap.gen);

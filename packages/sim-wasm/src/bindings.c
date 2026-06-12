@@ -359,7 +359,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_snapshot_import(void) {
         snap_import_size = 0U;
         return BIOSIM_ERR_IO;
     }
-    biosim_status_t rc = biosim_snapshot_load_survivors_f(f, sim.genome.population, &snap);
+    biosim_status_t rc = biosim_snapshot_load_survivors_f(f, &snap);
     (void)fclose(f);
     free(snap_import_buf);
     snap_import_buf = NULL;

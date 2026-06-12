@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **snapshot load no longer truncates to the live population** (gh-123) — the
+  growable `biosim_survivor_snap_t` container makes the old population cap
+  obsolete, so `biosim_snapshot_load_survivors_f` drops its `min_pop` argument
+  (signature is now `(FILE *f, biosim_survivor_snap_t *snap)`) and loads every
+  survivor in the record. The internal `load_genome_into_snap` sheds its
+  `min_pop` and `n_survivors_out` arguments (the latter was redundant with
+  `snap->count`). No file-format change.
 - **snapshot/config affordance polish** (gh-114) — loading an incompatible
   snapshot now auto-opens the config panel (sim tab) so the incompatible-field
   hint explains the greyed-out controls; **Step** and **Evolve** join Play /

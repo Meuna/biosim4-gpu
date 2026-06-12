@@ -366,16 +366,14 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
 
 /*
  * Load a genome entry at the current file position into snap (row-major).
- * Excess entries are read and discarded to advance the file position correctly.
- * Sets snap->count = pop_load on success.
+ * Loads every survivor in the record; snap grows to fit.
+ * Sets snap->count = pop_file on success.
  */
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static biosim_status_t load_genome_into_snap(
     FILE *f,
     const biosim_snap_header_t *header,
-    uint32_t min_pop,
     biosim_survivor_snap_t *snap,
-    uint32_t *n_survivors_out,
     uint32_t *gen_idx_out,
     uint64_t *gen_rng_out
 ) {
@@ -406,10 +404,9 @@ static biosim_status_t load_genome_into_snap(
         goto exit;
     }
 
-    const uint32_t pop_load = pop_file < min_pop ? pop_file : min_pop;
     const uint16_t g_max_len = header->genome_max_len;
 
-    returncode = biosim_survivor_snap_grow(snap, pop_load, g_max_len);
+    returncode = biosim_survivor_snap_grow(snap, pop_file, g_max_len);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -427,7 +424,7 @@ static biosim_status_t load_genome_into_snap(
         returncode = biosim_io_status(f);
         goto exit;
     }
-    for (uint32_t s = 0U; s < pop_load; s++) {
+    for (uint32_t s = 0U; s < pop_file; s++) {
         uint16_t g_len = row[s];
         if (g_len > g_max_len) {
             BIOSIM_ERRORF("corrupted file (genome length %u > max length %u)", g_len, g_max_len);
@@ -443,7 +440,7 @@ static biosim_status_t load_genome_into_snap(
             returncode = biosim_io_status(f);
             goto exit;
         }
-        for (uint32_t s = 0U; s < pop_load; s++) {
+        for (uint32_t s = 0U; s < pop_file; s++) {
             snap->conn[(size_t)s * stride + j] = row[s];
         }
     }
@@ -454,25 +451,20 @@ static biosim_status_t load_genome_into_snap(
             returncode = biosim_io_status(f);
             goto exit;
         }
-        for (uint32_t s = 0U; s < pop_load; s++) {
+        for (uint32_t s = 0U; s < pop_file; s++) {
             int16_t w;
             (void)memcpy(&w, &row[s], sizeof(w));
             snap->wgt[(size_t)s * stride + j] = w;
         }
     }
 
-    /* scores: read pop_load entries; seek past excess */
-    if (fread(snap->scores, sizeof(float), pop_load, f) != pop_load) {
+    /* scores */
+    if (fread(snap->scores, sizeof(float), pop_file, f) != pop_file) {
         returncode = biosim_io_status(f);
         goto exit;
     }
-    if (fseek(f, (long)(pop_file - pop_load) * 4L, SEEK_CUR) != 0) {
-        returncode = BIOSIM_ERR_IO;
-        goto exit;
-    }
 
-    snap->count = pop_load;
-    *n_survivors_out = pop_load;
+    snap->count = pop_file;
     *gen_idx_out = gen_idx;
     *gen_rng_out = gen_rng;
 
@@ -565,11 +557,8 @@ static biosim_status_t snap_seek_last_entry(FILE *f, const biosim_snap_header_t 
     return BIOSIM_OK;
 }
 
-biosim_status_t biosim_snapshot_load_survivors_f(
-    FILE *f, uint32_t min_pop, biosim_survivor_snap_t *snap
-) {
+biosim_status_t biosim_snapshot_load_survivors_f(FILE *f, biosim_survivor_snap_t *snap) {
     biosim_snap_header_t hdr = {0};
-    uint32_t n_surv = 0U;
     uint32_t gen_idx = 0U;
     uint64_t gen_rng = 0U;
     biosim_status_t returncode = BIOSIM_OK;
@@ -585,11 +574,11 @@ biosim_status_t biosim_snapshot_load_survivors_f(
         goto exit;
     }
 
-    returncode = load_genome_into_snap(f, &hdr, min_pop, snap, &n_surv, &gen_idx, &gen_rng);
+    returncode = load_genome_into_snap(f, &hdr, snap, &gen_idx, &gen_rng);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
-    if (n_surv == 0U) {
+    if (snap->count == 0U) {
         BIOSIM_ERRORF("snapshot contains no survivors");
         returncode = BIOSIM_ERR_INVALID;
         goto exit;
@@ -636,7 +625,7 @@ biosim_status_t biosim_snapshot_load_survivors(
         return rc;
     }
 
-    rc = biosim_snapshot_load_survivors_f(f, sim->genome.population, snap);
+    rc = biosim_snapshot_load_survivors_f(f, snap);
     if (rc == BIOSIM_OK) {
         sim->gen = snap->gen;
         sim->gen_rng = snap->gen_rng;

@@ -50,7 +50,7 @@ biosim_status_t biosim_snapshot_load_survivors(
 /*
  * Low-level FILE* loader. f must be open for reading; the function seeks to
  * byte 0 internally. Reads the header, seeks to the last generation record,
- * and loads up to min_pop survivors into snap (growing it as needed).
+ * and loads every survivor in that record into snap (growing it as needed).
  * Sets snap->gen and snap->gen_rng from the loaded record.
  * Does NOT perform coherency checks and does NOT update any sim fields.
  * Does NOT fclose f.
@@ -58,9 +58,7 @@ biosim_status_t biosim_snapshot_load_survivors(
  * Returns BIOSIM_ERR_NOMEM on allocation failure.
  * Returns BIOSIM_EOF when no complete generation record is found.
  */
-biosim_status_t biosim_snapshot_load_survivors_f(
-    FILE *f, uint32_t min_pop, biosim_survivor_snap_t *snap
-);
+biosim_status_t biosim_snapshot_load_survivors_f(FILE *f, biosim_survivor_snap_t *snap);
 
 /* ── output session ──────────────────────────────────────────────────────── */
 
