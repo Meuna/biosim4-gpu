@@ -174,6 +174,7 @@
         />
         {#if incompatibleFields.includes("maxGenomeLen")}
             <p class="sim-config__incompat-hint">
+                <TriangleAlert size={12} style="display: inline-block;" />
                 Current genomes need at least {requiredGenomeLen} — increase to re-enable
                 play.
             </p>
@@ -200,6 +201,7 @@
         />
         {#if incompatibleFields.includes("maxNeurons")}
             <p class="sim-config__incompat-hint">
+                <TriangleAlert size={12} style="display: inline-block;" />
                 Current genomes need at least {requiredNeurons} — increase to re-enable
                 play.
             </p>

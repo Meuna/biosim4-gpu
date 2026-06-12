@@ -174,8 +174,7 @@
     }
 
     .param-slider__range--muted {
-        accent-color: var(--color-warn);
-        opacity: 0.5;
+        opacity: 0.3;
     }
 
     .param-slider__edit {
