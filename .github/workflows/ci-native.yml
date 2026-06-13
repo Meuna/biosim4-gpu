@@ -1,0 +1,103 @@
+name: Native CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/core/**'
+      - 'packages/cfgparse/**'
+      - 'packages/sim-ref/**'
+      - 'packages/sim-gpu/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'vcpkg.json'
+      - 'cmake/**'
+      - '.clang-tidy'
+      - '.clang-format'
+      - '.github/workflows/ci-native.yml'
+  pull_request:
+    paths:
+      - 'packages/core/**'
+      - 'packages/cfgparse/**'
+      - 'packages/sim-ref/**'
+      - 'packages/sim-gpu/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'vcpkg.json'
+      - 'cmake/**'
+      - '.clang-tidy'
+      - '.clang-format'
+      - '.github/workflows/ci-native.yml'
+
+concurrency:
+  group: ci-native-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-format-lint:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - build: linux
+          os: ubuntu-latest
+          conf-args: 
+        - build: win-msvc
+          os: windows-latest
+          conf-args: >
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+            -DBIOSIM_BUILD_GPU=OFF
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install POCL icd
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pocl-opencl-icd
+
+      - name: Set up MSVC x64 environment
+        if: matrix.os == 'windows-latest'
+        shell: cmd
+        run: |
+          set VS_WHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
+          set VS_REQUIRED=Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+          for /f "delims=" %%i in ('"%VS_WHERE%" -latest -products * -requires %VS_REQUIRED% -property installationPath') do set VS_PATH=%%i
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set >> %GITHUB_ENV%
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v5
+        with:
+          path: build/**/vcpkg_installed
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-
+
+      - name: Set VCPKG_ROOT
+        shell: bash
+        run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: cmake --preset ci ${{ matrix.conf-args }}
+
+      - name: Build
+        run: cmake --build --preset ci
+
+      - name: Test
+        run: ctest --preset ci
+
+      - name: Format check
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cmake --build --preset ci --target format
+          git diff --exit-code
+
+      - name: Lint
+        if: matrix.os == 'ubuntu-latest'
+        run: cmake --build --preset ci --target lint
