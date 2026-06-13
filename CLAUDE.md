@@ -64,10 +64,11 @@ Read the full specification before writing any code:
 gh issue view {number}
 ```
 
-### 2. Create a feature branch
+### 2. Create a feature branch from origin/main
 
 ```sh
-git checkout -b gh-{number}
+git fetch
+git checkout -b gh-{number} origin/main
 ```
 
 Branch names must follow the pattern `gh-{number}`.
@@ -103,16 +104,20 @@ gh pr create \
 The PR body **must** contain `Closes #{N}` so that GitHub closes the issue
 automatically when the PR is merged.
 
-### 6. Respond to review comments
+### 6. Record the user-visible and important PR in the changelog
+
+Use the discipline in `RELEASE.md#5-changelog-discipline`
+
+### 7. Respond to review comments
 
 IMPORTANT: respond to the latest review ONLY, or a specific review ID when provided.
 
 1. If not provided, find the latest review ID:
-   `LATEST_REVIEW=$(gh api repos/<owner>/<repo>/pulls/<pr>/reviews --jq '.[-1].id')`
+   `REVIEW_ID=$(gh api repos/<owner>/<repo>/pulls/<pr>/reviews --jq '.[-1].id')`
 2. Read the main review comment:
-   `gh api repos/<owner>/<repo>/pulls/<pr>/reviews --jq ".[] | select(.id == $LATEST_REVIEW) | .body"`
+   `gh api repos/<owner>/<repo>/pulls/<pr>/reviews --jq ".[] | select(.id == $REVIEW_ID) | .body"`
 3. Read the inline comments:
-   `gh api repos/<owner>/<repo>/pulls/<pr>/comments --jq ".[] | select(.pull_request_review_id == $LATEST_REVIEW) | {id,path,line,start_line,side,body}"`
+   `gh api repos/<owner>/<repo>/pulls/<pr>/comments --jq ".[] | select(.pull_request_review_id == $REVIEW_ID) | {id,path,line,start_line,side,body}"`
 4. Implement the review, group related review changes into focused commits.
 5. Push: `git push`
 
@@ -122,8 +127,6 @@ trail so reviewers can track changes individually.
 ## Working with this repository
 
 - **Keep the status up-to-date.**
-
-- **Keep the changelog up-to-date.**
 
 - **Keep the documentation up-to-date.** The documentation is NOT a changelog.
   State how the project is; never state how it used to be.
