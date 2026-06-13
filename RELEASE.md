@@ -78,12 +78,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) +
 - **Describe the user-visible behavior, not the implementation.** No file
   names, no function or kernel names, no "refactored X into Y", no rationale,
   no internal mechanics.
-- **End every entry with its PR reference `(#NNN)`.**
+- **End every entry with its linked PR reference**:
+  `([#NNN](https://github.com/<owner>/<repo>/pull/NNN)])`.
 - Imperative or simple present, capitalized, ≤ ~120 characters, no trailing period.
 - If a change has no user-visible effect it usually does not belong here. If it
   must be recorded, a single terse line under **Changed**.
 - One PR = one line, unless it genuinely ships two distinct user-facing changes
-  — then one line each, both ending with the same `(#NNN)`.
+  — then one line each, both ending with the same link `(#NNN)`.
 
 ### Examples
 
@@ -91,11 +92,14 @@ Good:
 
 ```markdown
 ### Added
-- GPU batch simulator selectable with `--backend gpu` (#142)
-- Brain Explorer view with force-directed neuron layout (#150)
+- Snapshot checkpointing with `--snapshot-in`, `--snapshot-out`
+  ([#105](https://github.com/meuna/biosim4-gpu/pull/105))
+- Brain Explorer view with force-directed neuron layout
+  ([#75](https://github.com/meuna/biosim4-gpu/pull/75))
 
 ### Fixed
-- Non-deterministic survivor counts at high agent density (#147)
+- Build and run on Windows x64 (MSVC)
+  ([#107](https://github.com/meuna/biosim4-gpu/pull/107))
 ```
 
 Rejected (a novel, implementation detail, no PR link):
