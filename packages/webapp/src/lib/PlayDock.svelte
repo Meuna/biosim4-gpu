@@ -102,6 +102,7 @@
     <div class="dock__autoplay-group">
         <button
             class="dock__btn"
+            class:dock__btn--prompt-breathe={isGenComplete}
             disabled={genomIncompatible || isFreeRunning}
             onclick={(e) => onNextGen(e.ctrlKey)}
             aria-label="Advance one generation (Ctrl+click to auto play)"
@@ -112,6 +113,7 @@
 
         <button
             class="dock__btn"
+            class:dock__btn--prompt-breathe={isGenComplete}
             disabled={genomIncompatible || isFreeRunning}
             onclick={(e) => onRewind(e.ctrlKey)}
             aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
@@ -302,5 +304,26 @@
     .dock__btn--evolve-active {
         border: 1px solid var(--color-border-subtle);
         border-radius: var(--radius-sm);
+    }
+
+    @keyframes breathe {
+        0%,
+        100% {
+            opacity: 0.5;
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+
+    .dock__btn--prompt-breathe {
+        color: var(--color-accent-text);
+        animation: breathe 1.8s ease-in-out infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .dock__btn--prompt-breathe {
+            animation: none;
+        }
     }
 </style>
