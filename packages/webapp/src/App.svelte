@@ -319,6 +319,14 @@
         return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
     });
 
+    // Telemetry sits right of the grid normally; below it once the viewport is
+    // narrow enough that a right-placed block would clip. The grid is centred,
+    // so its right edge is ~viewportW/2 + w/2 and telemetry-right clips below
+    // ~1084px at max grid size — so switch at 1160, the header's 2-row reflow
+    // breakpoint (TopBar.svelte), which clears that threshold. var() can't be
+    // used in this comparison, so 1160 is duplicated here as in the header media.
+    const telemetryPlacement = $derived(viewportW < 1160 ? "below" : "right");
+
     // Re-send layout whenever the grid geometry or viewport dims change so the
     // worker can resize the canvas and reposition the grid region.
     $effect(() => {
@@ -600,9 +608,10 @@
                 phase={machine.phase}
             />
         {:else}
-            <!-- z-index: 15 — telemetry stats, top-right of grid -->
+            <!-- z-index: 15 — telemetry stats, right of grid (below on <1160) -->
             <TelemetryHUD
                 geom={gridGeom}
+                placement={telemetryPlacement}
                 phase={machine.phase}
                 gen={telemetry.gen}
                 step={telemetry.step}
