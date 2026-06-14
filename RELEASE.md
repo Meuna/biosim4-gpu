@@ -63,8 +63,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) +
 ### Structure
 
 - The top section is always `## [Unreleased]`.
-- Categories, in this fixed order, omit the empty ones: **Added, Changed,
-  Deprecated, Removed, Fixed, Security**.
+- Scope, in this fixed order, omit the empty ones: **Biosim4-gpu, Webapp**
+- Categories, in this fixed order, omit the empty ones: **Added, Changed, Removed, Fixed**.
 - Compare links sit at the bottom of the file.
 
 ### When to write
