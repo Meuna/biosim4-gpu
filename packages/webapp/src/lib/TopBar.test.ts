@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import TopBar from "./TopBar.svelte";
+import { webappVersion } from "./version";
 
 const noOp = () => {};
 
@@ -16,10 +17,15 @@ const defaultProps = {
 };
 
 describe("TopBar", () => {
-    it("renders the brand name and subtitle", () => {
+    it("renders the brand name and subtitle in the bar", () => {
         render(TopBar, defaultProps);
         expect(screen.getByText("biosim4-gpu")).toBeTruthy();
-        expect(screen.getByText("visualizer · v0.1")).toBeTruthy();
+        expect(screen.getByText("visualizer")).toBeTruthy();
+    });
+
+    it("renders the build version below the bar", () => {
+        render(TopBar, defaultProps);
+        expect(screen.getByText(webappVersion)).toBeTruthy();
     });
 
     it("renders the GitHub link", () => {

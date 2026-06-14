@@ -1,6 +1,7 @@
 <script lang="ts">
     import PlayDock from "./PlayDock.svelte";
     import type { SimPhase } from "./simMachine.svelte";
+    import { webappVersion, snapshotCompatNoteText } from "./version";
 
     let {
         phase,
@@ -30,7 +31,7 @@
 <header class="topbar">
     <div class="topbar__left">
         <span class="topbar__brand">biosim4-gpu</span>
-        <span class="topbar__subtitle small-caps">visualizer · v0.1</span>
+        <span class="topbar__subtitle small-caps">visualizer</span>
     </div>
 
     <div class="topbar__center">
@@ -71,6 +72,19 @@
     </div>
 </header>
 
+<!-- Build version, parked just under the bar so it stays legible without
+     crowding the brand/subtitle. The compat marker sits beside it. -->
+<div class="topbar__version small-caps">
+    <span>{webappVersion}</span>
+    {#if snapshotCompatNoteText}
+        <span
+            class="topbar__compat"
+            title={snapshotCompatNoteText}
+            aria-label={snapshotCompatNoteText}>- ⚠ Incompatible snapshots</span
+        >
+    {/if}
+</div>
+
 <style>
     .topbar {
         position: fixed;
@@ -102,7 +116,21 @@
         letter-spacing: -0.02em;
     }
 
-    /* .topbar__subtitle uses .small-caps from primitives.css */
+    .topbar__compat {
+        font-size: 0.7rem;
+        color: var(--color-warn);
+        cursor: help;
+    }
+
+    .topbar__version {
+        position: fixed;
+        top: calc(3.5rem + var(--space-3));
+        left: var(--space-6);
+        z-index: 20;
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-2);
+    }
 
     .topbar__center {
         position: absolute;

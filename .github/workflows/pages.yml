@@ -29,6 +29,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          # The version step and the compat script read release tags via
+          # `git describe`; a shallow clone (the default depth 1) hides them.
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2.2.0
@@ -44,6 +48,12 @@ jobs:
       - name: Set VCPKG_ROOT
         shell: bash
         run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Compute webapp version
+        shell: bash
+        run: |
+          echo "VITE_WEBAPP_VERSION=$(git describe --tags --always --dirty)" >> "$GITHUB_ENV"
+          echo "VITE_SNAPSHOT_COMPAT=$(.github/scripts/snapshot-compat-version.sh)" >> "$GITHUB_ENV"
 
       - name: Build webapp
         run: |
