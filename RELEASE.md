@@ -39,7 +39,7 @@ The **release commit metadata only, no code**. Check-list:
    - Commit message: `Release M.m.p`.
 2. `git push`. Wait for green CI on that commit.
 3. Tag that exact commit (annotated, GPG-signed):
-   - `git tag -a vM.m.p -m "Release M.m.p"`
+   - `git tag -s vM.m.p -m "Release M.m.p"`
    - `git push origin vX.Y.Z`
 4. `release.yml` runs: builds targets and creates a **draft** release.
 5. Review the draft and **Publish**.
@@ -80,7 +80,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) +
   no internal mechanics.
 - **End every entry with its linked PR reference**:
   `([#NNN](https://github.com/<owner>/<repo>/pull/NNN)])`.
-- Imperative or simple present, capitalized, ≤ ~120 characters, no trailing period.
+- Imperative or simple present, capitalized, ≤ ~120 characters, single-line, no
+  trailing period.
 - If a change has no user-visible effect it usually does not belong here. If it
   must be recorded, a single terse line under **Changed**.
 - One PR = one line, unless it genuinely ships two distinct user-facing changes
