@@ -10,21 +10,11 @@ A GPU-accelerated port of [biosim4](https://github.com/davidrmiller/biosim4)
 (David Miller's evolutionary simulator of neural-net-driven agents) to
 C11/OpenCL, with a CPU reference simulator and a Svelte web front-end.
 
-[**▶ Try it live**](#) &nbsp;·&nbsp; placeholder — a hosted instance is coming soon
+[**▶ Try it live**](https://meuna.github.io/biosim4-gpu/)
 
 </div>
 
 ---
-
-<div align="center">
-
-<!-- TODO(#109 follow-up): replace this note with a real screenshot/animation:
-     <img src="docs/assets/webapp.png" width="820" alt="biosim4-gpu webapp"> -->
-
-📸 _Webapp screenshot/animation coming soon — build and run the webapp (see
-[Getting started](#getting-started)) to see agents evolve live._
-
-</div>
 
 ## What it is
 
