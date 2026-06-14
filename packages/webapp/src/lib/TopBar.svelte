@@ -156,10 +156,13 @@
         justify-self: start;
         display: flex;
         align-items: baseline;
-        /* Stays on one line: this is the solid left boundary that pushes the
-           dock right (its width is the brand track's max-content). Below 1160px
-           the 2-row layout takes over, so it never needs to wrap. */
-        white-space: nowrap;
+        /* On 1 row the brand track is minmax(max-content, 1fr), so this is given
+           its full one-line width and never wraps — that max-content is also the
+           boundary that pushes the dock right. On 2/3 rows the track is 1fr and
+           can shrink: flex-wrap then lets the subtitle drop below the brand
+           (which itself stays whole via .topbar__brand) so nothing clips down to
+           ~320px. */
+        flex-wrap: wrap;
         gap: var(--space-3);
     }
 
