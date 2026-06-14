@@ -17,7 +17,7 @@ Three sources are kept on purpose, with **disjoint roles**. Do not collapse them
 
 | Source | Location | Role | Changes |
 |---|---|---|---|
-| Declared version | `project(... VERSION x.y.z)` in `CMakeLists.txt` | Source-tree's declared version (CMake hygiene) | Release commit only |
+| Declared version | `project(... VERSION X.Y.Z)` in `CMakeLists.txt` | Source-tree's declared version (CMake hygiene) | Release commit only |
 | Declared version | `"version-string"` in `vcpkg.json` | Mirror the CMake version | Release commit only |
 | Build stamp | `BIOSIM_GIT_VERSION` from `git describe --tags --always --dirty` (`cmake/BuildVersion.cmake`) | Compiled into the binary; printed by `--version`; authoritative build provenance | Every commit, automatically |
 
@@ -36,10 +36,10 @@ The **release commit metadata only, no code**. Check-list:
    - Finalize `CHANGELOG.md`: rename `## [Unreleased]` to `## [X.Y.Z] - YYYY-MM-DD`,
      update the compare links at the bottom.
    - Bump declared version `project(... VERSION X.Y.Z)` and `"version-string"`.
-   - Commit message: `Release M.m.p`.
+   - Commit message: `Release X.Y.Z`.
 2. `git push`. Wait for green CI on that commit.
 3. Tag that exact commit (annotated, GPG-signed):
-   - `git tag -s vM.m.p -m "Release M.m.p"`
+   - `git tag -s vX.Y.Z -m "Release X.Y.Z"`
    - `git push origin vX.Y.Z`
 4. `release.yml` runs: builds targets and creates a **draft** release.
 5. Review the draft and **Publish**.
