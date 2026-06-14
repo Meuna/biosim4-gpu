@@ -105,7 +105,7 @@ cmake --build --preset debug
 # CPU reference simulator (defaults: 3000 agents, 128×128 grid, 1000 generations)
 ./build/debug/packages/sim-ref/biosim-ref
 
-# GPU simulator — feed a webapp-exported config and snapshot
+# GPU simulator
 ./build/debug/packages/sim-gpu/biosim-gpu
 ```
 
