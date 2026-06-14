@@ -3,6 +3,7 @@
 
     let {
         geom,
+        placement = "right",
         phase,
         gen,
         step,
@@ -18,6 +19,7 @@
             cx: number;
             cy: number;
         };
+        placement?: "right" | "below";
         phase: SimPhase;
         gen: number;
         step: number;
@@ -39,7 +41,10 @@
 
 <aside
     class="telemetry"
-    style="top: {geom.y}px; left: {geom.x + geom.w + 12}px"
+    class:telemetry--below={placement === "below"}
+    style={placement === "below"
+        ? `top: ${geom.y + geom.h + 12}px; left: ${geom.x}px`
+        : `top: ${geom.y}px; left: ${geom.x + geom.w + 12}px`}
     aria-label="Simulation telemetry"
 >
     <p class="telemetry__header small-caps">Telemetry</p>
@@ -79,6 +84,20 @@
         grid-template-columns: auto auto;
         gap: var(--space-1) var(--space-6);
         margin: 0;
+    }
+
+    /* Below-grid: lay the stats out as a single wrapping horizontal row. */
+    .telemetry--below .telemetry__stats {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        column-gap: var(--space-2);
+        row-gap: var(--space-1);
+    }
+
+    /* Group each key→value pair: extra space before every key but the first. */
+    .telemetry--below .telemetry__key:not(:first-of-type) {
+        margin-left: var(--space-4);
     }
 
     .telemetry__key {
