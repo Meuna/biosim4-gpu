@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Webapp
+
+#### Fixed
+
+- Reflow the header and keep telemetry on-screen on small (phone) viewports ([#149](https://github.com/Meuna/biosim4-gpu/pull/149))
+
 ## [1.0.0] - 2026-06-14
 
 ### Biosim4-gpu
