@@ -50,7 +50,7 @@
 
     <div class="topbar__right">
         <a
-            href="https://github.com/biosim4-gpu/biosim4-gpu"
+            href="https://github.com/meuna/biosim4-gpu"
             target="_blank"
             rel="noopener noreferrer"
             class="topbar__github"
