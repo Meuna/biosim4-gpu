@@ -1429,7 +1429,8 @@ async function init(): Promise<void> {
     const mod = await import(/* @vite-ignore */ biosimUrl);
     const createBiosim = mod.default as EmscriptenFactory;
     biosim = await createBiosim({
-        locateFile: (filename: string) => `${import.meta.env.BASE_URL}wasm/${filename}`,
+        locateFile: (filename: string) =>
+            `${import.meta.env.BASE_URL}wasm/${filename}`,
     });
     call("biosim_wasm_init");
     postMessage({ type: "ready" } satisfies WorkerEvent);
