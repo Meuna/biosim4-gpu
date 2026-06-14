@@ -731,7 +731,7 @@
     .hamburger {
         position: fixed;
         right: var(--space-6);
-        top: calc(3.5rem + var(--space-5));
+        top: calc(var(--topbar-h, 3.5rem) + var(--space-5));
         z-index: 30;
         width: 2.75rem;
         height: 2.75rem;
@@ -776,7 +776,7 @@
         position: fixed;
         max-width: 1060px;
         margin-inline: auto;
-        top: 3.5rem;
+        top: var(--topbar-h, 3.5rem);
         left: 0;
         right: 0;
         bottom: 0;
@@ -825,7 +825,7 @@
     /* ── Drag-drop overlay ── */
     .drop-overlay {
         position: fixed;
-        inset: 3.5rem 0 0;
+        inset: var(--topbar-h, 3.5rem) 0 0;
         z-index: 100;
         display: flex;
         align-items: center;
