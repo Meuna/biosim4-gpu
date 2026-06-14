@@ -1,0 +1,224 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+
+      - v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to use for manual runs
+        required: false
+      skip-tag-verification:
+        description: Skip tag verification
+        type: boolean
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Credits: https://github.com/BurntSushi/ripgrep
+  # The create-release job runs purely to initialize the GitHub release itself,
+  # and names the release after the `x.y.z` tag that was pushed. It's separate
+  # from building the release so that we only create the release once.
+  create-release:
+    permissions:
+      contents: write
+    name: create-release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ env.VERSION }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set the version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            version="${{ inputs.version }}"
+          else
+            version="${{ github.ref_name }}"
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Show the version
+        run: echo "VERSION=$VERSION"
+
+      - name: Check that tag version and vcpkg.json version are the same
+        run: |
+          vcpkg_version=$(jq -r '."version-string"' vcpkg.json)
+          if [ "$VERSION" != "v$vcpkg_version" ]; then
+            echo "version ($VERSION) does not match vcpkg.json (v$vcpkg_version)" >&2
+            exit 1
+          fi
+
+      - name: Check that tag version and CMakeLists.txt version are the same
+        run: |
+          version_stripped=${VERSION#v}
+          if ! grep -q "VERSION $version_stripped" CMakeLists.txt; then
+            echo "version $version_stripped not found in CMakeLists.txt" >&2
+            exit 1
+          fi
+
+      - name: Compute release flags
+        run: |
+          flags=""
+          if [[ "$VERSION" == *rc* ]]; then
+            flags="$flags --prerelease"
+          fi
+          if [[ "${{ inputs.skip-tag-verification }}" != "true" ]]; then
+            flags="$flags --verify-tag"
+          fi
+          echo "RELEASE_FLAGS=$flags"
+          echo "RELEASE_FLAGS=$flags" >> "$GITHUB_ENV"
+
+      - name: Extract release notes from changelog
+        run: |
+          if [[ "$VERSION" == *rc* ]]; then
+            section="Unreleased"
+          else
+            section="${VERSION#v}"
+          fi
+          .github/scripts/extract-changelog.sh $section > release-notes.md
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create $VERSION --draft --title $VERSION
+          --notes-file release-notes.md $RELEASE_FLAGS
+
+  build-release:
+    needs: ['create-release']
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - build: linux
+          os: ubuntu-24.04
+          target: linux-x86_64
+          conf-args: 
+        - build: win-msvc
+          os: windows-2022
+          target: windows-x86_64
+          conf-args: >
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static
+            -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # BuildVersion.cmake runs `git describe --tags`; a shallow clone (the
+          # default depth 1) hides the tag and the binary would report "unknown".
+          fetch-depth: 0
+
+      - name: Install POCL icd
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pocl-opencl-icd
+
+      - name: Set up MSVC x64 environment
+        if: matrix.os == 'windows-2022'
+        shell: cmd
+        run: |
+          set VS_WHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
+          set VS_REQUIRED=Microsoft.VisualStudio.Component.VC.Tools.x86.x64
+          for /f "delims=" %%i in ('"%VS_WHERE%" -latest -products * -requires %VS_REQUIRED% -property installationPath') do set VS_PATH=%%i
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          set >> %GITHUB_ENV%
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v5
+        with:
+          path: build/**/vcpkg_installed
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-
+
+      - name: Set VCPKG_ROOT
+        shell: bash
+        run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: cmake --preset release ${{ matrix.conf-args }}
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Set package name
+        shell: bash
+        run: |
+          version="${{ needs.create-release.outputs.version }}"
+          echo "PKG=biosim4-gpu-$version-${{ matrix.target }}" >> $GITHUB_ENV
+
+      - name: Package assembly
+        shell: bash
+        run: |
+          cmake --install build/release --prefix "staging/$PKG"
+          cp README.md LICENSE CHANGELOG.md "staging/$PKG/"
+
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          staging/$PKG/bin/biosim-ref -p 100 --max-gen=10
+          staging/$PKG/bin/biosim-gpu -p 100 --max-gen=10
+
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          staging\%PKG%\bin\biosim-ref.exe -p 100 --max-gen=10
+          staging\%PKG%\bin\biosim-gpu.exe --help
+
+      - name: Create the archive
+        if: runner.os == 'Linux'
+        run: |
+          tar -C staging -czf "$PKG.tar.gz" "$PKG"
+          sha256sum "$PKG.tar.gz" > "$PKG.tar.gz.sha256"
+
+      - name: Create the archive
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          (cd staging && 7z a "../$PKG.zip" "$PKG")
+          sha256sum "$PKG.zip" > "$PKG.zip.sha256"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ env.PKG }}.*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.target }}-bin
+          path: staging/${{ env.PKG }}/bin/biosim-*
+          if-no-files-found: error
+
+  publish:
+    permissions:
+      contents: write
+    needs: [create-release, build-release]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload ${{ needs.create-release.outputs.version }} dist/*
