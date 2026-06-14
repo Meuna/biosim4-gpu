@@ -74,7 +74,7 @@
     .rail {
         position: fixed;
         right: 0;
-        top: 3.5rem;
+        top: var(--topbar-h, 3.5rem);
         bottom: 0;
         width: 23.75rem;
         z-index: 22;
