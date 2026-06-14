@@ -54,128 +54,150 @@
     let clearConfirmOpen = $state(false);
 </script>
 
+<!-- display:contents — the two groups below participate directly in TopBar's
+     grid; their grid-area names ("playback"/"evolution") are matched by the
+     grid-template-areas in TopBar.svelte. -->
 <div class="dock">
-    <div class="dock__speed">
-        <span class="dock__speed-label" aria-hidden="true">fps</span>
-        <DiscreteSlider
-            stops={SPEED_STOPS}
-            value={targetSpeed}
-            onChange={onSetSpeed}
-            ariaLabel="Simulation speed"
-        />
+    <div class="dock__group dock__group--playback">
+        <div class="dock__speed">
+            <span class="dock__speed-label" aria-hidden="true">fps</span>
+            <DiscreteSlider
+                stops={SPEED_STOPS}
+                value={targetSpeed}
+                onChange={onSetSpeed}
+                ariaLabel="Simulation speed"
+            />
+        </div>
+
+        <div class="divider-v dock__sep" aria-hidden="true"></div>
+
+        <button
+            class="dock__btn dock__btn--primary"
+            class:dock__btn--spent={isGenComplete}
+            disabled={!isRunning &&
+                (isGenComplete || genomIncompatible || isFreeRunning)}
+            onclick={onToggle}
+            aria-label={isRunning ? "Stop simulation" : "Play simulation"}
+        >
+            {#if isRunning}
+                <Pause size={14} />
+                Stop
+            {:else if isGenComplete}
+                <Flag size={14} />
+                End
+            {:else}
+                <Play size={14} />
+                Play
+            {/if}
+        </button>
+
+        <button
+            class="dock__btn"
+            disabled={isRunning || isFreeRunning || genomIncompatible}
+            onclick={onStep}
+            aria-label="Step one simulation tick"
+        >
+            <StepForward size={14} />
+            Step
+        </button>
     </div>
 
-    <div class="dock__sep" aria-hidden="true"></div>
+    <div class="dock__group dock__group--evolution">
+        <div class="dock__autoplay-group">
+            <button
+                class="dock__btn"
+                class:dock__btn--prompt-breathe={isGenComplete}
+                disabled={genomIncompatible || isFreeRunning}
+                onclick={(e) => onNextGen(e.ctrlKey)}
+                aria-label="Advance one generation (Ctrl+click to auto play)"
+            >
+                <Baby size={14} />
+                Next Gen
+            </button>
 
-    <button
-        class="dock__btn dock__btn--primary"
-        class:dock__btn--spent={isGenComplete}
-        disabled={!isRunning &&
-            (isGenComplete || genomIncompatible || isFreeRunning)}
-        onclick={onToggle}
-        aria-label={isRunning ? "Stop simulation" : "Play simulation"}
-    >
-        {#if isRunning}
-            <Pause size={14} />
-            Stop
-        {:else if isGenComplete}
-            <Flag size={14} />
-            End
+            <button
+                class="dock__btn"
+                class:dock__btn--prompt-breathe={isGenComplete}
+                disabled={genomIncompatible || isFreeRunning}
+                onclick={(e) => onRewind(e.ctrlKey)}
+                aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
+            >
+                <History size={14} />
+                Rewind
+            </button>
+
+            <span class="dock__autoplay-hint" aria-hidden="true"
+                >ctrl+click to auto-play</span
+            >
+        </div>
+
+        {#if clearConfirmOpen}
+            <ConfirmInline
+                open={clearConfirmOpen}
+                confirmLabel="Clear"
+                cancelLabel="Cancel"
+                disabled={genomIncompatible || isFreeRunning}
+                onConfirm={() => {
+                    clearConfirmOpen = false;
+                    onClearGenom();
+                }}
+                onCancel={() => {
+                    clearConfirmOpen = false;
+                }}
+            />
         {:else}
-            <Play size={14} />
-            Play
+            <button
+                class="dock__btn"
+                disabled={genomIncompatible || isFreeRunning}
+                onclick={() => {
+                    clearConfirmOpen = true;
+                }}
+                aria-label="Clear genome"
+            >
+                <Dna size={14} />
+                Clear Genom
+            </button>
         {/if}
-    </button>
 
-    <button
-        class="dock__btn"
-        disabled={isRunning || isFreeRunning || genomIncompatible}
-        onclick={onStep}
-        aria-label="Step one simulation tick"
-    >
-        <StepForward size={14} />
-        Step
-    </button>
-
-    <div class="dock__sep" aria-hidden="true"></div>
-
-    <div class="dock__autoplay-group">
-        <button
-            class="dock__btn"
-            class:dock__btn--prompt-breathe={isGenComplete}
-            disabled={genomIncompatible || isFreeRunning}
-            onclick={(e) => onNextGen(e.ctrlKey)}
-            aria-label="Advance one generation (Ctrl+click to auto play)"
-        >
-            <Baby size={14} />
-            Next Gen
-        </button>
+        <div class="divider-v dock__sep" aria-hidden="true"></div>
 
         <button
-            class="dock__btn"
-            class:dock__btn--prompt-breathe={isGenComplete}
-            disabled={genomIncompatible || isFreeRunning}
-            onclick={(e) => onRewind(e.ctrlKey)}
-            aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
+            class="dock__btn dock__btn--evolve"
+            class:dock__btn--evolve-active={isFreeRunning}
+            disabled={isRunning || isFreeRunStopping || genomIncompatible}
+            onclick={onToggleFreeRun}
+            aria-label={isFreeRunning
+                ? "Stop evolving"
+                : "Evolve: auto-advance generations"}
         >
-            <History size={14} />
-            Rewind
+            <span class="evolve-icon"><RefreshCw size={14} /></span>
+            Evolve
         </button>
-
-        <span class="dock__autoplay-hint" aria-hidden="true"
-            >ctrl+click to auto-play</span
-        >
     </div>
-
-    {#if clearConfirmOpen}
-        <ConfirmInline
-            open={clearConfirmOpen}
-            confirmLabel="Clear"
-            cancelLabel="Cancel"
-            disabled={genomIncompatible || isFreeRunning}
-            onConfirm={() => {
-                clearConfirmOpen = false;
-                onClearGenom();
-            }}
-            onCancel={() => {
-                clearConfirmOpen = false;
-            }}
-        />
-    {:else}
-        <button
-            class="dock__btn"
-            disabled={genomIncompatible || isFreeRunning}
-            onclick={() => {
-                clearConfirmOpen = true;
-            }}
-            aria-label="Clear genome"
-        >
-            <Dna size={14} />
-            Clear Genom
-        </button>
-    {/if}
-
-    <div class="dock__sep" aria-hidden="true"></div>
-
-    <button
-        class="dock__btn dock__btn--evolve"
-        class:dock__btn--evolve-active={isFreeRunning}
-        disabled={isRunning || isFreeRunStopping || genomIncompatible}
-        onclick={onToggleFreeRun}
-        aria-label={isFreeRunning
-            ? "Stop evolving"
-            : "Evolve: auto-advance generations"}
-    >
-        <span class="evolve-icon"><RefreshCw size={14} /></span>
-        Evolve
-    </button>
 </div>
 
 <style>
+    /* display:contents lets the two groups below participate directly in
+       TopBar's grid; .dock itself contributes no box. */
     .dock {
+        display: contents;
+    }
+
+    .dock__group {
         display: flex;
         align-items: center;
-        gap: 0;
+        /* Centres the group when it spans a full-width wrapped row; a no-op in
+           the auto-sized desktop tracks. */
+        justify-self: center;
+    }
+
+    /* Area names are matched by grid-template-areas in TopBar.svelte. */
+    .dock__group--playback {
+        grid-area: playback;
+    }
+
+    .dock__group--evolution {
+        grid-area: evolution;
     }
 
     .dock__btn {
@@ -237,12 +259,10 @@
         opacity: 1;
     }
 
+    /* Visuals come from .divider-v (primitives.css); only the intra-group
+       spacing is component-specific. */
     .dock__sep {
-        width: 1px;
-        height: 1.25rem;
-        background: var(--color-border-subtle);
         margin: 0 var(--space-3);
-        flex-shrink: 0;
     }
 
     /* Shared hint floats below Next Gen + Rewind without affecting their height */

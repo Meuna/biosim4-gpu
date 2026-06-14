@@ -213,3 +213,12 @@
     height: 1px;
     background: var(--color-border-subtle);
 }
+
+/* Vertical 1px divider between inline control groups. Consumers add their own
+   margin (intra-group spacing differs from the header-level separator). */
+.divider-v {
+    width: 1px;
+    height: 1.25rem;
+    background: var(--color-border-subtle);
+    flex-shrink: 0;
+}
