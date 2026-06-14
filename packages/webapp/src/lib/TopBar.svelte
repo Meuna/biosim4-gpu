@@ -36,20 +36,22 @@
         <span class="topbar__subtitle small-caps">visualizer</span>
     </div>
 
-    <div class="topbar__center">
-        <PlayDock
-            {phase}
-            {genomIncompatible}
-            {targetSpeed}
-            {onToggle}
-            {onStep}
-            {onNextGen}
-            {onRewind}
-            {onClearGenom}
-            {onSetSpeed}
-            {onToggleFreeRun}
-        />
-    </div>
+    <PlayDock
+        {phase}
+        {genomIncompatible}
+        {targetSpeed}
+        {onToggle}
+        {onStep}
+        {onNextGen}
+        {onRewind}
+        {onClearGenom}
+        {onSetSpeed}
+        {onToggleFreeRun}
+    />
+
+    <!-- Separator between the playback and evolution groups. Only present in the
+         1-row layout (≥1060px); hidden once the groups wrap to different rows. -->
+    <div class="topbar__sep divider-v" aria-hidden="true"></div>
 
     <div class="topbar__right">
         <a
@@ -88,25 +90,76 @@
 </div>
 
 <style>
+    /* Responsive header grid. The bar reflows into 1 / 2 / 3 rows as the
+       viewport narrows; min-height (not height) lets it grow when it wraps so
+       the measured height published by App.svelte tracks the real height.
+       Breakpoints 1160/760 are duplicated as literals in the @media rules below
+       because var() cannot be used inside @media conditions. (1160 is where the
+       full brand + the ~750px dock + github stop fitting on one line.) */
     .topbar {
         position: fixed;
         left: 0;
         right: 0;
         top: 0;
-        height: 3.5rem;
+        min-height: 3.5rem;
         z-index: 20;
-        display: flex;
+        display: grid;
         align-items: center;
-        justify-content: space-between;
-        padding: 0 var(--space-6);
+        column-gap: var(--space-3);
+        row-gap: var(--space-2);
+        padding: var(--space-2) var(--space-6);
         background: var(--color-surface-glass);
         backdrop-filter: blur(6px);
         border-bottom: 1px solid var(--color-border-subtle);
+
+        /* 1-row (≥1160px): the dock (playback·sep·evolution) is centred while
+           there is symmetric room. The left track's min is the brand's
+           max-content, so once the brand+subtitle get close the brand *pushes*
+           the dock rightward instead of overlapping it (and the wasteful empty
+           space beside the small github link is reclaimed). The right track only
+           needs github's min-content, so it yields first. */
+        grid-template-columns:
+            minmax(max-content, 1fr) auto auto auto
+            minmax(min-content, 1fr);
+        grid-template-areas: "brand playback sep evolution github";
+    }
+
+    /* <1160px: 2 rows (brand · playback · github / evolution). */
+    @media (max-width: 1159.98px) {
+        .topbar {
+            grid-template-columns: 1fr auto 1fr;
+            grid-template-areas:
+                "brand playback github"
+                "evolution evolution evolution";
+        }
+
+        /* The sep's area is absent from this template; it must be removed from
+           flow, not merely unreferenced, or it auto-places and breaks layout. */
+        .topbar__sep {
+            display: none;
+        }
+    }
+
+    /* <760px: 3 rows (brand · github / playback / evolution). */
+    @media (max-width: 759.98px) {
+        .topbar {
+            grid-template-columns: 1fr 1fr;
+            grid-template-areas:
+                "brand github"
+                "playback playback"
+                "evolution evolution";
+        }
     }
 
     .topbar__left {
+        grid-area: brand;
+        justify-self: start;
         display: flex;
         align-items: baseline;
+        /* Stays on one line: this is the solid left boundary that pushes the
+           dock right (its width is the brand track's max-content). Below 1160px
+           the 2-row layout takes over, so it never needs to wrap. */
+        white-space: nowrap;
         gap: var(--space-3);
     }
 
@@ -116,6 +169,7 @@
         font-weight: 700;
         color: var(--color-text);
         letter-spacing: -0.02em;
+        white-space: nowrap;
     }
 
     .topbar__compat {
@@ -136,13 +190,16 @@
         gap: var(--space-2);
     }
 
-    .topbar__center {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+    /* Visuals come from .divider-v (primitives.css); margin matches the
+       intra-group seps so the 1-row dock reads as a single ruled strip. */
+    .topbar__sep {
+        grid-area: sep;
+        margin: 0 var(--space-3);
     }
 
     .topbar__right {
+        grid-area: github;
+        justify-self: end;
         display: flex;
         align-items: center;
     }
