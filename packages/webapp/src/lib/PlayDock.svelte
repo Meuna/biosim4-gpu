@@ -130,6 +130,7 @@
             open={clearConfirmOpen}
             confirmLabel="Clear"
             cancelLabel="Cancel"
+            disabled={genomIncompatible || isFreeRunning}
             onConfirm={() => {
                 clearConfirmOpen = false;
                 onClearGenom();
@@ -141,6 +142,7 @@
     {:else}
         <button
             class="dock__btn"
+            disabled={genomIncompatible || isFreeRunning}
             onclick={() => {
                 clearConfirmOpen = true;
             }}

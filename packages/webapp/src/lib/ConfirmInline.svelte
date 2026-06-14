@@ -1,12 +1,14 @@
 <script lang="ts">
     let {
         open,
+        disabled = false,
         onConfirm,
         onCancel,
         confirmLabel = "Yes",
         cancelLabel = "No",
     }: {
         open: boolean;
+        disabled?: boolean;
         onConfirm: () => void;
         onCancel: () => void;
         confirmLabel?: string;
@@ -18,11 +20,16 @@
     <div class="confirm-inline" role="group" aria-label="Confirm action">
         <button
             class="button button--pill confirm-inline__btn--confirm"
+            {disabled}
             onclick={onConfirm}
         >
             {confirmLabel}
         </button>
-        <button class="button button--pill button--ghost" onclick={onCancel}>
+        <button
+            class="button button--pill button--ghost"
+            {disabled}
+            onclick={onCancel}
+        >
             {cancelLabel}
         </button>
     </div>
