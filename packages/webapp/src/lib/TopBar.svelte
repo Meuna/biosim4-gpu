@@ -7,6 +7,7 @@
         phase,
         genomIncompatible = false,
         targetSpeed,
+        headerHeight = $bindable(56),
         onToggle,
         onStep,
         onNextGen,
@@ -18,6 +19,7 @@
         phase: SimPhase;
         genomIncompatible?: boolean;
         targetSpeed: number;
+        headerHeight?: number;
         onToggle: () => void;
         onStep: () => void;
         onNextGen: (autoPlay: boolean) => void;
@@ -28,7 +30,7 @@
     } = $props();
 </script>
 
-<header class="topbar">
+<header class="topbar" bind:offsetHeight={headerHeight}>
     <div class="topbar__left">
         <span class="topbar__brand">biosim4-gpu</span>
         <span class="topbar__subtitle small-caps">visualizer</span>
@@ -124,7 +126,9 @@
 
     .topbar__version {
         position: fixed;
-        top: calc(3.5rem + var(--space-3));
+        /* Follows the measured header height published by App.svelte; 3.5rem is
+           the fallback that matches the bar's default (non-wrapped) height. */
+        top: calc(var(--topbar-h, 3.5rem) + var(--space-3));
         left: var(--space-6);
         z-index: 20;
         display: flex;

@@ -299,20 +299,23 @@
     const PAD_TOP = 80;
     const PAD_SIDE = 80;
     const PAD_BOTTOM = 180;
-    const TOPBAR_H = 56; // 3.5rem at 16px
     const RAIL_W = 380;
+
+    // Measured live from TopBar (bind:headerHeight); 56 = 3.5rem fallback until
+    // the first measure. Grows when the header wraps to multiple rows.
+    let topbarH = $state(56);
 
     const gridGeom = $derived.by(() => {
         const railW = railOpen && viewportW > 760 ? RAIL_W : 0;
         const availW = viewportW - railW - PAD_SIDE * 2;
-        const availH = viewportH - TOPBAR_H - PAD_TOP - PAD_BOTTOM;
+        const availH = viewportH - topbarH - PAD_TOP - PAD_BOTTOM;
         const maxCells = Math.max(telemetry.gridSizeX, telemetry.gridSizeY);
         const maxDim = Math.max(140, Math.min(availW, availH, 760));
         const ppc = maxDim / maxCells;
         const w = telemetry.gridSizeX * ppc;
         const h = telemetry.gridSizeY * ppc;
         const x = PAD_SIDE + (availW - w) / 2;
-        const y = TOPBAR_H + PAD_TOP + (availH - h) / 2;
+        const y = topbarH + PAD_TOP + (availH - h) / 2;
         return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
     });
 
@@ -491,6 +494,7 @@
 
 <div
     class="app-shell"
+    style="--topbar-h: {topbarH}px"
     ondragenter={handleDragEnter}
     ondragover={(e) => e.preventDefault()}
     role="application"
@@ -559,6 +563,7 @@
         phase={machine.phase}
         genomIncompatible={machine.genomIncompatible}
         {targetSpeed}
+        bind:headerHeight={topbarH}
         onSetSpeed={handleSetSpeed}
         onToggle={() => machine.toggle()}
         onStep={() => machine.step()}
