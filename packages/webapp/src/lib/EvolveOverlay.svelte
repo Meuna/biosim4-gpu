@@ -44,7 +44,7 @@
 
     .evolve-overlay__gen {
         font-family: var(--font-mono);
-        font-size: 4rem;
+        font-size: var(--text-4xl);
         font-weight: 700;
         color: var(--color-text);
         letter-spacing: -0.02em;

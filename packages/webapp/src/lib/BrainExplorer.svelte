@@ -777,7 +777,7 @@
 
     .brain__label {
         font-family: var(--font-mono);
-        font-size: 9px;
+        font-size: var(--text-2xs);
         fill: var(--color-text);
         pointer-events: none;
     }
@@ -788,7 +788,7 @@
 
     .brain__caption {
         font-family: var(--font-mono);
-        font-size: 11px;
+        font-size: var(--text-xs);
         letter-spacing: 0.16em;
         fill: var(--color-text-muted);
     }
@@ -800,7 +800,7 @@
         pointer-events: none;
         white-space: nowrap;
         font-family: var(--font-mono);
-        font-size: 0.6875rem;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
     }
 

@@ -278,7 +278,7 @@
         left: 50%;
         transform: translateX(-50%);
         font-family: var(--font-mono);
-        font-size: 0.5rem;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
         opacity: 0;
         white-space: nowrap;

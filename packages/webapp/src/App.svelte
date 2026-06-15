@@ -733,7 +733,7 @@
         z-index: 6;
         pointer-events: none;
         font-family: var(--font-mono);
-        font-size: 10px;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
     }
 
