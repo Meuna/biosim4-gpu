@@ -419,6 +419,54 @@ void test_load_survivors_pop_file_smaller(void) {
     biosim_sim_free(&sim_read);
 }
 
+/* A snapshot whose originating max-neurons differs from the live config must be
+ * rejected in BOTH directions: the neuron cap re-maps gene neuron numbers via
+ * `% max_neurons`, so a different cap silently rewires the brains. */
+void test_load_survivors_neuron_mismatch_rejected(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_neuron_mismatch.bsm4";
+    (void)remove(path);
+
+    FILE *f = fopen(path, "w+b");
+    TEST_ASSERT_NOT_NULL(f);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_header(f, &sim)); /* max_neurons = 2 */
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_write_genome(f, &sim, &snap));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_finalize(f, 1U));
+    (void)fclose(f);
+
+    /* Read configs differ only in max_neurons (3 = larger, 1 = smaller); every
+     * other compatibility field matches the file, so the neuron gate fires. */
+    const uint8_t mismatched_neurons[2] = {3U, 1U};
+    for (size_t i = 0U; i < 2U; i++) {
+        biosim_sim_t sim_read;
+        TEST_ASSERT_EQUAL_INT(
+            BIOSIM_OK,
+            sim_test_create(
+                &sim_read,
+                &(sim_test_scn_t){
+                    .population = 4U,
+                    .size_x = 8,
+                    .size_y = 8,
+                    .max_genes = 4U,
+                    .max_neurons = mismatched_neurons[i],
+                    .los_range = 4U,
+                    .steps_per_gen = 1U,
+                    .sensor_radius = 1,
+                }
+            )
+        );
+
+        biosim_survivor_snap_t rsnap = {0};
+        TEST_ASSERT_EQUAL_INT(
+            BIOSIM_ERR_INVALID, biosim_snapshot_load_survivors(path, &sim_read, &rsnap)
+        );
+
+        biosim_survivor_snap_free(&rsnap);
+        biosim_sim_free(&sim_read);
+    }
+
+    (void)remove(path);
+}
+
 /* biosim_snapshot_load_survivors_f: write to tmpfile, seek back, call _f.
  * _f does not update sim; only snap->gen / snap->gen_rng are set. */
 void test_load_survivors_f_roundtrip(void) {
@@ -461,6 +509,7 @@ int main(void) {
     RUN_TEST(test_load_last_no_complete_gen);
     RUN_TEST(test_load_survivors_pop_file_larger);
     RUN_TEST(test_load_survivors_pop_file_smaller);
+    RUN_TEST(test_load_survivors_neuron_mismatch_rejected);
     RUN_TEST(test_session_restore_identical_second_generation);
     RUN_TEST(test_load_survivors_f_roundtrip);
     return UNITY_END();

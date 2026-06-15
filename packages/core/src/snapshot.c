@@ -349,6 +349,11 @@ static biosim_status_t check_compat(const biosim_snap_header_t *hdr, const biosi
         );
         return BIOSIM_ERR_INVALID;
     }
+    /* Unlike max_genes (a pure slot count, so any cap >= the file's fits), the
+     * neuron cap participates in gene decoding: a gene stores a raw 7-bit
+     * neuron number that biosim_nnet_compile reduces with `% max_neurons`. A
+     * different cap therefore re-maps every neuron source/sink and silently
+     * rewires the brains, so the match must be exact in either direction. */
     if (hdr->max_neurons != sim->nnet.max_neurons) {
         BIOSIM_ERRORF(
             "file max-neurons=%u but current is %u;"

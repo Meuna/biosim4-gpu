@@ -40,6 +40,13 @@ The format is binary, little-endian throughout.
 A schema version mismatch is fatal on load — catalogue indices would silently
 corrupt gene interpretation.
 
+On load, the file's caps are checked against the live config. `max_genes` is a
+pure slot count, so the live config only needs `max_genes >= file` (a snapshot
+from a smaller genome fits). `max_neurons` must match **exactly**: a gene stores
+a raw neuron number reduced with `% max_neurons` when the brains are compiled, so
+any different cap — larger or smaller — re-maps every neuron and silently rewires
+the loaded genomes.
+
 ### Generation record
 
 Let `n = n_survivors` and `L = max_genes` (from file header).
