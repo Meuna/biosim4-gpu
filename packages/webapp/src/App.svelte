@@ -396,15 +396,22 @@
             focus.endHover();
             return;
         }
+        // The canvas is full-viewport, so onmouseleave only fires leaving the
+        // whole surface — moving off the grid into the surrounding padding does
+        // not. Compute the cell synchronously (cheap) and end the live hover the
+        // moment the cursor leaves the grid region. This both hides the floating
+        // card and demotes the hover to a sticky last-hover, so a follow-up
+        // Ctrl+click can promote it. Only the worker `send` needs rAF throttling.
+        const cell = pixelToCell(e.clientX, e.clientY);
+        if (!cell) {
+            focus.endHover();
+            return;
+        }
         if (hoverRafPending) return;
         hoverRafPending = true;
-        const px = e.clientX;
-        const py = e.clientY;
         requestAnimationFrame(() => {
             hoverRafPending = false;
-            const cell = pixelToCell(px, py);
-            if (cell)
-                send({ type: "pickAgentAtCell", ...cell, reason: "hover" });
+            send({ type: "pickAgentAtCell", ...cell, reason: "hover" });
         });
     }
 

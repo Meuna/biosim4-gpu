@@ -12,6 +12,7 @@
 
 - Reflow the header and keep telemetry on-screen on small (phone) viewports ([#149](https://github.com/Meuna/biosim4-gpu/pull/149))
 - Stop the expanded Brain view title from colliding with the version label ([#155](https://github.com/Meuna/biosim4-gpu/pull/155))
+- Hide the agent hover card and re-enable Ctrl+click pinning when the cursor leaves the grid while Ctrl+hovering a border agent ([#155](https://github.com/Meuna/biosim4-gpu/pull/155))
 
 ## [1.0.0] - 2026-06-14
 
