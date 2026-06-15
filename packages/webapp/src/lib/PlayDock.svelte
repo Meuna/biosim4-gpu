@@ -273,7 +273,7 @@
 
     .dock__autoplay-hint {
         position: absolute;
-        top: 100%;
+        top: 75%;
         left: 50%;
         transform: translateX(-50%);
         font-family: var(--font-mono);

@@ -140,6 +140,13 @@
         }
     }
 
+    /* <900px>: we drop the VISUALIZER subtitle. */
+    @media (max-width: 899.98px) {
+        .topbar__subtitle {
+            display: none;
+        }
+    }
+
     /* <760px: 3 rows (brand · github / playback / evolution). */
     @media (max-width: 759.98px) {
         .topbar {

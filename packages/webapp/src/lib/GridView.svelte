@@ -53,12 +53,8 @@
     <!-- Idle overlay — visible only before simulation has ever been started -->
     {#if phase === "WORKER_PENDING" || phase === "WORKER_READY"}
         <div class="idle-overlay" aria-label="Simulation not started">
-            <p class="idle-overlay__hint small-caps">Awaiting initialization</p>
             <p class="idle-overlay__display">
                 press play<br /><em>to begin.</em>
-            </p>
-            <p class="idle-overlay__meta">
-                {gridSizeX} × {gridSizeY} · seed 0xA17C · 2 048 cells queued
             </p>
         </div>
     {/if}
@@ -154,11 +150,6 @@
         text-align: center;
     }
 
-    .idle-overlay__hint {
-        margin-bottom: var(--space-3);
-        /* .small-caps class handles font/size/casing */
-    }
-
     .idle-overlay__display {
         font-family: var(--font-sans);
         font-size: var(--text-4xl);
@@ -170,13 +161,5 @@
 
     .idle-overlay__display em {
         font-style: italic;
-    }
-
-    .idle-overlay__meta {
-        font-family: var(--font-mono);
-        font-size: var(--text-xs);
-        color: var(--color-text-muted);
-        margin-top: var(--space-5);
-        margin-bottom: 0;
     }
 </style>
