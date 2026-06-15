@@ -174,7 +174,7 @@
     }
 
     .param-slider__range--muted {
-        opacity: var(--opacity-faint)
+        opacity: var(--opacity-faint);
     }
 
     .param-slider__edit {
