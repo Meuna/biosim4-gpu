@@ -54,6 +54,7 @@ jobs:
         run: |
           echo "VITE_WEBAPP_VERSION=$(git describe --tags --always --dirty)" >> "$GITHUB_ENV"
           echo "VITE_SNAPSHOT_COMPAT=$(.github/scripts/snapshot-compat-version.sh)" >> "$GITHUB_ENV"
+          cat $GITHUB_ENV
 
       - name: Build webapp
         run: |
@@ -61,7 +62,7 @@ jobs:
           cmake --build --preset webapp
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: build/webapp/packages/webapp/dist
 
@@ -77,4 +78,4 @@ jobs:
 
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
