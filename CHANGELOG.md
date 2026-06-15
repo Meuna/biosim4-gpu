@@ -4,6 +4,10 @@
 
 ### Webapp
 
+#### Changed
+
+- Require an exact Max neurons match to breed a loaded snapshot or running population ([#151](https://github.com/Meuna/biosim4-gpu/pull/151))
+
 #### Fixed
 
 - Reflow the header and keep telemetry on-screen on small (phone) viewports ([#149](https://github.com/Meuna/biosim4-gpu/pull/149))
