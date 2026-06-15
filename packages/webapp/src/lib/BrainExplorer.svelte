@@ -714,7 +714,7 @@
         align-items: center;
         gap: var(--space-2);
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         letter-spacing: 0.1em;
         text-transform: uppercase;
         color: var(--color-text-muted);

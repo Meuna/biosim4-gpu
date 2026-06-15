@@ -118,7 +118,7 @@
         background: transparent;
         cursor: pointer;
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         text-transform: uppercase;
         letter-spacing: 0.1em;
         color: var(--color-text-muted);

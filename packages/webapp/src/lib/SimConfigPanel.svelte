@@ -174,7 +174,7 @@
         />
         {#if incompatibleFields.includes("maxGenes")}
             <p class="sim-config__incompat-hint">
-                <TriangleAlert size={12} style="display: inline-block;" />
+                <TriangleAlert size={12} class="icon-inline" />
                 Current genomes need at least {requiredGenomeLen} — increase to re-enable
                 play.
             </p>
@@ -201,7 +201,7 @@
         />
         {#if incompatibleFields.includes("maxNeurons")}
             <p class="sim-config__incompat-hint">
-                <TriangleAlert size={12} style="display: inline-block;" />
+                <TriangleAlert size={12} class="icon-inline" />
                 Current genomes need at least {requiredNeurons} — increase to re-enable
                 play.
             </p>
@@ -347,7 +347,7 @@
 
     {#if (draftConfig.challenge.kind === "near_barrier" || draftConfig.challenge.kind === "location_sequence") && draftConfig.barriers.length === 0}
         <p class="sim-config__barrier-warning">
-            <TriangleAlert size={14} style="display: inline-block;" />
+            <TriangleAlert size={14} class="icon-inline" />
             This challenge requires at least one barrier — add one in the Barriers
             section below.
         </p>
@@ -408,14 +408,14 @@
 
     .sim-config__subtitle {
         font-family: var(--font-sans);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         margin: var(--space-1) 0 0 0;
     }
 
     .sim-config__hint {
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
     }
 
@@ -438,7 +438,7 @@
 
     .sim-config__incompat-hint {
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         color: var(--color-warn);
         margin: calc(-1 * var(--space-2)) 0 var(--space-4) 0;
     }
@@ -459,6 +459,6 @@
     }
 
     .sim-config__io-label {
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
     }
 </style>

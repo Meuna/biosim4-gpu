@@ -211,7 +211,7 @@
         border-radius: var(--radius-sm);
         cursor: pointer;
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         letter-spacing: 0.04em;
         transition:
@@ -300,7 +300,7 @@
 
     .dock__speed-label {
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
         letter-spacing: 0.04em;
         padding-left: var(--space-2);

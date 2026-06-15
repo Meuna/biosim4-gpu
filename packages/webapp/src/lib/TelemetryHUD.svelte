@@ -102,13 +102,13 @@
 
     .telemetry__key {
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
     }
 
     .telemetry__val {
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text);
     }
 

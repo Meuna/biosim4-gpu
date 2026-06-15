@@ -83,7 +83,7 @@
         top: 50%;
         width: 0.625rem;
         height: 0.625rem;
-        border-radius: 9999px;
+        border-radius: var(--radius-pill);
         background: var(--color-text);
         transform: translate(-50%, -50%);
         transition: left 0.2s ease;
@@ -118,7 +118,7 @@
         top: 50%;
         width: 1rem;
         height: 1rem;
-        border-radius: 9999px;
+        border-radius: var(--radius-pill);
         border: 1.5px solid var(--color-border);
         background: var(--color-surface);
         transform: translateY(-50%);
@@ -137,7 +137,7 @@
         align-items: center;
         justify-content: center;
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
         white-space: nowrap;
         letter-spacing: 0.03em;

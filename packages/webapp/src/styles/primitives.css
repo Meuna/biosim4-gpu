@@ -145,7 +145,7 @@
 
 .field-hint {
     font-family: var(--font-mono);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
 }
 
@@ -166,7 +166,7 @@
 
 .small-caps {
     font-family: var(--font-mono);
-    font-size: 0.625rem;
+    font-size: var(--text-2xs);
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: var(--color-text-muted);
@@ -205,6 +205,13 @@
     width: 1rem;
     height: 1rem;
     flex-shrink: 0;
+}
+
+/* ── Icons ── */
+
+/* Inline icon sitting in a line of text (e.g. lucide glyphs). */
+.icon-inline {
+    display: inline-block;
 }
 
 /* ── Layout helpers ── */

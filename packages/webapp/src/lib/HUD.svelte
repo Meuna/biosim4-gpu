@@ -104,7 +104,7 @@
 
     .hud__sparkline-empty {
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
     }
 </style>
