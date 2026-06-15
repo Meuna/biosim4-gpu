@@ -213,7 +213,6 @@
         font-family: var(--font-mono);
         font-size: var(--text-xs);
         color: var(--color-text-muted);
-        letter-spacing: 0.04em;
         transition:
             color 0.1s,
             background 0.1s;
@@ -283,7 +282,6 @@
         opacity: 0;
         white-space: nowrap;
         pointer-events: none;
-        letter-spacing: 0.03em;
         transition: opacity 0.15s;
     }
 
@@ -302,7 +300,6 @@
         font-family: var(--font-mono);
         font-size: var(--text-2xs);
         color: var(--color-text-muted);
-        letter-spacing: 0.04em;
         padding-left: var(--space-2);
         white-space: nowrap;
     }

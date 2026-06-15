@@ -120,7 +120,7 @@
         font-family: var(--font-mono);
         font-size: var(--text-xs);
         text-transform: uppercase;
-        letter-spacing: 0.1em;
+        letter-spacing: var(--tracking-wider);
         color: var(--color-text-muted);
         position: relative;
         transition: color 0.1s;

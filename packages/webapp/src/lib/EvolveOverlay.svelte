@@ -47,14 +47,14 @@
         font-size: var(--text-4xl);
         font-weight: 700;
         color: var(--color-text);
-        letter-spacing: -0.02em;
+        letter-spacing: var(--tracking-tight);
         line-height: 1;
     }
 
     .evolve-overlay__stop {
         font-family: var(--font-mono);
         font-size: var(--text-2xs);
-        letter-spacing: 0.1em;
+        letter-spacing: var(--tracking-wider);
         color: var(--color-text-muted);
     }
 </style>

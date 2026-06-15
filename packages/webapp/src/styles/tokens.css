@@ -79,6 +79,14 @@
     --text-2xl: 2rem;
     --text-4xl: 3.5rem;
 
+    /* ── Letter-spacing / tracking scale ──
+       Sans display text tightens; small uppercase mono labels widen. */
+    --tracking-tight: -0.02em;
+    --tracking-normal: 0;
+    --tracking-wide: 0.08em;
+    --tracking-wider: 0.12em;
+    --tracking-widest: 0.18em;
+
     /* ── Radius ── */
     --radius-sm: 2px;
     --radius-md: 4px;

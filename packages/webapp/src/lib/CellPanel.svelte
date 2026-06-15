@@ -277,7 +277,7 @@
         cursor: pointer;
         font-family: var(--font-mono);
         font-size: var(--text-2xs);
-        letter-spacing: 0.12em;
+        letter-spacing: var(--tracking-wider);
         color: var(--color-text-muted);
         text-transform: uppercase;
         padding: var(--space-2) var(--space-4);
