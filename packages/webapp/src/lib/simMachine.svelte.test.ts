@@ -541,7 +541,7 @@ describe("snapshots", () => {
         expect(sent).toEqual([]); // no spawn 2
     });
 
-    it("raising maxNeurons clears the gate, then Rewind breeds the snapshot", () => {
+    it("matching maxNeurons exactly clears the gate, then Rewind breeds the snapshot", () => {
         const { m, sent } = create(makeParams({ maxGenes: 64, maxNeurons: 5 }));
         m.onWorkerReady();
         m.loadSnapshot(new Uint8Array([1]));
@@ -552,6 +552,20 @@ describe("snapshots", () => {
         sent.length = 0;
         m.rewind(false);
         expect(types(sent)).toEqual(["rewindConfigured"]);
+    });
+
+    it("fires the neuron gate when maxNeurons exceeds the requirement", () => {
+        // The neuron cap re-maps gene neuron numbers via `% maxNeurons`, so a
+        // larger cap is just as incompatible as a smaller one: the gate must
+        // require an exact match, not merely `>=`.
+        const { m } = create(makeParams({ maxGenes: 64, maxNeurons: 5 }));
+        m.onWorkerReady();
+        m.loadSnapshot(new Uint8Array([1]));
+        m.onSnapshotLoaded(40, 8);
+        m.setDraft(makeParams({ maxGenes: 64, maxNeurons: 10 })); // 10 > required 8
+        expect(m.genomIncompatible).toBe(true);
+        expect(m.incompatibleFields).toContain("maxNeurons");
+        expect(m.incompatibleFields).not.toContain("maxGenes");
     });
 
     it("raising maxGenes clears the gate, then Rewind breeds the snapshot", () => {

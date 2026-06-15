@@ -54,14 +54,18 @@ export class SimMachine {
             JSON.stringify($state.snapshot(this.#lastPlayedConfig)),
     );
 
-    // Genome compatibility gate — true when the draft's genome/neuron caps fall
-    // below the required caps (the running config's caps from the last census, or
-    // the loaded snapshot's originating caps), which would truncate live genomes.
+    // Genome compatibility gate — true when the draft's caps are incompatible
+    // with the required caps (the running config's caps from the last census, or
+    // the loaded snapshot's originating caps). The genome-length cap is a pure
+    // slot count, so any value >= the requirement fits. The neuron cap instead
+    // re-maps every gene's neuron number via `% maxNeurons` when the brains are
+    // compiled, so it must match exactly — even a larger cap silently rewires
+    // them. This mirrors core's check_compat in packages/core/src/snapshot.c.
     #genomIncompatible = $derived(
         (this.#requiredGenomeLen > 0 &&
             this.#draftConfig.maxGenes < this.#requiredGenomeLen) ||
             (this.#requiredNeurons > 0 &&
-                this.#draftConfig.maxNeurons < this.#requiredNeurons),
+                this.#draftConfig.maxNeurons !== this.#requiredNeurons),
     );
     #incompatibleFields = $derived<string[]>([
         ...(this.#requiredGenomeLen > 0 &&
@@ -69,7 +73,7 @@ export class SimMachine {
             ? ["maxGenes"]
             : []),
         ...(this.#requiredNeurons > 0 &&
-        this.#draftConfig.maxNeurons < this.#requiredNeurons
+        this.#draftConfig.maxNeurons !== this.#requiredNeurons
             ? ["maxNeurons"]
             : []),
     ]);
