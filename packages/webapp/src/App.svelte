@@ -785,7 +785,11 @@
         position: fixed;
         max-width: 1060px;
         margin-inline: auto;
-        top: var(--topbar-h, 3.5rem);
+        /* Offset past the build-version line that TopBar parks just under the
+           bar (left-aligned, at --topbar-h + space-3); without this the title
+           collides with it. Stays relative to --topbar-h so it keeps tracking
+           the header's narrow-viewport reflow. */
+        top: calc(var(--topbar-h, 3.5rem) + var(--space-6));
         left: 0;
         right: 0;
         bottom: 0;
