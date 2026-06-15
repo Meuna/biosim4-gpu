@@ -7,6 +7,7 @@
 #### Changed
 
 - Require an exact Max neurons match to breed a loaded snapshot or running population ([#151](https://github.com/Meuna/biosim4-gpu/pull/151))
+- Enlarge the simulation grid on small (phone) viewports by scaling the side margins with the viewport width ([#157](https://github.com/Meuna/biosim4-gpu/pull/157))
 
 #### Fixed
 
