@@ -26,6 +26,7 @@
     import { SimMachine } from "./lib/simMachine.svelte";
     import { AgentFocus } from "./lib/agentFocus.svelte";
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
+    import { computeGridGeom } from "./lib/gridGeom";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -296,28 +297,20 @@
         return () => window.removeEventListener("resize", onResize);
     });
 
-    const PAD_TOP = 80;
-    const PAD_SIDE = 80;
-    const PAD_BOTTOM = 180;
-    const RAIL_W = 380;
-
     // Measured live from TopBar (bind:headerHeight); 56 = 3.5rem fallback until
     // the first measure. Grows when the header wraps to multiple rows.
     let topbarH = $state(56);
 
-    const gridGeom = $derived.by(() => {
-        const railW = railOpen && viewportW > 760 ? RAIL_W : 0;
-        const availW = viewportW - railW - PAD_SIDE * 2;
-        const availH = viewportH - topbarH - PAD_TOP - PAD_BOTTOM;
-        const maxCells = Math.max(telemetry.gridSizeX, telemetry.gridSizeY);
-        const maxDim = Math.max(140, Math.min(availW, availH, 760));
-        const ppc = maxDim / maxCells;
-        const w = telemetry.gridSizeX * ppc;
-        const h = telemetry.gridSizeY * ppc;
-        const x = PAD_SIDE + (availW - w) / 2;
-        const y = topbarH + PAD_TOP + (availH - h) / 2;
-        return { x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
-    });
+    const gridGeom = $derived(
+        computeGridGeom({
+            viewportW,
+            viewportH,
+            topbarH,
+            railOpen,
+            gridSizeX: telemetry.gridSizeX,
+            gridSizeY: telemetry.gridSizeY,
+        }),
+    );
 
     // Telemetry sits right of the grid normally; below it once the viewport is
     // narrow enough that a right-placed block would clip. The grid is centred,
