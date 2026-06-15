@@ -2,8 +2,8 @@
     import {
         ArrowLeft,
         ArrowRight,
+        Dices,
         SearchX,
-        Shuffle,
         Skull,
     } from "lucide-svelte";
     import type { AgentInfo } from "../workers/sim.worker";
@@ -136,7 +136,7 @@
                     onclick={onShuffle}
                     aria-label="Random agent"
                 >
-                    <Shuffle size={13} />
+                    <Dices size={13} />
                 </button>
                 <button
                     class="cell-panel__nav-btn"

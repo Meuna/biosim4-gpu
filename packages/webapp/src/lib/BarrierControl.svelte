@@ -6,7 +6,7 @@
         ChallengeSpec,
     } from "../workers/sim.worker";
     import ParamSlider from "./ParamSlider.svelte";
-    import { CornerRightDown, Shuffle, Trash2 } from "lucide-svelte";
+    import { CornerRightDown, Dices, Trash2 } from "lucide-svelte";
 
     interface Props {
         value: BarrierSpec[];
@@ -149,7 +149,7 @@
                     onclick={() => shuffleBarrier(i)}
                     aria-label={`Shuffle barrier ${i + 1}`}
                 >
-                    <Shuffle size={13} />
+                    <Dices size={13} />
                 </button>
                 <button
                     class="button button--ghost barrier-control__small-button"
