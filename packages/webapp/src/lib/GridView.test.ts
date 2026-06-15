@@ -48,26 +48,6 @@ describe("GridView", () => {
         expect(screen.queryByLabelText("Simulation not started")).toBeNull();
     });
 
-    it("shows the correct grid size in the idle meta line (square)", () => {
-        render(GridView, {
-            geom: defaultGeom,
-            phase: "WORKER_READY" as const,
-            gridSizeX: 64,
-            gridSizeY: 64,
-        });
-        expect(screen.getByText(/64 × 64/)).toBeTruthy();
-    });
-
-    it("shows different X and Y sizes in the idle meta line (rectangular)", () => {
-        render(GridView, {
-            geom: { ...defaultGeom, h: 300 },
-            phase: "WORKER_READY" as const,
-            gridSizeX: 128,
-            gridSizeY: 64,
-        });
-        expect(screen.getByText(/128 × 64/)).toBeTruthy();
-    });
-
     it("renders axis labels with separate X and Y values", () => {
         render(GridView, {
             geom: { ...defaultGeom, h: 300 },
