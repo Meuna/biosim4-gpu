@@ -202,8 +202,8 @@
         {#if incompatibleFields.includes("maxNeurons")}
             <p class="sim-config__incompat-hint">
                 <TriangleAlert size={12} class="icon-inline" />
-                Current genomes need at least {requiredNeurons} — increase to re-enable
-                play.
+                Current genomes need exactly {requiredNeurons} — set Max neurons to
+                {requiredNeurons} to re-enable play.
             </p>
         {/if}
     </div>
