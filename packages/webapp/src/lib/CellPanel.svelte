@@ -159,7 +159,7 @@
         {/if}
 
         <!-- Identity section -->
-        <div class="section-label" style="margin-top: var(--space-6)">
+        <div class="section-label cell-panel__section">
             <span class="small-caps">Identity</span>
         </div>
         <div class="stat-row">
@@ -174,7 +174,7 @@
         </div>
 
         <!-- Position section -->
-        <div class="section-label" style="margin-top: var(--space-6)">
+        <div class="section-label cell-panel__section">
             <span class="small-caps">Position</span>
         </div>
         <div class="stat-row">
@@ -191,7 +191,7 @@
         </div>
 
         <!-- Behaviour section -->
-        <div class="section-label" style="margin-top: var(--space-6)">
+        <div class="section-label cell-panel__section">
             <span class="small-caps">Behaviour</span>
         </div>
         <div class="stat-row">
@@ -208,7 +208,7 @@
         </div>
 
         <!-- Brain network -->
-        <div class="section-label" style="margin-top: var(--space-6)">
+        <div class="section-label cell-panel__section">
             <span class="small-caps">Genome / brain</span>
         </div>
         {#if brain}
@@ -229,6 +229,11 @@
 <style>
     .cell-panel {
         padding: var(--space-6);
+    }
+
+    /* Vertical rhythm above each titled stat section. */
+    .cell-panel__section {
+        margin-top: var(--space-6);
     }
 
     .cell-panel--dead {
@@ -260,7 +265,7 @@
 
     .cell-panel__empty-hint {
         font-family: var(--font-sans);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         max-width: 15rem;
         margin: 0 auto var(--space-4) auto;
@@ -271,7 +276,7 @@
         background: transparent;
         cursor: pointer;
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         letter-spacing: 0.12em;
         color: var(--color-text-muted);
         text-transform: uppercase;
@@ -300,7 +305,7 @@
         background: transparent;
         cursor: pointer;
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         padding: var(--space-1);
         flex-shrink: 0;
@@ -353,20 +358,20 @@
 
     .stat-key {
         font-family: var(--font-sans);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
     }
 
     .stat-val {
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text);
     }
 
     /* ── Brain network ── */
     .cell-panel__no-brain {
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         margin: var(--space-2) 0 0 0;
     }

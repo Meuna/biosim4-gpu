@@ -212,7 +212,7 @@
         align-items: center;
         gap: var(--space-2);
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         text-decoration: none;
         letter-spacing: 0.06em;

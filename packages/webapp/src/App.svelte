@@ -561,7 +561,7 @@
             style="left: {gridGeom.x}px; top: {gridGeom.y - 24}px"
             aria-hidden="true"
         >
-            <MousePointerClick size={13} style="display: inline-block; " />
+            <MousePointerClick size={13} class="icon-inline" />
             Click or Ctrl+hover an agent to inspect it
         </div>
     {/if}

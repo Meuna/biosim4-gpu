@@ -53,7 +53,7 @@
 
     .evolve-overlay__stop {
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         letter-spacing: 0.1em;
         color: var(--color-text-muted);
     }

@@ -69,7 +69,7 @@
 
     .hover-card__title {
         font-family: var(--font-mono);
-        font-size: 0.75rem;
+        font-size: var(--text-xs);
         font-weight: 700;
         color: var(--color-accent-text);
         margin-bottom: var(--space-1);
@@ -84,13 +84,13 @@
 
     .hover-card__key {
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
     }
 
     .hover-card__val {
         font-family: var(--font-mono);
-        font-size: 0.625rem;
+        font-size: var(--text-2xs);
         color: var(--color-text);
     }
 </style>
