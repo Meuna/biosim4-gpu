@@ -868,7 +868,7 @@
         font-weight: 700;
         color: var(--color-text);
         margin: 0;
-        letter-spacing: -0.01em;
+        letter-spacing: var(--tracking-tight);
     }
 
     .drop-overlay__list {
@@ -900,7 +900,6 @@
         font-size: var(--text-xs);
         color: var(--color-text-muted);
         margin: 0;
-        letter-spacing: 0.05em;
     }
 
     .conf-error-banner {

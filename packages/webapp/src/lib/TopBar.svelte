@@ -171,7 +171,7 @@
         font-size: 1.375rem;
         font-weight: 700;
         color: var(--color-text);
-        letter-spacing: -0.02em;
+        letter-spacing: var(--tracking-tight);
         white-space: nowrap;
     }
 
@@ -214,7 +214,6 @@
         font-size: var(--text-xs);
         color: var(--color-text-muted);
         text-decoration: none;
-        letter-spacing: 0.06em;
         transition: color 0.1s;
     }
 

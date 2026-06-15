@@ -140,7 +140,6 @@
         font-size: var(--text-2xs);
         color: var(--color-text-muted);
         white-space: nowrap;
-        letter-spacing: 0.03em;
         pointer-events: none;
         transition: color 0.1s;
     }

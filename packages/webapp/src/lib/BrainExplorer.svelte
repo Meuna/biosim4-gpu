@@ -715,7 +715,7 @@
         gap: var(--space-2);
         font-family: var(--font-mono);
         font-size: var(--text-2xs);
-        letter-spacing: 0.1em;
+        letter-spacing: var(--tracking-wider);
         text-transform: uppercase;
         color: var(--color-text-muted);
     }
@@ -789,7 +789,7 @@
     .brain__caption {
         font-family: var(--font-mono);
         font-size: var(--text-xs);
-        letter-spacing: 0.16em;
+        letter-spacing: var(--tracking-widest);
         fill: var(--color-text-muted);
     }
 
