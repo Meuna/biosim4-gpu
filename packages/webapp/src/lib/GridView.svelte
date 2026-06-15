@@ -77,7 +77,7 @@
 
     .grid-view--blurred {
         filter: blur(2px);
-        opacity: 0.5;
+        opacity: var(--opacity-half);
     }
 
     /* ── Crop marks ── */

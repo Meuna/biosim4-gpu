@@ -61,7 +61,7 @@
 }
 
 .button--filled:hover {
-    opacity: 0.85;
+    opacity: var(--opacity-strong);
     color: var(--color-surface);
     border-color: var(--color-text);
 }

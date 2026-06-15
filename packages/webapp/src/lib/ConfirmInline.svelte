@@ -50,6 +50,6 @@
     .confirm-inline__btn--confirm:hover {
         color: var(--color-warn);
         border-color: var(--color-warn);
-        opacity: 0.8;
+        opacity: var(--opacity-strong);
     }
 </style>

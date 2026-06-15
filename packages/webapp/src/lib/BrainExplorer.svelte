@@ -762,7 +762,7 @@
     }
 
     .brain__node--dim {
-        opacity: 0.22;
+        opacity: var(--opacity-faint);
     }
 
     .brain__node--focus circle {

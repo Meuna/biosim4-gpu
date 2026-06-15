@@ -230,7 +230,7 @@
     }
 
     .dock__btn:disabled {
-        opacity: 0.35;
+        opacity: var(--opacity-faint);
         cursor: default;
     }
 
@@ -288,7 +288,7 @@
     }
 
     .dock__autoplay-group:hover .dock__autoplay-hint {
-        opacity: 0.55;
+        opacity: var(--opacity-half);
     }
 
     .dock__speed {
@@ -329,7 +329,7 @@
     @keyframes breathe {
         0%,
         100% {
-            opacity: 0.5;
+            opacity: var(--opacity-half);
         }
         50% {
             opacity: 1;
