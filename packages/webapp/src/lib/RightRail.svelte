@@ -162,7 +162,7 @@
             transform: scale(1);
         }
         50% {
-            opacity: 0.5;
+            opacity: var(--opacity-half);
             transform: scale(0.85);
         }
         100% {
