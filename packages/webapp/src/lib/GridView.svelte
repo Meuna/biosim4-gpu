@@ -122,7 +122,7 @@
     .axis-label {
         position: absolute;
         font-family: var(--font-mono);
-        font-size: 9px;
+        font-size: var(--text-2xs);
         color: var(--color-text-muted);
         line-height: 1;
     }
@@ -174,7 +174,7 @@
 
     .idle-overlay__meta {
         font-family: var(--font-mono);
-        font-size: 11px;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         margin-top: var(--space-5);
         margin-bottom: 0;

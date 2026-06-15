@@ -176,7 +176,6 @@
     }
 
     .topbar__compat {
-        font-size: 0.7rem;
         color: var(--color-warn);
         cursor: help;
     }

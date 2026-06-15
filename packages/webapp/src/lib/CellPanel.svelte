@@ -343,7 +343,7 @@
 
     .cell-panel__sub {
         font-family: var(--font-mono);
-        font-size: 11px;
+        font-size: var(--text-xs);
         color: var(--color-text-muted);
         margin: var(--space-1) 0 0 0;
     }
