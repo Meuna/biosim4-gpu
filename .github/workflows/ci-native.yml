@@ -92,12 +92,12 @@ jobs:
       - name: Test
         run: ctest --preset ci
 
+      - name: Lint
+        if: matrix.os == 'ubuntu-latest'
+        run: cmake --build --preset ci --target lint
+
       - name: Format check
         if: matrix.os == 'ubuntu-latest'
         run: |
           cmake --build --preset ci --target format
           git diff --exit-code
-
-      - name: Lint
-        if: matrix.os == 'ubuntu-latest'
-        run: cmake --build --preset ci --target lint

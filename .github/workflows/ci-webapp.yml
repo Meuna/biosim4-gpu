@@ -62,10 +62,10 @@ jobs:
       - name: Test
         run: bun run --cwd packages/webapp test
 
+      - name: Lint
+        run: cmake --build --preset webapp --target lint
+
       - name: Format check
         run: |
           cmake --build --preset webapp --target format
           git diff --exit-code
-
-      - name: Lint
-        run: cmake --build --preset webapp --target lint
