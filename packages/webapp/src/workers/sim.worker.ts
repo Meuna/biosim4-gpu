@@ -201,7 +201,7 @@ export type WorkerEvent =
           requiredGenomeLen: number;
           requiredNeurons: number;
       }
-    | { type: "error"; message: string }
+    | { type: "error"; message: string; call?: string; fatal?: boolean }
     | { type: "agentPicked"; reason: "click" | "hover"; info: AgentInfo }
     | { type: "agentMissed"; reason: "click" | "hover" }
     | { type: "agentUpdated"; info: AgentInfo }
@@ -240,6 +240,25 @@ let biosim: EmscriptenModule | null = null;
 
 function call(name: string): number {
     return biosim!.ccall(name, "number", [], []);
+}
+
+// Runs a status-returning WASM call. On a non-zero status it logs the failed
+// call name to the console and forwards an error event to the main thread, then
+// returns the status so the caller can bail before posting a success reply.
+// `fatal` marks unrecoverable failures (e.g. the bootstrap init) that warrant a
+// blocking display rather than the auto-dismissing banner.
+function callChecked(name: string, fatal = false): number {
+    const rc = call(name);
+    if (rc !== 0) {
+        console.error(`WASM call ${name} returned status ${rc}`);
+        postMessage({
+            type: "error",
+            message: `Simulation call "${name}" failed (status ${rc})`,
+            call: name,
+            fatal,
+        } satisfies WorkerEvent);
+    }
+    return rc;
 }
 
 function setParamInt(name: string, val: number): void {
@@ -1024,14 +1043,14 @@ function handleStop(): void {
 
 function handleStep(): void {
     startTransitionIfNeeded();
-    call("biosim_wasm_do_step");
+    if (callChecked("biosim_wasm_do_step") !== 0) return;
     postMessage(progress("stepped"));
     notifySelectionUpdate();
 }
 
 function handleRewind(): void {
     playing = false;
-    call("biosim_wasm_rewind");
+    if (callChecked("biosim_wasm_rewind") !== 0) return;
     postMessage(progress("paused"));
 }
 
@@ -1039,7 +1058,7 @@ function handleRewindConfigured(params: SimParams): void {
     playing = false;
     const prevMode = mode;
     applyConfig(params);
-    call("biosim_wasm_rewind_configured");
+    if (callChecked("biosim_wasm_rewind_configured") !== 0) return;
     cacheBarrierCells();
     mode = prevMode === "idle" ? "idle" : "running";
     startTime = performance.now();
@@ -1057,7 +1076,7 @@ function handleNextGenerationConfigured(params: SimParams): void {
     const prevMode = mode;
     startTransitionIfNeeded();
     applyConfig(params);
-    call("biosim_wasm_next_generation_configured");
+    if (callChecked("biosim_wasm_next_generation_configured") !== 0) return;
     cacheBarrierCells();
     mode = prevMode === "idle" ? "idle" : "running";
     startTime = performance.now();
@@ -1080,7 +1099,7 @@ function handleConfigure(params: SimParams): void {
     playing = false;
     const prevMode = mode;
     applyConfig(params);
-    call("biosim_wasm_init");
+    if (callChecked("biosim_wasm_init") !== 0) return;
     cacheBarrierCells();
     // Skip the kinematic intro if the user was already watching the grid.
     mode = prevMode === "idle" ? "idle" : "running";
@@ -1096,7 +1115,7 @@ function handleConfigure(params: SimParams): void {
 
 function handleClearGenom(): void {
     playing = false;
-    call("biosim_wasm_clear_genome");
+    if (callChecked("biosim_wasm_clear_genome") !== 0) return;
     postMessage(progress("paused"));
 }
 
@@ -1104,9 +1123,14 @@ function handleExportSnapshot(): void {
     if (!biosim) return;
     const rc = call("biosim_wasm_snapshot_export");
     if (rc !== 0) {
+        console.error(
+            `WASM call biosim_wasm_snapshot_export returned status ${rc}`,
+        );
         postMessage({
             type: "error",
             message: "Snapshot export failed",
+            call: "biosim_wasm_snapshot_export",
+            fatal: false,
         } satisfies WorkerEvent);
         return;
     }
@@ -1139,18 +1163,28 @@ function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
         [data.byteLength],
     );
     if (ptr === 0) {
+        console.error(
+            "WASM call biosim_wasm_snapshot_import_alloc returned null",
+        );
         postMessage({
             type: "error",
             message: "Snapshot load failed (alloc)",
+            call: "biosim_wasm_snapshot_import_alloc",
+            fatal: false,
         } satisfies WorkerEvent);
         return;
     }
     biosim!.HEAPU8.set(data, ptr);
     const importRc = call("biosim_wasm_snapshot_import");
     if (importRc !== 0) {
+        console.error(
+            `WASM call biosim_wasm_snapshot_import returned status ${importRc}`,
+        );
         postMessage({
             type: "error",
             message: "Snapshot load failed (import)",
+            call: "biosim_wasm_snapshot_import",
+            fatal: false,
         } satisfies WorkerEvent);
         return;
     }
@@ -1190,7 +1224,10 @@ function playTick(): void {
         return;
     }
     const tickStart = performance.now();
-    call("biosim_wasm_do_step");
+    if (callChecked("biosim_wasm_do_step") !== 0) {
+        playing = false;
+        return;
+    }
     postMessage(progress("stepped"));
     notifySelectionUpdate();
     const elapsed = performance.now() - tickStart;
@@ -1208,7 +1245,7 @@ function playTick(): void {
 
 function doNextGeneration(): void {
     startTransitionIfNeeded();
-    call("biosim_wasm_next_generation");
+    if (callChecked("biosim_wasm_next_generation") !== 0) return;
     const gen = call("biosim_wasm_census_gen");
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
@@ -1228,7 +1265,10 @@ function doNextGeneration(): void {
 
 function freeRunTick(): void {
     if (!freeRunning) return;
-    call("biosim_wasm_do_gen");
+    if (callChecked("biosim_wasm_do_gen") !== 0) {
+        freeRunning = false;
+        return;
+    }
     const gen = call("biosim_wasm_census_gen");
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
@@ -1432,7 +1472,7 @@ async function init(): Promise<void> {
         locateFile: (filename: string) =>
             `${import.meta.env.BASE_URL}wasm/${filename}`,
     });
-    call("biosim_wasm_init");
+    if (callChecked("biosim_wasm_init", true) !== 0) return;
     postMessage({ type: "ready" } satisfies WorkerEvent);
 }
 

@@ -15,6 +15,8 @@
     import BrainExplorer from "./lib/BrainExplorer.svelte";
     import ConfigChangeDialog from "./lib/ConfigChangeDialog.svelte";
     import EvolveOverlay from "./lib/EvolveOverlay.svelte";
+    import ErrorBanner from "./lib/ErrorBanner.svelte";
+    import FatalErrorOverlay from "./lib/FatalErrorOverlay.svelte";
     import type { BrainConn } from "./lib/brain";
     import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
     import { simParamsToToml, tomlToSimParams } from "./lib/tomlConfig";
@@ -190,7 +192,8 @@
                 );
                 break;
             case "error":
-                confErrorMsg = msg.message;
+                if (msg.fatal) fatalError = msg.message;
+                else bannerError = msg.message;
                 break;
         }
     });
@@ -416,13 +419,17 @@
         isDragging = true;
     }
 
-    // ── Config import / export ───────────────────────────────────────────────
-    let confErrorMsg = $state<string | null>(null);
+    // ── Error reporting ──────────────────────────────────────────────────────
+    // `bannerError` drives the auto-dismissing bottom banner; `fatalError` drives
+    // the blocking overlay for unrecoverable failures (e.g. bootstrap init) and
+    // never auto-clears.
+    let bannerError = $state<string | null>(null);
+    let fatalError = $state<string | null>(null);
 
     $effect(() => {
-        if (!confErrorMsg) return;
+        if (!bannerError) return;
         const t = setTimeout(() => {
-            confErrorMsg = null;
+            bannerError = null;
         }, 4000);
         return () => clearTimeout(t);
     });
@@ -439,9 +446,9 @@
     function applyTomlText(text: string): void {
         try {
             machine.setDraft(tomlToSimParams(text));
-            confErrorMsg = null;
+            bannerError = null;
         } catch (err) {
-            confErrorMsg =
+            bannerError =
                 err instanceof Error ? err.message : "Failed to parse config";
         }
     }
@@ -449,7 +456,7 @@
     // ── Config / snapshot loaders (shared by picker + drag-drop) ──────────────
     function loadConfigFile(file: File): Promise<void> {
         return file.text().then(applyTomlText, () => {
-            confErrorMsg = "Failed to read config file";
+            bannerError = "Failed to read config file";
         });
     }
 
@@ -457,7 +464,7 @@
         return file.arrayBuffer().then(
             (buf) => machine.loadSnapshot(new Uint8Array(buf)),
             () => {
-                confErrorMsg = "Failed to read snapshot file";
+                bannerError = "Failed to read snapshot file";
             },
         );
     }
@@ -482,14 +489,14 @@
         e.preventDefault();
         isDragging = false;
         if (changeDisabled) {
-            confErrorMsg = "Stop the evolution run before loading files";
+            bannerError = "Stop the evolution run before loading files";
             return;
         }
         const { toml, snap, error } = classifyDroppedFiles(
             Array.from(e.dataTransfer?.files ?? []),
         );
         if (error) {
-            confErrorMsg = error;
+            bannerError = error;
             return;
         }
         // Config and snapshot are independent: the .toml updates the draft
@@ -533,8 +540,15 @@
         </div>
     {/if}
 
-    {#if confErrorMsg}
-        <div class="conf-error-banner" role="alert">{confErrorMsg}</div>
+    {#if bannerError}
+        <ErrorBanner
+            message={bannerError}
+            onClose={() => (bannerError = null)}
+        />
+    {/if}
+
+    {#if fatalError}
+        <FatalErrorOverlay message={fatalError} />
     {/if}
 
     <!--
@@ -904,22 +918,5 @@
         font-size: var(--text-xs);
         color: var(--color-text-muted);
         margin: 0;
-    }
-
-    .conf-error-banner {
-        position: fixed;
-        top: var(--space-4);
-        right: var(--space-4);
-        z-index: 90;
-        max-width: 26rem;
-        padding: var(--space-2) var(--space-4);
-        background: var(--color-surface-glass);
-        border: 1px solid var(--color-warn);
-        color: var(--color-warn);
-        font-family: var(--font-mono);
-        font-size: var(--text-sm);
-        line-height: 1.4;
-        word-break: break-word;
-        backdrop-filter: blur(4px);
     }
 </style>
