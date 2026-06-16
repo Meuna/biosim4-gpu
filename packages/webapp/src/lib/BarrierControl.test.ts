@@ -165,37 +165,4 @@ describe("BarrierControl", () => {
                 .disabled,
         ).toBe(true);
     });
-
-    it("shows warning when near_barrier challenge has no barriers", () => {
-        render(BarrierControl, {
-            props: {
-                value: [],
-                challengeKind: "near_barrier",
-                onchange: vi.fn(),
-            },
-        });
-        expect(screen.getByText(/add a barrier here/i)).toBeTruthy();
-    });
-
-    it("hides warning when near_barrier challenge has barriers", () => {
-        render(BarrierControl, {
-            props: {
-                value: [defaultHbar],
-                challengeKind: "near_barrier",
-                onchange: vi.fn(),
-            },
-        });
-        expect(screen.queryByText(/add a barrier here/i)).toBeNull();
-    });
-
-    it("hides warning for other challenge kinds", () => {
-        render(BarrierControl, {
-            props: {
-                value: [],
-                challengeKind: "disc",
-                onchange: vi.fn(),
-            },
-        });
-        expect(screen.queryByText(/add a barrier here/i)).toBeNull();
-    });
 });

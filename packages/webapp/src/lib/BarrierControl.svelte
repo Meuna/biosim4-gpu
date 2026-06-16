@@ -1,25 +1,15 @@
 <script lang="ts">
     // BarrierControl — add/remove/configure barriers for the simulation.
-    import type {
-        BarrierSpec,
-        BarrierKind,
-        ChallengeSpec,
-    } from "../workers/sim.worker";
+    import type { BarrierSpec, BarrierKind } from "../workers/sim.worker";
     import ParamSlider from "./ParamSlider.svelte";
-    import { CornerRightDown, Dices, Trash2 } from "lucide-svelte";
+    import { Dices, Trash2 } from "lucide-svelte";
 
     interface Props {
         value: BarrierSpec[];
-        challengeKind?: ChallengeSpec["kind"];
         disabled?: boolean;
         onchange: (barriers: BarrierSpec[]) => void;
     }
-    const {
-        value,
-        challengeKind,
-        disabled = false,
-        onchange,
-    }: Props = $props();
+    const { value, disabled = false, onchange }: Props = $props();
 
     const KINDS: { kind: BarrierKind; label: string }[] = [
         { kind: "hbar", label: "Horizontal bar" },
@@ -67,11 +57,6 @@
         });
     }
 
-    const needsBarriers = $derived(
-        challengeKind === "near_barrier" ||
-            challengeKind === "location_sequence",
-    );
-
     // Per-barrier collapse state; grows when barriers are added.
     let collapsed = $state<boolean[]>([]);
     $effect(() => {
@@ -94,12 +79,6 @@
         return `${b.kind}(${parts.join(", ")})`;
     }
 </script>
-
-{#if needsBarriers && value.length === 0}
-    <p class="barrier-control__warning">
-        <CornerRightDown size={14} /> Add a barrier here
-    </p>
-{/if}
 
 {#each value as barrier, i}
     <div class="barrier-control__item">
@@ -230,16 +209,6 @@
 </div>
 
 <style>
-    .barrier-control__warning {
-        display: flex;
-        align-items: center;
-        gap: var(--space-1);
-        font-family: var(--font-sans);
-        font-size: var(--text-sm);
-        color: var(--color-warn);
-        margin: var(--space-1) 0;
-    }
-
     .barrier-control__item {
         position: relative;
         border-left: 2px solid var(--color-border);

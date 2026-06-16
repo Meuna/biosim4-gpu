@@ -7,7 +7,14 @@
     import GridSizeControl from "./GridSizeControl.svelte";
     import ChallengeControl from "./ChallengeControl.svelte";
     import BarrierControl from "./BarrierControl.svelte";
-    import { Download, FileUp, TriangleAlert, Undo2 } from "lucide-svelte";
+    import BarrierPresets from "./BarrierPresets.svelte";
+    import {
+        CornerRightDown,
+        Download,
+        FileUp,
+        TriangleAlert,
+        Undo2,
+    } from "lucide-svelte";
 
     interface Props {
         draftConfig: SimParams;
@@ -361,9 +368,21 @@
         <span class="sim-config__hint">barriers.h</span>
     </div>
 
+    {#if (draftConfig.challenge.kind === "near_barrier" || draftConfig.challenge.kind === "location_sequence") && draftConfig.barriers.length === 0}
+        <p class="sim-config__add-barrier-warning">
+            <CornerRightDown size={14} class="icon-inline" /> Add a barrier here
+        </p>
+    {/if}
+
+    <BarrierPresets
+        disabled={changeDisabled}
+        onapply={(b) => {
+            onDraftChange({ ...draftConfig, barriers: b });
+        }}
+    />
+
     <BarrierControl
         value={draftConfig.barriers}
-        challengeKind={draftConfig.challenge.kind}
         disabled={changeDisabled}
         onchange={(b) => {
             onDraftChange({ ...draftConfig, barriers: b });
@@ -424,6 +443,16 @@
         font-size: var(--text-sm);
         color: var(--color-warn);
         margin: var(--space-2) 0 0 0;
+    }
+
+    .sim-config__add-barrier-warning {
+        display: flex;
+        align-items: center;
+        gap: var(--space-1);
+        font-family: var(--font-sans);
+        font-size: var(--text-sm);
+        color: var(--color-warn);
+        margin: var(--space-1) 0;
     }
 
     .sim-config__field-wrap {

@@ -81,6 +81,75 @@ describe("SimConfigPanel", () => {
         expect(screen.getByLabelText("Add barrier")).toBeTruthy();
     });
 
+    it("shows barrier preset pills", () => {
+        renderPanel();
+        expect(screen.getByLabelText("Cross preset")).toBeTruthy();
+        expect(screen.getByLabelText("Random preset")).toBeTruthy();
+    });
+
+    it("clicking a preset replaces the barriers array", async () => {
+        const onDraftChange = vi.fn<[SimParams], void>();
+        renderPanel({
+            props: {
+                draftConfig: {
+                    ...DEFAULTS,
+                    barriers: [
+                        {
+                            kind: "circle",
+                            x: 0.1,
+                            y: 0.1,
+                            length: 0.1,
+                            width: null,
+                        },
+                    ],
+                },
+                onDraftChange,
+            },
+        });
+        await fireEvent.click(screen.getByLabelText("Cross preset"));
+        expect(onDraftChange).toHaveBeenCalledOnce();
+        const updated = onDraftChange.mock.calls[0][0];
+        expect(updated.barriers).toHaveLength(2);
+        expect(updated.barriers.map((b) => b.kind).sort()).toEqual([
+            "hbar",
+            "vbar",
+        ]);
+    });
+
+    it("shows the 'Add a barrier here' warning for near_barrier with no barriers", () => {
+        renderPanel({
+            props: {
+                draftConfig: {
+                    ...DEFAULTS,
+                    challenge: { kind: "near_barrier", radius: 1.5 },
+                    barriers: [],
+                },
+            },
+        });
+        expect(screen.getByText(/add a barrier here/i)).toBeTruthy();
+    });
+
+    it("hides the 'Add a barrier here' warning once a barrier exists", () => {
+        renderPanel({
+            props: {
+                draftConfig: {
+                    ...DEFAULTS,
+                    challenge: { kind: "near_barrier", radius: 1.5 },
+                    barriers: [
+                        {
+                            kind: "hbar",
+                            x: 0.5,
+                            y: 0.5,
+                            length: 0.25,
+                            width: 0.02,
+                        },
+                    ],
+                },
+            },
+        });
+        expect(screen.queryByText(/add a barrier here/i)).toBeNull();
+    });
+
     it("does not render revert button when isDirty is false", () => {
         renderPanel({ props: { isDirty: false } });
         expect(
