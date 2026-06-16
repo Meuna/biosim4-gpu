@@ -4,6 +4,10 @@
 
 ### Webapp
 
+#### Added
+
+- Report simulation engine failures in a dismissable bottom banner, with a blocking overlay for fatal startup failures ([#160](https://github.com/Meuna/biosim4-gpu/pull/160))
+
 #### Changed
 
 - Require an exact Max neurons match to breed a loaded snapshot or running population ([#151](https://github.com/Meuna/biosim4-gpu/pull/151))
