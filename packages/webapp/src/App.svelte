@@ -28,7 +28,11 @@
     import { SimMachine } from "./lib/simMachine.svelte";
     import { AgentFocus } from "./lib/agentFocus.svelte";
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
-    import { computeGridGeom } from "./lib/gridGeom";
+    import {
+        computeGridGeom,
+        hamburgerInset,
+        hamburgerTopGap,
+    } from "./lib/gridGeom";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -643,6 +647,8 @@
     <button
         class="hamburger"
         class:hamburger--open={railOpen}
+        style="--hamburger-inset: {hamburgerInset(viewportW)}px;
+        --hamburger-top-gap: {hamburgerTopGap(viewportW)}px"
         onclick={() => (railOpen = !railOpen)}
         aria-label={railOpen ? "Close panel" : "Open panel"}
         aria-expanded={railOpen}
@@ -753,8 +759,10 @@
 
     .hamburger {
         position: fixed;
-        right: var(--space-6);
-        top: calc(var(--topbar-h, 3.5rem) + var(--space-5));
+        right: var(--hamburger-inset, var(--space-6));
+        top: calc(
+            var(--topbar-h, 3.5rem) + var(--hamburger-top-gap, var(--space-5))
+        );
         z-index: 30;
         width: 2.75rem;
         height: 2.75rem;

@@ -41,6 +41,38 @@ function sidePadding(viewportW: number): number {
     );
 }
 
+// Hamburger inset from the right edge. On wide screens it sits in the roomy
+// right margin (24px = --space-6, the desktop look). As the viewport narrows
+// the margin tightens and the grid-hint text reaches toward it, so the button
+// hugs the border (floor 8px) to stay clear. Continuous — mirrors sidePadding,
+// no breakpoint/resize "pop". Reaches 24px near 1000px wide.
+const HAMBURGER_INSET_MIN = 8;
+const HAMBURGER_INSET_MAX = 24;
+const HAMBURGER_INSET_FRACTION = 0.024;
+
+export function hamburgerInset(viewportW: number): number {
+    return Math.min(
+        HAMBURGER_INSET_MAX,
+        Math.max(HAMBURGER_INSET_MIN, viewportW * HAMBURGER_INSET_FRACTION),
+    );
+}
+
+// Hamburger gap below the topbar. On wide screens 20px (--space-5, the desktop
+// look). On narrow screens the topbar wraps and a short viewport makes the grid
+// height-limited, lifting the grid-hint into the button's row; tightening the
+// gap to 8px raises the button so its bottom clears the hint. Continuous —
+// mirrors hamburgerInset, no breakpoint/resize "pop". Reaches 20px near 1000px.
+const HAMBURGER_TOP_GAP_MIN = 8;
+const HAMBURGER_TOP_GAP_MAX = 20;
+const HAMBURGER_TOP_GAP_FRACTION = 0.02;
+
+export function hamburgerTopGap(viewportW: number): number {
+    return Math.min(
+        HAMBURGER_TOP_GAP_MAX,
+        Math.max(HAMBURGER_TOP_GAP_MIN, viewportW * HAMBURGER_TOP_GAP_FRACTION),
+    );
+}
+
 export function computeGridGeom(input: GridGeomInput): GridGeom {
     const padSide = sidePadding(input.viewportW);
     const railW = input.railOpen && input.viewportW > 760 ? RAIL_W : 0;

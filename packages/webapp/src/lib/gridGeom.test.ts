@@ -1,4 +1,9 @@
-import { computeGridGeom, type GridGeomInput } from "./gridGeom";
+import {
+    computeGridGeom,
+    hamburgerInset,
+    hamburgerTopGap,
+    type GridGeomInput,
+} from "./gridGeom";
 
 const base: GridGeomInput = {
     viewportW: 1440,
@@ -73,5 +78,59 @@ describe("computeGridGeom", () => {
             viewportH: 5000,
         });
         expect(huge.w).toBe(760);
+    });
+});
+
+describe("hamburgerInset", () => {
+    it("hugs the border on a small viewport (375px)", () => {
+        // iPhone 12 mini: the button tucks in close to the right edge so the
+        // grid-hint text clears it.
+        const inset = hamburgerInset(375);
+        expect(inset).toBeGreaterThanOrEqual(8);
+        expect(inset).toBeLessThan(24);
+    });
+
+    it("caps at the desktop look (24px) once wide enough", () => {
+        expect(hamburgerInset(1000)).toBe(24);
+        expect(hamburgerInset(1440)).toBe(24);
+    });
+
+    it("floors at 8px on a very narrow viewport", () => {
+        expect(hamburgerInset(100)).toBe(8);
+    });
+
+    it("shrinks monotonically as the viewport narrows", () => {
+        const wide = hamburgerInset(900);
+        const mid = hamburgerInset(500);
+        const narrow = hamburgerInset(375);
+        expect(wide).toBeGreaterThanOrEqual(mid);
+        expect(mid).toBeGreaterThanOrEqual(narrow);
+    });
+});
+
+describe("hamburgerTopGap", () => {
+    it("tightens the gap on a small viewport so the button clears the hint", () => {
+        // iPhone 12 mini: lifting the button keeps its bottom above the
+        // grid-hint when a short viewport makes the grid height-limited.
+        const gap = hamburgerTopGap(375);
+        expect(gap).toBeGreaterThanOrEqual(8);
+        expect(gap).toBeLessThan(20);
+    });
+
+    it("caps at the desktop look (20px = --space-5) once wide enough", () => {
+        expect(hamburgerTopGap(1000)).toBe(20);
+        expect(hamburgerTopGap(1440)).toBe(20);
+    });
+
+    it("floors at 8px on a very narrow viewport", () => {
+        expect(hamburgerTopGap(100)).toBe(8);
+    });
+
+    it("shrinks monotonically as the viewport narrows", () => {
+        const wide = hamburgerTopGap(900);
+        const mid = hamburgerTopGap(500);
+        const narrow = hamburgerTopGap(375);
+        expect(wide).toBeGreaterThanOrEqual(mid);
+        expect(mid).toBeGreaterThanOrEqual(narrow);
     });
 });
