@@ -13,7 +13,7 @@
 #### Added
 
 - Report simulation engine failures in a dismissable bottom banner, with a blocking overlay for fatal startup failures ([#160](https://github.com/Meuna/biosim4-gpu/pull/160))
-- Add barrier layout presets (cross, vertical split, bar cross, square, 5 dots, random) to the Barriers section ([#NNN](https://github.com/Meuna/biosim4-gpu/pull/NNN))
+- Add barrier layout presets (cross, vertical split, bar cross, square, 5 dots, random) to the Barriers section ([#162](https://github.com/Meuna/biosim4-gpu/pull/162))
 
 #### Changed
 
