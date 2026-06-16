@@ -201,7 +201,7 @@ export type WorkerEvent =
           requiredGenomeLen: number;
           requiredNeurons: number;
       }
-    | { type: "error"; message: string }
+    | { type: "error"; message: string; fatal?: boolean }
     | { type: "agentPicked"; reason: "click" | "hover"; info: AgentInfo }
     | { type: "agentMissed"; reason: "click" | "hover" }
     | { type: "agentUpdated"; info: AgentInfo }
@@ -242,31 +242,60 @@ function call(name: string): number {
     return biosim!.ccall(name, "number", [], []);
 }
 
-function setParamInt(name: string, val: number): void {
-    biosim!.ccall(
+function reportError(callName: string, message: string, fatal = false): void {
+    console.error(`${callName} failed`);
+    postMessage({ type: "error", message, fatal } satisfies WorkerEvent);
+}
+
+function setParamInt(name: string, val: number): boolean {
+    const rc = biosim!.ccall(
         "biosim_wasm_set_param_int",
         "number",
         ["string", "number"],
         [name, val],
     );
+    if (rc !== 0) {
+        reportError(
+            "biosim_wasm_set_param_int",
+            `Failed to set param "${name}"`,
+        );
+        return false;
+    }
+    return true;
 }
 
-function setParamFloat(name: string, val: number): void {
-    biosim!.ccall(
+function setParamFloat(name: string, val: number): boolean {
+    const rc = biosim!.ccall(
         "biosim_wasm_set_param_float",
         "number",
         ["string", "number"],
         [name, val],
     );
+    if (rc !== 0) {
+        reportError(
+            "biosim_wasm_set_param_float",
+            `Failed to set float param "${name}"`,
+        );
+        return false;
+    }
+    return true;
 }
 
-function setParamBool(name: string, val: boolean): void {
-    biosim!.ccall(
+function setParamBool(name: string, val: boolean): boolean {
+    const rc = biosim!.ccall(
         "biosim_wasm_set_param_bool",
         "number",
         ["string", "number"],
         [name, val ? 1 : 0],
     );
+    if (rc !== 0) {
+        reportError(
+            "biosim_wasm_set_param_bool",
+            `Failed to set bool param "${name}"`,
+        );
+        return false;
+    }
+    return true;
 }
 
 // ── Barriers ──────────────────────────────────────────────────────────────────
@@ -290,9 +319,10 @@ function setBarriers(
     specs: BarrierSpec[],
     gridSizeX: number,
     gridSizeY: number,
-): void {
+): boolean {
     biosim!.ccall("biosim_wasm_clear_barriers", null, [], []);
     const gridMin = Math.min(gridSizeX, gridSizeY);
+    let ok = true;
     for (const spec of specs) {
         const x =
             spec.x !== null ? Math.round(spec.x * (gridSizeX - 1)) : -32768;
@@ -300,13 +330,21 @@ function setBarriers(
             spec.y !== null ? Math.round(spec.y * (gridSizeY - 1)) : -32768;
         const len = spec.length !== null ? spec.length * gridMin : 0.0;
         const w = spec.width !== null ? spec.width * gridMin : 0.0;
-        biosim!.ccall(
+        const rc = biosim!.ccall(
             "biosim_wasm_add_barrier",
             "number",
             ["number", "number", "number", "number", "number"],
             [BARRIER_KIND_INT[spec.kind], x, y, len, w],
         );
+        if (rc !== 0) {
+            reportError(
+                "biosim_wasm_add_barrier",
+                `Failed to add ${spec.kind} barrier`,
+            );
+            ok = false;
+        }
     }
+    return ok;
 }
 
 // Scans the grid for BIOSIM_GRID_BARRIER cells (0xFFFFFFFF) and caches their
@@ -980,23 +1018,26 @@ let freeRunning = false;
 let targetFps = 0;
 let fpsWindow = createFpsWindow();
 
-function applyConfig(p: SimParams): void {
-    setParamInt("population", p.population);
-    setParamInt("grid-size-x", p.gridSizeX);
-    setParamInt("grid-size-y", p.gridSizeY);
-    setParamInt("steps-per-gen", p.stepsPerGen);
-    setParamInt("max-genes", p.maxGenes);
-    setParamInt("max-neurons", p.maxNeurons);
-    setParamFloat("point-mutation-rate", p.pointMutationRate);
-    setParamBool("sexual-reproduction", p.sexualReproduction);
-    setParamBool("choose-parents-by-fitness", p.chooseParentsByFitness);
-    setParamInt("los-range", p.losRange);
-    setParamInt("sensor-radius", p.sensorRadius);
-    setParamBool("enable-kill", p.enableKill);
-    setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
-    setBarriers(p.barriers, p.gridSizeX, p.gridSizeY);
+function applyConfig(p: SimParams): boolean {
+    const ok = [
+        setParamInt("population", p.population),
+        setParamInt("grid-size-x", p.gridSizeX),
+        setParamInt("grid-size-y", p.gridSizeY),
+        setParamInt("steps-per-gen", p.stepsPerGen),
+        setParamInt("max-genes", p.maxGenes),
+        setParamInt("max-neurons", p.maxNeurons),
+        setParamFloat("point-mutation-rate", p.pointMutationRate),
+        setParamBool("sexual-reproduction", p.sexualReproduction),
+        setParamBool("choose-parents-by-fitness", p.chooseParentsByFitness),
+        setParamInt("los-range", p.losRange),
+        setParamInt("sensor-radius", p.sensorRadius),
+        setParamBool("enable-kill", p.enableKill),
+        setParamFloat("responsiveness-curve-k", p.responsivenessCurveK),
+        setBarriers(p.barriers, p.gridSizeX, p.gridSizeY),
+    ].every(Boolean);
     setChallengeSpec(p.challenge);
     currentChallenge = p.challenge;
+    return ok;
 }
 
 function progress(type: "stepped" | "genComplete" | "paused"): WorkerEvent {
@@ -1024,14 +1065,22 @@ function handleStop(): void {
 
 function handleStep(): void {
     startTransitionIfNeeded();
-    call("biosim_wasm_do_step");
+    const rc = call("biosim_wasm_do_step");
+    if (rc !== 0) {
+        reportError("biosim_wasm_do_step", "Step failed");
+        return;
+    }
     postMessage(progress("stepped"));
     notifySelectionUpdate();
 }
 
 function handleRewind(): void {
     playing = false;
-    call("biosim_wasm_rewind");
+    const rc = call("biosim_wasm_rewind");
+    if (rc !== 0) {
+        reportError("biosim_wasm_rewind", "Rewind failed");
+        return;
+    }
     postMessage(progress("paused"));
 }
 
@@ -1039,7 +1088,14 @@ function handleRewindConfigured(params: SimParams): void {
     playing = false;
     const prevMode = mode;
     applyConfig(params);
-    call("biosim_wasm_rewind_configured");
+    const rc = call("biosim_wasm_rewind_configured");
+    if (rc !== 0) {
+        reportError(
+            "biosim_wasm_rewind_configured",
+            "Rewind with new config failed",
+        );
+        return;
+    }
     cacheBarrierCells();
     mode = prevMode === "idle" ? "idle" : "running";
     startTime = performance.now();
@@ -1057,7 +1113,14 @@ function handleNextGenerationConfigured(params: SimParams): void {
     const prevMode = mode;
     startTransitionIfNeeded();
     applyConfig(params);
-    call("biosim_wasm_next_generation_configured");
+    const rc = call("biosim_wasm_next_generation_configured");
+    if (rc !== 0) {
+        reportError(
+            "biosim_wasm_next_generation_configured",
+            "Next generation with new config failed",
+        );
+        return;
+    }
     cacheBarrierCells();
     mode = prevMode === "idle" ? "idle" : "running";
     startTime = performance.now();
@@ -1080,7 +1143,11 @@ function handleConfigure(params: SimParams): void {
     playing = false;
     const prevMode = mode;
     applyConfig(params);
-    call("biosim_wasm_init");
+    const rc = call("biosim_wasm_init");
+    if (rc !== 0) {
+        reportError("biosim_wasm_init", "Simulation initialisation failed");
+        return;
+    }
     cacheBarrierCells();
     // Skip the kinematic intro if the user was already watching the grid.
     mode = prevMode === "idle" ? "idle" : "running";
@@ -1096,7 +1163,11 @@ function handleConfigure(params: SimParams): void {
 
 function handleClearGenom(): void {
     playing = false;
-    call("biosim_wasm_clear_genome");
+    const rc = call("biosim_wasm_clear_genome");
+    if (rc !== 0) {
+        reportError("biosim_wasm_clear_genome", "Clear genome failed");
+        return;
+    }
     postMessage(progress("paused"));
 }
 
@@ -1104,10 +1175,7 @@ function handleExportSnapshot(): void {
     if (!biosim) return;
     const rc = call("biosim_wasm_snapshot_export");
     if (rc !== 0) {
-        postMessage({
-            type: "error",
-            message: "Snapshot export failed",
-        } satisfies WorkerEvent);
+        reportError("biosim_wasm_snapshot_export", "Snapshot export failed");
         return;
     }
     const ptr = call("biosim_wasm_snapshot_export_ptr");
@@ -1139,19 +1207,19 @@ function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
         [data.byteLength],
     );
     if (ptr === 0) {
-        postMessage({
-            type: "error",
-            message: "Snapshot load failed (alloc)",
-        } satisfies WorkerEvent);
+        reportError(
+            "biosim_wasm_snapshot_import_alloc",
+            "Snapshot load failed (alloc)",
+        );
         return;
     }
     biosim!.HEAPU8.set(data, ptr);
     const importRc = call("biosim_wasm_snapshot_import");
     if (importRc !== 0) {
-        postMessage({
-            type: "error",
-            message: "Snapshot load failed (import)",
-        } satisfies WorkerEvent);
+        reportError(
+            "biosim_wasm_snapshot_import",
+            "Snapshot load failed (import)",
+        );
         return;
     }
     mode = prevMode === "idle" ? "idle" : "running";
@@ -1190,7 +1258,13 @@ function playTick(): void {
         return;
     }
     const tickStart = performance.now();
-    call("biosim_wasm_do_step");
+    const rc = call("biosim_wasm_do_step");
+    if (rc !== 0) {
+        playing = false;
+        reportError("biosim_wasm_do_step", "Step failed during playback");
+        postMessage(progress("paused"));
+        return;
+    }
     postMessage(progress("stepped"));
     notifySelectionUpdate();
     const elapsed = performance.now() - tickStart;
@@ -1208,7 +1282,11 @@ function playTick(): void {
 
 function doNextGeneration(): void {
     startTransitionIfNeeded();
-    call("biosim_wasm_next_generation");
+    const rc = call("biosim_wasm_next_generation");
+    if (rc !== 0) {
+        reportError("biosim_wasm_next_generation", "Next generation failed");
+        return;
+    }
     const gen = call("biosim_wasm_census_gen");
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
@@ -1228,7 +1306,13 @@ function doNextGeneration(): void {
 
 function freeRunTick(): void {
     if (!freeRunning) return;
-    call("biosim_wasm_do_gen");
+    const rc = call("biosim_wasm_do_gen");
+    if (rc !== 0) {
+        freeRunning = false;
+        reportError("biosim_wasm_do_gen", "Free-run generation failed");
+        postMessage(progress("paused"));
+        return;
+    }
     const gen = call("biosim_wasm_census_gen");
     const population = call("biosim_wasm_census_population");
     const survivors = call("biosim_wasm_census_survivors");
@@ -1432,7 +1516,15 @@ async function init(): Promise<void> {
         locateFile: (filename: string) =>
             `${import.meta.env.BASE_URL}wasm/${filename}`,
     });
-    call("biosim_wasm_init");
+    const rc = call("biosim_wasm_init");
+    if (rc !== 0) {
+        reportError(
+            "biosim_wasm_init",
+            "Simulation failed to initialise — please reload the page",
+            true,
+        );
+        return;
+    }
     postMessage({ type: "ready" } satisfies WorkerEvent);
 }
 

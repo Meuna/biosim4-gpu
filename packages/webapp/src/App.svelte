@@ -16,7 +16,8 @@
     import ConfigChangeDialog from "./lib/ConfigChangeDialog.svelte";
     import EvolveOverlay from "./lib/EvolveOverlay.svelte";
     import type { BrainConn } from "./lib/brain";
-    import { MousePointerClick, ArrowLeft, Menu } from "lucide-svelte";
+    import { fly } from "svelte/transition";
+    import { MousePointerClick, ArrowLeft, Menu, X } from "lucide-svelte";
     import { simParamsToToml, tomlToSimParams } from "./lib/tomlConfig";
     import {
         pickFile,
@@ -190,7 +191,7 @@
                 );
                 break;
             case "error":
-                confErrorMsg = msg.message;
+                errorMsg = { message: msg.message, fatal: msg.fatal ?? false };
                 break;
         }
     });
@@ -417,12 +418,16 @@
     }
 
     // ── Config import / export ───────────────────────────────────────────────
-    let confErrorMsg = $state<string | null>(null);
+    interface ErrorBanner {
+        message: string;
+        fatal: boolean;
+    }
+    let errorMsg = $state<ErrorBanner | null>(null);
 
     $effect(() => {
-        if (!confErrorMsg) return;
+        if (!errorMsg || errorMsg.fatal) return;
         const t = setTimeout(() => {
-            confErrorMsg = null;
+            errorMsg = null;
         }, 4000);
         return () => clearTimeout(t);
     });
@@ -439,17 +444,22 @@
     function applyTomlText(text: string): void {
         try {
             machine.setDraft(tomlToSimParams(text));
-            confErrorMsg = null;
+            errorMsg = null;
         } catch (err) {
-            confErrorMsg =
-                err instanceof Error ? err.message : "Failed to parse config";
+            errorMsg = {
+                message:
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to parse config",
+                fatal: false,
+            };
         }
     }
 
     // ── Config / snapshot loaders (shared by picker + drag-drop) ──────────────
     function loadConfigFile(file: File): Promise<void> {
         return file.text().then(applyTomlText, () => {
-            confErrorMsg = "Failed to read config file";
+            errorMsg = { message: "Failed to read config file", fatal: false };
         });
     }
 
@@ -457,7 +467,10 @@
         return file.arrayBuffer().then(
             (buf) => machine.loadSnapshot(new Uint8Array(buf)),
             () => {
-                confErrorMsg = "Failed to read snapshot file";
+                errorMsg = {
+                    message: "Failed to read snapshot file",
+                    fatal: false,
+                };
             },
         );
     }
@@ -482,14 +495,17 @@
         e.preventDefault();
         isDragging = false;
         if (changeDisabled) {
-            confErrorMsg = "Stop the evolution run before loading files";
+            errorMsg = {
+                message: "Stop the evolution run before loading files",
+                fatal: false,
+            };
             return;
         }
         const { toml, snap, error } = classifyDroppedFiles(
             Array.from(e.dataTransfer?.files ?? []),
         );
         if (error) {
-            confErrorMsg = error;
+            errorMsg = { message: error, fatal: false };
             return;
         }
         // Config and snapshot are independent: the .toml updates the draft
@@ -533,8 +549,20 @@
         </div>
     {/if}
 
-    {#if confErrorMsg}
-        <div class="conf-error-banner" role="alert">{confErrorMsg}</div>
+    {#if errorMsg}
+        <div
+            class="error-banner"
+            class:error-banner--fatal={errorMsg.fatal}
+            role="alert"
+            transition:fly={{ y: 16, duration: 200 }}
+        >
+            <span class="error-banner__msg">{errorMsg.message}</span>
+            <button
+                class="error-banner__close"
+                aria-label="Dismiss error"
+                onclick={() => (errorMsg = null)}><X size={14} /></button
+            >
+        </div>
     {/if}
 
     <!--
@@ -906,13 +934,13 @@
         margin: 0;
     }
 
-    .conf-error-banner {
+    .error-banner {
         position: fixed;
-        top: var(--space-4);
+        bottom: var(--space-4);
         right: var(--space-4);
         z-index: 90;
         max-width: 26rem;
-        padding: var(--space-2) var(--space-4);
+        padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
         background: var(--color-surface-glass);
         border: 1px solid var(--color-warn);
         color: var(--color-warn);
@@ -921,5 +949,31 @@
         line-height: 1.4;
         word-break: break-word;
         backdrop-filter: blur(4px);
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-2);
+    }
+
+    .error-banner__msg {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .error-banner__close {
+        flex-shrink: 0;
+        background: none;
+        border: none;
+        color: var(--color-warn);
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .error-banner__close:hover {
+        color: var(--color-text);
+    }
+
+    .error-banner--fatal {
+        border-width: 2px;
     }
 </style>
