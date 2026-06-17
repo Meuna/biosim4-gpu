@@ -56,8 +56,8 @@ describe("BarrierPresets", () => {
         // the bar-cross layout from the square box.
         const barriers = clickPreset("Bar cross");
         for (const b of barriers) {
-            expect(b.x === 0.35 || b.x === 0.65).toBe(true);
-            expect(b.y === 0.35 || b.y === 0.65).toBe(true);
+            expect(b.x === 0.4 || b.x === 0.6).toBe(true);
+            expect(b.y === 0.4 || b.y === 0.6).toBe(true);
         }
     });
 
@@ -78,8 +78,8 @@ describe("BarrierPresets", () => {
         // inward, so each side keeps a gap in the middle.
         const barriers = clickPreset("Square");
         for (const b of barriers) {
-            expect(b.x === 0.2 || b.x === 0.8).toBe(true);
-            expect(b.y === 0.2 || b.y === 0.8).toBe(true);
+            expect(b.x === 0.15 || b.x === 0.85).toBe(true);
+            expect(b.y === 0.15 || b.y === 0.85).toBe(true);
         }
     });
 

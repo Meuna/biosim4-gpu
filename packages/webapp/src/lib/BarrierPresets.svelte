@@ -33,25 +33,17 @@
         };
     }
 
-    // One corner of the bar-cross / square layouts as a single first-class
-    // barrier: an L whose junction is (vx, hy) and whose arms reach toward
-    // (hx, vy). The quadrant follows those fraction-space arm directions under
-    // the io_defs.h direction table (north is -y, so +y reaches downward):
-    // +x/-y → ne, +x/+y → se, -x/-y → nw, -x/+y → sw.
     function corner(
-        vx: number,
-        hy: number,
-        hx: number,
-        vy: number,
-        arm: number,
+        quadrant: CornerQuadrant,
+        x: number,
+        y: number,
+        length: number,
     ): BarrierSpec {
-        const quadrant: CornerQuadrant =
-            hx >= vx ? (vy >= hy ? "se" : "ne") : vy >= hy ? "sw" : "nw";
         return {
             kind: "corner",
-            x: vx,
-            y: hy,
-            length: arm,
+            x: x,
+            y: y,
+            length: length,
             width: BAR_WIDTH,
             quadrant,
         };
@@ -78,22 +70,22 @@
     function buildBarCross(): BarrierSpec[] {
         const arm = 0.3;
         return [
-            corner(0.35, 0.35, 0.2, 0.2, arm),
-            corner(0.65, 0.35, 0.8, 0.2, arm),
-            corner(0.35, 0.65, 0.2, 0.8, arm),
-            corner(0.65, 0.65, 0.8, 0.8, arm),
+            corner("ne", 0.6, 0.4, arm),
+            corner("nw", 0.4, 0.4, arm),
+            corner("sw", 0.4, 0.6, arm),
+            corner("se", 0.6, 0.6, arm),
         ];
     }
 
     // Brackets hug the outer corners with short arms, forming a box whose four
     // sides each have a gap in the middle.
     function buildSquare(): BarrierSpec[] {
-        const arm = 0.15;
+        const arm = 0.25;
         return [
-            corner(0.2, 0.2, 0.275, 0.275, arm),
-            corner(0.8, 0.2, 0.725, 0.275, arm),
-            corner(0.2, 0.8, 0.275, 0.725, arm),
-            corner(0.8, 0.8, 0.725, 0.725, arm),
+            corner("sw", 0.85, 0.15, arm),
+            corner("se", 0.15, 0.15, arm),
+            corner("ne", 0.15, 0.85, arm),
+            corner("nw", 0.85, 0.85, arm),
         ];
     }
 
