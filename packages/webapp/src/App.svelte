@@ -445,6 +445,21 @@
         downloadBlob("biosim.toml", toml, "text/plain");
     }
 
+    // Copies the draft config TOML to the clipboard, returning whether it
+    // succeeded so the panel can flash a confirmation.
+    async function handleConfCopy(): Promise<boolean> {
+        const toml = simParamsToToml(
+            $state.snapshot(machine.draftConfig) as SimParams,
+        );
+        try {
+            await navigator.clipboard.writeText(toml);
+            return true;
+        } catch {
+            bannerError = "Failed to copy config to clipboard";
+            return false;
+        }
+    }
+
     // Parses TOML text into the draft config, surfacing a parse error in the
     // banner. The single sink the picker and the drag-drop paths both feed.
     function applyTomlText(text: string): void {
@@ -674,6 +689,7 @@
                 onRevert={() => machine.revertDraft()}
                 onConfUpload={() => void importConfig()}
                 onConfDownload={handleConfDownload}
+                onConfCopy={handleConfCopy}
                 snapReady={telemetry.snapReady}
                 onSnapUpload={() => void importSnapshot()}
                 onSnapDownload={() => machine.exportSnapshot()}

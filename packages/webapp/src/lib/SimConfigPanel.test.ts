@@ -30,6 +30,7 @@ function renderPanel(overrides?: Partial<Parameters<typeof render>[1]>) {
             onRevert: vi.fn(),
             onConfUpload: vi.fn(),
             onConfDownload: vi.fn(),
+            onConfCopy: vi.fn().mockResolvedValue(true),
             onSnapUpload: vi.fn(),
             onSnapDownload: vi.fn(),
             ...overrides?.props,
@@ -191,6 +192,22 @@ describe("SimConfigPanel", () => {
         renderPanel({ props: { onSnapUpload } });
         await fireEvent.click(screen.getByLabelText("Upload snapshot"));
         expect(onSnapUpload).toHaveBeenCalledOnce();
+    });
+
+    it("calls onConfCopy when the copy button is clicked", async () => {
+        const onConfCopy = vi.fn().mockResolvedValue(true);
+        renderPanel({ props: { onConfCopy } });
+        await fireEvent.click(screen.getByLabelText("Copy config"));
+        expect(onConfCopy).toHaveBeenCalledOnce();
+    });
+
+    it("flashes a checkmark after a successful copy", async () => {
+        const { container } = renderPanel({
+            props: { onConfCopy: vi.fn().mockResolvedValue(true) },
+        });
+        expect(container.querySelector(".lucide-check")).toBeNull();
+        await fireEvent.click(screen.getByLabelText("Copy config"));
+        expect(container.querySelector(".lucide-check")).not.toBeNull();
     });
 
     it("disables uploads and config controls when changeDisabled", () => {

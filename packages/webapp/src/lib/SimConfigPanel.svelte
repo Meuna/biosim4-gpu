@@ -9,6 +9,8 @@
     import BarrierControl from "./BarrierControl.svelte";
     import BarrierPresets from "./BarrierPresets.svelte";
     import {
+        Check,
+        Copy,
         CornerRightDown,
         Download,
         FileUp,
@@ -26,6 +28,9 @@
         requiredNeurons?: number;
         onConfUpload: () => void;
         onConfDownload: () => void;
+        // Resolves true once the config text is on the clipboard, so the panel
+        // can flash a confirmation; false leaves the parent to report the error.
+        onConfCopy: () => Promise<boolean>;
         // Import is allowed as soon as the sim is live; export needs survivors.
         snapReady?: boolean;
         onSnapUpload: () => void;
@@ -43,11 +48,23 @@
         requiredNeurons = 0,
         onConfUpload,
         onConfDownload,
+        onConfCopy,
         snapReady = false,
         onSnapUpload,
         onSnapDownload,
         changeDisabled = false,
     }: Props = $props();
+
+    // Flash a checkmark on the copy button after a successful clipboard write.
+    let copied = $state(false);
+    let copiedTimer: ReturnType<typeof setTimeout> | undefined;
+    async function handleCopyClick(): Promise<void> {
+        if (await onConfCopy()) {
+            copied = true;
+            clearTimeout(copiedTimer);
+            copiedTimer = setTimeout(() => (copied = false), 1500);
+        }
+    }
 </script>
 
 <div class="sim-config">
@@ -83,6 +100,17 @@
                 aria-label="Download config"
             >
                 <Download size={14} />
+            </button>
+            <button
+                class="button button--utility"
+                onclick={handleCopyClick}
+                aria-label="Copy config"
+            >
+                {#if copied}
+                    <Check size={14} />
+                {:else}
+                    <Copy size={14} />
+                {/if}
             </button>
             <span class="small-caps sim-config__io-label">Snapshot</span>
             <button
