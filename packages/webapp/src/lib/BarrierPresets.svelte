@@ -155,17 +155,32 @@
         >
             <span class="barrier-presets__glyph" aria-hidden="true">
                 {#if preset.id === "cross"}
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="4" y="11" width="16" height="2" rx="1" />
-                        <rect x="11" y="4" width="2" height="16" rx="1" />
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        version="1.1"
+                    >
+                        <path d="M5 12h14"></path>
+                        <path d="M12 5v14"></path>
                     </svg>
                 {:else if preset.id === "vsplit"}
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="11" y="3" width="2" height="18" rx="1" />
-                        <rect x="5" y="3" width="2" height="7" rx="1" />
-                        <rect x="5" y="14" width="2" height="7" rx="1" />
-                        <rect x="17" y="3" width="2" height="7" rx="1" />
-                        <rect x="17" y="14" width="2" height="7" rx="1" />
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M5 4v5" />
+                        <path d="M5 15v5" />
+                        <path d="M12 7v10" />
+                        <path d="M19 4v5" />
+                        <path d="M19 15v5" />
                     </svg>
                 {:else if preset.id === "barcross"}
                     <svg
