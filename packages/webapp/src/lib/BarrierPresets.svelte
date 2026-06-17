@@ -188,7 +188,6 @@
                     <Dices size={16} />
                 {/if}
             </span>
-            <span>{preset.label}</span>
         </button>
     {/each}
 </div>
