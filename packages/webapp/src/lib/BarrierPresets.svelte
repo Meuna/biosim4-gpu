@@ -52,26 +52,27 @@
         ];
     }
 
-    // Brackets hug the outer corners, arms reaching toward the centre, so the
-    // open channels meet in a plus shape.
+    // Inner brackets: vertices near the centre with arms reaching outward
+    // toward the corners, so the open channels between them meet in a plus.
     function buildBarCross(): BarrierSpec[] {
-        const arm = 0.3;
-        return [
-            ...cornerL(0.2, 0.2, 0.35, 0.35, arm),
-            ...cornerL(0.8, 0.2, 0.65, 0.35, arm),
-            ...cornerL(0.2, 0.8, 0.35, 0.65, arm),
-            ...cornerL(0.8, 0.8, 0.65, 0.65, arm),
-        ];
-    }
-
-    // Inverted brackets: arms reach outward toward the corners, forming a box.
-    function buildSquare(): BarrierSpec[] {
         const arm = 0.3;
         return [
             ...cornerL(0.35, 0.35, 0.2, 0.2, arm),
             ...cornerL(0.65, 0.35, 0.8, 0.2, arm),
             ...cornerL(0.35, 0.65, 0.2, 0.8, arm),
             ...cornerL(0.65, 0.65, 0.8, 0.8, arm),
+        ];
+    }
+
+    // Brackets hug the outer corners with short arms, forming a box whose four
+    // sides each have a gap in the middle.
+    function buildSquare(): BarrierSpec[] {
+        const arm = 0.15;
+        return [
+            ...cornerL(0.2, 0.2, 0.275, 0.275, arm),
+            ...cornerL(0.8, 0.2, 0.725, 0.275, arm),
+            ...cornerL(0.2, 0.8, 0.275, 0.725, arm),
+            ...cornerL(0.8, 0.8, 0.725, 0.725, arm),
         ];
     }
 
@@ -146,25 +147,32 @@
                         <rect x="17" y="14" width="2" height="7" rx="1" />
                     </svg>
                 {:else if preset.id === "barcross"}
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="4" y="4" width="7" height="2" rx="1" />
-                        <rect x="4" y="4" width="2" height="7" rx="1" />
-                        <rect x="13" y="4" width="7" height="2" rx="1" />
-                        <rect x="18" y="4" width="2" height="7" rx="1" />
-                        <rect x="4" y="18" width="7" height="2" rx="1" />
-                        <rect x="4" y="13" width="2" height="7" rx="1" />
-                        <rect x="13" y="18" width="7" height="2" rx="1" />
-                        <rect x="18" y="13" width="2" height="7" rx="1" />
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M3 9h5a1 1 0 0 0 1-1v-5" />
+                        <path d="M3 15h5a1 1 0 0 1 1 1v5" />
+                        <path d="M15 3v5a1 1 0 0 0 1 1h5" />
+                        <path d="M15 21v-5a1 1 0 0 1 1-1h5" />
                     </svg>
                 {:else if preset.id === "square"}
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="8" y="8" width="6" height="2" rx="1" />
-                        <rect x="8" y="8" width="2" height="6" rx="1" />
-                        <rect x="14" y="8" width="2" height="2" rx="1" />
-                        <rect x="14" y="8" width="2" height="6" rx="1" />
-                        <rect x="8" y="14" width="6" height="2" rx="1" />
-                        <rect x="8" y="14" width="2" height="2" rx="1" />
-                        <rect x="14" y="14" width="2" height="2" rx="1" />
+                    <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M4 9v-4a1 1 0 0 1 1-1h4" />
+                        <path d="M4 15v4a1 1 0 0 0 1 1h4" />
+                        <path d="M15 20h4a1 1 0 0 0 1-1v-4" />
+                        <path d="M15 4h4a1 1 0 0 1 1 1v4" />
                     </svg>
                 {:else if preset.id === "dots"}
                     <svg viewBox="0 0 24 24" fill="currentColor">
