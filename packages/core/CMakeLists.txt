@@ -3,6 +3,7 @@ add_library(core STATIC
   src/census.c
   src/challenges.c
   src/generation.c
+  src/hud.c
   src/log.c
   src/params.c
   src/sim.c

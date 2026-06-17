@@ -69,3 +69,8 @@ add_executable(core-generation-tests test_generation.c)
 target_link_libraries(core-generation-tests PRIVATE core-sim-test-utils)
 target_compile_features(core-generation-tests PRIVATE c_std_11)
 add_test(NAME core-generation-tests COMMAND core-generation-tests)
+
+add_executable(core-hud-tests test_hud.c)
+target_link_libraries(core-hud-tests PRIVATE core unity)
+target_compile_features(core-hud-tests PRIVATE c_std_11)
+add_test(NAME core-hud-tests COMMAND core-hud-tests)

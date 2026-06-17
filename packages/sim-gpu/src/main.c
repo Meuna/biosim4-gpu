@@ -7,6 +7,7 @@
 #include "biosim/cfgparse/challenges.h"
 #include "biosim/core/census.h"
 #include "biosim/core/generation.h"
+#include "biosim/core/hud.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
 #include "biosim/core/sim.h"
@@ -189,7 +190,8 @@ int main(int argc, char **argv) {
 
     /* ── main generation loop ────────────────────────────────────────────── */
 
-    biosim_census_print_header(stdout);
+    biosim_hud_t hud;
+    biosim_hud_init(&hud, stdout, sim.max_generations);
 
     while (sim.gen < sim.max_generations && !g_halt_requested) {
         returncode = biosim_generation_spawn(&sim, &snap);
@@ -220,8 +222,10 @@ int main(int argc, char **argv) {
         if (returncode != BIOSIM_OK) {
             goto exit;
         }
-        biosim_census_print(stdout, &census);
+        biosim_hud_update(&hud, &census);
     }
+
+    biosim_hud_finish(&hud);
 
     if (g_halt_requested) {
         BIOSIM_WARNF("simulation halted by signal after generation %u", sim.gen);

@@ -52,10 +52,14 @@ biosim_log_ctx_t biosim_log_default_ctx = {
     .use_color = 0,
 };
 
+bool biosim_isatty(FILE *stream) {
+    return BIOSIM_ISATTY(BIOSIM_FILENO(stream)) != 0;
+}
+
 void biosim_log_init(biosim_log_ctx_t *ctx) {
     ctx->threshold = BIOSIM_LOG_WARN;
     ctx->sink = NULL;
-    ctx->use_color = BIOSIM_ISATTY(BIOSIM_FILENO(stderr));
+    ctx->use_color = biosim_isatty(stderr);
 }
 
 void biosim_log_emit(

@@ -7,6 +7,7 @@
 #include "biosim/core/status.h"
 #include <errno.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 /* Compile-time level gate. Override per preset:
@@ -31,6 +32,10 @@ typedef struct {
 } biosim_log_ctx_t;
 
 extern biosim_log_ctx_t biosim_log_default_ctx;
+
+/* True when stream is connected to an interactive terminal. Portable wrapper
+ * over POSIX isatty / Windows _isatty. */
+bool biosim_isatty(FILE *stream);
 
 void biosim_log_init(biosim_log_ctx_t *ctx);
 
