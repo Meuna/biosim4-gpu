@@ -35,8 +35,9 @@
 
     // One corner of the bar-cross / square layouts as a single first-class
     // barrier: an L whose junction is (vx, hy) and whose arms reach toward
-    // (hx, vy). The quadrant follows those fraction-space arm directions, which
-    // map straight onto biosim_corner_quadrant_t (x right = +x, y down = +y).
+    // (hx, vy). The quadrant follows those fraction-space arm directions under
+    // the io_defs.h direction table (north is -y, so +y reaches downward):
+    // +x/-y → ne, +x/+y → se, -x/-y → nw, -x/+y → sw.
     function corner(
         vx: number,
         hy: number,
@@ -45,7 +46,7 @@
         arm: number,
     ): BarrierSpec {
         const quadrant: CornerQuadrant =
-            hx >= vx ? (vy >= hy ? "ne" : "se") : vy >= hy ? "nw" : "sw";
+            hx >= vx ? (vy >= hy ? "se" : "ne") : vy >= hy ? "sw" : "nw";
         return {
             kind: "corner",
             x: vx,

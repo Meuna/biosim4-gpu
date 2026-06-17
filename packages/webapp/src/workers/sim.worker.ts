@@ -37,7 +37,9 @@ type EmscriptenFactory = (
 /** Barrier kind — mirrors biosim_barrier_kind_t in barriers.h. */
 export type BarrierKind = "hbar" | "vbar" | "square" | "circle" | "corner";
 
-/** Corner arm directions — mirrors biosim_corner_quadrant_t in barriers.h. */
+/** Corner arm directions — mirrors biosim_corner_quadrant_t in barriers.h.
+ *  Cardinals follow the io_defs.h direction table (north is -y):
+ *  ne → +x/-y, nw → -x/-y, se → +x/+y, sw → -x/+y. */
 export type CornerQuadrant = "ne" | "nw" | "se" | "sw";
 
 /** One barrier shape — mirrors biosim_barrier_spec_t in barriers.h.

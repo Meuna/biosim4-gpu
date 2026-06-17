@@ -23,13 +23,15 @@
         { kind: "corner", label: "Corner" },
     ];
 
-    // Labels are screen-oriented: the canvas draws grid-y downward, so the core
-    // quadrant (y up) maps to the opposite vertical half on screen.
+    // Corner cardinals follow the io_defs.h direction table (north is -y), and
+    // the canvas draws grid-y downward, so each cardinal maps straight onto its
+    // screen corner: ne → top-right, nw → top-left, se → bottom-right,
+    // sw → bottom-left.
     const QUADRANTS: { quadrant: CornerQuadrant; label: string }[] = [
-        { quadrant: "se", label: "Top-right" },
-        { quadrant: "sw", label: "Top-left" },
-        { quadrant: "ne", label: "Bottom-right" },
-        { quadrant: "nw", label: "Bottom-left" },
+        { quadrant: "ne", label: "Top-right" },
+        { quadrant: "nw", label: "Top-left" },
+        { quadrant: "se", label: "Bottom-right" },
+        { quadrant: "sw", label: "Bottom-left" },
     ];
 
     const DEFAULT_BARRIER: BarrierSpec = {
