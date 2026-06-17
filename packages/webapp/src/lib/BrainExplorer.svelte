@@ -761,6 +761,18 @@
         cursor: pointer;
     }
 
+    /* The accent circle stroke already signals the focused node, so drop the
+       default focus outline on pointer focus; keep an accent outline for
+       keyboard navigation (mirrors .button:focus-visible in primitives.css). */
+    .brain__node:focus {
+        outline: none;
+    }
+
+    .brain__node:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
+    }
+
     .brain__node--dim {
         opacity: var(--opacity-faint);
     }

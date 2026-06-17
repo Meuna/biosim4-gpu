@@ -33,6 +33,8 @@
 - Stop the expanded Brain view title from colliding with the version label ([#155](https://github.com/Meuna/biosim4-gpu/pull/155))
 - Hide the agent hover card and re-enable Ctrl+click pinning when the cursor leaves the grid while Ctrl+hovering a border agent ([#155](https://github.com/Meuna/biosim4-gpu/pull/155))
 - Stop the menu button from overlapping the grid hint on small (phone) viewports ([#161](https://github.com/Meuna/biosim4-gpu/pull/161))
+- Keep the menu button on-screen when opening the panel on small (phone) viewports ([#164](https://github.com/Meuna/biosim4-gpu/pull/164))
+- Remove the black focus outline on the Brain view's focused node ([#164](https://github.com/Meuna/biosim4-gpu/pull/164))
 
 ## [1.0.0] - 2026-06-14
 

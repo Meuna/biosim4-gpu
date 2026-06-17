@@ -801,7 +801,15 @@
     }
 
     .hamburger--open {
-        transform: translateX(var(--space-4))
+        /* Cap the rightward tuck at the available inset so it never crosses the
+           viewport edge on narrow screens (where --hamburger-inset shrinks to
+           8px); --space-4 preserves the desktop look. */
+        transform: translateX(
+                min(
+                    var(--space-4),
+                    calc(var(--hamburger-inset) - var(--space-1))
+                )
+            )
             translateY(calc(-1 * var(--space-3))) scale(0.6);
         transform-origin: top right;
     }
