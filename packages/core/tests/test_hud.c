@@ -13,7 +13,7 @@ void tearDown(void) {
 /* Read the whole content of f into out (NUL-terminated). */
 static void capture(FILE *f, char *out, size_t cap) {
     (void)fflush(f);
-    rewind(f);
+    TEST_ASSERT_EQUAL_INT(0, fseek(f, 0L, SEEK_SET));
     size_t n = fread(out, 1U, cap - 1U, f);
     out[n] = '\0';
 }

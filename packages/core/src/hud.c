@@ -17,12 +17,12 @@ static const char *const spinner_frames[] = {
 };
 #define SPINNER_FRAMES 8U
 
-#define BAR_WIDTH    20U
-#define BAR_FILLED   "\xe2\x96\x88" /* █ */
-#define BAR_EMPTY    "\xe2\x96\x91" /* ░ */
-#define HUD_LINES    3
-#define CURSOR_UP_3  "\033[3A"
-#define CLEAR_LINE   "\r\033[K"
+#define BAR_WIDTH  20U
+#define BAR_FILLED "\xe2\x96\x88" /* █ */
+#define BAR_EMPTY  "\xe2\x96\x91" /* ░ */
+/* The HUD occupies 3 lines; CURSOR_UP_3 rewinds to the top of the block. */
+#define CURSOR_UP_3 "\033[3A"
+#define CLEAR_LINE  "\r\033[K"
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
