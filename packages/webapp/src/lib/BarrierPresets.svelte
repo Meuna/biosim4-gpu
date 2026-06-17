@@ -39,16 +39,18 @@
     }
 
     function buildCross(): BarrierSpec[] {
-        return [bar("hbar", 0.5, 0.5, 0.6), bar("vbar", 0.5, 0.5, 0.6)];
+        return [bar("hbar", 0.5, 0.5, 0.75), bar("vbar", 0.5, 0.5, 0.75)];
     }
 
     function buildVerticalSplit(): BarrierSpec[] {
         return [
-            bar("vbar", 0.5, 0.5, 1.0),
-            bar("vbar", 0.25, 0.25, 0.45),
-            bar("vbar", 0.25, 0.75, 0.45),
-            bar("vbar", 0.75, 0.25, 0.45),
-            bar("vbar", 0.75, 0.75, 0.45),
+            bar("vbar", 0.5, 0.05, 0.1),
+            bar("vbar", 0.5, 0.5, 0.3),
+            bar("vbar", 0.5, 0.95, 0.1),
+            bar("vbar", 0.25, 0.25, 0.35),
+            bar("vbar", 0.25, 0.75, 0.35),
+            bar("vbar", 0.75, 0.25, 0.35),
+            bar("vbar", 0.75, 0.75, 0.35),
         ];
     }
 
@@ -80,10 +82,10 @@
         const r = 0.08;
         return [
             circle(0.5, 0.5, r),
-            circle(0.27, 0.27, r),
-            circle(0.73, 0.27, r),
-            circle(0.27, 0.73, r),
-            circle(0.73, 0.73, r),
+            circle(0.22, 0.22, r),
+            circle(0.77, 0.22, r),
+            circle(0.22, 0.77, r),
+            circle(0.77, 0.77, r),
         ];
     }
 
@@ -95,7 +97,7 @@
                 circle(
                     0.1 + Math.random() * 0.8,
                     0.1 + Math.random() * 0.8,
-                    0.05,
+                    0.02,
                 ),
             );
         }
