@@ -23,26 +23,26 @@ void test_full_config_loads_four_specs(void) {
     TEST_ASSERT_NOT_NULL(specs);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_HBAR, specs[0].kind);
-    TEST_ASSERT_EQUAL_INT(64, specs[0].x);
-    TEST_ASSERT_EQUAL_INT(32, specs[0].y);
-    TEST_ASSERT_EQUAL_FLOAT(40.0F, specs[0].length);
-    TEST_ASSERT_EQUAL_FLOAT(2.0F, specs[0].width);
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, specs[0].x);
+    TEST_ASSERT_EQUAL_FLOAT(0.25F, specs[0].y);
+    TEST_ASSERT_EQUAL_FLOAT(0.3F, specs[0].length);
+    TEST_ASSERT_EQUAL_FLOAT(0.02F, specs[0].width);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_VBAR, specs[1].kind);
-    TEST_ASSERT_EQUAL_INT(96, specs[1].x);
-    TEST_ASSERT_EQUAL_INT(64, specs[1].y);
-    TEST_ASSERT_EQUAL_FLOAT(30.0F, specs[1].length);
-    TEST_ASSERT_EQUAL_FLOAT(3.0F, specs[1].width);
+    TEST_ASSERT_EQUAL_FLOAT(0.75F, specs[1].x);
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, specs[1].y);
+    TEST_ASSERT_EQUAL_FLOAT(0.25F, specs[1].length);
+    TEST_ASSERT_EQUAL_FLOAT(0.03F, specs[1].width);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_SQUARE, specs[2].kind);
-    TEST_ASSERT_EQUAL_INT(20, specs[2].x);
-    TEST_ASSERT_EQUAL_INT(20, specs[2].y);
-    TEST_ASSERT_EQUAL_FLOAT(12.0F, specs[2].length);
+    TEST_ASSERT_EQUAL_FLOAT(0.2F, specs[2].x);
+    TEST_ASSERT_EQUAL_FLOAT(0.2F, specs[2].y);
+    TEST_ASSERT_EQUAL_FLOAT(0.1F, specs[2].length);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_CIRCLE, specs[3].kind);
-    TEST_ASSERT_EQUAL_INT(100, specs[3].x);
-    TEST_ASSERT_EQUAL_INT(80, specs[3].y);
-    TEST_ASSERT_EQUAL_FLOAT(7.5F, specs[3].length);
+    TEST_ASSERT_EQUAL_FLOAT(0.8F, specs[3].x);
+    TEST_ASSERT_EQUAL_FLOAT(0.6F, specs[3].y);
+    TEST_ASSERT_EQUAL_FLOAT(0.06F, specs[3].length);
 
     free(specs);
 }
@@ -59,14 +59,14 @@ void test_partial_config_sentinels(void) {
     TEST_ASSERT_NOT_NULL(specs);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_HBAR, specs[0].kind);
-    TEST_ASSERT_EQUAL_INT(64, specs[0].x);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_POS_UNSET, specs[0].y);
+    TEST_ASSERT_EQUAL_FLOAT(0.5F, specs[0].x);
+    TEST_ASSERT_EQUAL_FLOAT(BIOSIM_BARRIER_POS_UNSET, specs[0].y);
     TEST_ASSERT_EQUAL_FLOAT(BIOSIM_BARRIER_DIM_UNSET, specs[0].length);
     TEST_ASSERT_EQUAL_FLOAT(BIOSIM_BARRIER_DIM_UNSET, specs[0].width);
 
     TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_CIRCLE, specs[1].kind);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_POS_UNSET, specs[1].x);
-    TEST_ASSERT_EQUAL_INT(BIOSIM_BARRIER_POS_UNSET, specs[1].y);
+    TEST_ASSERT_EQUAL_FLOAT(BIOSIM_BARRIER_POS_UNSET, specs[1].x);
+    TEST_ASSERT_EQUAL_FLOAT(BIOSIM_BARRIER_POS_UNSET, specs[1].y);
     TEST_ASSERT_EQUAL_FLOAT(BIOSIM_BARRIER_DIM_UNSET, specs[1].length);
 
     free(specs);

@@ -29,6 +29,19 @@ static int32_t clamp_i(int32_t v, int32_t lo, int32_t hi) {
     return v;
 }
 
+/* ── ratio resolution ───────────────────────────────────────────────────── */
+
+/* Resolve a [0,1] ratio to a cell index in [0, size-1], rounded to nearest. */
+static int ratio_to_cell(float ratio, int size) {
+    return (int)(ratio * (float)(size - 1) + 0.5F);
+}
+
+/* Resolve a [0,1] ratio to a length in cells of the grid's smaller axis. The
+ * caller applies its own truncation or rounding to match per-shape behaviour. */
+static float ratio_to_dim(float ratio, int gmin) {
+    return ratio * (float)gmin;
+}
+
 /* ── shape helpers ──────────────────────────────────────────────────────── */
 
 static void fill_box(biosim_grid_t *grid, int32_t x0, int32_t y0, int32_t x1, int32_t y1) {
@@ -57,20 +70,22 @@ static biosim_coord_t place_hbar(
 ) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
+    int gmin = sx < sy ? sx : sy;
     int margin_x = sx / 10;
     int margin_y = sy / 10;
 
-    int len = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? (int)spec->length
+    int len = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? (int)ratio_to_dim(spec->length, gmin)
                                                          : rand_range_i(rng, sx / 4, sx / 2);
-    int w = (spec->width != BIOSIM_BARRIER_DIM_UNSET) ? (int)spec->width : rand_range_i(rng, 1, 3);
+    int w = (spec->width != BIOSIM_BARRIER_DIM_UNSET) ? (int)ratio_to_dim(spec->width, gmin)
+                                                      : rand_range_i(rng, 1, 3);
 
     int half_len = len / 2;
     int half_w = w / 2;
 
     int x = (spec->x != BIOSIM_BARRIER_POS_UNSET)
-                ? (int)spec->x
+                ? ratio_to_cell(spec->x, sx)
                 : rand_range_i(rng, margin_x + half_len, sx - margin_x - half_len);
-    int y = (spec->y != BIOSIM_BARRIER_POS_UNSET) ? (int)spec->y
+    int y = (spec->y != BIOSIM_BARRIER_POS_UNSET) ? ratio_to_cell(spec->y, sy)
                                                   : rand_range_i(rng, margin_y, sy - margin_y);
 
     fill_box(grid, x - half_len, y - half_w, x + half_len, y + half_w);
@@ -84,20 +99,22 @@ static biosim_coord_t place_vbar(
 ) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
+    int gmin = sx < sy ? sx : sy;
     int margin_x = sx / 10;
     int margin_y = sy / 10;
 
-    int len = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? (int)spec->length
+    int len = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? (int)ratio_to_dim(spec->length, gmin)
                                                          : rand_range_i(rng, sy / 4, sy / 2);
-    int w = (spec->width != BIOSIM_BARRIER_DIM_UNSET) ? (int)spec->width : rand_range_i(rng, 1, 3);
+    int w = (spec->width != BIOSIM_BARRIER_DIM_UNSET) ? (int)ratio_to_dim(spec->width, gmin)
+                                                      : rand_range_i(rng, 1, 3);
 
     int half_len = len / 2;
     int half_w = w / 2;
 
-    int x = (spec->x != BIOSIM_BARRIER_POS_UNSET) ? (int)spec->x
+    int x = (spec->x != BIOSIM_BARRIER_POS_UNSET) ? ratio_to_cell(spec->x, sx)
                                                   : rand_range_i(rng, margin_x, sx - margin_x);
     int y = (spec->y != BIOSIM_BARRIER_POS_UNSET)
-                ? (int)spec->y
+                ? ratio_to_cell(spec->y, sy)
                 : rand_range_i(rng, margin_y + half_len, sy - margin_y - half_len);
 
     fill_box(grid, x - half_w, y - half_len, x + half_w, y + half_len);
@@ -111,19 +128,20 @@ static biosim_coord_t place_square(
 ) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
+    int gmin = sx < sy ? sx : sy;
     int margin_x = sx / 10;
     int margin_y = sy / 10;
 
-    int side = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? (int)spec->length
+    int side = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? (int)ratio_to_dim(spec->length, gmin)
                                                           : rand_range_i(rng, sx / 8, sx / 4);
 
     int half = side / 2;
 
     int x = (spec->x != BIOSIM_BARRIER_POS_UNSET)
-                ? (int)spec->x
+                ? ratio_to_cell(spec->x, sx)
                 : rand_range_i(rng, margin_x + half, sx - margin_x - half);
     int y = (spec->y != BIOSIM_BARRIER_POS_UNSET)
-                ? (int)spec->y
+                ? ratio_to_cell(spec->y, sy)
                 : rand_range_i(rng, margin_y + half, sy - margin_y - half);
 
     fill_box(grid, x - half, y - half, x + half, y + half);
@@ -137,18 +155,19 @@ static biosim_coord_t place_circle(
 ) {
     int sx = (int)grid->size_x;
     int sy = (int)grid->size_y;
+    int gmin = sx < sy ? sx : sy;
     int margin_x = sx / 10;
     int margin_y = sy / 10;
 
-    float radius =
-        (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? spec->length : rand_range_f(rng, 3.0F, 10.0F);
+    float radius = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? ratio_to_dim(spec->length, gmin)
+                                                              : rand_range_f(rng, 3.0F, 10.0F);
     int r = (int)(radius + 0.5F);
 
     int x = (spec->x != BIOSIM_BARRIER_POS_UNSET)
-                ? (int)spec->x
+                ? ratio_to_cell(spec->x, sx)
                 : rand_range_i(rng, margin_x + r, sx - margin_x - r);
     int y = (spec->y != BIOSIM_BARRIER_POS_UNSET)
-                ? (int)spec->y
+                ? ratio_to_cell(spec->y, sy)
                 : rand_range_i(rng, margin_y + r, sy - margin_y - r);
 
     biosim_coord_t centre = {x, y};

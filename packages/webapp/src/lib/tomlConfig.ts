@@ -113,27 +113,23 @@ function serializeChallenge(c: ChallengeSpec): string[] {
     return lines;
 }
 
-function serializeBarrier(
-    b: BarrierSpec,
-    index: number,
-    gridSizeX: number,
-    gridSizeY: number,
-): string[] {
-    const gridMin = Math.min(gridSizeX, gridSizeY);
+function serializeBarrier(b: BarrierSpec, index: number): string[] {
+    // The C core stores grid ratios in [0, 1] directly, so fractions are
+    // written verbatim and scale with whatever grid size loads them.
     const lines: string[] = [`[barrier-${index}]`, `kind = "${b.kind}"`];
     if (b.x !== null) {
-        lines.push(`x = ${Math.round(b.x * (gridSizeX - 1))}`);
+        lines.push(`x = ${tomlFloat(b.x)}`);
     }
     if (b.y !== null) {
-        lines.push(`y = ${Math.round(b.y * (gridSizeY - 1))}`);
+        lines.push(`y = ${tomlFloat(b.y)}`);
     }
     // cfgparse uses "radius" as the length key for circle barriers.
     const lengthKey = b.kind === "circle" ? "radius" : "length";
     if (b.length !== null) {
-        lines.push(`${lengthKey} = ${tomlFloat(b.length * gridMin)}`);
+        lines.push(`${lengthKey} = ${tomlFloat(b.length)}`);
     }
     if (b.kind !== "circle" && b.width !== null) {
-        lines.push(`width = ${tomlFloat(b.width * gridMin)}`);
+        lines.push(`width = ${tomlFloat(b.width)}`);
     }
     return lines;
 }
@@ -179,15 +175,7 @@ export function simParamsToToml(params: SimParams): string {
     sections.push("", "[barriers]", `num-barriers = ${params.barriers.length}`);
 
     for (let i = 0; i < params.barriers.length; i++) {
-        sections.push(
-            "",
-            ...serializeBarrier(
-                params.barriers[i],
-                i + 1,
-                params.gridSizeX,
-                params.gridSizeY,
-            ),
-        );
+        sections.push("", ...serializeBarrier(params.barriers[i], i + 1));
     }
 
     return sections.join("\n") + "\n";
@@ -208,17 +196,10 @@ function parseBarrierKind(v: unknown): BarrierKind {
         : "hbar";
 }
 
-function parseBarrier(
-    table: Record<string, unknown>,
-    gridSizeX: number,
-    gridSizeY: number,
-): BarrierSpec {
-    const gridMin = Math.min(Math.max(gridSizeX, 1), Math.max(gridSizeY, 1));
-    const gx = Math.max(gridSizeX - 1, 1);
-    const gy = Math.max(gridSizeY - 1, 1);
-
-    const x = "x" in table ? numOf(table["x"], 0) / gx : null;
-    const y = "y" in table ? numOf(table["y"], 0) / gy : null;
+function parseBarrier(table: Record<string, unknown>): BarrierSpec {
+    // x/y/length/width are stored as grid ratios in [0, 1], read verbatim.
+    const x = "x" in table ? numOf(table["x"], 0) : null;
+    const y = "y" in table ? numOf(table["y"], 0) : null;
 
     // Accept both "length" and "radius" (circle alias) for the length field.
     const rawLength =
@@ -227,9 +208,8 @@ function parseBarrier(
             : "radius" in table
               ? table["radius"]
               : undefined;
-    const length =
-        rawLength !== undefined ? numOf(rawLength, 0) / gridMin : null;
-    const width = "width" in table ? numOf(table["width"], 0) / gridMin : null;
+    const length = rawLength !== undefined ? numOf(rawLength, 0) : null;
+    const width = "width" in table ? numOf(table["width"], 0) : null;
 
     return { kind: parseBarrierKind(table["kind"]), x, y, length, width };
 }
@@ -314,7 +294,7 @@ export function tomlToSimParams(toml: string): SimParams {
     const barriers: BarrierSpec[] = [];
     for (let i = 1; i <= numBarriers; i++) {
         const bt = tableOf(doc[`barrier-${i}`]);
-        barriers.push(parseBarrier(bt, gridSizeX, gridSizeY));
+        barriers.push(parseBarrier(bt));
     }
 
     return {

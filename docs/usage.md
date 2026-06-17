@@ -299,16 +299,16 @@ num-barriers = 2
 
 [barrier-1]
 kind   = "hbar"    # required: hbar | vbar | square | circle
-x      = 64        # centre x (cells); omit for random
-y      = 32        # centre y (cells); omit for random
-length = 40        # extent along bar axis; omit for random
-width  = 2         # thickness perpendicular to bar axis; omit for random
+x      = 0.5       # centre x (grid ratio 0..1); omit for random
+y      = 0.25      # centre y (grid ratio 0..1); omit for random
+length = 0.3       # extent along bar axis (ratio); omit for random
+width  = 0.02      # thickness perpendicular to bar axis (ratio); omit for random
 
 [barrier-2]
 kind   = "circle"
-x      = 80
-y      = 80
-radius = 7.5       # alias for length on circle shapes; float accepted
+x      = 0.8
+y      = 0.8
+radius = 0.06      # alias for length on circle shapes
 ```
 
 No `[barriers]` section (or `num-barriers = 0`) produces zero barriers.
@@ -317,13 +317,16 @@ No `[barriers]` section (or `num-barriers = 0`) produces zero barriers.
 
 | Kind | `length` | `width` | Description |
 |------|----------|---------|-------------|
-| `hbar` | horizontal extent (cells) | vertical thickness | Horizontal bar centred on (`x`, `y`) |
-| `vbar` | vertical extent (cells) | horizontal thickness | Vertical bar centred on (`x`, `y`) |
-| `square` | side length (cells) | ignored | Square centred on (`x`, `y`) |
-| `circle` | radius (cells, float) | ignored | Disc centred on (`x`, `y`) |
+| `hbar` | horizontal extent | vertical thickness | Horizontal bar centred on (`x`, `y`) |
+| `vbar` | vertical extent | horizontal thickness | Vertical bar centred on (`x`, `y`) |
+| `square` | side length | ignored | Square centred on (`x`, `y`) |
+| `circle` | radius | ignored | Disc centred on (`x`, `y`) |
 
-`x` and `y` are 0-based grid coordinates with origin at the
-bottom-left. Out-of-bounds cells are clipped silently.
+All coordinates and dimensions are **grid ratios in [0, 1]**, so a layout
+scales with the grid size. `x`/`y` are fractions of grid width/height with
+origin at the bottom-left; `length`/`width` are fractions of the smaller grid
+axis (`min(W, H)`). They resolve to cells against the target grid; out-of-bounds
+cells are clipped silently.
 
 When position or dimension is omitted, a value is drawn from the
 simulation RNG seeded with `biosim_rng_seed(0, 0)` — the same seed

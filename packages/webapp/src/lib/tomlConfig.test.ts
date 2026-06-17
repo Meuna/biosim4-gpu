@@ -160,10 +160,9 @@ describe("simParamsToToml / tomlToSimParams", () => {
             expect(r.barriers).toHaveLength(1);
             const b = r.barriers[0];
             expect(b.kind).toBe("hbar");
-            // Position round-trips through Math.round; tolerate up to 1 cell error.
-            expect(b.x).toBeCloseTo(0.5, 1);
-            expect(b.y).toBeCloseTo(0.25, 1);
-            // Dimensions are floats and survive the trip without rounding.
+            // All fields are stored as grid ratios and round-trip exactly.
+            expect(b.x).toBeCloseTo(0.5, 5);
+            expect(b.y).toBeCloseTo(0.25, 5);
             expect(b.length).toBeCloseTo(0.5, 5);
             expect(b.width).toBeCloseTo(0.03125, 5);
         });

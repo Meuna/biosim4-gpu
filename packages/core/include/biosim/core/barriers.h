@@ -18,22 +18,26 @@ typedef enum {
 } biosim_barrier_kind_t;
 
 /* Sentinel: use random placement / dimension */
-#define BIOSIM_BARRIER_POS_UNSET ((int16_t)INT16_MIN)
+#define BIOSIM_BARRIER_POS_UNSET (-1.0F)
 #define BIOSIM_BARRIER_DIM_UNSET (0.0F)
 
 /*
- * Describes one barrier shape.
+ * Describes one barrier shape. All dimensions are grid ratios in [0, 1] so a
+ * layout scales with the grid size; the placement functions resolve them to
+ * cell coordinates against the target grid.
  *
- * x, y    — centre of the barrier; BIOSIM_BARRIER_POS_UNSET picks a random position.
- * length  — primary dimension (bar length, square side, circle radius);
- *           BIOSIM_BARRIER_DIM_UNSET picks a random value.
- * width   — thickness perpendicular to the bar axis (bars only);
- *           BIOSIM_BARRIER_DIM_UNSET picks a random value.
+ * x, y    — centre of the barrier as a fraction of grid width/height;
+ *           BIOSIM_BARRIER_POS_UNSET picks a random position.
+ * length  — primary dimension (bar length, square side, circle radius) as a
+ *           fraction of min(width, height); BIOSIM_BARRIER_DIM_UNSET picks a
+ *           random value.
+ * width   — thickness perpendicular to the bar axis (bars only) as a fraction
+ *           of min(width, height); BIOSIM_BARRIER_DIM_UNSET picks a random value.
  */
 typedef struct {
     biosim_barrier_kind_t kind;
-    int16_t x;
-    int16_t y;
+    float x;
+    float y;
     float length;
     float width;
 } biosim_barrier_spec_t;

@@ -47,13 +47,17 @@ static biosim_status_t parse_barrier_table(toml_datum_t tab, biosim_barrier_spec
     }
 
     toml_datum_t x_val = toml_get(tab, "x");
-    if (x_val.type == TOML_INT64) {
-        out->x = (int16_t)x_val.u.int64;
+    if (x_val.type == TOML_FP64) {
+        out->x = (float)x_val.u.fp64;
+    } else if (x_val.type == TOML_INT64) {
+        out->x = (float)x_val.u.int64;
     }
 
     toml_datum_t y_val = toml_get(tab, "y");
-    if (y_val.type == TOML_INT64) {
-        out->y = (int16_t)y_val.u.int64;
+    if (y_val.type == TOML_FP64) {
+        out->y = (float)y_val.u.fp64;
+    } else if (y_val.type == TOML_INT64) {
+        out->y = (float)y_val.u.int64;
     }
 
     toml_datum_t len_val = toml_get(tab, "length");

@@ -304,21 +304,16 @@ let barrierCells: Int32Array | null = null;
 // Tiled diagonal-line (///) pattern for barrier cells; created once after ctx is ready.
 let barrierHatchPattern: CanvasPattern | null = null;
 
-// Passes barrier specs to WASM; converts fractions to cell coordinates.
-function setBarriers(
-    specs: BarrierSpec[],
-    gridSizeX: number,
-    gridSizeY: number,
-): void {
+// Passes barrier specs to WASM. The C core stores grid ratios in [0, 1]
+// directly, so fractions pass straight through; null maps to the sentinel
+// (-1.0 for position, 0.0 for dimension).
+function setBarriers(specs: BarrierSpec[]): void {
     biosim!.ccall("biosim_wasm_clear_barriers", null, [], []);
-    const gridMin = Math.min(gridSizeX, gridSizeY);
     for (const spec of specs) {
-        const x =
-            spec.x !== null ? Math.round(spec.x * (gridSizeX - 1)) : -32768;
-        const y =
-            spec.y !== null ? Math.round(spec.y * (gridSizeY - 1)) : -32768;
-        const len = spec.length !== null ? spec.length * gridMin : 0.0;
-        const w = spec.width !== null ? spec.width * gridMin : 0.0;
+        const x = spec.x !== null ? spec.x : -1.0;
+        const y = spec.y !== null ? spec.y : -1.0;
+        const len = spec.length !== null ? spec.length : 0.0;
+        const w = spec.width !== null ? spec.width : 0.0;
         biosim!.ccall(
             "biosim_wasm_add_barrier",
             "number",
@@ -1013,7 +1008,7 @@ function applyConfig(p: SimParams): void {
     setParamInt("sensor-radius", p.sensorRadius);
     setParamBool("enable-kill", p.enableKill);
     setParamFloat("responsiveness-curve-k", p.responsivenessCurveK);
-    setBarriers(p.barriers, p.gridSizeX, p.gridSizeY);
+    setBarriers(p.barriers);
     setChallengeSpec(p.challenge);
     currentChallenge = p.challenge;
 }

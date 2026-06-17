@@ -37,7 +37,8 @@ static int count_barriers(const biosim_grid_t *grid) {
 /* ── hbar ───────────────────────────────────────────────────────────────── */
 
 void test_hbar_explicit(void) {
-    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_HBAR, 32, 32, 20.0F, 2.0F};
+    /* ratios on a 64×64 grid: x/y 0.5 → cell 32; length 20/64, width 2/64 */
+    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_HBAR, 0.5F, 0.5F, 20.0F / 64.0F, 2.0F / 64.0F};
     uint64_t rng = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
@@ -55,7 +56,7 @@ void test_hbar_explicit(void) {
 /* ── vbar ───────────────────────────────────────────────────────────────── */
 
 void test_vbar_explicit(void) {
-    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_VBAR, 32, 32, 20.0F, 2.0F};
+    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_VBAR, 0.5F, 0.5F, 20.0F / 64.0F, 2.0F / 64.0F};
     uint64_t rng = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
@@ -72,7 +73,10 @@ void test_vbar_explicit(void) {
 /* ── square ─────────────────────────────────────────────────────────────── */
 
 void test_square_explicit(void) {
-    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_SQUARE, 30, 30, 10.0F, BIOSIM_BARRIER_DIM_UNSET};
+    /* x/y 30/63 → cell 30; side 10/64 → 10 */
+    biosim_barrier_spec_t spec = {
+        BIOSIM_BARRIER_SQUARE, 30.0F / 63.0F, 30.0F / 63.0F, 10.0F / 64.0F, BIOSIM_BARRIER_DIM_UNSET
+    };
     uint64_t rng = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
@@ -89,7 +93,10 @@ void test_square_explicit(void) {
 /* ── circle ─────────────────────────────────────────────────────────────── */
 
 void test_circle_explicit(void) {
-    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_CIRCLE, 32, 32, 5.0F, BIOSIM_BARRIER_DIM_UNSET};
+    /* x/y 0.5 → cell 32; radius 5/64 → 5 */
+    biosim_barrier_spec_t spec = {
+        BIOSIM_BARRIER_CIRCLE, 0.5F, 0.5F, 5.0F / 64.0F, BIOSIM_BARRIER_DIM_UNSET
+    };
     uint64_t rng = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng, NULL);
 
@@ -102,7 +109,9 @@ void test_circle_explicit(void) {
 
 void test_circle_stays_in_bounds(void) {
     /* Spec right at the edge; visit_neighborhood clips silently */
-    biosim_barrier_spec_t spec = {BIOSIM_BARRIER_CIRCLE, 0, 0, 5.0F, BIOSIM_BARRIER_DIM_UNSET};
+    biosim_barrier_spec_t spec = {
+        BIOSIM_BARRIER_CIRCLE, 0.0F, 0.0F, 5.0F / 64.0F, BIOSIM_BARRIER_DIM_UNSET
+    };
     uint64_t rng = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng, NULL);
     /* At least the origin is a barrier */

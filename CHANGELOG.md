@@ -8,6 +8,10 @@
 
 - Show an animated HUD (spinner, progress bar, survival/max/kill rates) on a TTY, keeping line-per-generation output when piped ([#169](https://github.com/Meuna/biosim4-gpu/pull/169))
 
+#### Changed
+
+- Define barrier position and size as grid ratios in [0, 1] so layouts scale with the grid size ([#162](https://github.com/Meuna/biosim4-gpu/pull/162))
+
 ### Webapp
 
 #### Added

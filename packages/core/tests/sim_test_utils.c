@@ -79,8 +79,9 @@ biosim_status_t sim_test_make_8x8(biosim_sim_t *sim) {
 }
 
 biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
+    /* ratios on a 32×32 grid (gmin=32): cell 16 → 16/31, dims /32 */
     static const biosim_barrier_spec_t k_barriers[] = {
-        {BIOSIM_BARRIER_HBAR, 16, 16, 20.0F, 1.0F},
+        {BIOSIM_BARRIER_HBAR, 16.0F / 31.0F, 16.0F / 31.0F, 20.0F / 32.0F, 1.0F / 32.0F},
     };
     return sim_test_create(
         sim,
@@ -103,15 +104,16 @@ biosim_status_t sim_test_make_32x32(biosim_sim_t *sim) {
 }
 
 biosim_status_t sim_test_make_128x128(biosim_sim_t *sim) {
+    /* ratios on a 128×128 grid (gmin=128): cell C → C/127, dims /128 */
     static const biosim_barrier_spec_t k_barriers[] = {
-        {BIOSIM_BARRIER_HBAR, 21, 32, 32.0F, 4.0F},
-        {BIOSIM_BARRIER_HBAR, 21, 96, 32.0F, 4.0F},
-        {BIOSIM_BARRIER_HBAR, 42, 64, 64.0F, 4.0F},
-        {BIOSIM_BARRIER_HBAR, 64, 32, 32.0F, 4.0F},
-        {BIOSIM_BARRIER_HBAR, 64, 96, 32.0F, 4.0F},
-        {BIOSIM_BARRIER_HBAR, 85, 64, 64.0F, 4.0F},
-        {BIOSIM_BARRIER_HBAR, 106, 32, 32.0F, 4.0F},
-        {BIOSIM_BARRIER_HBAR, 106, 96, 32.0F, 4.0F},
+        {BIOSIM_BARRIER_HBAR, 21.0F / 127.0F, 32.0F / 127.0F, 32.0F / 128.0F, 4.0F / 128.0F},
+        {BIOSIM_BARRIER_HBAR, 21.0F / 127.0F, 96.0F / 127.0F, 32.0F / 128.0F, 4.0F / 128.0F},
+        {BIOSIM_BARRIER_HBAR, 42.0F / 127.0F, 64.0F / 127.0F, 64.0F / 128.0F, 4.0F / 128.0F},
+        {BIOSIM_BARRIER_HBAR, 64.0F / 127.0F, 32.0F / 127.0F, 32.0F / 128.0F, 4.0F / 128.0F},
+        {BIOSIM_BARRIER_HBAR, 64.0F / 127.0F, 96.0F / 127.0F, 32.0F / 128.0F, 4.0F / 128.0F},
+        {BIOSIM_BARRIER_HBAR, 85.0F / 127.0F, 64.0F / 127.0F, 64.0F / 128.0F, 4.0F / 128.0F},
+        {BIOSIM_BARRIER_HBAR, 106.0F / 127.0F, 32.0F / 127.0F, 32.0F / 128.0F, 4.0F / 128.0F},
+        {BIOSIM_BARRIER_HBAR, 106.0F / 127.0F, 96.0F / 127.0F, 32.0F / 128.0F, 4.0F / 128.0F},
     };
     return sim_test_create(
         sim,

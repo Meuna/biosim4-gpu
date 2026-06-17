@@ -3,7 +3,7 @@ num-barriers = 2
 
 [barrier-1]
 kind = "hbar"
-x = 64
+x = 0.5
 # y, length, width omitted → random
 
 [barrier-2]

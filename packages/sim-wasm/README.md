@@ -78,7 +78,7 @@ Call `biosim_wasm_clear_barriers` and `biosim_wasm_add_barrier` **before**
 | Function | Args | Return | Description |
 |---|---|---|---|
 | `biosim_wasm_clear_barriers` | — | `null` | Reset the barrier list to empty. |
-| `biosim_wasm_add_barrier` | `kind: number, x: number, y: number, length: number, width: number` | `number` (status) | Append one barrier. Returns `BIOSIM_ERR_NOMEM` if allocation fails. |
+| `biosim_wasm_add_barrier` | `kind: number, x: number, y: number, length: number, width: number` | `number` (status) | Append one barrier. `x`/`y`/`length`/`width` are grid ratios in `[0, 1]`; pass `-1.0` for a random position or `0.0` for a random dimension. Returns `BIOSIM_ERR_NOMEM` if allocation fails. |
 | `biosim_wasm_get_n_barriers` | — | `number` | Number of barriers currently in the list. |
 
 **Sentinel values for `add_barrier`:**
