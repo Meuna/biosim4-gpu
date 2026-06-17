@@ -298,7 +298,7 @@ a barrier cell.
 num-barriers = 2
 
 [barrier-1]
-kind   = "hbar"    # required: hbar | vbar | square | circle
+kind   = "hbar"    # required: hbar | vbar | square | circle | corner
 x      = 0.5       # centre x (grid ratio 0..1); omit for random
 y      = 0.25      # centre y (grid ratio 0..1); omit for random
 length = 0.3       # extent along bar axis (ratio); omit for random
@@ -321,6 +321,22 @@ No `[barriers]` section (or `num-barriers = 0`) produces zero barriers.
 | `vbar` | vertical extent | horizontal thickness | Vertical bar centred on (`x`, `y`) |
 | `square` | side length | ignored | Square centred on (`x`, `y`) |
 | `circle` | radius | ignored | Disc centred on (`x`, `y`) |
+| `corner` | arm length | arm thickness | L-shape with its junction at (`x`, `y`); see `quadrant` |
+
+A `corner` is an L of one horizontal and one vertical arm meeting at the
+junction (`x`, `y`). Its `quadrant` selects the arm directions (origin
+bottom-left, y up): `ne` → right+up, `nw` → left+up, `se` → right+down,
+`sw` → left+down. Defaults to `ne`; ignored by other kinds.
+
+```toml
+[barrier-3]
+kind     = "corner"
+x        = 0.3
+y        = 0.3
+length   = 0.2     # length of each arm
+width    = 0.02    # arm thickness
+quadrant = "ne"    # ne | nw | se | sw
+```
 
 All coordinates and dimensions are **grid ratios in [0, 1]**, so a layout
 scales with the grid size. `x`/`y` are fractions of grid width/height with

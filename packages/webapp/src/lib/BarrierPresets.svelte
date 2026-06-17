@@ -2,7 +2,7 @@
     // BarrierPresets — one-click pills that replace the barrier list with a
     // common layout. Kept separate from BarrierControl so the latter stays a
     // pure value/onchange control.
-    import type { BarrierSpec } from "../workers/sim.worker";
+    import type { BarrierSpec, CornerQuadrant } from "../workers/sim.worker";
     import { Dices } from "lucide-svelte";
 
     interface Props {
@@ -19,23 +19,41 @@
         y: number,
         length: number,
     ): BarrierSpec {
-        return { kind, x, y, length, width: BAR_WIDTH };
+        return { kind, x, y, length, width: BAR_WIDTH, quadrant: "ne" };
     }
 
     function circle(x: number, y: number, radius: number): BarrierSpec {
-        return { kind: "circle", x, y, length: radius, width: null };
+        return {
+            kind: "circle",
+            x,
+            y,
+            length: radius,
+            width: null,
+            quadrant: "ne",
+        };
     }
 
-    // One corner of the bar-cross / square layouts: an L made of one hbar and
-    // one vbar. `hx`/`vy` place the arm centres; the shared vertex is (vx, hy).
-    function cornerL(
+    // One corner of the bar-cross / square layouts as a single first-class
+    // barrier: an L whose junction is (vx, hy) and whose arms reach toward
+    // (hx, vy). The quadrant follows those fraction-space arm directions, which
+    // map straight onto biosim_corner_quadrant_t (x right = +x, y down = +y).
+    function corner(
         vx: number,
         hy: number,
         hx: number,
         vy: number,
         arm: number,
-    ): BarrierSpec[] {
-        return [bar("hbar", hx, hy, arm), bar("vbar", vx, vy, arm)];
+    ): BarrierSpec {
+        const quadrant: CornerQuadrant =
+            hx >= vx ? (vy >= hy ? "ne" : "se") : vy >= hy ? "nw" : "sw";
+        return {
+            kind: "corner",
+            x: vx,
+            y: hy,
+            length: arm,
+            width: BAR_WIDTH,
+            quadrant,
+        };
     }
 
     function buildCross(): BarrierSpec[] {
@@ -59,10 +77,10 @@
     function buildBarCross(): BarrierSpec[] {
         const arm = 0.3;
         return [
-            ...cornerL(0.35, 0.35, 0.2, 0.2, arm),
-            ...cornerL(0.65, 0.35, 0.8, 0.2, arm),
-            ...cornerL(0.35, 0.65, 0.2, 0.8, arm),
-            ...cornerL(0.65, 0.65, 0.8, 0.8, arm),
+            corner(0.35, 0.35, 0.2, 0.2, arm),
+            corner(0.65, 0.35, 0.8, 0.2, arm),
+            corner(0.35, 0.65, 0.2, 0.8, arm),
+            corner(0.65, 0.65, 0.8, 0.8, arm),
         ];
     }
 
@@ -71,10 +89,10 @@
     function buildSquare(): BarrierSpec[] {
         const arm = 0.15;
         return [
-            ...cornerL(0.2, 0.2, 0.275, 0.275, arm),
-            ...cornerL(0.8, 0.2, 0.725, 0.275, arm),
-            ...cornerL(0.2, 0.8, 0.275, 0.725, arm),
-            ...cornerL(0.8, 0.8, 0.725, 0.725, arm),
+            corner(0.2, 0.2, 0.275, 0.275, arm),
+            corner(0.8, 0.2, 0.725, 0.275, arm),
+            corner(0.2, 0.8, 0.275, 0.725, arm),
+            corner(0.8, 0.8, 0.725, 0.725, arm),
         ];
     }
 

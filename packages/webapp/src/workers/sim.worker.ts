@@ -35,17 +35,22 @@ type EmscriptenFactory = (
 ) => Promise<EmscriptenModule>;
 
 /** Barrier kind — mirrors biosim_barrier_kind_t in barriers.h. */
-export type BarrierKind = "hbar" | "vbar" | "square" | "circle";
+export type BarrierKind = "hbar" | "vbar" | "square" | "circle" | "corner";
+
+/** Corner arm directions — mirrors biosim_corner_quadrant_t in barriers.h. */
+export type CornerQuadrant = "ne" | "nw" | "se" | "sw";
 
 /** One barrier shape — mirrors biosim_barrier_spec_t in barriers.h.
  *  Positional fields are fractions of the grid dimension ([0, 1]);
- *  null means "pick randomly" (maps to the BIOSIM_BARRIER_*_UNSET sentinel). */
+ *  null means "pick randomly" (maps to the BIOSIM_BARRIER_*_UNSET sentinel).
+ *  quadrant applies to "corner" only and defaults to "ne" elsewhere. */
 export interface BarrierSpec {
     kind: BarrierKind;
     x: number | null;
     y: number | null;
     length: number | null;
     width: number | null;
+    quadrant: CornerQuadrant;
 }
 
 /** Challenge specification — mirrors biosim_challenge_spec_t in challenge_spec.h. */
@@ -296,6 +301,15 @@ const BARRIER_KIND_INT: Record<BarrierKind, number> = {
     vbar: 1,
     square: 2,
     circle: 3,
+    corner: 4,
+};
+
+// Maps CornerQuadrant strings to biosim_corner_quadrant_t ordinals (barriers.h).
+const CORNER_QUADRANT_INT: Record<CornerQuadrant, number> = {
+    ne: 0,
+    nw: 1,
+    se: 2,
+    sw: 3,
 };
 
 // Cached barrier cell coordinates: flat [gx0,gy0, gx1,gy1, ...].
@@ -317,8 +331,15 @@ function setBarriers(specs: BarrierSpec[]): void {
         biosim!.ccall(
             "biosim_wasm_add_barrier",
             "number",
-            ["number", "number", "number", "number", "number"],
-            [BARRIER_KIND_INT[spec.kind], x, y, len, w],
+            ["number", "number", "number", "number", "number", "number"],
+            [
+                BARRIER_KIND_INT[spec.kind],
+                x,
+                y,
+                len,
+                w,
+                CORNER_QUADRANT_INT[spec.quadrant],
+            ],
         );
     }
 }

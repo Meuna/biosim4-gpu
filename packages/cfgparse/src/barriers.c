@@ -25,7 +25,36 @@ static biosim_status_t parse_kind(const char *s, biosim_barrier_kind_t *out) {
         *out = BIOSIM_BARRIER_CIRCLE;
         return BIOSIM_OK;
     }
-    BIOSIM_ERRORF("invalid barrier kind '%s'. Accepted values are: hbar, vbar, square, circle", s);
+    if (strcmp(s, "corner") == 0) {
+        *out = BIOSIM_BARRIER_CORNER;
+        return BIOSIM_OK;
+    }
+    BIOSIM_ERRORF(
+        "invalid barrier kind '%s'. Accepted values are: hbar, vbar, square, circle, corner", s
+    );
+    return BIOSIM_ERR_INVALID;
+}
+
+/* ── corner quadrant parsing ────────────────────────────────────────────── */
+
+static biosim_status_t parse_quadrant(const char *s, biosim_corner_quadrant_t *out) {
+    if (strcmp(s, "ne") == 0) {
+        *out = BIOSIM_CORNER_NE;
+        return BIOSIM_OK;
+    }
+    if (strcmp(s, "nw") == 0) {
+        *out = BIOSIM_CORNER_NW;
+        return BIOSIM_OK;
+    }
+    if (strcmp(s, "se") == 0) {
+        *out = BIOSIM_CORNER_SE;
+        return BIOSIM_OK;
+    }
+    if (strcmp(s, "sw") == 0) {
+        *out = BIOSIM_CORNER_SW;
+        return BIOSIM_OK;
+    }
+    BIOSIM_ERRORF("invalid corner quadrant '%s'. Accepted values are: ne, nw, se, sw", s);
     return BIOSIM_ERR_INVALID;
 }
 
@@ -36,6 +65,7 @@ static biosim_status_t parse_barrier_table(toml_datum_t tab, biosim_barrier_spec
     out->y = BIOSIM_BARRIER_POS_UNSET;
     out->length = BIOSIM_BARRIER_DIM_UNSET;
     out->width = BIOSIM_BARRIER_DIM_UNSET;
+    out->quadrant = BIOSIM_CORNER_NE;
 
     toml_datum_t kind_val = toml_get(tab, "kind");
     if (kind_val.type != TOML_STRING) {
@@ -82,6 +112,14 @@ static biosim_status_t parse_barrier_table(toml_datum_t tab, biosim_barrier_spec
         out->width = (float)w_val.u.fp64;
     } else if (w_val.type == TOML_INT64) {
         out->width = (float)w_val.u.int64;
+    }
+
+    toml_datum_t q_val = toml_get(tab, "quadrant");
+    if (q_val.type == TOML_STRING) {
+        biosim_status_t qst = parse_quadrant(q_val.u.s, &out->quadrant);
+        if (qst != BIOSIM_OK) {
+            return qst;
+        }
     }
 
     return BIOSIM_OK;

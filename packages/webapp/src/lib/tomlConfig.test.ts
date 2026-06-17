@@ -153,6 +153,7 @@ describe("simParamsToToml / tomlToSimParams", () => {
                         y: 0.25,
                         length: 0.5,
                         width: 0.03125,
+                        quadrant: "ne",
                     },
                 ],
             };
@@ -177,6 +178,7 @@ describe("simParamsToToml / tomlToSimParams", () => {
                         y: null,
                         length: null,
                         width: null,
+                        quadrant: "ne",
                     },
                 ],
             };
@@ -202,6 +204,7 @@ describe("simParamsToToml / tomlToSimParams", () => {
                         y: 0.5,
                         length: 0.1,
                         width: 0.05,
+                        quadrant: "ne",
                     },
                 ],
             };
@@ -224,6 +227,7 @@ describe("simParamsToToml / tomlToSimParams", () => {
                         y: 0.25,
                         length: 0.5,
                         width: 0.03125,
+                        quadrant: "ne",
                     },
                     {
                         kind: "vbar",
@@ -231,6 +235,7 @@ describe("simParamsToToml / tomlToSimParams", () => {
                         y: 0.75,
                         length: 0.4,
                         width: null,
+                        quadrant: "ne",
                     },
                 ],
             };
@@ -240,6 +245,27 @@ describe("simParamsToToml / tomlToSimParams", () => {
             expect(r.barriers[1].kind).toBe("vbar");
             expect(r.barriers[1].x).toBeNull();
             expect(r.barriers[1].width).toBeNull();
+        });
+
+        it("corner barrier round-trips its quadrant", () => {
+            const p: SimParams = {
+                ...DEFAULTS,
+                barriers: [
+                    {
+                        kind: "corner",
+                        x: 0.3,
+                        y: 0.3,
+                        length: 0.2,
+                        width: 0.02,
+                        quadrant: "sw",
+                    },
+                ],
+            };
+            const toml = simParamsToToml(p);
+            expect(toml).toContain('quadrant = "sw"');
+            const r = roundTrip(p);
+            expect(r.barriers[0].kind).toBe("corner");
+            expect(r.barriers[0].quadrant).toBe("sw");
         });
     });
 

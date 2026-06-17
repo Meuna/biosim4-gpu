@@ -4,6 +4,7 @@ import type {
     ChallengeSpec,
     BarrierSpec,
     BarrierKind,
+    CornerQuadrant,
 } from "../workers/sim.worker";
 
 // Must match bindings.c s_params_mut and the C defaults in cfgparse.
@@ -131,6 +132,9 @@ function serializeBarrier(b: BarrierSpec, index: number): string[] {
     if (b.kind !== "circle" && b.width !== null) {
         lines.push(`width = ${tomlFloat(b.width)}`);
     }
+    if (b.kind === "corner") {
+        lines.push(`quadrant = "${b.quadrant}"`);
+    }
     return lines;
 }
 
@@ -188,12 +192,21 @@ const VALID_BARRIER_KINDS = new Set<string>([
     "vbar",
     "square",
     "circle",
+    "corner",
 ]);
+
+const VALID_CORNER_QUADRANTS = new Set<string>(["ne", "nw", "se", "sw"]);
 
 function parseBarrierKind(v: unknown): BarrierKind {
     return typeof v === "string" && VALID_BARRIER_KINDS.has(v)
         ? (v as BarrierKind)
         : "hbar";
+}
+
+function parseCornerQuadrant(v: unknown): CornerQuadrant {
+    return typeof v === "string" && VALID_CORNER_QUADRANTS.has(v)
+        ? (v as CornerQuadrant)
+        : "ne";
 }
 
 function parseBarrier(table: Record<string, unknown>): BarrierSpec {
@@ -211,7 +224,14 @@ function parseBarrier(table: Record<string, unknown>): BarrierSpec {
     const length = rawLength !== undefined ? numOf(rawLength, 0) : null;
     const width = "width" in table ? numOf(table["width"], 0) : null;
 
-    return { kind: parseBarrierKind(table["kind"]), x, y, length, width };
+    return {
+        kind: parseBarrierKind(table["kind"]),
+        x,
+        y,
+        length,
+        width,
+        quadrant: parseCornerQuadrant(table["quadrant"]),
+    };
 }
 
 function parseChallenge(

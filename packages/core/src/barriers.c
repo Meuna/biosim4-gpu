@@ -175,6 +175,49 @@ static biosim_coord_t place_circle(
     return centre;
 }
 
+static biosim_coord_t place_corner(
+    biosim_grid_t *grid, const biosim_barrier_spec_t *spec, uint64_t *rng
+) {
+    int sx = (int)grid->size_x;
+    int sy = (int)grid->size_y;
+    int gmin = sx < sy ? sx : sy;
+    int margin_x = sx / 10;
+    int margin_y = sy / 10;
+
+    /* Arms extend a full len from the junction, so the random range keeps len
+     * of clearance on every side (range stays valid for gmin/8..gmin/4 arms). */
+    int len = (spec->length != BIOSIM_BARRIER_DIM_UNSET) ? (int)ratio_to_dim(spec->length, gmin)
+                                                         : rand_range_i(rng, gmin / 8, gmin / 4);
+    int w = (spec->width != BIOSIM_BARRIER_DIM_UNSET) ? (int)ratio_to_dim(spec->width, gmin)
+                                                      : rand_range_i(rng, 1, 3);
+    int half_w = w / 2;
+
+    int jx = (spec->x != BIOSIM_BARRIER_POS_UNSET)
+                 ? ratio_to_cell(spec->x, sx)
+                 : rand_range_i(rng, margin_x + len, sx - margin_x - len);
+    int jy = (spec->y != BIOSIM_BARRIER_POS_UNSET)
+                 ? ratio_to_cell(spec->y, sy)
+                 : rand_range_i(rng, margin_y + len, sy - margin_y - len);
+
+    /* Arm directions per quadrant (index = quadrant): NE, NW, SE, SW. */
+    static const int dx_of[] = {1, -1, 1, -1};
+    static const int dy_of[] = {1, 1, -1, -1};
+    int dx = dx_of[spec->quadrant];
+    int dy = dy_of[spec->quadrant];
+
+    /* Horizontal arm reaches from the junction along x; vertical along y. They
+     * overlap at the w×w junction block, which fill_box paints idempotently. */
+    int hx0 = jx + (dx < 0 ? dx * len : 0);
+    int hx1 = jx + (dx > 0 ? dx * len : 0);
+    int vy0 = jy + (dy < 0 ? dy * len : 0);
+    int vy1 = jy + (dy > 0 ? dy * len : 0);
+    fill_box(grid, hx0, jy - half_w, hx1, jy + half_w);
+    fill_box(grid, jx - half_w, vy0, jx + half_w, vy1);
+
+    biosim_coord_t centre = {jx, jy};
+    return centre;
+}
+
 /* ── public API ─────────────────────────────────────────────────────────── */
 
 void biosim_barriers_place(
@@ -199,6 +242,9 @@ void biosim_barriers_place(
             break;
         case BIOSIM_BARRIER_CIRCLE:
             centre = place_circle(grid, s, rng_state);
+            break;
+        case BIOSIM_BARRIER_CORNER:
+            centre = place_corner(grid, s, rng_state);
             break;
         default:
             centre.x = 0;

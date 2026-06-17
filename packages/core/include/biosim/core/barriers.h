@@ -15,7 +15,21 @@ typedef enum {
     BIOSIM_BARRIER_VBAR,
     BIOSIM_BARRIER_SQUARE,
     BIOSIM_BARRIER_CIRCLE,
+    BIOSIM_BARRIER_CORNER,
 } biosim_barrier_kind_t;
+
+/*
+ * Quadrant of a CORNER barrier: the cell-space directions its horizontal and
+ * vertical arms extend from the junction (origin bottom-left, y up).
+ *   NE → (+x, +y)   NW → (-x, +y)   SE → (+x, -y)   SW → (-x, -y)
+ * Ignored by all other barrier kinds.
+ */
+typedef enum {
+    BIOSIM_CORNER_NE,
+    BIOSIM_CORNER_NW,
+    BIOSIM_CORNER_SE,
+    BIOSIM_CORNER_SW,
+} biosim_corner_quadrant_t;
 
 /* Sentinel: use random placement / dimension */
 #define BIOSIM_BARRIER_POS_UNSET (-1.0F)
@@ -33,6 +47,10 @@ typedef enum {
  *           random value.
  * width   — thickness perpendicular to the bar axis (bars only) as a fraction
  *           of min(width, height); BIOSIM_BARRIER_DIM_UNSET picks a random value.
+ *
+ * For a CORNER, x/y are the arm junction, length is each arm's length, width is
+ * the arm thickness, and quadrant picks which way the arms extend. quadrant is
+ * ignored by every other kind.
  */
 typedef struct {
     biosim_barrier_kind_t kind;
@@ -40,6 +58,7 @@ typedef struct {
     float y;
     float length;
     float width;
+    biosim_corner_quadrant_t quadrant;
 } biosim_barrier_spec_t;
 
 /*

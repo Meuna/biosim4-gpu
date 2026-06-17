@@ -5,7 +5,7 @@ grid-size-y = 128
 steps-per-gen = 10
 
 [barriers]
-num-barriers = 4
+num-barriers = 5
 
 # Coordinates are grid ratios in [0, 1].
 
@@ -34,3 +34,11 @@ kind = "circle"
 x = 0.8
 y = 0.6
 radius = 0.06
+
+[barrier-5]
+kind = "corner"
+x = 0.3
+y = 0.3
+length = 0.2
+width = 0.02
+quadrant = "sw"

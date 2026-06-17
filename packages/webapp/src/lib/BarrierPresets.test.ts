@@ -32,51 +32,54 @@ describe("BarrierPresets", () => {
         expect(barriers.map((b) => b.kind).sort()).toEqual(["hbar", "vbar"]);
     });
 
-    it("vertical split applies five vbars", () => {
+    it("vertical split applies seven vbars", () => {
         const barriers = clickPreset("Vertical split");
-        expect(barriers).toHaveLength(5);
+        expect(barriers).toHaveLength(7);
         expect(barriers.every((b) => b.kind === "vbar")).toBe(true);
     });
 
-    it("bar cross applies four hbars and four vbars", () => {
+    it("bar cross applies four corners, one per quadrant", () => {
         const barriers = clickPreset("Bar cross");
-        expect(barriers).toHaveLength(8);
-        expect(barriers.filter((b) => b.kind === "hbar")).toHaveLength(4);
-        expect(barriers.filter((b) => b.kind === "vbar")).toHaveLength(4);
+        expect(barriers).toHaveLength(4);
+        expect(barriers.every((b) => b.kind === "corner")).toBe(true);
+        expect(barriers.map((b) => b.quadrant).sort()).toEqual([
+            "ne",
+            "nw",
+            "se",
+            "sw",
+        ]);
     });
 
-    it("bar cross sits its bracket vertices near the centre", () => {
-        // Inner elbows: every hbar runs along an inner row and every vbar along
-        // an inner column (~0.35 / ~0.65), leaving an open plus through the
-        // middle. This discriminates the bar-cross layout from the square box.
+    it("bar cross sits its corner junctions near the centre", () => {
+        // Inner elbows: every junction sits on an inner row/column (~0.35 /
+        // ~0.65), leaving an open plus through the middle. This discriminates
+        // the bar-cross layout from the square box.
         const barriers = clickPreset("Bar cross");
         for (const b of barriers) {
-            const v = (b.kind === "hbar" ? b.y : b.x) as number;
-            expect(v === 0.35 || v === 0.65).toBe(true);
+            expect(b.x === 0.35 || b.x === 0.65).toBe(true);
+            expect(b.y === 0.35 || b.y === 0.65).toBe(true);
         }
     });
 
-    it("square applies four hbars and four vbars", () => {
+    it("square applies four corners, one per quadrant", () => {
         const barriers = clickPreset("Square");
-        expect(barriers).toHaveLength(8);
-        expect(barriers.filter((b) => b.kind === "hbar")).toHaveLength(4);
-        expect(barriers.filter((b) => b.kind === "vbar")).toHaveLength(4);
+        expect(barriers).toHaveLength(4);
+        expect(barriers.every((b) => b.kind === "corner")).toBe(true);
+        expect(barriers.map((b) => b.quadrant).sort()).toEqual([
+            "ne",
+            "nw",
+            "se",
+            "sw",
+        ]);
     });
 
-    it("square hugs the outer perimeter with a hole in each side", () => {
+    it("square hugs the outer perimeter", () => {
+        // Junctions sit at the outer corners (~0.2 / ~0.8) with arms reaching
+        // inward, so each side keeps a gap in the middle.
         const barriers = clickPreset("Square");
-        // Perimeter bars: hbars on the top/bottom rows, vbars on the side
-        // columns (~0.2 / ~0.8).
         for (const b of barriers) {
-            const edge = (b.kind === "hbar" ? b.y : b.x) as number;
-            expect(edge === 0.2 || edge === 0.8).toBe(true);
-        }
-        // Hole in the middle of every side: no hbar's span covers x = 0.5 and
-        // no vbar's span covers y = 0.5.
-        for (const b of barriers) {
-            const centre = (b.kind === "hbar" ? b.x : b.y) as number;
-            const half = (b.length as number) / 2;
-            expect(centre - half <= 0.5 && centre + half >= 0.5).toBe(false);
+            expect(b.x === 0.2 || b.x === 0.8).toBe(true);
+            expect(b.y === 0.2 || b.y === 0.8).toBe(true);
         }
     });
 

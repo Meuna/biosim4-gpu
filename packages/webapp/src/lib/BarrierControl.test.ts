@@ -9,6 +9,7 @@ const defaultHbar: BarrierSpec = {
     y: 0.5,
     length: 0.25,
     width: 0.02,
+    quadrant: "ne",
 };
 
 describe("BarrierControl", () => {
@@ -97,6 +98,35 @@ describe("BarrierControl", () => {
             props: { value: [circle], onchange: vi.fn() },
         });
         expect(screen.queryByLabelText("Width")).toBeNull();
+    });
+
+    it("shows width slider and quadrant selector for corner", () => {
+        const cornerSpec: BarrierSpec = { ...defaultHbar, kind: "corner" };
+        render(BarrierControl, {
+            props: { value: [cornerSpec], onchange: vi.fn() },
+        });
+        expect(screen.queryByLabelText("Width")).toBeTruthy();
+        expect(screen.queryByLabelText("Barrier 1 quadrant")).toBeTruthy();
+    });
+
+    it("hides quadrant selector for non-corner kinds", () => {
+        render(BarrierControl, {
+            props: { value: [defaultHbar], onchange: vi.fn() },
+        });
+        expect(screen.queryByLabelText("Barrier 1 quadrant")).toBeNull();
+    });
+
+    it("changing quadrant calls onchange with updated quadrant", async () => {
+        const onchange = vi.fn<[BarrierSpec[]], void>();
+        const cornerSpec: BarrierSpec = { ...defaultHbar, kind: "corner" };
+        render(BarrierControl, {
+            props: { value: [cornerSpec], onchange },
+        });
+        await fireEvent.change(screen.getByLabelText("Barrier 1 quadrant"), {
+            target: { value: "sw" },
+        });
+        expect(onchange).toHaveBeenCalledOnce();
+        expect(onchange.mock.calls[0][0][0].quadrant).toBe("sw");
     });
 
     it("shuffle button calls onchange with randomised values", async () => {

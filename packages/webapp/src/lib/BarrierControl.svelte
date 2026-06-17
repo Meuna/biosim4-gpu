@@ -1,6 +1,10 @@
 <script lang="ts">
     // BarrierControl — add/remove/configure barriers for the simulation.
-    import type { BarrierSpec, BarrierKind } from "../workers/sim.worker";
+    import type {
+        BarrierSpec,
+        BarrierKind,
+        CornerQuadrant,
+    } from "../workers/sim.worker";
     import ParamSlider from "./ParamSlider.svelte";
     import { Dices, Trash2 } from "lucide-svelte";
 
@@ -16,6 +20,16 @@
         { kind: "vbar", label: "Vertical bar" },
         { kind: "square", label: "Square" },
         { kind: "circle", label: "Circle" },
+        { kind: "corner", label: "Corner" },
+    ];
+
+    // Labels are screen-oriented: the canvas draws grid-y downward, so the core
+    // quadrant (y up) maps to the opposite vertical half on screen.
+    const QUADRANTS: { quadrant: CornerQuadrant; label: string }[] = [
+        { quadrant: "se", label: "Top-right" },
+        { quadrant: "sw", label: "Top-left" },
+        { quadrant: "ne", label: "Bottom-right" },
+        { quadrant: "nw", label: "Bottom-left" },
     ];
 
     const DEFAULT_BARRIER: BarrierSpec = {
@@ -24,10 +38,11 @@
         y: 0.5,
         length: 0.25,
         width: 0.02,
+        quadrant: "ne",
     };
 
     function hasWidth(kind: BarrierKind): boolean {
-        return kind === "hbar" || kind === "vbar";
+        return kind === "hbar" || kind === "vbar" || kind === "corner";
     }
 
     function addBarrier(): void {
@@ -179,7 +194,29 @@
                 onchange={(v) => patchBarrier(i, { length: v })}
             />
 
-            <!-- Width — bars only -->
+            <!-- Quadrant — corner only -->
+            {#if barrier.kind === "corner"}
+                <div class="field-row barrier-control__quadrant-row">
+                    <span class="field-label">Quadrant</span>
+                    <select
+                        class="barrier-control__select"
+                        value={barrier.quadrant}
+                        {disabled}
+                        onchange={(e) =>
+                            patchBarrier(i, {
+                                quadrant: (e.target as HTMLSelectElement)
+                                    .value as CornerQuadrant,
+                            })}
+                        aria-label={`Barrier ${i + 1} quadrant`}
+                    >
+                        {#each QUADRANTS as { quadrant, label }}
+                            <option value={quadrant}>{label}</option>
+                        {/each}
+                    </select>
+                </div>
+            {/if}
+
+            <!-- Width — bars and corners -->
             {#if hasWidth(barrier.kind)}
                 <ParamSlider
                     label="Width"
@@ -245,6 +282,12 @@
     }
 
     .barrier-control__header-row {
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-1);
+    }
+
+    .barrier-control__quadrant-row {
         align-items: center;
         gap: var(--space-2);
         margin-bottom: var(--space-1);

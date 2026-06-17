@@ -498,10 +498,11 @@ static int barriers_grow(void) {
 /* Append one barrier spec to the list. x, y, length and width are grid ratios
  * in [0, 1]: x/y are fractions of grid width/height, length/width fractions of
  * the smaller axis. Pass -1.0 (BIOSIM_BARRIER_POS_UNSET) for a random position
- * or 0.0 (BIOSIM_BARRIER_DIM_UNSET) for a random dimension. Returns BIOSIM_OK
- * or BIOSIM_ERR_NOMEM on allocation failure. */
+ * or 0.0 (BIOSIM_BARRIER_DIM_UNSET) for a random dimension. quadrant selects a
+ * corner barrier's arm directions (biosim_corner_quadrant_t) and is ignored by
+ * other kinds. Returns BIOSIM_OK or BIOSIM_ERR_NOMEM on allocation failure. */
 EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
-    int kind, float x, float y, float length, float width
+    int kind, float x, float y, float length, float width, int quadrant
 ) {
     int rc = barriers_grow();
     if (rc != BIOSIM_OK) {
@@ -513,6 +514,7 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
     b->y = y;
     b->length = length;
     b->width = width;
+    b->quadrant = (biosim_corner_quadrant_t)quadrant;
     n_barriers++;
     return BIOSIM_OK;
 }

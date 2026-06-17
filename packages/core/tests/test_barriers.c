@@ -118,6 +118,52 @@ void test_circle_stays_in_bounds(void) {
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(0, 0)));
 }
 
+/* ── corner ─────────────────────────────────────────────────────────────── */
+
+void test_corner_explicit(void) {
+    /* junction (32,32); NE arms reach +x and +y by length 10/64 → 10 cells */
+    biosim_barrier_spec_t spec = {
+        BIOSIM_BARRIER_CORNER, 0.5F, 0.5F, 10.0F / 64.0F, 2.0F / 64.0F, BIOSIM_CORNER_NE
+    };
+    uint64_t rng = biosim_rng_seed(0, 0);
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
+
+    /* junction and both arm tips are barriers */
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(42, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 42)));
+    /* arms do not extend the opposite way, nor past their length */
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(22, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 22)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(43, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 43)));
+}
+
+void test_corner_quadrants(void) {
+    /* From junction (32,32) with arm length 10, each quadrant places its
+     * horizontal arm tip at hx and its vertical arm tip at vy. */
+    struct {
+        biosim_corner_quadrant_t q;
+        int16_t hx;
+        int16_t vy;
+    } cases[] = {
+        {BIOSIM_CORNER_NE, 42, 42},
+        {BIOSIM_CORNER_NW, 22, 42},
+        {BIOSIM_CORNER_SE, 42, 22},
+        {BIOSIM_CORNER_SW, 22, 22},
+    };
+    for (int i = 0; i < 4; i++) {
+        biosim_grid_zero_fill(&g);
+        biosim_barrier_spec_t spec = {
+            BIOSIM_BARRIER_CORNER, 0.5F, 0.5F, 10.0F / 64.0F, 2.0F / 64.0F, cases[i].q
+        };
+        uint64_t rng = biosim_rng_seed(0, 0);
+        biosim_barriers_place(&g, &spec, 1, &rng, NULL);
+        TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(cases[i].hx, 32)));
+        TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, cases[i].vy)));
+    }
+}
+
 /* ── random placement ───────────────────────────────────────────────────── */
 
 void test_random_hbar_places_barriers(void) {
@@ -127,6 +173,20 @@ void test_random_hbar_places_barriers(void) {
         BIOSIM_BARRIER_POS_UNSET,
         BIOSIM_BARRIER_DIM_UNSET,
         BIOSIM_BARRIER_DIM_UNSET
+    };
+    uint64_t rng = biosim_rng_seed(0, 0);
+    biosim_barriers_place(&g, &spec, 1, &rng, NULL);
+    TEST_ASSERT_GREATER_THAN(0, count_barriers(&g));
+}
+
+void test_random_corner_places_barriers(void) {
+    biosim_barrier_spec_t spec = {
+        BIOSIM_BARRIER_CORNER,
+        BIOSIM_BARRIER_POS_UNSET,
+        BIOSIM_BARRIER_POS_UNSET,
+        BIOSIM_BARRIER_DIM_UNSET,
+        BIOSIM_BARRIER_DIM_UNSET,
+        BIOSIM_CORNER_NE
     };
     uint64_t rng = biosim_rng_seed(0, 0);
     biosim_barriers_place(&g, &spec, 1, &rng, NULL);
@@ -169,7 +229,10 @@ int main(void) {
     RUN_TEST(test_square_explicit);
     RUN_TEST(test_circle_explicit);
     RUN_TEST(test_circle_stays_in_bounds);
+    RUN_TEST(test_corner_explicit);
+    RUN_TEST(test_corner_quadrants);
     RUN_TEST(test_random_hbar_places_barriers);
+    RUN_TEST(test_random_corner_places_barriers);
     RUN_TEST(test_random_deterministic);
     RUN_TEST(test_empty_spec_list);
     return UNITY_END();
