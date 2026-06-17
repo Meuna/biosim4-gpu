@@ -199,9 +199,11 @@ static biosim_coord_t place_corner(
                  ? ratio_to_cell(spec->y, sy)
                  : rand_range_i(rng, margin_y + len, sy - margin_y - len);
 
-    /* Arm directions per quadrant (index = quadrant): NE, NW, SE, SW. */
+    /* Arm directions per quadrant (index = quadrant): NE, NW, SE, SW. Cardinals
+     * follow the io_defs.h direction table (north is -y): NE → (+x,-y),
+     * NW → (-x,-y), SE → (+x,+y), SW → (-x,+y). */
     static const int dx_of[] = {1, -1, 1, -1};
-    static const int dy_of[] = {1, 1, -1, -1};
+    static const int dy_of[] = {-1, -1, 1, 1};
     int dx = dx_of[spec->quadrant];
     int dy = dy_of[spec->quadrant];
 

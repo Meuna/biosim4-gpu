@@ -20,8 +20,9 @@ typedef enum {
 
 /*
  * Quadrant of a CORNER barrier: the cell-space directions its horizontal and
- * vertical arms extend from the junction (origin bottom-left, y up).
- *   NE → (+x, +y)   NW → (-x, +y)   SE → (+x, -y)   SW → (-x, -y)
+ * vertical arms extend from the junction. Cardinals follow the io_defs.h
+ * direction table, where north is -y (y increases downward):
+ *   NE → (+x, -y)   NW → (-x, -y)   SE → (+x, +y)   SW → (-x, +y)
  * Ignored by all other barrier kinds.
  */
 typedef enum {

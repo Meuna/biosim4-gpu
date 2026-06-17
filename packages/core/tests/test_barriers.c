@@ -121,7 +121,7 @@ void test_circle_stays_in_bounds(void) {
 /* ── corner ─────────────────────────────────────────────────────────────── */
 
 void test_corner_explicit(void) {
-    /* junction (32,32); NE arms reach +x and +y by length 10/64 → 10 cells */
+    /* junction (32,32); NE arms reach +x and -y by length 10/64 → 10 cells */
     biosim_barrier_spec_t spec = {
         BIOSIM_BARRIER_CORNER, 0.5F, 0.5F, 10.0F / 64.0F, 2.0F / 64.0F, BIOSIM_CORNER_NE
     };
@@ -131,12 +131,12 @@ void test_corner_explicit(void) {
     /* junction and both arm tips are barriers */
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 32)));
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(42, 32)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 42)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 22)));
     /* arms do not extend the opposite way, nor past their length */
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(22, 32)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 22)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 42)));
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(43, 32)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 43)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 21)));
 }
 
 void test_corner_quadrants(void) {
@@ -147,10 +147,10 @@ void test_corner_quadrants(void) {
         int16_t hx;
         int16_t vy;
     } cases[] = {
-        {BIOSIM_CORNER_NE, 42, 42},
-        {BIOSIM_CORNER_NW, 22, 42},
-        {BIOSIM_CORNER_SE, 42, 22},
-        {BIOSIM_CORNER_SW, 22, 22},
+        {BIOSIM_CORNER_NE, 42, 22},
+        {BIOSIM_CORNER_NW, 22, 22},
+        {BIOSIM_CORNER_SE, 42, 42},
+        {BIOSIM_CORNER_SW, 22, 42},
     };
     for (int i = 0; i < 4; i++) {
         biosim_grid_zero_fill(&g);
