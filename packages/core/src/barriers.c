@@ -1,5 +1,6 @@
 #include "biosim/core/barriers.h"
 #include "biosim/core/grid_defs.h"
+#include "biosim/core/io_defs.h"
 #include "biosim/core/rng.h"
 
 #include <stddef.h>
@@ -199,13 +200,14 @@ static biosim_coord_t place_corner(
                  ? ratio_to_cell(spec->y, sy)
                  : rand_range_i(rng, margin_y + len, sy - margin_y - len);
 
-    /* Arm directions per quadrant (index = quadrant): NE, NW, SE, SW. Cardinals
-     * follow the io_defs.h direction table (north is -y): NE → (+x,-y),
-     * NW → (-x,-y), SE → (+x,+y), SW → (-x,+y). */
-    static const int dx_of[] = {1, -1, 1, -1};
-    static const int dy_of[] = {-1, -1, 1, 1};
-    int dx = dx_of[spec->quadrant];
-    int dy = dy_of[spec->quadrant];
+    /* Arm directions come straight from the io_defs.h direction table so they
+     * cannot drift from the canonical cardinal vectors. quadrant_dir maps each
+     * quadrant (NE, NW, SE, SW) onto its table index (E NE N NW W SW S SE),
+     * yielding NE → (+x,-y), NW → (-x,-y), SE → (+x,+y), SW → (-x,+y). */
+    static const int quadrant_dir[] = {1, 3, 7, 5};
+    int dir = quadrant_dir[spec->quadrant];
+    int dx = (int)BIOSIM_DIR_DX[dir];
+    int dy = (int)BIOSIM_DIR_DY[dir];
 
     /* Horizontal arm reaches from the junction along x; vertical along y. They
      * overlap at the w×w junction block, which fill_box paints idempotently. */
