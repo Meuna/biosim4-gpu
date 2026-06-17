@@ -6,7 +6,7 @@
     } from "./workers/sim.worker";
     import TopBar from "./lib/TopBar.svelte";
     import GridView from "./lib/GridView.svelte";
-    import HUD from "./lib/HUD.svelte";
+    import SurvivalSparkline from "./lib/SurvivalSparkline.svelte";
     import TelemetryHUD from "./lib/TelemetryHUD.svelte";
     import RightRail from "./lib/RightRail.svelte";
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
@@ -28,7 +28,11 @@
     import { SimMachine } from "./lib/simMachine.svelte";
     import { AgentFocus } from "./lib/agentFocus.svelte";
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
-    import { computeGridGeom, hamburgerInset } from "./lib/gridGeom";
+    import {
+        computeGridGeom,
+        hudBounds,
+        hamburgerInset,
+    } from "./lib/gridGeom";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -322,6 +326,10 @@
     // breakpoint (TopBar.svelte), which clears that threshold. var() can't be
     // used in this comparison, so 1160 is duplicated here as in the header media.
     const telemetryPlacement = $derived(viewportW < 1160 ? "below" : "right");
+
+    // Survival sparkline shares the grid's responsive width rules: it starts at
+    // the shrinking side padding and is pushed in by the rail.
+    const survivalBounds = $derived(hudBounds(viewportW, railOpen));
 
     // Re-send layout whenever the grid geometry or viewport dims change so the
     // worker can resize the canvas and reposition the grid region.
@@ -654,7 +662,14 @@
             />
 
             <!-- z-index: 15 — survival sparkline, bottom-left -->
-            <HUD survivalHistory={telemetry.survivalHistory} />
+            <SurvivalSparkline
+                survivalHistory={telemetry.survivalHistory}
+                min={telemetry.survivalMin}
+                current={telemetry.survivalCurrent}
+                max={telemetry.survivalMax}
+                left={survivalBounds.left}
+                maxWidth={survivalBounds.maxWidth}
+            />
         {/if}
     {/if}
 

@@ -34,11 +34,28 @@ const PAD_SIDE_MIN = 44;
 const PAD_SIDE_MAX = 80;
 const PAD_SIDE_FRACTION = 0.08;
 
-function sidePadding(viewportW: number): number {
+export function sidePadding(viewportW: number): number {
     return Math.min(
         PAD_SIDE_MAX,
         Math.max(PAD_SIDE_MIN, viewportW * PAD_SIDE_FRACTION),
     );
+}
+
+function railWidth(viewportW: number, railOpen: boolean): number {
+    return railOpen && viewportW > 760 ? RAIL_W : 0;
+}
+
+// Horizontal bounds the survival sparkline shares with the grid: it starts at
+// the same shrinking side padding and its max width is pushed in by the rail,
+// so it never overlaps the rail nor runs off a narrow viewport. Pure so it is
+// unit-testable alongside computeGridGeom.
+export function hudBounds(
+    viewportW: number,
+    railOpen: boolean,
+): { left: number; maxWidth: number } {
+    const padSide = sidePadding(viewportW);
+    const railW = railWidth(viewportW, railOpen);
+    return { left: padSide, maxWidth: viewportW - railW - padSide * 2 };
 }
 
 // Hamburger inset from the right edge. On wide screens it sits in the roomy
@@ -59,7 +76,7 @@ export function hamburgerInset(viewportW: number): number {
 
 export function computeGridGeom(input: GridGeomInput): GridGeom {
     const padSide = sidePadding(input.viewportW);
-    const railW = input.railOpen && input.viewportW > 760 ? RAIL_W : 0;
+    const railW = railWidth(input.viewportW, input.railOpen);
     const availW = input.viewportW - railW - padSide * 2;
     const availH = input.viewportH - input.topbarH - PAD_TOP - PAD_BOTTOM;
     const maxCells = Math.max(input.gridSizeX, input.gridSizeY);

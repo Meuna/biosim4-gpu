@@ -29,6 +29,15 @@ export class SimTelemetry {
     #pop = $state(3000);
     #survivalHistory = $state<number[]>([]);
 
+    // Running aggregates over the full survival history, folded in O(1) per
+    // generation. Kept here (not derived in the view) so they reflect the whole
+    // run without an O(n) Math.min(...spread) — which would also risk a
+    // call-stack overflow at the 100k-generation scale. Null until the first
+    // census of a run.
+    #survivalMin = $state<number | null>(null);
+    #survivalCurrent = $state<number | null>(null);
+    #survivalMax = $state<number | null>(null);
+
     // These reflect the active simulation parameters and are refreshed whenever
     // a (re)configuration reply arrives.
     #stepsPerGen = $state(300);
@@ -55,6 +64,18 @@ export class SimTelemetry {
         return this.#survivalHistory;
     }
 
+    get survivalMin(): number | null {
+        return this.#survivalMin;
+    }
+
+    get survivalCurrent(): number | null {
+        return this.#survivalCurrent;
+    }
+
+    get survivalMax(): number | null {
+        return this.#survivalMax;
+    }
+
     get stepsPerGen(): number {
         return this.#stepsPerGen;
     }
@@ -71,11 +92,29 @@ export class SimTelemetry {
         return this.#snapReady;
     }
 
-    // Append a survival rate to the sparkline, capped at the most recent 12
-    // entries. Guards a zero denominator (no population this generation).
+    // Append a survival rate to the sparkline over the full generation range,
+    // folding the running min/current/max. Guards a zero denominator (no
+    // population this generation).
     #pushSurvival(survivors: number, denom: number): void {
         const rate = denom > 0 ? survivors / denom : 0;
-        this.#survivalHistory = [...this.#survivalHistory.slice(-11), rate];
+        this.#survivalHistory = [...this.#survivalHistory, rate];
+        this.#survivalCurrent = rate;
+        this.#survivalMin =
+            this.#survivalMin === null
+                ? rate
+                : Math.min(this.#survivalMin, rate);
+        this.#survivalMax =
+            this.#survivalMax === null
+                ? rate
+                : Math.max(this.#survivalMax, rate);
+    }
+
+    // Clear the survival history and its aggregates at the start of a run.
+    #resetSurvival(): void {
+        this.#survivalHistory = [];
+        this.#survivalMin = null;
+        this.#survivalCurrent = null;
+        this.#survivalMax = null;
     }
 
     // ── Worker-reply intents ──────────────────────────────────────────────────
@@ -94,7 +133,7 @@ export class SimTelemetry {
     onConfigured(e: ConfigInfo): void {
         this.#gen = 0;
         this.#step = 0;
-        this.#survivalHistory = [];
+        this.#resetSurvival();
         this.#pop = e.population;
         this.#gridSizeX = e.gridSizeX;
         this.#gridSizeY = e.gridSizeY;
@@ -109,7 +148,7 @@ export class SimTelemetry {
         this.#gridSizeX = e.gridSizeX;
         this.#gridSizeY = e.gridSizeY;
         this.#stepsPerGen = e.stepsPerGen;
-        this.#survivalHistory = [];
+        this.#resetSurvival();
     }
 
     onNextGenerationConfigured(
@@ -136,7 +175,7 @@ export class SimTelemetry {
         this.#step = 0;
         this.#pop = e.population;
         this.#snapReady = true;
-        this.#survivalHistory = [];
+        this.#resetSurvival();
     }
 
     // ── User gestures ─────────────────────────────────────────────────────────

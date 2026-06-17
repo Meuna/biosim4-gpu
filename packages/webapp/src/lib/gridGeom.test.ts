@@ -1,5 +1,6 @@
 import {
     computeGridGeom,
+    hudBounds,
     hamburgerInset,
     type GridGeomInput,
 } from "./gridGeom";
@@ -77,6 +78,33 @@ describe("computeGridGeom", () => {
             viewportH: 5000,
         });
         expect(huge.w).toBe(760);
+    });
+});
+
+describe("hudBounds", () => {
+    it("starts the HUD at the side padding, shrinking on small viewports", () => {
+        // Wide: side padding caps at 80px.
+        expect(hudBounds(1440, false).left).toBe(80);
+        // Narrow: side padding floors at 44px.
+        expect(hudBounds(393, false).left).toBe(44);
+        // The left offset shrinks monotonically as the viewport narrows.
+        expect(hudBounds(900, false).left).toBeGreaterThanOrEqual(
+            hudBounds(500, false).left,
+        );
+    });
+
+    it("matches the grid's available width (left + width + left)", () => {
+        const b = hudBounds(1440, false);
+        expect(b.left + b.maxWidth + b.left).toBe(1440);
+    });
+
+    it("is pushed in by the rail only above 760px", () => {
+        const closed = hudBounds(1000, false);
+        const open = hudBounds(1000, true);
+        expect(open.maxWidth).toBe(closed.maxWidth - 380);
+
+        // At 760px the rail is a full-width overlay, so it is ignored.
+        expect(hudBounds(760, true)).toEqual(hudBounds(760, false));
     });
 });
 

@@ -16,6 +16,9 @@ describe("initial state", () => {
         expect(t.step).toBe(0);
         expect(t.pop).toBe(3000);
         expect(history(t)).toEqual([]);
+        expect(t.survivalMin).toBeNull();
+        expect(t.survivalCurrent).toBeNull();
+        expect(t.survivalMax).toBeNull();
         expect(t.stepsPerGen).toBe(300);
         expect(t.gridSizeX).toBe(128);
         expect(t.gridSizeY).toBe(128);
@@ -48,15 +51,25 @@ describe("onCensus", () => {
         expect(history(t)).toEqual([0]);
     });
 
-    it("caps the sparkline at 12 entries", () => {
+    it("keeps the full history without a sliding-window cap", () => {
         const t = create();
         for (let i = 0; i < 15; i++)
             t.onCensus({ gen: i, population: 100, survivors: i });
         const h = history(t);
-        expect(h).toHaveLength(12);
-        // Oldest kept entry is the 4th census (survivors=3), newest is the 15th.
-        expect(h[0]).toBeCloseTo(0.03);
-        expect(h[11]).toBeCloseTo(0.14);
+        expect(h).toHaveLength(15);
+        expect(h[0]).toBeCloseTo(0);
+        expect(h[14]).toBeCloseTo(0.14);
+    });
+
+    it("folds running min/current/max over the full history", () => {
+        const t = create();
+        t.onCensus({ gen: 0, population: 100, survivors: 50 }); // 0.5
+        t.onCensus({ gen: 1, population: 100, survivors: 20 }); // 0.2
+        t.onCensus({ gen: 2, population: 100, survivors: 80 }); // 0.8
+        t.onCensus({ gen: 3, population: 100, survivors: 40 }); // 0.4
+        expect(t.survivalMin).toBeCloseTo(0.2);
+        expect(t.survivalMax).toBeCloseTo(0.8);
+        expect(t.survivalCurrent).toBeCloseTo(0.4);
     });
 });
 
@@ -73,6 +86,9 @@ describe("onConfigured", () => {
         expect(t.gen).toBe(0);
         expect(t.step).toBe(0);
         expect(history(t)).toEqual([]);
+        expect(t.survivalMin).toBeNull();
+        expect(t.survivalCurrent).toBeNull();
+        expect(t.survivalMax).toBeNull();
         expect(t.pop).toBe(1500);
         expect(t.gridSizeX).toBe(64);
         expect(t.gridSizeY).toBe(96);
@@ -100,6 +116,9 @@ describe("onRewindConfigured", () => {
         expect(t.gridSizeY).toBe(48);
         expect(t.stepsPerGen).toBe(400);
         expect(history(t)).toEqual([]);
+        expect(t.survivalMin).toBeNull();
+        expect(t.survivalCurrent).toBeNull();
+        expect(t.survivalMax).toBeNull();
     });
 
     it("leaves snapReady untouched (preserves prior value)", () => {
@@ -170,6 +189,9 @@ describe("onSnapshotLoaded", () => {
         expect(t.stepsPerGen).toBe(500);
         expect(t.snapReady).toBe(true);
         expect(history(t)).toEqual([]);
+        expect(t.survivalMin).toBeNull();
+        expect(t.survivalCurrent).toBeNull();
+        expect(t.survivalMax).toBeNull();
     });
 });
 
