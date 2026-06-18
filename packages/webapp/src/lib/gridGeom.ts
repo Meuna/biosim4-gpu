@@ -57,22 +57,6 @@ export function hamburgerInset(viewportW: number): number {
     );
 }
 
-// Hamburger gap below the topbar. On wide screens 20px (--space-5, the desktop
-// look). On narrow screens the topbar wraps and a short viewport makes the grid
-// height-limited, lifting the grid-hint into the button's row; tightening the
-// gap to 8px raises the button so its bottom clears the hint. Continuous —
-// mirrors hamburgerInset, no breakpoint/resize "pop". Reaches 20px near 1000px.
-const HAMBURGER_TOP_GAP_MIN = 8;
-const HAMBURGER_TOP_GAP_MAX = 20;
-const HAMBURGER_TOP_GAP_FRACTION = 0.02;
-
-export function hamburgerTopGap(viewportW: number): number {
-    return Math.min(
-        HAMBURGER_TOP_GAP_MAX,
-        Math.max(HAMBURGER_TOP_GAP_MIN, viewportW * HAMBURGER_TOP_GAP_FRACTION),
-    );
-}
-
 export function computeGridGeom(input: GridGeomInput): GridGeom {
     const padSide = sidePadding(input.viewportW);
     const railW = input.railOpen && input.viewportW > 760 ? RAIL_W : 0;

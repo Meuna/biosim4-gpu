@@ -1,7 +1,6 @@
 import {
     computeGridGeom,
     hamburgerInset,
-    hamburgerTopGap,
     type GridGeomInput,
 } from "./gridGeom";
 
@@ -103,33 +102,6 @@ describe("hamburgerInset", () => {
         const wide = hamburgerInset(900);
         const mid = hamburgerInset(500);
         const narrow = hamburgerInset(375);
-        expect(wide).toBeGreaterThanOrEqual(mid);
-        expect(mid).toBeGreaterThanOrEqual(narrow);
-    });
-});
-
-describe("hamburgerTopGap", () => {
-    it("tightens the gap on a small viewport so the button clears the hint", () => {
-        // iPhone 12 mini: lifting the button keeps its bottom above the
-        // grid-hint when a short viewport makes the grid height-limited.
-        const gap = hamburgerTopGap(375);
-        expect(gap).toBeGreaterThanOrEqual(8);
-        expect(gap).toBeLessThan(20);
-    });
-
-    it("caps at the desktop look (20px = --space-5) once wide enough", () => {
-        expect(hamburgerTopGap(1000)).toBe(20);
-        expect(hamburgerTopGap(1440)).toBe(20);
-    });
-
-    it("floors at 8px on a very narrow viewport", () => {
-        expect(hamburgerTopGap(100)).toBe(8);
-    });
-
-    it("shrinks monotonically as the viewport narrows", () => {
-        const wide = hamburgerTopGap(900);
-        const mid = hamburgerTopGap(500);
-        const narrow = hamburgerTopGap(375);
         expect(wide).toBeGreaterThanOrEqual(mid);
         expect(mid).toBeGreaterThanOrEqual(narrow);
     });
