@@ -27,6 +27,7 @@
 - Require an exact Max neurons match to breed a loaded snapshot or running population ([#151](https://github.com/Meuna/biosim4-gpu/pull/151))
 - Enlarge the simulation grid on small (phone) viewports by scaling the side margins with the viewport width ([#157](https://github.com/Meuna/biosim4-gpu/pull/157))
 - Show the full-run survival rate with a min/now/max readout in a responsive sparkline that widens with each generation up to the grid width ([#167](https://github.com/Meuna/biosim4-gpu/pull/167))
+- The survival spark line stay visible during evolve ([#172](https://github.com/Meuna/biosim4-gpu/pull/172))
 
 #### Fixed
 

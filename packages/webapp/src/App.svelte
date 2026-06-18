@@ -656,17 +656,17 @@
                 pop={telemetry.pop}
                 fps={measuredFps}
             />
-
-            <!-- z-index: 15 — survival sparkline, bottom-left -->
-            <SurvivalSparkline
-                survivalHistory={telemetry.survivalHistory}
-                min={telemetry.survivalMin}
-                current={telemetry.survivalCurrent}
-                max={telemetry.survivalMax}
-                left={survivalBounds.left}
-                maxWidth={survivalBounds.maxWidth}
-            />
         {/if}
+
+        <!-- z-index: 15 — survival sparkline, bottom-left -->
+        <SurvivalSparkline
+            survivalHistory={telemetry.survivalHistory}
+            min={telemetry.survivalMin}
+            current={telemetry.survivalCurrent}
+            max={telemetry.survivalMax}
+            left={survivalBounds.left}
+            maxWidth={survivalBounds.maxWidth}
+        />
     {/if}
 
     <!-- Hamburger toggle — top-right, z-index: 30 -->
