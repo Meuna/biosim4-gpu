@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/svelte";
+import { render, screen, fireEvent } from "@testing-library/svelte";
+import { vi } from "vitest";
 import TopBar from "./TopBar.svelte";
 import { webappVersion } from "./version";
 
@@ -6,6 +7,7 @@ const noOp = () => {};
 
 const defaultProps = {
     phase: "WORKER_READY" as const,
+    renderMode: "grid" as const,
     onToggle: noOp,
     onStep: noOp,
     onNextGen: noOp,
@@ -14,6 +16,7 @@ const defaultProps = {
     onToggleFreeRun: noOp,
     targetSpeed: 0,
     onSetSpeed: noOp,
+    onReturnToSculpture: noOp,
 };
 
 describe("TopBar", () => {
@@ -47,6 +50,33 @@ describe("TopBar", () => {
         expect(
             screen.getByRole("button", { name: /stop simulation/i }),
         ).toBeTruthy();
+    });
+
+    it("returns to the sculpture when the brand is clicked at rest", async () => {
+        const onReturnToSculpture = vi.fn();
+        render(TopBar, { ...defaultProps, onReturnToSculpture });
+        const brand = screen.getByRole("button", {
+            name: /return to the idle sculpture/i,
+        });
+        expect((brand as HTMLButtonElement).disabled).toBe(false);
+        await fireEvent.click(brand);
+        expect(onReturnToSculpture).toHaveBeenCalledOnce();
+    });
+
+    it("disables the brand control while the sim is running", () => {
+        render(TopBar, { ...defaultProps, phase: "STEPS_RUNNING" as const });
+        const brand = screen.getByRole("button", {
+            name: /return to the idle sculpture/i,
+        });
+        expect((brand as HTMLButtonElement).disabled).toBe(true);
+    });
+
+    it("disables the brand control while the sculpture is shown", () => {
+        render(TopBar, { ...defaultProps, renderMode: "kinematic" as const });
+        const brand = screen.getByRole("button", {
+            name: /return to the idle sculpture/i,
+        });
+        expect((brand as HTMLButtonElement).disabled).toBe(true);
     });
 
     it("renders Step, Rewind, Next Gen, and Clear Genom buttons", () => {

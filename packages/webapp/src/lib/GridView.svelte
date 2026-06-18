@@ -1,9 +1,7 @@
 <script lang="ts">
-    import type { SimPhase } from "./simMachine.svelte";
-
     let {
         geom,
-        phase,
+        renderMode,
         gridSizeX = 128,
         gridSizeY = 128,
         blurred = false,
@@ -16,7 +14,7 @@
             cx: number;
             cy: number;
         };
-        phase: SimPhase;
+        renderMode: "kinematic" | "grid";
         gridSizeX?: number;
         gridSizeY?: number;
         blurred?: boolean;
@@ -50,15 +48,15 @@
         >{gridSizeX}</span
     >
 
-    <!-- Idle overlay — visible only before simulation has ever been started -->
-    {#if phase === "WORKER_PENDING" || phase === "WORKER_READY"}
+    <!-- Idle overlay — visible whenever the worker shows the kinematic
+         sculpture (initial idle, idle-timeout return, or brand-click return). -->
+    {#if renderMode === "kinematic"}
         <div class="idle-overlay" aria-label="Simulation not started">
             <p class="idle-overlay__display">
                 press play<br /><em>to begin.</em>
             </p>
         </div>
     {/if}
-    <!-- TODO: replace idle overlay with actual agent rendering on the canvas layer -->
 </div>
 
 <style>

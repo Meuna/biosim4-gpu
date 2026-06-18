@@ -5,6 +5,7 @@
 
     let {
         phase,
+        renderMode,
         genomIncompatible = false,
         targetSpeed,
         headerHeight = $bindable(56),
@@ -15,8 +16,10 @@
         onClearGenom,
         onSetSpeed,
         onToggleFreeRun,
+        onReturnToSculpture,
     }: {
         phase: SimPhase;
+        renderMode: "kinematic" | "grid";
         genomIncompatible?: boolean;
         targetSpeed: number;
         headerHeight?: number;
@@ -27,12 +30,32 @@
         onClearGenom: () => void;
         onSetSpeed: (fps: number) => void;
         onToggleFreeRun: () => void;
+        onReturnToSculpture: () => void;
     } = $props();
+
+    // The brand doubles as a "return to the sculpture" control, but only when
+    // it would do something: the grid is shown and the sim is at rest (matching
+    // the worker's at-rest gate). While actively running it is inert.
+    const brandActive = $derived(
+        renderMode === "grid" &&
+            phase !== "STEPS_RUNNING" &&
+            phase !== "FREE_RUNNING" &&
+            phase !== "FREE_RUN_STOPPING",
+    );
 </script>
 
 <header class="topbar" bind:offsetHeight={headerHeight}>
     <div class="topbar__left">
-        <span class="topbar__brand">biosim4-gpu</span>
+        <button
+            type="button"
+            class="topbar__brand"
+            class:topbar__brand--active={brandActive}
+            disabled={!brandActive}
+            onclick={onReturnToSculpture}
+            aria-label="Return to the idle sculpture"
+        >
+            biosim4-gpu
+        </button>
         <span class="topbar__subtitle small-caps">visualizer</span>
     </div>
 
@@ -180,6 +203,26 @@
         color: var(--color-text);
         letter-spacing: var(--tracking-tight);
         white-space: nowrap;
+        /* Button reset — the brand looks identical whether or not it is the
+           live return-to-sculpture control (never greyed). */
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: none;
+        cursor: default;
+    }
+
+    .topbar__brand--active {
+        cursor: pointer;
+    }
+
+    .topbar__brand--active:hover {
+        color: var(--color-accent);
+    }
+
+    .topbar__brand--active:focus-visible {
+        outline: 2px solid var(--color-accent);
+        outline-offset: 2px;
     }
 
     .topbar__compat {

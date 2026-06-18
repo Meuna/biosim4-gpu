@@ -11,6 +11,7 @@ import {
 } from "../lib/kinematic";
 import { unpackConn, type BrainConn } from "../lib/brain";
 import { stepDelay, createFpsWindow } from "../lib/playbackRate";
+import { shouldIdleReturn, type RenderLoopMode } from "../lib/idleReturn";
 
 // ── Types & Protocol ──────────────────────────────────────────────────────────
 
@@ -124,7 +125,7 @@ export interface SimParams {
 export type WorkerCmd =
     | { type: "play" }
     | { type: "stop" }
-    | { type: "reset" }
+    | { type: "returnToKinematic" }
     | { type: "step" }
     | { type: "rewind" }
     | { type: "rewindConfigured"; params: SimParams }
@@ -168,6 +169,7 @@ export type WorkerCmd =
 
 export type WorkerEvent =
     | { type: "ready" }
+    | { type: "renderMode"; mode: "kinematic" | "grid" }
     | { type: "stepped"; gen: number; step: number }
     | { type: "genComplete"; gen: number; step: number }
     | { type: "paused"; gen: number; step: number }
@@ -239,7 +241,9 @@ interface Layout {
     gridCellsY: number;
 }
 
-type Mode = "idle" | "transitioning-in" | "running";
+// Mode is the worker's render-loop state, distinct from SimMachine's lifecycle
+// phase. RenderLoopMode is shared with the pure idle-return predicate.
+type Mode = RenderLoopMode;
 
 // ── WASM Bindings ─────────────────────────────────────────────────────────────
 
@@ -797,7 +801,28 @@ let startTime = performance.now(); // epoch for kinematic t (seconds)
 let kFrozenT = 0; // kinematic t captured at the moment play/step was pressed
 let transitionStart = 0; // performance.now() when current transition began
 const TRANSITION_IN_MS = 600;
+// Return to the sculpture is much slower than the snap into the grid, and only
+// after the sim has sat at rest for a while.
+const TRANSITION_OUT_MS = 2500;
+const IDLE_TIMEOUT_MS = 30_000;
+let lastActivity = performance.now(); // last time the sim was active or touched
 let animInterval: ReturnType<typeof setInterval> | null = null;
+
+// The main thread observes render mode (not the worker's finer Mode) to route
+// clicks and toggle the idle overlay. Posted only when the mapped value changes.
+let lastRenderMode: "kinematic" | "grid" | null = null;
+function renderModeFor(m: Mode): "kinematic" | "grid" {
+    // Sculpture-interactive (idle / forming) vs agent-pick-interactive (grid).
+    return m === "idle" || m === "transitioning-out" ? "kinematic" : "grid";
+}
+function setMode(next: Mode): void {
+    mode = next;
+    const rm = renderModeFor(next);
+    if (rm !== lastRenderMode) {
+        lastRenderMode = rm;
+        postMessage({ type: "renderMode", mode: rm } satisfies WorkerEvent);
+    }
+}
 
 function clearCanvas(): void {
     if (!ctx || !layout) return;
@@ -982,12 +1007,98 @@ function drawTransitionIn(frac: number): void {
     ctx.restore();
 }
 
+// Mirror of drawTransitionIn for the return to the sculpture: grid → kinematic.
+// Unlike transition-in, the sculpture is alive (evaluated at live t), so it is
+// visibly forming as the grid dissolves.
+function drawTransitionOut(frac: number, t: number): void {
+    if (!ctx || !layout || !biosim) return;
+    clearCanvas();
+    // The grid scaffolding dissolves as the sculpture takes over.
+    ctx.save();
+    ctx.globalAlpha = 1 - frac;
+    drawChallengeOverlay(currentChallenge);
+    drawBarriers();
+    ctx.restore();
+
+    const {
+        canvasW,
+        canvasH,
+        gridX,
+        gridY,
+        gridW,
+        gridH,
+        gridCellsX,
+        gridCellsY,
+    } = layout;
+    const pop = call("biosim_wasm_get_population");
+    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
+    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
+    const aliveOff = call("biosim_wasm_get_alive_ptr");
+    const { HEAP32, HEAPU8 } = biosim;
+
+    applyAgentStyle();
+    // Per-dot opacity ⇒ one fill per dot; save/restore so globalAlpha never
+    // leaks into the next frame's grid/overlay draws.
+    ctx.save();
+    for (let i = 0; i < pop; i++) {
+        const to = kinematicPosition(i, pop, {
+            t,
+            canvasW,
+            canvasH,
+            beat: 0,
+            pointer: null,
+        });
+        if (HEAPU8[aliveOff + i]) {
+            const gx = HEAP32[locXOff + i];
+            const gy = HEAP32[locYOff + i];
+            const from = gridPosition(
+                gx,
+                gy,
+                gridX,
+                gridY,
+                gridW,
+                gridH,
+                gridCellsX,
+                gridCellsY,
+            );
+            const { x, y } = lerpVec2(from, to, frac);
+            const r = from.r + (to.r - from.r) * frac;
+            // Grid is fully opaque; fade toward the sculpture's per-dot opacity.
+            ctx.globalAlpha = 1 + (to.opacity - 1) * frac;
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Dead agents have no grid cell: fade in at their sculpture position.
+            const r = to.r * frac;
+            if (r > 0.1) {
+                ctx.globalAlpha = to.opacity * frac;
+                ctx.beginPath();
+                ctx.arc(to.x, to.y, r, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+    ctx.restore();
+}
+
 function startTransitionIfNeeded(): void {
-    if (mode === "idle") {
+    // Also reachable mid-return: snapping back into the grid must interrupt a
+    // transition-out, or play/step would run the sim invisibly under the
+    // sculpture.
+    if (mode === "idle" || mode === "transitioning-out") {
+        // kFrozenT is the live t so transition-in reverses from the current
+        // sculpture frame (idle or mid-return).
         kFrozenT = (performance.now() - startTime) / 1000;
         transitionStart = performance.now();
-        mode = "transitioning-in";
+        setMode("transitioning-in");
     }
+}
+
+function startTransitionOut(): void {
+    transitionStart = performance.now();
+    // t stays live via startTime so the sculpture is alive and forming.
+    setMode("transitioning-out");
 }
 
 function animTick(): void {
@@ -996,11 +1107,29 @@ function animTick(): void {
     const now = performance.now();
     const t = (now - startTime) / 1000;
 
+    if (
+        shouldIdleReturn({
+            mode,
+            playing,
+            freeRunning,
+            now,
+            lastActivity,
+            timeoutMs: IDLE_TIMEOUT_MS,
+        })
+    ) {
+        startTransitionOut();
+    }
+
     if (mode === "transitioning-in") {
         const raw = (now - transitionStart) / TRANSITION_IN_MS;
         const frac = Math.min(1, raw);
         drawTransitionIn(easeInOut(frac));
-        if (frac >= 1) mode = "running";
+        if (frac >= 1) setMode("running");
+    } else if (mode === "transitioning-out") {
+        const raw = (now - transitionStart) / TRANSITION_OUT_MS;
+        const frac = Math.min(1, raw);
+        drawTransitionOut(easeInOut(frac), t);
+        if (frac >= 1) setMode("idle");
     } else if (mode === "running") {
         drawGrid();
     } else {
@@ -1057,8 +1186,9 @@ function handlePlay(): void {
 
 function handleStop(): void {
     playing = false;
-    // mode intentionally unchanged — agents freeze at their current
-    // grid positions (idle-timeout return to kinematic is future work).
+    // mode intentionally unchanged — agents freeze at their grid positions;
+    // the idle timer (reset here) drives the eventual return to the sculpture.
+    lastActivity = performance.now();
     postMessage(progress("paused"));
 }
 
@@ -1081,7 +1211,8 @@ function handleRewindConfigured(params: SimParams): void {
     applyConfig(params);
     if (callChecked("biosim_wasm_rewind_configured") !== 0) return;
     cacheBarrierCells();
-    mode = prevMode === "idle" ? "idle" : "running";
+    // Keep the sculpture if we were showing it; otherwise land on the grid.
+    setMode(renderModeFor(prevMode) === "kinematic" ? "idle" : "running");
     startTime = performance.now();
     postMessage({
         type: "rewindConfigured",
@@ -1099,7 +1230,8 @@ function handleNextGenerationConfigured(params: SimParams): void {
     applyConfig(params);
     if (callChecked("biosim_wasm_next_generation_configured") !== 0) return;
     cacheBarrierCells();
-    mode = prevMode === "idle" ? "idle" : "running";
+    // Keep the sculpture if we were showing it; otherwise land on the grid.
+    setMode(renderModeFor(prevMode) === "kinematic" ? "idle" : "running");
     startTime = performance.now();
     postMessage({
         type: "nextGenerationConfigured",
@@ -1123,7 +1255,8 @@ function handleConfigure(params: SimParams): void {
     if (callChecked("biosim_wasm_init") !== 0) return;
     cacheBarrierCells();
     // Skip the kinematic intro if the user was already watching the grid.
-    mode = prevMode === "idle" ? "idle" : "running";
+    // Keep the sculpture if we were showing it; otherwise land on the grid.
+    setMode(renderModeFor(prevMode) === "kinematic" ? "idle" : "running");
     startTime = performance.now();
     postMessage({
         type: "configured",
@@ -1209,7 +1342,8 @@ function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
         } satisfies WorkerEvent);
         return;
     }
-    mode = prevMode === "idle" ? "idle" : "running";
+    // Keep the sculpture if we were showing it; otherwise land on the grid.
+    setMode(renderModeFor(prevMode) === "kinematic" ? "idle" : "running");
     startTime = performance.now();
     postMessage({
         type: "snapshotLoaded",
@@ -1222,8 +1356,9 @@ function handleLoadSnapshot(data: Uint8Array, rewindFirst: boolean): void {
 
 function handleStartFreeRun(): void {
     playing = false;
-    if (mode === "idle" || mode === "transitioning-in") {
-        mode = "running";
+    // Any non-grid mode (idle / either transition) snaps straight to the grid.
+    if (mode !== "running") {
+        setMode("running");
     }
     freeRunning = true;
     clearCanvas();
@@ -1232,6 +1367,7 @@ function handleStartFreeRun(): void {
 
 function handleStopFreeRun(): void {
     freeRunning = false;
+    lastActivity = performance.now();
     postMessage(progress("paused"));
 }
 
@@ -1241,12 +1377,14 @@ function playTick(): void {
     if (!playing) return;
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
+        lastActivity = performance.now();
         postMessage(progress("genComplete"));
         return;
     }
     const tickStart = performance.now();
     if (callChecked("biosim_wasm_do_step") !== 0) {
         playing = false;
+        lastActivity = performance.now();
         return;
     }
     postMessage(progress("stepped"));
@@ -1258,6 +1396,7 @@ function playTick(): void {
     }
     if (call("biosim_wasm_is_gen_complete")) {
         playing = false;
+        lastActivity = performance.now();
         postMessage(progress("genComplete"));
     } else {
         setTimeout(playTick, stepDelay(targetFps, elapsed));
@@ -1288,6 +1427,7 @@ function freeRunTick(): void {
     if (!freeRunning) return;
     if (callChecked("biosim_wasm_do_gen") !== 0) {
         freeRunning = false;
+        lastActivity = performance.now();
         return;
     }
     const gen = call("biosim_wasm_census_gen");
@@ -1312,11 +1452,15 @@ function freeRunTick(): void {
 
 self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
     const cmd = e.data;
+    // Any incoming command counts as activity, deferring the idle return.
+    lastActivity = performance.now();
     switch (cmd.type) {
-        case "reset":
-            playing = false;
-            mode = "idle";
-            startTime = performance.now();
+        case "returnToKinematic":
+            // On-demand twin of the idle timeout: only from a resting grid, so
+            // render mode stays orthogonal to the sim lifecycle.
+            if (mode === "running" && !playing && !freeRunning) {
+                startTransitionOut();
+            }
             break;
         case "configure":
             handleConfigure(cmd.params);

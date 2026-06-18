@@ -33,6 +33,11 @@
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
 
+    // Render mode is owned by the worker (sole authority); the main thread only
+    // observes it via the "renderMode" event to toggle the idle overlay and
+    // (sub-plan C) route canvas clicks. Defaults to the idle sculpture.
+    let renderMode = $state<"kinematic" | "grid">("kinematic");
+
     const worker = new Worker(
         new URL("./workers/sim.worker.ts", import.meta.url),
         { type: "module" },
@@ -106,6 +111,9 @@
         switch (msg.type) {
             case "ready":
                 bootstrapCanvas();
+                break;
+            case "renderMode":
+                renderMode = msg.mode;
                 break;
             case "configured":
                 machine.onConfigured();
@@ -606,6 +614,7 @@
     <!-- z-index: 20 — fixed top bar (contains PlayDock inline) -->
     <TopBar
         phase={machine.phase}
+        {renderMode}
         genomIncompatible={machine.genomIncompatible}
         {targetSpeed}
         bind:headerHeight={topbarH}
@@ -616,6 +625,7 @@
         onRewind={handleRewind}
         onClearGenom={() => machine.clearGenom()}
         onToggleFreeRun={() => machine.toggleFreeRun()}
+        onReturnToSculpture={() => send({ type: "returnToKinematic" })}
     />
 
     <!-- z-index: 55/60 — config-change-while-running dialog -->
@@ -631,7 +641,7 @@
         <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
         <GridView
             geom={gridGeom}
-            phase={machine.phase}
+            {renderMode}
             gridSizeX={telemetry.gridSizeX}
             gridSizeY={telemetry.gridSizeY}
             blurred={machine.phase === "CONFIRM"}
