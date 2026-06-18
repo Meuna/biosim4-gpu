@@ -816,21 +816,17 @@ function drawKinematic(t: number): void {
 
     const { canvasW, canvasH } = layout;
     const pop = call("biosim_wasm_get_population");
-    const cx = canvasW / 2;
-    const cy = canvasH / 2;
 
     applyAgentStyle();
     ctx.beginPath();
     for (let i = 0; i < pop; i++) {
-        const { x, y, r } = kinematicPosition(
-            i,
-            pop,
-            cx,
-            cy,
+        const { x, y, r } = kinematicPosition(i, pop, {
             t,
             canvasW,
             canvasH,
-        );
+            beat: 0,
+            pointer: null,
+        });
         ctx.moveTo(x + r, y);
         ctx.arc(x, y, r, 0, Math.PI * 2);
     }
@@ -930,8 +926,6 @@ function drawTransitionIn(frac: number): void {
         gridCellsX,
         gridCellsY,
     } = layout;
-    const cx = canvasW / 2;
-    const cy = canvasH / 2;
     const pop = call("biosim_wasm_get_population");
     const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
     const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
@@ -941,15 +935,13 @@ function drawTransitionIn(frac: number): void {
     applyAgentStyle();
     ctx.beginPath();
     for (let i = 0; i < pop; i++) {
-        const from = kinematicPosition(
-            i,
-            pop,
-            cx,
-            cy,
-            kFrozenT,
+        const from = kinematicPosition(i, pop, {
+            t: kFrozenT,
             canvasW,
             canvasH,
-        );
+            beat: 0,
+            pointer: null,
+        });
         if (HEAPU8[aliveOff + i]) {
             const gx = HEAP32[locXOff + i];
             const gy = HEAP32[locYOff + i];

@@ -1,9 +1,27 @@
 import {
+    beatEnvelope,
     easeInOut,
     gridPosition,
     kinematicPosition,
     lerpVec2,
+    sphereSculpture,
+    type KinematicCtx,
 } from "./kinematic";
+
+const CANVAS_W = 800;
+const CANVAS_H = 600;
+const MARGIN = 0.12;
+
+function ctx(overrides: Partial<KinematicCtx> = {}): KinematicCtx {
+    return {
+        t: 0,
+        canvasW: CANVAS_W,
+        canvasH: CANVAS_H,
+        beat: 0,
+        pointer: null,
+        ...overrides,
+    };
+}
 
 describe("easeInOut", () => {
     it("returns 0 at t=0 and 1 at t=1", () => {
@@ -45,28 +63,115 @@ describe("lerpVec2", () => {
     });
 });
 
-describe("kinematicPosition", () => {
-    it("returns a radius in the expected [1, 2] range at t=0", () => {
-        const { r } = kinematicPosition(0, 100, 400, 300, 0, 800, 600);
-        expect(r).toBeGreaterThanOrEqual(1);
-        expect(r).toBeLessThanOrEqual(2);
+describe("kinematicPosition (wave surface)", () => {
+    const POP = 100;
+
+    it("is deterministic per index for identical inputs", () => {
+        const a = kinematicPosition(42, POP, ctx({ t: 1.5 }));
+        const b = kinematicPosition(42, POP, ctx({ t: 1.5 }));
+        expect(a).toEqual(b);
     });
 
-    it("places agent 0 at the rightmost orbit point when t=0", () => {
-        // agent 0 has theta=0, t=0 → x = cx + rX, y = cy + 0
-        const canvasW = 800;
-        const canvasH = 600;
-        const cx = canvasW / 2;
-        const cy = canvasH / 2;
-        const { x, y } = kinematicPosition(0, 100, cx, cy, 0, canvasW, canvasH);
-        expect(x).toBeCloseTo(cx + canvasW * 0.7);
-        expect(y).toBeCloseTo(cy);
+    it("keeps dots within the margin-extended box (no edge seam)", () => {
+        // Sample many agents across several times; displacement adds at most
+        // (AMP + a small slack) beyond the barycenter span.
+        const slackX = CANVAS_W * (MARGIN + 0.05);
+        const slackY = CANVAS_H * (MARGIN + 0.06);
+        for (const t of [0, 0.7, 3.3, 10]) {
+            for (let i = 0; i < POP; i++) {
+                const { x, y } = kinematicPosition(i, POP, ctx({ t }));
+                expect(x).toBeGreaterThanOrEqual(-slackX);
+                expect(x).toBeLessThanOrEqual(CANVAS_W + slackX);
+                expect(y).toBeGreaterThanOrEqual(-slackY);
+                expect(y).toBeLessThanOrEqual(CANVAS_H + slackY);
+            }
+        }
     });
 
-    it("produces different positions for different agents at the same time", () => {
-        const a = kinematicPosition(0, 100, 400, 300, 1, 800, 600);
-        const b = kinematicPosition(50, 100, 400, 300, 1, 800, 600);
-        expect(a.x).not.toBeCloseTo(b.x, 1);
+    it("keeps the radius within the un-beaten wave swing range", () => {
+        // R_BASE = 1.8, R_SWING = 0.8 → [1.0, 2.6] when beat = 0.
+        for (const t of [0, 1.1, 5.5]) {
+            for (let i = 0; i < POP; i++) {
+                const { r } = kinematicPosition(i, POP, ctx({ t }));
+                expect(r).toBeGreaterThanOrEqual(1.0 - 1e-6);
+                expect(r).toBeLessThanOrEqual(2.6 + 1e-6);
+            }
+        }
+    });
+
+    it("spreads barycenters across both halves of the viewport", () => {
+        // The matrix must cover the whole surface, not cluster at the centre.
+        let left = false;
+        let right = false;
+        let top = false;
+        let bottom = false;
+        for (let i = 0; i < POP; i++) {
+            const { x, y } = kinematicPosition(i, POP, ctx());
+            if (x < CANVAS_W * 0.25) left = true;
+            if (x > CANVAS_W * 0.75) right = true;
+            if (y < CANVAS_H * 0.25) top = true;
+            if (y > CANVAS_H * 0.75) bottom = true;
+        }
+        expect(left && right && top && bottom).toBe(true);
+    });
+
+    it("a full-viewport beat enlarges dots (vs the neutral case)", () => {
+        const neutral = kinematicPosition(10, POP, ctx({ t: 0.3 }));
+        const beaten = kinematicPosition(10, POP, ctx({ t: 0.3, beat: 1 }));
+        expect(beaten.r).toBeGreaterThan(neutral.r);
+    });
+});
+
+describe("beatEnvelope", () => {
+    const ATTACK_MS = 90;
+    const DECAY_MS = 700;
+
+    it("is 0 at elapsed 0 and below", () => {
+        expect(beatEnvelope(0)).toBe(0);
+        expect(beatEnvelope(-50)).toBe(0);
+    });
+
+    it("peaks at 1 at the end of the attack", () => {
+        expect(beatEnvelope(ATTACK_MS)).toBeCloseTo(1);
+    });
+
+    it("returns 0 at and after the full duration", () => {
+        expect(beatEnvelope(ATTACK_MS + DECAY_MS)).toBe(0);
+        expect(beatEnvelope(ATTACK_MS + DECAY_MS + 100)).toBe(0);
+    });
+
+    it("stays within [0, 1] and decays monotonically after the peak", () => {
+        let prev = beatEnvelope(ATTACK_MS);
+        for (let e = ATTACK_MS + 20; e <= ATTACK_MS + DECAY_MS; e += 20) {
+            const v = beatEnvelope(e);
+            expect(v).toBeGreaterThanOrEqual(0);
+            expect(v).toBeLessThanOrEqual(1);
+            expect(v).toBeLessThanOrEqual(prev + 1e-9);
+            prev = v;
+        }
+    });
+});
+
+describe("sphereSculpture (sample)", () => {
+    const POP = 120;
+
+    it("is deterministic per index for identical inputs", () => {
+        const a = sphereSculpture(7, POP, ctx({ t: 2.0 }));
+        const b = sphereSculpture(7, POP, ctx({ t: 2.0 }));
+        expect(a).toEqual(b);
+    });
+
+    it("projects points onto the canvas with a positive radius", () => {
+        for (let i = 0; i < POP; i++) {
+            const { x, y, r } = sphereSculpture(i, POP, ctx({ t: 1 }));
+            expect(Number.isFinite(x)).toBe(true);
+            expect(Number.isFinite(y)).toBe(true);
+            expect(x).toBeGreaterThan(0);
+            expect(x).toBeLessThan(CANVAS_W);
+            expect(y).toBeGreaterThan(0);
+            expect(y).toBeLessThan(CANVAS_H);
+            expect(r).toBeGreaterThan(0);
+        }
     });
 });
 

@@ -464,7 +464,7 @@ event to several holders (e.g. `census` feeds both `SimMachine` and
 | `tomlConfig.ts` | Parse/serialize the `SimParams` config to/from TOML (round-trips with the CLI). |
 | `fileTransfer.ts` | Browser file IO: `pickFile`, `downloadBlob`, and the pure `classifyDroppedFiles` drop router. |
 | `brain.ts` | DOM-free decode layer: `unpackConn` mirrors the `gene.h` bit-layout; `SENSOR_LABELS`/`ACTION_LABELS` plus full-name tables for the UI. |
-| `kinematic.ts` | Interpolation helpers for smooth agent motion between steps. |
+| `kinematic.ts` | Idle-sculpture math: the wave-surface `kinematicPosition` (frozen `(i, pop, ctx)` `SculptureFn` signature), a swappable `sphereSculpture` sample, the `beatEnvelope` transfer function, plus the grid/interpolation helpers (`gridPosition`, `lerpVec2`, `easeInOut`). |
 | `playbackRate.ts` | Step-rate throttle and rolling FPS window (unit-testable without WASM). |
 | `headings.ts` | `HEADINGS`: compass-direction labels indexed by an agent's heading (0–7). |
 
