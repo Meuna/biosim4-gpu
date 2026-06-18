@@ -27,12 +27,35 @@
     // the canvas draws grid-y downward, so each cardinal maps straight onto its
     // screen corner: ne → top-right, nw → top-left, se → bottom-right,
     // sw → bottom-left.
-    const QUADRANTS: { quadrant: CornerQuadrant; label: string }[] = [
-        { quadrant: "ne", label: "Top-right" },
-        { quadrant: "nw", label: "Top-left" },
-        { quadrant: "se", label: "Bottom-right" },
-        { quadrant: "sw", label: "Bottom-left" },
-    ];
+    const QUADRANT_LABEL: Record<CornerQuadrant, string> = {
+        ne: "Top-right",
+        nw: "Top-left",
+        se: "Bottom-right",
+        sw: "Bottom-left",
+    };
+
+    // Clockwise screen order (top-right → bottom-right → bottom-left →
+    // top-left); each click advances one step and rotates the glyph 90° CCW.
+    const QUADRANT_ORDER: CornerQuadrant[] = ["ne", "nw", "sw", "se"];
+
+    // The base glyph illustrates `ne`. Each quadrant rotates it CCW around its
+    // centre via a CSS transform (transform-origin: center). nw is 270° CCW,
+    // i.e. matrix(0,-1,1,0,0,0).
+    const QUADRANT_ROTATION: Record<CornerQuadrant, string> = {
+        ne: "0deg",
+        nw: "270deg",
+        sw: "180deg",
+        se: "90deg",
+    };
+
+    function rotateQuadrant(i: number): void {
+        const current = value[i].quadrant ?? "ne";
+        const next =
+            QUADRANT_ORDER[
+                (QUADRANT_ORDER.indexOf(current) + 1) % QUADRANT_ORDER.length
+            ];
+        patchBarrier(i, { quadrant: next });
+    }
 
     const DEFAULT_BARRIER: BarrierSpec = {
         kind: "hbar",
@@ -139,6 +162,33 @@
                         <option value={kind}>{label}</option>
                     {/each}
                 </select>
+
+                <!-- Quadrant — corner only -->
+                {#if barrier.kind === "corner"}
+                    <button
+                        class="button button--ghost barrier-control__small-button"
+                        {disabled}
+                        onclick={() => rotateQuadrant(i)}
+                        aria-label={`Barrier ${i + 1} quadrant`}
+                        title={`${QUADRANT_LABEL[barrier.quadrant ?? "ne"]} — click to rotate`}
+                    >
+                        <svg
+                            width="13"
+                            height="13"
+                            style={`transform: rotate(${QUADRANT_ROTATION[barrier.quadrant ?? "ne"]})`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M6 2v15a1 1 0 0 0 1 1h15"></path>
+                        </svg>
+                    </button>
+                {/if}
+
                 <button
                     class="button button--ghost barrier-control__small-button"
                     {disabled}
@@ -195,28 +245,6 @@
                 {disabled}
                 onchange={(v) => patchBarrier(i, { length: v })}
             />
-
-            <!-- Quadrant — corner only -->
-            {#if barrier.kind === "corner"}
-                <div class="field-row barrier-control__quadrant-row">
-                    <span class="field-label">Quadrant</span>
-                    <select
-                        class="barrier-control__select"
-                        value={barrier.quadrant}
-                        {disabled}
-                        onchange={(e) =>
-                            patchBarrier(i, {
-                                quadrant: (e.target as HTMLSelectElement)
-                                    .value as CornerQuadrant,
-                            })}
-                        aria-label={`Barrier ${i + 1} quadrant`}
-                    >
-                        {#each QUADRANTS as { quadrant, label }}
-                            <option value={quadrant}>{label}</option>
-                        {/each}
-                    </select>
-                </div>
-            {/if}
 
             <!-- Width — bars and corners -->
             {#if hasWidth(barrier.kind)}
@@ -289,12 +317,6 @@
         margin-bottom: var(--space-1);
     }
 
-    .barrier-control__quadrant-row {
-        align-items: center;
-        gap: var(--space-2);
-        margin-bottom: var(--space-1);
-    }
-
     .barrier-control__index {
         flex-shrink: 0;
         color: var(--color-text-muted);
@@ -315,7 +337,7 @@
 
     .barrier-control__small-button {
         flex-shrink: 0;
-        padding: var(--space-1) var(--space-2);
+        padding: var(--space-1) var(--space-1);
         font-size: var(--text-sm);
     }
 

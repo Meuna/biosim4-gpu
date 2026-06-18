@@ -116,17 +116,19 @@ describe("BarrierControl", () => {
         expect(screen.queryByLabelText("Barrier 1 quadrant")).toBeNull();
     });
 
-    it("changing quadrant calls onchange with updated quadrant", async () => {
+    it("clicking quadrant rotates clockwise to the next quadrant", async () => {
         const onchange = vi.fn<[BarrierSpec[]], void>();
-        const cornerSpec: BarrierSpec = { ...defaultHbar, kind: "corner" };
+        const cornerSpec: BarrierSpec = {
+            ...defaultHbar,
+            kind: "corner",
+            quadrant: "ne",
+        };
         render(BarrierControl, {
             props: { value: [cornerSpec], onchange },
         });
-        await fireEvent.change(screen.getByLabelText("Barrier 1 quadrant"), {
-            target: { value: "sw" },
-        });
+        await fireEvent.click(screen.getByLabelText("Barrier 1 quadrant"));
         expect(onchange).toHaveBeenCalledOnce();
-        expect(onchange.mock.calls[0][0][0].quadrant).toBe("sw");
+        expect(onchange.mock.calls[0][0][0].quadrant).toBe("nw");
     });
 
     it("shuffle button calls onchange with randomised values", async () => {
