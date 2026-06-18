@@ -28,11 +28,7 @@
     import { SimMachine } from "./lib/simMachine.svelte";
     import { AgentFocus } from "./lib/agentFocus.svelte";
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
-    import {
-        computeGridGeom,
-        hudBounds,
-        hamburgerInset,
-    } from "./lib/gridGeom";
+    import { computeGridGeom, hudBounds, hamburgerInset } from "./lib/gridGeom";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
