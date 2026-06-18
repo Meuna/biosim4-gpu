@@ -5,11 +5,13 @@
 // ── Sculpture-authoring contract ───────────────────────────────────────────────
 // A "sculpture" is a pure function with the `SculptureFn` shape: given an agent
 // index, the population size, and a `KinematicCtx`, it returns that agent's
-// canvas-pixel centre `{x, y}` and dot radius `r`. The contract:
+// canvas-pixel centre `{x, y}`, dot radius `r`, and dot `opacity`. The contract:
 //   • Deterministic per index: the same (i, pop, ctx) MUST return the same point.
 //     No randomness, no module-level mutable state — only `ctx.t` drives motion.
 //   • Output is in canvas pixels; sculptures may place dots beyond the viewport
 //     edges (cells span a margin) but should keep them near the canvas.
+//   • `opacity` is in `[0, 1]`; the worker draws each dot at that alpha, so
+//     sculptures use it for depth (e.g. far-side points fade) or wave shading.
 //   • `ctx.beat` (0..1) and `ctx.pointer` are reserved for the beat response:
 //     `beat = 0` (and/or `pointer = null`) MUST render the neutral, un-pulsed
 //     sculpture. Callers that don't drive beats pass `beat: 0, pointer: null`.
@@ -30,12 +32,13 @@ export interface KinematicCtx {
     pointer: { x: number; y: number } | null;
 }
 
-/** A swappable sculpture: agent index + population + context → dot placement. */
+/** A swappable sculpture: agent index + population + context → dot placement.
+ *  `opacity` is in `[0, 1]`; the worker renders each dot at that alpha. */
 export type SculptureFn = (
     i: number,
     pop: number,
     ctx: KinematicCtx,
-) => { x: number; y: number; r: number };
+) => { x: number; y: number; r: number; opacity: number };
 
 // ── Wave-surface sculpture (the default idle sculpture) ─────────────────────────
 
@@ -49,6 +52,9 @@ const AMP_X = 0.02;
 /** Base dot radius (px) and how far it swings with the wave field (px). */
 const R_BASE = 1.8;
 const R_SWING = 0.8;
+/** Opacity shading: dim in wave troughs, bright on crests → [BASE-SWING, BASE+SWING]. */
+const OPACITY_BASE = 0.7;
+const OPACITY_SWING = 0.3;
 /** Spatial frequencies (radians across the normalised viewport) of the two
  *  superposed travelling waves, and their temporal speeds (radians/second). */
 const WAVE_A = { kx: 6.0, ky: 4.0, omega: 1.1 };
@@ -72,6 +78,11 @@ function waveGrid(
     return { cols, rows };
 }
 
+/** Brighten an opacity toward fully opaque by the local beat intensity. */
+function liftByBeat(opacity: number, beat: number): number {
+    return opacity + (1 - opacity) * beat;
+}
+
 /** Beat intensity felt at a cell, given the context. Uniform for full-viewport
  *  beats; a Gaussian falloff from `ctx.pointer` for click beats. */
 function beatAt(ctx: KinematicCtx, x: number, y: number): number {
@@ -88,13 +99,14 @@ function beatAt(ctx: KinematicCtx, x: number, y: number): number {
  * near-square matrix that spans the viewport plus a {@link MARGIN}; cells
  * oscillate around it with two superposed travelling waves, giving a surface
  * (rather than orbit) feel. Deterministic per index. A beat amplifies the
- * displacement and radius (uniform, or decaying from `ctx.pointer`).
+ * displacement and radius and brightens the dot (uniform, or decaying from
+ * `ctx.pointer`).
  */
 export function kinematicPosition(
     i: number,
     pop: number,
     ctx: KinematicCtx,
-): { x: number; y: number; r: number } {
+): { x: number; y: number; r: number; opacity: number } {
     const { t, canvasW, canvasH } = ctx;
     const { cols, rows } = waveGrid(pop, canvasW, canvasH);
     const col = i % cols;
@@ -121,6 +133,7 @@ export function kinematicPosition(
         x: bx + AMP_X * canvasW * sway * ampFactor,
         y: by + AMP_Y * canvasH * wave * ampFactor,
         r: R_BASE + R_SWING * wave + BEAT_R_GAIN * beat,
+        opacity: liftByBeat(OPACITY_BASE + OPACITY_SWING * wave, beat),
     };
 }
 
@@ -150,20 +163,23 @@ export function beatEnvelope(elapsedMs: number): number {
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 /** Sphere rotation speed (radians/second) about the vertical axis. */
 const SPHERE_TURN = 0.5;
+/** Opacity of the farthest-back sphere point; the front face reaches 1. */
+const SPHERE_OPACITY_MIN = 0.3;
 
 /**
  * Sample sculpture: a rotating 3-D sphere projected to 2-D. Points are placed
  * deterministically per index with a Fibonacci-sphere distribution, rotated
  * about the vertical axis by `ctx.t`, and perspective-projected (the projection
  * math is ported from the issue's `sphere.js` reference — its stateful particle
- * lifecycle is intentionally dropped). Swap it in for {@link kinematicPosition}
- * to author a different idle sculpture. Honours beats via the same envelope.
+ * lifecycle is intentionally dropped). Far-side points fade (lower opacity) for
+ * a depth cue. Swap it in for {@link kinematicPosition} to author a different
+ * idle sculpture. Honours beats via the same envelope.
  */
 export function sphereSculpture(
     i: number,
     pop: number,
     ctx: KinematicCtx,
-): { x: number; y: number; r: number } {
+): { x: number; y: number; r: number; opacity: number } {
     const { t, canvasW, canvasH } = ctx;
     const cx = canvasW / 2;
     const cy = canvasH / 2;
@@ -189,10 +205,15 @@ export function sphereSculpture(
     const m = fLen / (fLen + sphereRad - rotZ);
 
     const beat = beatAt(ctx, cx + rotX * m, cy + py * m);
+    // Depth in [-1, 1] (front toward camera = +1) → opacity floor..1.
+    const depth = rotZ / sphereRad;
+    const shade =
+        SPHERE_OPACITY_MIN + (1 - SPHERE_OPACITY_MIN) * (depth * 0.5 + 0.5);
     return {
         x: cx + rotX * m,
         y: cy + py * m,
         r: (R_BASE + R_SWING) * m + BEAT_R_GAIN * beat,
+        opacity: liftByBeat(shade, beat),
     };
 }
 

@@ -818,19 +818,23 @@ function drawKinematic(t: number): void {
     const pop = call("biosim_wasm_get_population");
 
     applyAgentStyle();
-    ctx.beginPath();
+    // Per-dot opacity ⇒ one fill per dot; save/restore so globalAlpha never
+    // leaks into the next frame's grid/overlay draws.
+    ctx.save();
     for (let i = 0; i < pop; i++) {
-        const { x, y, r } = kinematicPosition(i, pop, {
+        const { x, y, r, opacity } = kinematicPosition(i, pop, {
             t,
             canvasW,
             canvasH,
             beat: 0,
             pointer: null,
         });
-        ctx.moveTo(x + r, y);
+        ctx.globalAlpha = opacity;
+        ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
     }
-    ctx.fill();
+    ctx.restore();
 }
 
 function drawGrid(): void {
@@ -933,7 +937,9 @@ function drawTransitionIn(frac: number): void {
     const { HEAP32, HEAPU8 } = biosim;
 
     applyAgentStyle();
-    ctx.beginPath();
+    // Per-dot opacity ⇒ one fill per dot; save/restore so globalAlpha never
+    // leaks into the next frame's grid/overlay draws.
+    ctx.save();
     for (let i = 0; i < pop; i++) {
         const from = kinematicPosition(i, pop, {
             t: kFrozenT,
@@ -957,18 +963,23 @@ function drawTransitionIn(frac: number): void {
             );
             const { x, y } = lerpVec2(from, to, frac);
             const r = from.r + (to.r - from.r) * frac;
-            ctx.moveTo(x + r, y);
+            // Ramp to fully opaque to meet the grid draw without a pop.
+            ctx.globalAlpha = from.opacity + (1 - from.opacity) * frac;
+            ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.fill();
         } else {
             // Dead agents fade out at their kinematic position.
             const r = from.r * (1 - frac);
             if (r > 0.1) {
-                ctx.moveTo(from.x + r, from.y);
+                ctx.globalAlpha = from.opacity * (1 - frac);
+                ctx.beginPath();
                 ctx.arc(from.x, from.y, r, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
     }
-    ctx.fill();
+    ctx.restore();
 }
 
 function startTransitionIfNeeded(): void {

@@ -120,6 +120,21 @@ describe("kinematicPosition (wave surface)", () => {
         const beaten = kinematicPosition(10, POP, ctx({ t: 0.3, beat: 1 }));
         expect(beaten.r).toBeGreaterThan(neutral.r);
     });
+
+    it("keeps opacity within [0, 1] across the wave field", () => {
+        for (const t of [0, 1.1, 5.5]) {
+            for (let i = 0; i < POP; i++) {
+                const { opacity } = kinematicPosition(i, POP, ctx({ t }));
+                expect(opacity).toBeGreaterThanOrEqual(0);
+                expect(opacity).toBeLessThanOrEqual(1);
+            }
+        }
+    });
+
+    it("a full-viewport beat reaches full opacity", () => {
+        const beaten = kinematicPosition(10, POP, ctx({ t: 0.3, beat: 1 }));
+        expect(beaten.opacity).toBeCloseTo(1);
+    });
 });
 
 describe("beatEnvelope", () => {
@@ -172,6 +187,20 @@ describe("sphereSculpture (sample)", () => {
             expect(y).toBeLessThan(CANVAS_H);
             expect(r).toBeGreaterThan(0);
         }
+    });
+
+    it("fades far-side points: opacity stays in [0, 1] and varies with depth", () => {
+        let min = Infinity;
+        let max = -Infinity;
+        for (let i = 0; i < POP; i++) {
+            const { opacity } = sphereSculpture(i, POP, ctx({ t: 1 }));
+            expect(opacity).toBeGreaterThanOrEqual(0);
+            expect(opacity).toBeLessThanOrEqual(1);
+            min = Math.min(min, opacity);
+            max = Math.max(max, opacity);
+        }
+        // Depth cue is real: the front and back faces differ.
+        expect(max - min).toBeGreaterThan(0.2);
     });
 });
 
