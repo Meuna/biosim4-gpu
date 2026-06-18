@@ -451,6 +451,10 @@
         const toml = simParamsToToml(
             $state.snapshot(machine.draftConfig) as SimParams,
         );
+        if (!navigator.clipboard) {
+            bannerError = "Clipboard API not available";
+            return false;
+        }
         try {
             await navigator.clipboard.writeText(toml);
             return true;
