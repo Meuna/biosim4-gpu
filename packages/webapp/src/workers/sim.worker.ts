@@ -801,9 +801,7 @@ let startTime = performance.now(); // epoch for kinematic t (seconds)
 let kFrozenT = 0; // kinematic t captured at the moment play/step was pressed
 let transitionStart = 0; // performance.now() when current transition began
 const TRANSITION_IN_MS = 600;
-// Return to the sculpture is much slower than the snap into the grid, and only
-// after the sim has sat at rest for a while.
-const TRANSITION_OUT_MS = 2500;
+const TRANSITION_OUT_MS = 30_000;
 const IDLE_TIMEOUT_MS = 30_000;
 let lastActivity = performance.now(); // last time the sim was active or touched
 let animInterval: ReturnType<typeof setInterval> | null = null;
