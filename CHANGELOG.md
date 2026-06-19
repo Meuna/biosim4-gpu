@@ -6,6 +6,7 @@
 
 #### Added
 
+- Write the last survivors to the snapshot file when a run is halted by a signal, so an interrupted run is not lost ([#189](https://github.com/Meuna/biosim4-gpu/pull/189))
 - Show an animated HUD (spinner, progress bar, survival/max/kill rates) on a TTY, keeping line-per-generation output when piped ([#169](https://github.com/Meuna/biosim4-gpu/pull/169))
 - Add a corner barrier shape (an L of two arms) with a configurable quadrant ([#162](https://github.com/Meuna/biosim4-gpu/pull/162))
 
@@ -15,6 +16,7 @@
 
 #### Fixed
 
+- Always record the final generation in the snapshot when an interval is configured, instead of dropping it when it falls between intervals ([#189](https://github.com/Meuna/biosim4-gpu/pull/189))
 - Render the CLI help and HUD as ASCII on terminals without UTF-8, and enable Unicode and colors on the Windows console ([#188](https://github.com/Meuna/biosim4-gpu/pull/188))
 
 ### Webapp
