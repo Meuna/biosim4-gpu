@@ -142,7 +142,12 @@ file (`--config`) → CLI flags. Each layer overrides the previous.
 |----------|----------------------|---------|-------------|
 | `--snapshot-in <path>` | `in` | — | Restore from last generation in this file |
 | `--snapshot-out <path>` | `out` | — | Write survivor snapshots to this file |
-| `--snapshot-interval <n>` | `interval` | 0 | Write every N generations (0 = final generation only) |
+| `--snapshot-interval <n>` | `interval` | 0 | Write every N generations (0 = final generation only); the final generation is always written |
+
+The final generation is always recorded. If the run is halted by a signal
+(`SIGINT`/`SIGTERM`), the last completed generation's survivors are written
+before the file is closed, so an interrupted run can still be resumed with
+`--snapshot-in`.
 
 ## TOML configuration
 

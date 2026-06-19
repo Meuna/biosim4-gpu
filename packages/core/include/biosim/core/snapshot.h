@@ -74,8 +74,7 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
  * schedule. The final generation (max_generations - 1) is always written;
  * additionally, interval > 0 writes every Nth gen.
  * Skips silently when snap->count == 0 or sim->snap_f == NULL.
- * Returns BIOSIM_OK even on write failure (non-fatal); the error is logged to
- * stderr.
+ * Returns BIOSIM_OK when nothing is written, or the I/O error on write failure.
  */
 biosim_status_t biosim_snapshot_session_write(
     biosim_sim_t *sim, const biosim_survivor_snap_t *snap
