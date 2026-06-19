@@ -7,7 +7,6 @@ const noOp = () => {};
 
 const defaultProps = {
     phase: "WORKER_READY" as const,
-    renderMode: "grid" as const,
     onToggle: noOp,
     onStep: noOp,
     onNextGen: noOp,
@@ -52,31 +51,24 @@ describe("TopBar", () => {
         ).toBeTruthy();
     });
 
-    it("returns to the sculpture when the brand is clicked at rest", async () => {
+    it("calls onReturnToSculpture when the brand is clicked while the sim is at rest", async () => {
         const onReturnToSculpture = vi.fn();
         render(TopBar, { ...defaultProps, onReturnToSculpture });
-        const brand = screen.getByRole("button", {
-            name: /return to the idle sculpture/i,
-        });
-        expect((brand as HTMLButtonElement).disabled).toBe(false);
+        const brand = screen.getByText("biosim4-gpu");
         await fireEvent.click(brand);
         expect(onReturnToSculpture).toHaveBeenCalledOnce();
     });
 
-    it("disables the brand control while the sim is running", () => {
-        render(TopBar, { ...defaultProps, phase: "STEPS_RUNNING" as const });
-        const brand = screen.getByRole("button", {
-            name: /return to the idle sculpture/i,
+    it("does not call onReturnToSculpture when the brand is clicked while the sim is running", async () => {
+        const onReturnToSculpture = vi.fn();
+        render(TopBar, {
+            ...defaultProps,
+            phase: "STEPS_RUNNING" as const,
+            onReturnToSculpture,
         });
-        expect((brand as HTMLButtonElement).disabled).toBe(true);
-    });
-
-    it("disables the brand control while the sculpture is shown", () => {
-        render(TopBar, { ...defaultProps, renderMode: "kinematic" as const });
-        const brand = screen.getByRole("button", {
-            name: /return to the idle sculpture/i,
-        });
-        expect((brand as HTMLButtonElement).disabled).toBe(true);
+        const brand = screen.getByText("biosim4-gpu");
+        await fireEvent.click(brand);
+        expect(onReturnToSculpture).not.toHaveBeenCalled();
     });
 
     it("renders Step, Rewind, Next Gen, and Clear Genom buttons", () => {

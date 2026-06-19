@@ -614,7 +614,6 @@
     <!-- z-index: 20 — fixed top bar (contains PlayDock inline) -->
     <TopBar
         phase={machine.phase}
-        {renderMode}
         genomIncompatible={machine.genomIncompatible}
         {targetSpeed}
         bind:headerHeight={topbarH}
@@ -641,7 +640,7 @@
         <!-- z-index: 5 — transparent overlay: crop marks + idle text only -->
         <GridView
             geom={gridGeom}
-            {renderMode}
+            phase={machine.phase}
             gridSizeX={telemetry.gridSizeX}
             gridSizeY={telemetry.gridSizeY}
             blurred={machine.phase === "CONFIRM"}
