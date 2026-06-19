@@ -12,6 +12,7 @@
 
 #include "biosim/core/log.h"
 #include "biosim/core/status.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -26,10 +27,16 @@ typedef struct {
     cl_device_id device;
     cl_context context;
     cl_command_queue queue;
+    bool profiling; /* queue created with CL_QUEUE_PROFILING_ENABLE */
 } biosim_gpu_runner_t;
 
 /*
  * Create a runner for the device at (platform_idx, device_idx).
+ *
+ * When enable_profiling is true, the command queue is created with
+ * CL_QUEUE_PROFILING_ENABLE so the pipeline can collect per-kernel cl_event
+ * timings.  This is a developer tool (the benchmark binary); production runs
+ * pass false for zero overhead.
  *
  * Returns:
  *   BIOSIM_OK           — *out is valid; call biosim_gpu_runner_free when done
@@ -37,7 +44,7 @@ typedef struct {
  *   BIOSIM_ERR_INVALID  — OpenCL context or queue creation failed
  */
 biosim_status_t biosim_gpu_runner_create(
-    uint32_t platform_idx, uint32_t device_idx, biosim_gpu_runner_t *out
+    uint32_t platform_idx, uint32_t device_idx, bool enable_profiling, biosim_gpu_runner_t *out
 );
 
 /* Release all OpenCL objects. Safe to call on a zero-initialised struct. */

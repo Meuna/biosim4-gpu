@@ -17,7 +17,7 @@ biosim_status_t gpu_test_kernel_runtime_create(
         return BIOSIM_ERR_OPENCL;
     }
 
-    biosim_status_t rc = biosim_gpu_runner_create(0U, 0U, runner);
+    biosim_status_t rc = biosim_gpu_runner_create(0U, 0U, false, runner);
     if (rc != BIOSIM_OK) {
         return rc;
     }

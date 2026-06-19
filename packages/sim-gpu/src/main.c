@@ -177,7 +177,7 @@ int main(int argc, char **argv) {
     uint32_t platform_idx = (uint32_t)biosim_params_get_int(&p, "platform-index");
     uint32_t device_idx = (uint32_t)biosim_params_get_int(&p, "device-index");
 
-    returncode = biosim_gpu_runner_create(platform_idx, device_idx, &runner);
+    returncode = biosim_gpu_runner_create(platform_idx, device_idx, false, &runner);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }

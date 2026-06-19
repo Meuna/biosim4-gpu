@@ -42,7 +42,7 @@ static void fixture_setup(void) {
         return;
     }
 
-    fixture_status = biosim_gpu_runner_create(0U, 0U, &runner);
+    fixture_status = biosim_gpu_runner_create(0U, 0U, false, &runner);
     if (fixture_status != BIOSIM_OK) {
         return;
     }

@@ -46,7 +46,7 @@ exit:
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 biosim_status_t biosim_gpu_runner_create(
-    uint32_t platform_idx, uint32_t device_idx, biosim_gpu_runner_t *out
+    uint32_t platform_idx, uint32_t device_idx, bool enable_profiling, biosim_gpu_runner_t *out
 ) {
     memset(out, 0, sizeof(*out));
 
@@ -106,9 +106,15 @@ biosim_status_t biosim_gpu_runner_create(
         out->context, clCreateContext(NULL, 1U, &out->device, NULL, NULL, &cl_err)
     );
 
+    const cl_queue_properties profiling_props[] = {
+        CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0
+    };
+    const cl_queue_properties *queue_props = enable_profiling ? profiling_props : NULL;
     CL_ASSIGN_OR_GOTO_EXIT(
-        out->queue, clCreateCommandQueueWithProperties(out->context, out->device, NULL, &cl_err)
+        out->queue,
+        clCreateCommandQueueWithProperties(out->context, out->device, queue_props, &cl_err)
     );
+    out->profiling = enable_profiling;
 
 exit:
     free((void *)platforms);
