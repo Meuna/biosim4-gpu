@@ -182,8 +182,8 @@
         /* Low highlight: a soft accent band behind the lower glyphs that grows
            from the left on hover (background-position x=0, width 0% → 100%). */
         background-image: linear-gradient(
-            var(--color-accent-surface),
-            var(--color-accent-surface)
+            var(--color-accent),
+            var(--color-accent)
         );
         background-repeat: no-repeat;
         background-position: 0 88%;
