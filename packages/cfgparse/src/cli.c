@@ -7,6 +7,7 @@
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
 #include "biosim/core/status.h"
+#include "biosim/core/terminal.h"
 
 /* Forward declaration of internal TOML loader defined in toml.c */
 biosim_status_t params_load_toml_file(biosim_params_t *p, const char *path);
@@ -353,7 +354,8 @@ biosim_status_t biosim_params_parse(
 
     if (arg_help->count > 0) {
         print_synopsis(stdout, progname, argtable, nstatic, p, ndyn);
-        printf("%s — biosim4-gpu simulator\n\n", progname);
+        const char *dash = biosim_term_detect(stdout).unicode ? "—" : "--";
+        printf("%s %s biosim4-gpu simulator\n\n", progname, dash);
         print_glossary(stdout, argtable, nstatic, p, ndyn);
         exit_instead_of_return = true;
         goto exit;
