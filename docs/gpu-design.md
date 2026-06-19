@@ -229,3 +229,25 @@ For `N = 4096`, `SIZE_X = SIZE_Y = 128`, `MAX_GENES = 256`, `MAX_NEURONS = 32`:
 | **Total** | **~9 MiB** |
 
 Scaling `N` to 65,536 yields ~140 MiB — trivial on any modern 4 GiB+ GPU.
+
+## Profiling
+
+The pipeline can collect per-kernel and host↔device transfer timings using
+OpenCL events. The runner opt-in (`biosim_gpu_runner_create(..., enable_profiling=true)`)
+creates the command queue with `CL_QUEUE_PROFILING_ENABLE`; `step` and the sync
+calls then capture a `cl_event` per dispatch/transfer, wait for completion, read
+`CL_PROFILING_COMMAND_START`/`END`, accumulate the GPU timespan into
+`biosim_gpu_profile_t`, and release every event. Profiling is off by default, so
+the production binary pays nothing (NULL events, no wait).
+
+The per-step event wait serialises the host with the GPU, but because the queue
+is in-order and the kernels are data-dependent (K1 writes `desired_x/y`, K3 reads
+them), they already serialise on the device — the wait changes when timings are
+read, not their accuracy.
+
+The `benchmark` module (`benchmark.{h,c}`) converts the raw accumulators into
+derived metrics (per-kernel %, µs/step, throughput, generations/sec) via the
+pure, GPU-free `biosim_gpu_bench_compute`. The `biosim-gpu-bench` binary drives a
+warm-up then a timed loop with profiling on and prints the report; see
+[`usage.md`](usage.md). For driver-level traces (e.g. Nvidia Nsight) no code is
+required — run the unmodified binary under `nsys`.

@@ -12,7 +12,7 @@ WebAssembly via Emscripten.
 core (static lib — libc only)
   └── cfgparse (static lib — argtable3, tomlc17 PRIVATE)
       ├── sim-ref (executable — single-threaded CPU reference)
-      └── sim-gpu     (static lib + executable — OpenCL GPU simulator)
+      └── sim-gpu     (static lib + executables — OpenCL GPU simulator + bench)
 ```
 
 **Webapp tree** (`wasm`, `webapp` presets — Emscripten):
@@ -242,8 +242,9 @@ See [`docs/usage.md`](usage.md) for the command-line reference.
 ## `sim-gpu`
 
 **Location:** `packages/sim-gpu/`  
-**Type:** Static library (`sim-gpu-lib`) + executable (`biosim-gpu`). Depends on
-`core`, `cfgparse`, and OpenCL (vcpkg port `opencl`).
+**Type:** Static library (`sim-gpu-lib`) + executables (`biosim-gpu`, and the
+non-installed developer profiler `biosim-gpu-bench`). Depends on `core`,
+`cfgparse`, and OpenCL (vcpkg port `opencl`).
 
 Implements the OpenCL GPU simulator. Kernel sources are embedded at build time as
 C string literals so the binary is self-contained; a filesystem override mechanism
@@ -336,7 +337,16 @@ drives the K1→K5 kernel sequence each step.
 | `biosim_gpu_pipeline_step(p, sim)` | Enqueue one complete step (K1→K5); no clFinish |
 | `biosim_gpu_pipeline_sync_to_host(p, sim)` | clFinish + download alive, loc, challenge_bits, signal for generation evaluation |
 | `biosim_gpu_pipeline_sync_from_host(p, sim)` | Re-upload all mutable buffers after `biosim_generation_spawn` |
+| `biosim_gpu_pipeline_get_profile(p, out)` / `..._reset_profile(p)` | Read/clear the per-kernel and transfer timing accumulators |
 | `biosim_gpu_pipeline_free(p)` | Release all GPU resources |
+
+When the runner is created with profiling enabled, `step` and the sync calls
+capture a `cl_event` on each kernel dispatch and buffer transfer and accumulate
+the GPU timespans into `biosim_gpu_profile_t` (defined in `benchmark.h`). The
+`benchmark` module turns those raw counters into derived metrics
+(`biosim_gpu_bench_compute` / `biosim_gpu_bench_report_print`), consumed by the
+`biosim-gpu-bench` developer binary. Production runs pass profiling off for zero
+overhead.
 
 Spawn creates the new HOST population; `sync_from_host` uploads it to the GPU
 before the step kernels run; `sync_to_host` downloads results so `retire_generation`

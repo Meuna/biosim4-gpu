@@ -55,6 +55,31 @@ biosim-gpu   # loads k1_sensors.cl from the binary directory
 | `--platform <n>` | `platform-index` | 0 | OpenCL platform index |
 | `--device <n>` | `device-index` | 0 | OpenCL device index within the platform |
 
+## `biosim-gpu-bench` — pipeline profiler
+
+A developer-only benchmark for the GPU pipeline. It is built but **not
+installed**; run it from the build tree. It creates the command queue with
+`CL_QUEUE_PROFILING_ENABLE`, drives the pipeline (upload → K1–K5 × steps →
+download) without CPU-side genetics, and prints per-kernel GPU time,
+host↔device transfer time, and throughput.
+
+```sh
+build/debug/packages/sim-gpu/biosim-gpu-bench --gens 20
+```
+
+It defaults to a large brain (population 8192, 64 genes, 32 neurons) to stress
+the feedforward kernel; all simulation/genome/challenge flags from `biosim-gpu`
+are accepted, plus:
+
+| CLI flag | Default | Description |
+|----------|---------|-------------|
+| `--gens <n>` | 20 | timed generations |
+| `--warmup <n>` | 2 | untimed warm-up generations (driver JIT, first-touch) |
+
+For driver-level traces, run the unmodified binary under a profiler — e.g.
+`nsys profile build/debug/packages/sim-gpu/biosim-gpu-bench` — which lists the
+five `k_*` kernels in its timeline without any code change.
+
 ## Webapp
 
 The webapp is a static Svelte SPA. After `cmake --build --preset webapp` the
