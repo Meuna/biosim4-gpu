@@ -30,6 +30,7 @@
     import { AgentFocus } from "./lib/agentFocus.svelte";
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
     import { computeGridGeom, hudBounds, hamburgerInset } from "./lib/gridGeom";
+    import { configForFormFactor, detectFormFactor } from "./lib/formFactor";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -49,8 +50,13 @@
     // compatibility gate, and every lifecycle worker command. UX handlers and
     // worker replies below delegate to it; the rest of this component only
     // reads its getters.
-    const machine = new SimMachine((cmd, transfer) =>
-        worker.postMessage(cmd, transfer ?? []),
+    // The form factor is classified once, here at construction, to seed the
+    // initial draft/last-played config. This is a one-time startup choice, not
+    // reactive: it never re-fires on resize/rotation and never clobbers a draft
+    // the user has edited. A later TOML import still overrides it.
+    const machine = new SimMachine(
+        (cmd, transfer) => worker.postMessage(cmd, transfer ?? []),
+        configForFormFactor(detectFormFactor()),
     );
 
     // ── Agent-focus controller ───────────────────────────────────────────────
