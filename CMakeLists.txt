@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(biosim4-gpu
-  VERSION 1.0.0
+  VERSION 1.1.0
   LANGUAGES C
   DESCRIPTION "GPU port of biosim4 using OpenCL"
 )
