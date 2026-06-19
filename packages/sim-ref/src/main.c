@@ -12,6 +12,7 @@
 #include "biosim/core/params.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/snapshot.h"
+#include "biosim/core/terminal.h"
 
 static volatile sig_atomic_t g_halt_requested = 0;
 
@@ -68,6 +69,7 @@ int main(int argc, char **argv) {
     biosim_barrier_spec_t *barriers = NULL;
     biosim_status_t returncode = BIOSIM_OK;
 
+    biosim_term_init();
     memset(&sim, 0, sizeof(sim));
     biosim_log_init(&biosim_log_default_ctx);
 

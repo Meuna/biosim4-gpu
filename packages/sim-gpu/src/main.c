@@ -13,6 +13,7 @@
 #include "biosim/core/sim.h"
 #include "biosim/core/snapshot.h"
 #include "biosim/core/status.h"
+#include "biosim/core/terminal.h"
 #include "biosim/sim-gpu/pipeline.h"
 #include "biosim/sim-gpu/runner.h"
 
@@ -98,6 +99,7 @@ int main(int argc, char **argv) {
     memset(&sim, 0, sizeof(sim));
     memset(&runner, 0, sizeof(runner));
     memset(&pipeline, 0, sizeof(pipeline));
+    biosim_term_init();
     biosim_log_init(&biosim_log_default_ctx);
 
     (void)signal(SIGINT, handle_signal);
