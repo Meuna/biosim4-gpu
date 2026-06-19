@@ -29,11 +29,11 @@ void biosim_gpu_bench_compute(
     for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
         biosim_gpu_kernel_metric_t *k = &out->kernels[i];
         k->total_ms = (double)raw->kernel_ns[i] / 1.0e6;
-        k->pct = total_kernel_ns ? 100.0 * (double)raw->kernel_ns[i] / (double)total_kernel_ns : 0.0;
-        k->us_per_step =
-            raw->kernel_count[i]
-                ? (double)raw->kernel_ns[i] / (double)raw->kernel_count[i] / 1.0e3
-                : 0.0;
+        k->pct =
+            total_kernel_ns ? 100.0 * (double)raw->kernel_ns[i] / (double)total_kernel_ns : 0.0;
+        k->us_per_step = raw->kernel_count[i]
+                             ? (double)raw->kernel_ns[i] / (double)raw->kernel_count[i] / 1.0e3
+                             : 0.0;
     }
 
     out->wall_ms = (double)wall_ns / 1.0e6;
@@ -50,10 +50,10 @@ void biosim_gpu_bench_compute(
 }
 
 void biosim_gpu_bench_report_print(const biosim_gpu_bench_metrics_t *m, FILE *out) {
-    fprintf(out, "%-24s %10s %7s %10s\n", "kernel", "total ms", "%", "us/step");
+    (void)fprintf(out, "%-24s %10s %7s %10s\n", "kernel", "total ms", "%", "us/step");
     for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
         const biosim_gpu_kernel_metric_t *k = &m->kernels[i];
-        fprintf(
+        (void)fprintf(
             out,
             "%-24s %10.3f %6.1f%% %10.3f\n",
             biosim_gpu_kernel_names[i],
@@ -62,17 +62,17 @@ void biosim_gpu_bench_report_print(const biosim_gpu_bench_metrics_t *m, FILE *ou
             k->us_per_step
         );
     }
-    fprintf(out, "%-24s %10.3f\n", "total kernel", m->total_kernel_ms);
-    fprintf(out, "\n");
-    fprintf(
+    (void)fprintf(out, "%-24s %10.3f\n", "total kernel", m->total_kernel_ms);
+    (void)fprintf(out, "\n");
+    (void)fprintf(
         out,
         "throughput: %.0f steps/s, %.3g agent-steps/s, %.2f gens/s\n",
         m->steps_per_s,
         m->agent_steps_per_s,
         m->gens_per_s
     );
-    fprintf(
+    (void)fprintf(
         out, "transfer:   sync_to %.3f ms, sync_from %.3f ms\n", m->sync_to_ms, m->sync_from_ms
     );
-    fprintf(out, "wall:       %.3f ms\n", m->wall_ms);
+    (void)fprintf(out, "wall:       %.3f ms\n", m->wall_ms);
 }

@@ -85,6 +85,8 @@ target_compile_features(biosim-gpu-bench PRIVATE c_std_11)
 target_link_libraries(biosim-gpu-bench PRIVATE sim-gpu-lib cfgparse core OpenCL::OpenCL
     $<$<PLATFORM_ID:Linux>:m>)
 target_compile_definitions(biosim-gpu-bench PRIVATE BIOSIM_PROGNAME="biosim-gpu-bench")
+# clock_gettime/CLOCK_MONOTONIC require POSIX.1b under -std=c11 (non-GNU).
+target_compile_definitions(biosim-gpu-bench PRIVATE $<$<PLATFORM_ID:Linux>:_POSIX_C_SOURCE=199309L>)
 biosim_target_git_version(biosim-gpu-bench)
 
 if(BIOSIM_BUILD_TESTS)

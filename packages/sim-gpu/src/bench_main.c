@@ -5,9 +5,10 @@
  * a fixed population with profiling enabled, then reports per-kernel GPU time,
  * host<->device transfer time, and throughput.  Uses large-brain defaults to
  * stress the feedforward kernel.  Not installed; this is a dev-only tool.
+ *
+ * _POSIX_C_SOURCE (for clock_gettime/CLOCK_MONOTONIC) is defined on the compiler
+ * command line by CMake, keeping the source free of reserved-identifier macros.
  */
-#define _POSIX_C_SOURCE 199309L
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,7 +194,7 @@ int main(int argc, char **argv) {
     biosim_gpu_bench_metrics_t metrics;
     biosim_gpu_bench_compute(&profile, wall_ns, sim.population, sim.steps_per_gen, gens, &metrics);
 
-    printf(
+    (void)printf(
         "=== GPU benchmark (pop=%u genes=%u neurons=%u, gens=%u) ===\n",
         sim.population,
         (unsigned)sim.max_genes,

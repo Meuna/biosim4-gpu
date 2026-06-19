@@ -21,7 +21,7 @@ void test_bench_compute_basic(void) {
     for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
         raw.kernel_count[i] = 100U;
     }
-    raw.sync_to_ns = 50000000ULL;   /* 50 ms  */
+    raw.sync_to_ns = 50000000ULL;    /* 50 ms  */
     raw.sync_from_ns = 250000000ULL; /* 250 ms */
 
     biosim_gpu_bench_metrics_t m;
