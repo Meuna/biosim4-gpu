@@ -208,7 +208,14 @@ describe("gridPosition", () => {
     it("maps cell (0,0) to the top-left cell centre for a square grid", () => {
         // 400×400 canvas region, 128×128 cells
         const cellPx = 400 / 128;
-        const { x, y } = gridPosition(0, 0, 100, 100, 400, 400, 128, 128);
+        const { x, y } = gridPosition(0, 0, {
+            gridX: 100,
+            gridY: 100,
+            gridW: 400,
+            gridH: 400,
+            gridCellsX: 128,
+            gridCellsY: 128,
+        });
         expect(x).toBeCloseTo(100 + cellPx * 0.5);
         expect(y).toBeCloseTo(100 + cellPx * 0.5);
     });
@@ -216,7 +223,14 @@ describe("gridPosition", () => {
     it("uses the correct radius formula for a square grid", () => {
         const cellPx = 400 / 128;
         const expected = Math.max(1.5, cellPx * 0.4);
-        const { r } = gridPosition(0, 0, 100, 100, 400, 400, 128, 128);
+        const { r } = gridPosition(0, 0, {
+            gridX: 100,
+            gridY: 100,
+            gridW: 400,
+            gridH: 400,
+            gridCellsX: 128,
+            gridCellsY: 128,
+        });
         expect(r).toBeCloseTo(expected);
     });
 
@@ -224,17 +238,29 @@ describe("gridPosition", () => {
         // cellPxW = 400/256 = 1.5625, cellPxH = 200/128 = 1.5625 (coincidence)
         const cellPxW = 400 / 256;
         const cellPxH = 200 / 128;
-        const { x, y } = gridPosition(0, 0, 50, 60, 400, 200, 256, 128);
+        const { x, y } = gridPosition(0, 0, {
+            gridX: 50,
+            gridY: 60,
+            gridW: 400,
+            gridH: 200,
+            gridCellsX: 256,
+            gridCellsY: 128,
+        });
         expect(x).toBeCloseTo(50 + cellPxW * 0.5);
         expect(y).toBeCloseTo(60 + cellPxH * 0.5);
     });
 
     it("uses the smaller cell dimension for radius in a non-square grid", () => {
-        // gridW=200, gridH=400, gridCellsX=64, gridCellsY=128
-        // cellPxW = 200/64 ≈ 3.125, cellPxH = 400/128 ≈ 3.125 — equal here
         // Use a clearly asymmetric case: W=100, H=400, cells 100×100
         // cellPxW=1, cellPxH=4 → min=1, r=max(1.5, 0.4)=1.5
-        const { r } = gridPosition(0, 0, 0, 0, 100, 400, 100, 100);
+        const { r } = gridPosition(0, 0, {
+            gridX: 0,
+            gridY: 0,
+            gridW: 100,
+            gridH: 400,
+            gridCellsX: 100,
+            gridCellsY: 100,
+        });
         expect(r).toBeCloseTo(Math.max(1.5, 1 * 0.4));
     });
 });

@@ -219,24 +219,30 @@ export function sphereSculpture(
 
 // ── Grid-mode helpers (unchanged; reused by transitions) ────────────────────────
 
+/** The grid-region params gridPosition needs: a subset of the worker's Layout,
+ *  so a Layout value is structurally assignable here without an import. */
+export interface GridCells {
+    gridX: number;
+    gridY: number;
+    gridW: number;
+    gridH: number;
+    gridCellsX: number;
+    gridCellsY: number;
+}
+
 /** Canvas-pixel centre + radius for a simulation grid cell (gx, gy).
  *  Supports rectangular grids: gridW/gridH are the pixel dimensions of the
  *  grid region on the canvas; gridCellsX/Y are the simulation cell counts. */
 export function gridPosition(
     gx: number,
     gy: number,
-    gridX: number,
-    gridY: number,
-    gridW: number,
-    gridH: number,
-    gridCellsX: number,
-    gridCellsY: number,
+    grid: GridCells,
 ): { x: number; y: number; r: number } {
-    const cellPxW = gridW / gridCellsX;
-    const cellPxH = gridH / gridCellsY;
+    const cellPxW = grid.gridW / grid.gridCellsX;
+    const cellPxH = grid.gridH / grid.gridCellsY;
     return {
-        x: gridX + (gx + 0.5) * cellPxW,
-        y: gridY + (gy + 0.5) * cellPxH,
+        x: grid.gridX + (gx + 0.5) * cellPxW,
+        y: grid.gridY + (gy + 0.5) * cellPxH,
         r: Math.max(1.5, Math.min(cellPxW, cellPxH) * 0.4),
     };
 }

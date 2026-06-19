@@ -884,7 +884,6 @@ function drawGrid(): void {
     drawChallengeOverlay(currentChallenge);
     drawBarriers();
 
-    const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
     const pop = call("biosim_wasm_get_population");
     const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
     const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
@@ -897,16 +896,7 @@ function drawGrid(): void {
         if (HEAPU8[aliveOff + i]) {
             const gx = HEAP32[locXOff + i];
             const gy = HEAP32[locYOff + i];
-            const { x, y, r } = gridPosition(
-                gx,
-                gy,
-                gridX,
-                gridY,
-                gridW,
-                gridH,
-                gridCellsX,
-                gridCellsY,
-            );
+            const { x, y, r } = gridPosition(gx, gy, layout);
             ctx.moveTo(x + r, y);
             ctx.arc(x, y, r, 0, Math.PI * 2);
         }
@@ -918,16 +908,7 @@ function drawGrid(): void {
         if (id !== null && HEAPU8[aliveOff + id]) {
             const gx = HEAP32[locXOff + id];
             const gy = HEAP32[locYOff + id];
-            const { x, y, r } = gridPosition(
-                gx,
-                gy,
-                gridX,
-                gridY,
-                gridW,
-                gridH,
-                gridCellsX,
-                gridCellsY,
-            );
+            const { x, y, r } = gridPosition(gx, gy, layout);
             ctx.beginPath();
             ctx.arc(x, y, r, 0, Math.PI * 2);
             ctx.fill();
@@ -937,16 +918,7 @@ function drawGrid(): void {
     if (selectedAgentId !== null && HEAPU8[aliveOff + selectedAgentId]) {
         const gx = HEAP32[locXOff + selectedAgentId];
         const gy = HEAP32[locYOff + selectedAgentId];
-        const { x, y, r } = gridPosition(
-            gx,
-            gy,
-            gridX,
-            gridY,
-            gridW,
-            gridH,
-            gridCellsX,
-            gridCellsY,
-        );
+        const { x, y, r } = gridPosition(gx, gy, layout);
         ctx.beginPath();
         ctx.arc(x, y, r + 3, 0, Math.PI * 2);
         ctx.strokeStyle = AGENT_COLOR;
@@ -961,16 +933,7 @@ function drawTransitionIn(frac: number): void {
     drawChallengeOverlay(currentChallenge);
     drawBarriers();
 
-    const {
-        canvasW,
-        canvasH,
-        gridX,
-        gridY,
-        gridW,
-        gridH,
-        gridCellsX,
-        gridCellsY,
-    } = layout;
+    const { canvasW, canvasH } = layout;
     const pop = call("biosim_wasm_get_population");
     const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
     const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
@@ -992,16 +955,7 @@ function drawTransitionIn(frac: number): void {
         if (HEAPU8[aliveOff + i]) {
             const gx = HEAP32[locXOff + i];
             const gy = HEAP32[locYOff + i];
-            const to = gridPosition(
-                gx,
-                gy,
-                gridX,
-                gridY,
-                gridW,
-                gridH,
-                gridCellsX,
-                gridCellsY,
-            );
+            const to = gridPosition(gx, gy, layout);
             const { x, y } = lerpVec2(from, to, frac);
             const r = from.r + (to.r - from.r) * frac;
             // Ramp to fully opaque to meet the grid draw without a pop.
@@ -1041,16 +995,7 @@ function drawTransitionOut(
     drawBarriers();
     ctx.restore();
 
-    const {
-        canvasW,
-        canvasH,
-        gridX,
-        gridY,
-        gridW,
-        gridH,
-        gridCellsX,
-        gridCellsY,
-    } = layout;
+    const { canvasW, canvasH } = layout;
     const pop = call("biosim_wasm_get_population");
     const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
     const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
@@ -1072,16 +1017,7 @@ function drawTransitionOut(
         if (HEAPU8[aliveOff + i]) {
             const gx = HEAP32[locXOff + i];
             const gy = HEAP32[locYOff + i];
-            const from = gridPosition(
-                gx,
-                gy,
-                gridX,
-                gridY,
-                gridW,
-                gridH,
-                gridCellsX,
-                gridCellsY,
-            );
+            const from = gridPosition(gx, gy, layout);
             const { x, y } = lerpVec2(from, to, frac);
             const r = from.r + (to.r - from.r) * frac;
             // Grid is fully opaque; fade toward the sculpture's per-dot opacity.
