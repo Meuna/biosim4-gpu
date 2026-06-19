@@ -25,6 +25,7 @@
 - Pulse the idle sculpture like an equaliser — press space for a full-viewport beat, click for one decaying from the cursor ([#173](https://github.com/Meuna/biosim4-gpu/pull/173))
 - Start tablet and phone devices with a lighter default population and grid size ([#183](https://github.com/Meuna/biosim4-gpu/pull/183))
 - Draw an accentuated trace following the selected agent's path since selection ([#184](https://github.com/Meuna/biosim4-gpu/pull/184))
+- Start the simulation by clicking "play" in the grid idle overlay, which highlights with a marker effect on hover ([#186](https://github.com/Meuna/biosim4-gpu/pull/186))
 
 #### Changed
 
