@@ -14,6 +14,7 @@ import {
 import { unpackConn, type BrainConn } from "../lib/brain";
 import { stepDelay, createFpsWindow } from "../lib/playbackRate";
 import { shouldIdleReturn, type RenderLoopMode } from "../lib/idleReturn";
+import { appendTracePoint, type TracePoint } from "../lib/agentTrace";
 
 // ── Types & Protocol ──────────────────────────────────────────────────────────
 
@@ -719,6 +720,12 @@ function drawChallengeOverlay(spec: ChallengeSpec): void {
 let selectedAgentId: number | null = null;
 let hoveredAgentId: number | null = null;
 
+// Path travelled by the selected agent since it was selected (gh-69). Reset on a
+// new selection, on deselect, on rewind, and — via the `traceGen` guard in
+// recordSelectedTrace — whenever the generation changes underneath it.
+let selectedTrace: TracePoint[] = [];
+let traceGen = -1;
+
 function readAgentInfo(id: number): AgentInfo {
     const { HEAP32, HEAPU8, HEAPU32 } = biosim!;
     const HEAPU16 = new Uint16Array(HEAPU8.buffer);
@@ -759,6 +766,44 @@ function notifySelectionUpdate(): void {
         type: "agentUpdated",
         info: readAgentInfo(selectedAgentId),
     } satisfies WorkerEvent);
+}
+
+// Sole writer of `selectedAgentId` (set by AgentFocus on the main thread). A new
+// selection seeds the trace with the agent's current cell; deselecting clears it.
+function setSelectedAgent(id: number | null): void {
+    selectedAgentId = id;
+    selectedTrace = [];
+    if (id === null || !biosim) return;
+    traceGen = call("biosim_wasm_get_gen");
+    const aliveOff = call("biosim_wasm_get_alive_ptr");
+    if (!biosim.HEAPU8[aliveOff + id]) return;
+    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
+    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
+    appendTracePoint(
+        selectedTrace,
+        biosim.HEAP32[locXOff + id],
+        biosim.HEAP32[locYOff + id],
+    );
+}
+
+// Records the selected agent's cell after a sim step. Drops a stale trace when
+// the generation rolls over; freezes (stops extending) once the agent is dead.
+function recordSelectedTrace(): void {
+    if (selectedAgentId === null || !biosim) return;
+    const gen = call("biosim_wasm_get_gen");
+    if (gen !== traceGen) {
+        selectedTrace = [];
+        traceGen = gen;
+    }
+    const aliveOff = call("biosim_wasm_get_alive_ptr");
+    if (!biosim.HEAPU8[aliveOff + selectedAgentId]) return;
+    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
+    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
+    appendTracePoint(
+        selectedTrace,
+        biosim.HEAP32[locXOff + selectedAgentId],
+        biosim.HEAP32[locYOff + selectedAgentId],
+    );
 }
 
 // Reads and decodes agent `id`'s neural network from the WASM heap. The conn /
@@ -878,6 +923,7 @@ function drawMorph(
     ctx.globalAlpha = clamp01(1 - frac);
     drawChallengeOverlay(currentChallenge);
     drawBarriers();
+    drawSelectedTrace();
     ctx.restore();
 
     const { canvasW, canvasH } = layout;
@@ -919,11 +965,35 @@ function drawMorph(
     ctx.restore();
 }
 
+// Accentuated polyline through the selected agent's recorded cells (gh-69). Does
+// not touch globalAlpha, so it composes with the caller's fade.
+function drawSelectedTrace(): void {
+    if (!ctx || !layout || selectedTrace.length < 2) return;
+    ctx.save();
+    ctx.beginPath();
+    for (let i = 0; i < selectedTrace.length; i++) {
+        const { x, y } = gridPosition(
+            selectedTrace[i].gx,
+            selectedTrace[i].gy,
+            layout,
+        );
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.restore();
+}
+
 function drawGrid(): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
     drawChallengeOverlay(currentChallenge);
     drawBarriers();
+    drawSelectedTrace();
 
     const pop = call("biosim_wasm_get_population");
     const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
@@ -1092,11 +1162,13 @@ function handleStep(): void {
     if (callChecked("biosim_wasm_do_step") !== 0) return;
     postMessage(progress("stepped"));
     notifySelectionUpdate();
+    recordSelectedTrace();
 }
 
 function handleRewind(): void {
     playing = false;
     if (callChecked("biosim_wasm_rewind") !== 0) return;
+    selectedTrace = []; // same generation, step → 0: gen guard can't catch this
     postMessage(progress("paused"));
 }
 
@@ -1105,6 +1177,7 @@ function handleRewindConfigured(params: SimParams): void {
     const prevMode = mode;
     applyConfig(params);
     if (callChecked("biosim_wasm_rewind_configured") !== 0) return;
+    selectedTrace = []; // same generation, step → 0: gen guard can't catch this
     cacheBarrierCells();
     // Keep the sculpture if we were showing it; otherwise land on the grid.
     setMode(renderModeFor(prevMode) === "kinematic" ? "idle" : "running");
@@ -1284,6 +1357,7 @@ function playTick(): void {
     }
     postMessage(progress("stepped"));
     notifySelectionUpdate();
+    recordSelectedTrace();
     const elapsed = performance.now() - tickStart;
     const fpsReading = fpsWindow.tick(performance.now());
     if (fpsReading !== null) {
@@ -1485,7 +1559,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
         // Sole writers of the worker's selection state (set by AgentFocus on the
         // main thread — pick replies and UX gestures both funnel through here).
         case "selectAgent":
-            selectedAgentId = cmd.id;
+            setSelectedAgent(cmd.id);
             break;
         case "hoverAgent":
             hoveredAgentId = cmd.id;
