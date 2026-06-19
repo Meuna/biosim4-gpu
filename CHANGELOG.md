@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Biosim4-gpu
+
+#### Added
+
+- Add `biosim-gpu-bench`, a developer tool that profiles the GPU pipeline and reports per-kernel time, transfer time, and throughput ([#191](https://github.com/Meuna/biosim4-gpu/pull/191))
+
 ## [1.1.0] - 2026-06-19
 
 ### Biosim4-gpu
