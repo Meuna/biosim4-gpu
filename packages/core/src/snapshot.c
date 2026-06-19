@@ -641,14 +641,14 @@ biosim_status_t biosim_snapshot_load_survivors(
 
 /* ── high-level write: sessions ─────────────────────────────────────────── */
 
-static int snap_should_write(uint32_t gen, uint32_t max_generation, uint32_t interval) {
+static bool snap_should_write(uint32_t gen, uint32_t max_generation, uint32_t interval) {
     if (gen == max_generation - 1U) {
-        return 1; /* always capture the final generation */
+        return true; /* always capture the final generation */
     }
     if (interval > 0) {
         return gen % interval == 0;
     }
-    return 0;
+    return false;
 }
 
 static biosim_status_t session_emit_record(biosim_sim_t *sim, const biosim_survivor_snap_t *snap) {
