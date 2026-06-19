@@ -25,6 +25,7 @@
         downloadBlob,
         classifyDroppedFiles,
     } from "./lib/fileTransfer";
+    import { shouldSpaceBeat } from "./lib/beatTrigger";
     import { SimMachine } from "./lib/simMachine.svelte";
     import { AgentFocus } from "./lib/agentFocus.svelte";
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
@@ -295,6 +296,21 @@
         return () => window.removeEventListener("keyup", onKeyUp);
     });
 
+    // Space pulses the idle sculpture full-viewport. Gated to sculpture mode and
+    // away from editable/interactive focus (shouldSpaceBeat), so grid-mode space
+    // and space-activates-button keep working; e.repeat is ignored for discrete
+    // pulses (held space would otherwise pin the surface at peak).
+    $effect(() => {
+        function onKey(e: KeyboardEvent): void {
+            if (e.repeat) return;
+            if (!shouldSpaceBeat(e.key, renderMode, e.target)) return;
+            e.preventDefault();
+            send({ type: "beat" });
+        }
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    });
+
     // ── Viewport & grid geometry ─────────────────────────────────────────────
     let viewportW = $state(window.innerWidth);
     let viewportH = $state(window.innerHeight);
@@ -391,6 +407,12 @@
 
     function handleCanvasClick(e: MouseEvent): void {
         if (!workerReady) return;
+        // In sculpture mode a click is a beat decaying from the cursor; in grid
+        // mode it picks an agent. The two paths never both fire.
+        if (renderMode === "kinematic") {
+            send({ type: "beat", x: e.clientX, y: e.clientY });
+            return;
+        }
         if (e.ctrlKey && focus.promoteHoverToSelection()) return;
         const cell = pixelToCell(e.clientX, e.clientY);
         if (cell) send({ type: "pickAgentAtCell", ...cell, reason: "click" });

@@ -4,6 +4,7 @@
 // of where biosim.mjs is served (it gets a hashed URL in production builds).
 import biosimUrl from "@sim-wasm/biosim.mjs?url";
 import {
+    beatEnvelope,
     easeInOut,
     gridPosition,
     kinematicPosition,
@@ -165,7 +166,8 @@ export type WorkerCmd =
     | { type: "startFreeRun" }
     | { type: "stopFreeRun" }
     | { type: "exportSnapshot" }
-    | { type: "loadSnapshot"; data: Uint8Array; rewindFirst: boolean };
+    | { type: "loadSnapshot"; data: Uint8Array; rewindFirst: boolean }
+    | { type: "beat"; x?: number; y?: number };
 
 export type WorkerEvent =
     | { type: "ready" }
@@ -806,6 +808,18 @@ const IDLE_TIMEOUT_MS = 30_000;
 let lastActivity = performance.now(); // last time the sim was active or touched
 let animInterval: ReturnType<typeof setInterval> | null = null;
 
+// Beat response (space / sculpture click). `lastBeatEpoch` is when the latest
+// beat fired; `beatPointer` its epicentre (null = full-viewport). The intensity
+// is the pure `beatEnvelope`, sampled live in animTick and fed to the sculpture.
+let lastBeatEpoch = -Infinity;
+let beatPointer: { x: number; y: number } | null = null;
+function currentBeat(now: number): {
+    beat: number;
+    pointer: { x: number; y: number } | null;
+} {
+    return { beat: beatEnvelope(now - lastBeatEpoch), pointer: beatPointer };
+}
+
 // The main thread observes render mode (not the worker's finer Mode) to route
 // clicks and toggle the idle overlay. Posted only when the mapped value changes.
 let lastRenderMode: "kinematic" | "grid" | null = null;
@@ -833,7 +847,11 @@ function applyAgentStyle(): void {
     ctx.fillStyle = AGENT_COLOR;
 }
 
-function drawKinematic(t: number): void {
+function drawKinematic(
+    t: number,
+    beat: number,
+    pointer: { x: number; y: number } | null,
+): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
 
@@ -849,8 +867,8 @@ function drawKinematic(t: number): void {
             t,
             canvasW,
             canvasH,
-            beat: 0,
-            pointer: null,
+            beat,
+            pointer,
         });
         ctx.globalAlpha = opacity;
         ctx.beginPath();
@@ -1008,7 +1026,12 @@ function drawTransitionIn(frac: number): void {
 // Mirror of drawTransitionIn for the return to the sculpture: grid → kinematic.
 // Unlike transition-in, the sculpture is alive (evaluated at live t), so it is
 // visibly forming as the grid dissolves.
-function drawTransitionOut(frac: number, t: number): void {
+function drawTransitionOut(
+    frac: number,
+    t: number,
+    beat: number,
+    pointer: { x: number; y: number } | null,
+): void {
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
     // The grid scaffolding dissolves as the sculpture takes over.
@@ -1043,8 +1066,8 @@ function drawTransitionOut(frac: number, t: number): void {
             t,
             canvasW,
             canvasH,
-            beat: 0,
-            pointer: null,
+            beat,
+            pointer,
         });
         if (HEAPU8[aliveOff + i]) {
             const gx = HEAP32[locXOff + i];
@@ -1124,14 +1147,16 @@ function animTick(): void {
         drawTransitionIn(easeInOut(frac));
         if (frac >= 1) setMode("running");
     } else if (mode === "transitioning-out") {
+        const { beat, pointer } = currentBeat(now);
         const raw = (now - transitionStart) / TRANSITION_OUT_MS;
         const frac = Math.min(1, raw);
-        drawTransitionOut(easeInOut(frac), t);
+        drawTransitionOut(easeInOut(frac), t, beat, pointer);
         if (frac >= 1) setMode("idle");
     } else if (mode === "running") {
         drawGrid();
     } else {
-        drawKinematic(t);
+        const { beat, pointer } = currentBeat(now);
+        drawKinematic(t, beat, pointer);
     }
 }
 
@@ -1459,6 +1484,16 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             if (mode === "running" && !playing && !freeRunning) {
                 startTransitionOut();
             }
+            break;
+        case "beat":
+            // Record the pulse; animTick samples beatEnvelope and feeds the
+            // sculpture. Always reset the epicentre so a space-beat (no coords)
+            // after a click-beat pulses full-viewport, not from the stale point.
+            lastBeatEpoch = performance.now();
+            beatPointer =
+                cmd.x !== undefined && cmd.y !== undefined
+                    ? { x: cmd.x, y: cmd.y }
+                    : null;
             break;
         case "configure":
             handleConfigure(cmd.params);

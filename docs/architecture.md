@@ -451,7 +451,7 @@ event to several holders (e.g. `census` feeds both `SimMachine` and
 | Family | Commands → | ← Events |
 |---|---|---|
 | Lifecycle | `play`, `stop`, `step`, `configure`, `nextGeneration`, `rewind`, `clearGenom`, `startFreeRun`, `stopFreeRun` | `ready`, `stepped`, `genComplete`, `paused`, `census`, `configured`, … |
-| Render | `returnToKinematic` (dissolve the grid back to the idle sculpture, at rest only) | `renderMode` (`kinematic` \| `grid`; the worker is the sole authority, posted on change) |
+| Render | `returnToKinematic` (dissolve the grid back to the idle sculpture, at rest only), `beat` (pulse the sculpture — no coords = full-viewport/space, coords = epicentre/click) | `renderMode` (`kinematic` \| `grid`; the worker is the sole authority, posted on change) |
 | Canvas | `canvas` (transfers an `OffscreenCanvas`), `layout` | — |
 | Agent | `pickAgentAtCell`, `selectAgent`, `hoverAgent`, `selectAgentById`, `navigateAgent`, `randomAgent` | `agentPicked`, `agentMissed`, `agentUpdated` |
 | Brain | `requestBrain` | `brainData` |
@@ -468,6 +468,7 @@ event to several holders (e.g. `census` feeds both `SimMachine` and
 | `kinematic.ts` | Idle-sculpture math: the wave-surface `kinematicPosition` (frozen `(i, pop, ctx)` `SculptureFn` signature), a swappable `sphereSculpture` sample, the `beatEnvelope` transfer function, plus the grid/interpolation helpers (`gridPosition`, `lerpVec2`, `easeInOut`). |
 | `playbackRate.ts` | Step-rate throttle and rolling FPS window (unit-testable without WASM). |
 | `idleReturn.ts` | `shouldIdleReturn` — pure predicate gating the worker's idle-timeout return to the sculpture (at-rest, elapsed); shares the `RenderLoopMode` type with the worker. |
+| `beatTrigger.ts` | `shouldSpaceBeat` — pure predicate gating the space-key sculpture beat (kinematic mode + non-editable focus). |
 | `headings.ts` | `HEADINGS`: compass-direction labels indexed by an agent's heading (0–7). |
 
 ### Brain explorer
