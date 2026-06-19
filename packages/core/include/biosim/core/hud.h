@@ -22,6 +22,8 @@
  * stream            — destination stream (typically stdout)
  * max_generations   — denominator for the progress bar / counter
  * is_tty            — chosen output mode, detected at init
+ * unicode           — emit UTF-8 glyphs (braille spinner, block bar) vs ASCII
+ * color             — wrap the HUD in ANSI color (implies unicode)
  * started           — whether the TTY block has been drawn at least once
  * spinner_index     — current spinner frame, advances each update
  * max_survival_rate — running maximum survival rate (0..1) across generations
@@ -30,14 +32,17 @@ typedef struct biosim_hud {
     FILE *stream;
     uint32_t max_generations;
     bool is_tty;
+    bool unicode;
+    bool color;
     bool started;
     uint8_t spinner_index;
     float max_survival_rate;
 } biosim_hud_t;
 
 /*
- * Initialise the HUD for stream. Detects whether stream is a TTY and selects
- * the rendering mode. In non-TTY mode, prints the census column header.
+ * Initialise the HUD for stream. Detects the terminal capabilities (TTY,
+ * Unicode, color) and selects the rendering mode. In non-TTY mode, prints the
+ * census column header.
  */
 void biosim_hud_init(biosim_hud_t *hud, FILE *stream, uint32_t max_generations);
 

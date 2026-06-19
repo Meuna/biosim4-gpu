@@ -136,6 +136,72 @@ void test_tty_redraw_emits_cursor_up_after_first_frame(void) {
     (void)fclose(f);
 }
 
+/* ── progressive glyph / color tiers ────────────────────────────────────── */
+
+/* ASCII tier: no UTF-8 lead bytes, ASCII bar/spinner glyphs, no color. */
+void test_ascii_tier_uses_ascii_glyphs(void) {
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_hud_t hud;
+    biosim_hud_init(&hud, f, 10U);
+    hud.is_tty = true;
+    hud.unicode = false;
+    hud.color = false;
+
+    biosim_census_t c = {.gen = 0U, .population = 100U, .survivors = 50U, .kills = 2U};
+    char buf[2048];
+    biosim_hud_update(&hud, &c);
+    capture(f, buf, sizeof(buf));
+
+    TEST_ASSERT_NULL(strstr(buf, "\xe2"));    /* no UTF-8 multibyte lead byte */
+    TEST_ASSERT_NOT_NULL(strstr(buf, "#"));   /* ASCII filled bar cell */
+    TEST_ASSERT_NULL(strstr(buf, "\033[0;")); /* no color */
+
+    (void)fclose(f);
+}
+
+/* Unicode tier: block bar glyph present, but no color escapes. */
+void test_unicode_tier_uses_glyphs_without_color(void) {
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_hud_t hud;
+    biosim_hud_init(&hud, f, 10U);
+    hud.is_tty = true;
+    hud.unicode = true;
+    hud.color = false;
+
+    biosim_census_t c = {.gen = 0U, .population = 100U, .survivors = 50U, .kills = 2U};
+    char buf[2048];
+    biosim_hud_update(&hud, &c);
+    capture(f, buf, sizeof(buf));
+
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\xe2\x96\x88")); /* █ filled bar glyph */
+    TEST_ASSERT_NULL(strstr(buf, "\033[0;"));          /* still no color */
+
+    (void)fclose(f);
+}
+
+/* Color tier: Unicode glyphs plus ANSI color escapes. */
+void test_color_tier_emits_ansi_color(void) {
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_hud_t hud;
+    biosim_hud_init(&hud, f, 10U);
+    hud.is_tty = true;
+    hud.unicode = true;
+    hud.color = true;
+
+    biosim_census_t c = {.gen = 0U, .population = 100U, .survivors = 50U, .kills = 2U};
+    char buf[2048];
+    biosim_hud_update(&hud, &c);
+    capture(f, buf, sizeof(buf));
+
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\033[0;")); /* a color sequence */
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\033[0m")); /* and its reset */
+
+    (void)fclose(f);
+}
+
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -145,5 +211,8 @@ int main(void) {
     RUN_TEST(test_spinner_index_wraps_modulo_eight);
     RUN_TEST(test_zero_population_does_not_divide_by_zero);
     RUN_TEST(test_tty_redraw_emits_cursor_up_after_first_frame);
+    RUN_TEST(test_ascii_tier_uses_ascii_glyphs);
+    RUN_TEST(test_unicode_tier_uses_glyphs_without_color);
+    RUN_TEST(test_color_tier_emits_ansi_color);
     return UNITY_END();
 }
