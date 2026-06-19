@@ -2,10 +2,13 @@ import {
     beatEnvelope,
     easeInOut,
     gridPosition,
+    idleFrac,
     kinematicPosition,
     lerpVec2,
+    morphDot,
     sphereSculpture,
     type KinematicCtx,
+    type MorphDot,
 } from "./kinematic";
 
 const CANVAS_W = 800;
@@ -262,5 +265,81 @@ describe("gridPosition", () => {
             gridCellsY: 100,
         });
         expect(r).toBeCloseTo(Math.max(1.5, 1 * 0.4));
+    });
+});
+
+describe("morphDot", () => {
+    const grid = { x: 100, y: 200, r: 3 };
+    const sculpture: MorphDot = { x: 400, y: 50, r: 1.5, opacity: 0.6 };
+
+    describe("live agent (has a grid cell)", () => {
+        it("sits at the grid cell, fully opaque, at frac=0", () => {
+            const dot = morphDot(grid, sculpture, 0);
+            expect(dot.x).toBeCloseTo(grid.x);
+            expect(dot.y).toBeCloseTo(grid.y);
+            expect(dot.r).toBeCloseTo(grid.r);
+            expect(dot.opacity).toBeCloseTo(1);
+        });
+
+        it("reaches the sculpture point and its opacity at frac=1", () => {
+            const dot = morphDot(grid, sculpture, 1);
+            expect(dot.x).toBeCloseTo(sculpture.x);
+            expect(dot.y).toBeCloseTo(sculpture.y);
+            expect(dot.r).toBeCloseTo(sculpture.r);
+            expect(dot.opacity).toBeCloseTo(sculpture.opacity);
+        });
+
+        it("interpolates linearly at frac=0.5", () => {
+            const dot = morphDot(grid, sculpture, 0.5);
+            expect(dot.x).toBeCloseTo((grid.x + sculpture.x) / 2);
+            expect(dot.y).toBeCloseTo((grid.y + sculpture.y) / 2);
+            expect(dot.r).toBeCloseTo((grid.r + sculpture.r) / 2);
+            expect(dot.opacity).toBeCloseTo((1 + sculpture.opacity) / 2);
+        });
+    });
+
+    describe("dead agent (no grid cell)", () => {
+        it("vanishes at the sculpture position at frac=0", () => {
+            const dot = morphDot(null, sculpture, 0);
+            expect(dot.x).toBeCloseTo(sculpture.x);
+            expect(dot.y).toBeCloseTo(sculpture.y);
+            expect(dot.r).toBeCloseTo(0);
+            expect(dot.opacity).toBeCloseTo(0);
+        });
+
+        it("is the full sculpture dot at frac=1", () => {
+            const dot = morphDot(null, sculpture, 1);
+            expect(dot).toEqual(sculpture);
+        });
+
+        it("scales radius and opacity by frac at frac=0.5", () => {
+            const dot = morphDot(null, sculpture, 0.5);
+            expect(dot.x).toBeCloseTo(sculpture.x);
+            expect(dot.y).toBeCloseTo(sculpture.y);
+            expect(dot.r).toBeCloseTo(sculpture.r * 0.5);
+            expect(dot.opacity).toBeCloseTo(sculpture.opacity * 0.5);
+        });
+    });
+});
+
+describe("idleFrac", () => {
+    const AMP = 0.04;
+
+    it("stays within [1 - AMP, 1 + AMP] and is centred on 1.0", () => {
+        let min = Infinity;
+        let max = -Infinity;
+        for (let t = 0; t < 120; t += 0.25) {
+            const f = idleFrac(t);
+            expect(f).toBeGreaterThanOrEqual(1 - AMP - 1e-9);
+            expect(f).toBeLessThanOrEqual(1 + AMP + 1e-9);
+            min = Math.min(min, f);
+            max = Math.max(max, f);
+        }
+        // Symmetric around 1.0: the swing reaches both extremes.
+        expect((min + max) / 2).toBeCloseTo(1);
+    });
+
+    it("starts at exactly 1.0 (no jump from the idle entry frac)", () => {
+        expect(idleFrac(0)).toBeCloseTo(1);
     });
 });

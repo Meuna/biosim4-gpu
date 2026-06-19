@@ -16,9 +16,9 @@
 //     `beat = 0` (and/or `pointer = null`) MUST render the neutral, un-pulsed
 //     sculpture. Callers that don't drive beats pass `beat: 0, pointer: null`.
 // To swap the active sculpture, change the function the worker calls in its
-// `drawKinematic` / `drawTransitionIn` draw loops (`sim.worker.ts`) from
-// `kinematicPosition` to `sphereSculpture` (or any other `SculptureFn`). The
-// signature is frozen, so swapping is a one-line change.
+// single `drawMorph` draw loop (`sim.worker.ts`) from `kinematicPosition` to
+// `sphereSculpture` (or any other `SculptureFn`). The signature is frozen, so
+// swapping is a one-line change.
 
 /** Context passed to every `SculptureFn`. Field set is frozen (issue #80). */
 export interface KinematicCtx {
@@ -259,4 +259,67 @@ export function lerpVec2(
 /** Smooth-step (quadratic ease-in-out), t ∈ [0, 1]. */
 export function easeInOut(t: number): number {
     return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
+
+// ── Grid ↔ sculpture morph ──────────────────────────────────────────────────────
+
+/** A placed dot: canvas-pixel centre, radius, and draw opacity. */
+export interface MorphDot {
+    x: number;
+    y: number;
+    r: number;
+    opacity: number;
+}
+
+/**
+ * Blend one agent between its grid cell and its sculpture point along a single
+ * "sculpture-ness" axis `frac`: `0` = fully in the grid, `1` = fully formed
+ * sculpture. The worker drives `frac` continuously (sliding it toward 0/1 for
+ * the grid/sculpture transitions, oscillating it around 1 while idle), so one
+ * call covers idle, transition-in, and transition-out.
+ *
+ * `grid` is the agent's grid-cell placement (`{x, y, r}`) for a live agent, or
+ * `null` for a dead agent, which has no grid cell and only exists at the
+ * sculpture: it shrinks to nothing and fades out as `frac → 0`. Live agents
+ * ramp from the fully-opaque grid dot toward the sculpture's per-dot opacity.
+ *
+ * `frac` may exceed `1` (the idle oscillation overshoots the sculpture); the
+ * caller is responsible for clamping the returned `opacity` before drawing.
+ */
+export function morphDot(
+    grid: { x: number; y: number; r: number } | null,
+    sculpture: MorphDot,
+    frac: number,
+): MorphDot {
+    if (grid === null) {
+        // Dead agent: pinned at the sculpture, scaled in/out by frac.
+        return {
+            x: sculpture.x,
+            y: sculpture.y,
+            r: sculpture.r * frac,
+            opacity: sculpture.opacity * frac,
+        };
+    }
+    const { x, y } = lerpVec2(grid, sculpture, frac);
+    return {
+        x,
+        y,
+        r: grid.r + (sculpture.r - grid.r) * frac,
+        // Grid dots are fully opaque; fade toward the sculpture's per-dot alpha.
+        opacity: 1 + (sculpture.opacity - 1) * frac,
+    };
+}
+
+/** Idle breathing amplitude and angular speed (radians/second) of `frac`. */
+const IDLE_FRAC_AMP = 0.04;
+const IDLE_FRAC_OMEGA = 0.35;
+
+/**
+ * Idle sculpture-ness: a slow oscillation symmetric around `1.0`, so the idle
+ * sculpture gently breathes toward and away from the grid. Returns values in
+ * `[1 - IDLE_FRAC_AMP, 1 + IDLE_FRAC_AMP]`; values above `1` overshoot the
+ * sculpture, so the caller clamps draw opacity. Pure; `t` is seconds.
+ */
+export function idleFrac(t: number): number {
+    return 1 + IDLE_FRAC_AMP * Math.sin(IDLE_FRAC_OMEGA * t);
 }

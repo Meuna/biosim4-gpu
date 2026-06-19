@@ -7,8 +7,9 @@ import {
     beatEnvelope,
     easeInOut,
     gridPosition,
+    idleFrac,
     kinematicPosition,
-    lerpVec2,
+    morphDot,
 } from "../lib/kinematic";
 import { unpackConn, type BrainConn } from "../lib/brain";
 import { stepDelay, createFpsWindow } from "../lib/playbackRate";
@@ -800,7 +801,13 @@ let layout: Layout | null = null;
 
 let mode: Mode = "idle";
 let startTime = performance.now(); // epoch for kinematic t (seconds)
-let kFrozenT = 0; // kinematic t captured at the moment play/step was pressed
+// Continuous "sculpture-ness": 0 = fully in the grid, 1 = fully formed
+// sculpture. Transitions slide it from its current value (no teleport when
+// interrupted); idle oscillates it around 1. `frac` starts at the idle/sculpture
+// state; fracFrom/fracTarget bound the active transition slide.
+let frac = 1;
+let fracFrom = 1;
+let fracTarget = 1;
 let transitionStart = 0; // performance.now() when current transition began
 const TRANSITION_IN_MS = 600;
 const TRANSITION_OUT_MS = 30_000;
@@ -847,7 +854,18 @@ function applyAgentStyle(): void {
     ctx.fillStyle = AGENT_COLOR;
 }
 
-function drawKinematic(
+/** Clamp to the [0, 1] range canvas accepts; values > 1 are silently ignored
+ *  (leaving the previous globalAlpha) and < 0 throw, so guard every write. */
+function clamp01(x: number): number {
+    return Math.max(0, Math.min(1, x));
+}
+
+// Single morph render for the idle sculpture and both transitions, driven by a
+// continuous "sculpture-ness" `frac` (0 = fully in the grid, 1 = fully formed
+// sculpture; idle oscillates around 1). The sculpture is always evaluated at
+// live `t`, so neither endpoint jumps when a transition is interrupted.
+function drawMorph(
+    frac: number,
     t: number,
     beat: number,
     pointer: { x: number; y: number } | null,
@@ -855,24 +873,47 @@ function drawKinematic(
     if (!ctx || !layout || !biosim) return;
     clearCanvas();
 
+    // Grid scaffolding fades in as frac → 0 (grid) and out as frac → 1 (sculpture).
+    ctx.save();
+    ctx.globalAlpha = clamp01(1 - frac);
+    drawChallengeOverlay(currentChallenge);
+    drawBarriers();
+    ctx.restore();
+
     const { canvasW, canvasH } = layout;
     const pop = call("biosim_wasm_get_population");
+    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
+    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
+    const aliveOff = call("biosim_wasm_get_alive_ptr");
+    const { HEAP32, HEAPU8 } = biosim;
 
     applyAgentStyle();
     // Per-dot opacity ⇒ one fill per dot; save/restore so globalAlpha never
     // leaks into the next frame's grid/overlay draws.
     ctx.save();
     for (let i = 0; i < pop; i++) {
-        const { x, y, r, opacity } = kinematicPosition(i, pop, {
+        const sculpture = kinematicPosition(i, pop, {
             t,
             canvasW,
             canvasH,
             beat,
             pointer,
         });
-        ctx.globalAlpha = opacity;
+        // Live agents morph between their grid cell and the sculpture; dead
+        // agents have no grid cell (null), so they only exist at the sculpture.
+        let grid = null;
+        if (HEAPU8[aliveOff + i]) {
+            grid = gridPosition(
+                HEAP32[locXOff + i],
+                HEAP32[locYOff + i],
+                layout,
+            );
+        }
+        const dot = morphDot(grid, sculpture, frac);
+        if (dot.r <= 0.1) continue; // cull faded-out dead dots
+        ctx.globalAlpha = clamp01(dot.opacity);
         ctx.beginPath();
-        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2);
         ctx.fill();
     }
     ctx.restore();
@@ -927,134 +968,25 @@ function drawGrid(): void {
     }
 }
 
-function drawTransitionIn(frac: number): void {
-    if (!ctx || !layout || !biosim) return;
-    clearCanvas();
-    drawChallengeOverlay(currentChallenge);
-    drawBarriers();
-
-    const { canvasW, canvasH } = layout;
-    const pop = call("biosim_wasm_get_population");
-    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
-    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
-    const aliveOff = call("biosim_wasm_get_alive_ptr");
-    const { HEAP32, HEAPU8 } = biosim;
-
-    applyAgentStyle();
-    // Per-dot opacity ⇒ one fill per dot; save/restore so globalAlpha never
-    // leaks into the next frame's grid/overlay draws.
-    ctx.save();
-    for (let i = 0; i < pop; i++) {
-        const from = kinematicPosition(i, pop, {
-            t: kFrozenT,
-            canvasW,
-            canvasH,
-            beat: 0,
-            pointer: null,
-        });
-        if (HEAPU8[aliveOff + i]) {
-            const gx = HEAP32[locXOff + i];
-            const gy = HEAP32[locYOff + i];
-            const to = gridPosition(gx, gy, layout);
-            const { x, y } = lerpVec2(from, to, frac);
-            const r = from.r + (to.r - from.r) * frac;
-            // Ramp to fully opaque to meet the grid draw without a pop.
-            ctx.globalAlpha = from.opacity + (1 - from.opacity) * frac;
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            // Dead agents fade out at their kinematic position.
-            const r = from.r * (1 - frac);
-            if (r > 0.1) {
-                ctx.globalAlpha = from.opacity * (1 - frac);
-                ctx.beginPath();
-                ctx.arc(from.x, from.y, r, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    }
-    ctx.restore();
-}
-
-// Mirror of drawTransitionIn for the return to the sculpture: grid → kinematic.
-// Unlike transition-in, the sculpture is alive (evaluated at live t), so it is
-// visibly forming as the grid dissolves.
-function drawTransitionOut(
-    frac: number,
-    t: number,
-    beat: number,
-    pointer: { x: number; y: number } | null,
-): void {
-    if (!ctx || !layout || !biosim) return;
-    clearCanvas();
-    // The grid scaffolding dissolves as the sculpture takes over.
-    ctx.save();
-    ctx.globalAlpha = 1 - frac;
-    drawChallengeOverlay(currentChallenge);
-    drawBarriers();
-    ctx.restore();
-
-    const { canvasW, canvasH } = layout;
-    const pop = call("biosim_wasm_get_population");
-    const locXOff = call("biosim_wasm_get_loc_x_ptr") >>> 2;
-    const locYOff = call("biosim_wasm_get_loc_y_ptr") >>> 2;
-    const aliveOff = call("biosim_wasm_get_alive_ptr");
-    const { HEAP32, HEAPU8 } = biosim;
-
-    applyAgentStyle();
-    // Per-dot opacity ⇒ one fill per dot; save/restore so globalAlpha never
-    // leaks into the next frame's grid/overlay draws.
-    ctx.save();
-    for (let i = 0; i < pop; i++) {
-        const to = kinematicPosition(i, pop, {
-            t,
-            canvasW,
-            canvasH,
-            beat,
-            pointer,
-        });
-        if (HEAPU8[aliveOff + i]) {
-            const gx = HEAP32[locXOff + i];
-            const gy = HEAP32[locYOff + i];
-            const from = gridPosition(gx, gy, layout);
-            const { x, y } = lerpVec2(from, to, frac);
-            const r = from.r + (to.r - from.r) * frac;
-            // Grid is fully opaque; fade toward the sculpture's per-dot opacity.
-            ctx.globalAlpha = 1 + (to.opacity - 1) * frac;
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            // Dead agents have no grid cell: fade in at their sculpture position.
-            const r = to.r * frac;
-            if (r > 0.1) {
-                ctx.globalAlpha = to.opacity * frac;
-                ctx.beginPath();
-                ctx.arc(to.x, to.y, r, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-    }
-    ctx.restore();
-}
-
 function startTransitionIfNeeded(): void {
     // Also reachable mid-return: snapping back into the grid must interrupt a
     // transition-out, or play/step would run the sim invisibly under the
     // sculpture.
     if (mode === "idle" || mode === "transitioning-out") {
-        // kFrozenT is the live t so transition-in reverses from the current
-        // sculpture frame (idle or mid-return).
-        kFrozenT = (performance.now() - startTime) / 1000;
+        // Slide toward the grid from the frac shown right now (idle or mid
+        // transition-out), so the dots never teleport on interrupt.
+        fracFrom = frac;
+        fracTarget = 0;
         transitionStart = performance.now();
         setMode("transitioning-in");
     }
 }
 
 function startTransitionOut(): void {
+    // Slide back toward the sculpture from the current grid frac (0).
+    fracFrom = frac;
+    fracTarget = 1;
     transitionStart = performance.now();
-    // t stays live via startTime so the sculpture is alive and forming.
     setMode("transitioning-out");
 }
 
@@ -1077,22 +1009,26 @@ function animTick(): void {
         startTransitionOut();
     }
 
-    if (mode === "transitioning-in") {
-        const raw = (now - transitionStart) / TRANSITION_IN_MS;
-        const frac = Math.min(1, raw);
-        drawTransitionIn(easeInOut(frac));
-        if (frac >= 1) setMode("running");
-    } else if (mode === "transitioning-out") {
-        const { beat, pointer } = currentBeat(now);
-        const raw = (now - transitionStart) / TRANSITION_OUT_MS;
-        const frac = Math.min(1, raw);
-        drawTransitionOut(easeInOut(frac), t, beat, pointer);
-        if (frac >= 1) setMode("idle");
-    } else if (mode === "running") {
+    if (mode === "running") {
         drawGrid();
+        return;
+    }
+
+    const { beat, pointer } = currentBeat(now);
+    if (mode === "transitioning-in" || mode === "transitioning-out") {
+        const dur =
+            mode === "transitioning-in" ? TRANSITION_IN_MS : TRANSITION_OUT_MS;
+        const p = Math.min(1, (now - transitionStart) / dur);
+        frac = fracFrom + (fracTarget - fracFrom) * easeInOut(p);
+        drawMorph(frac, t, beat, pointer);
+        if (p >= 1) {
+            frac = fracTarget;
+            setMode(mode === "transitioning-in" ? "running" : "idle");
+        }
     } else {
-        const { beat, pointer } = currentBeat(now);
-        drawKinematic(t, beat, pointer);
+        // Idle: breathe frac slowly around 1.0 (the formed sculpture).
+        frac = idleFrac(t);
+        drawMorph(frac, t, beat, pointer);
     }
 }
 
