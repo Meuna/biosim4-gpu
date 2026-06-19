@@ -36,6 +36,7 @@
 
 #### Fixed
 
+- Start the simulation at the device's form-factor population and grid size, not only the config panel ([#185](https://github.com/Meuna/biosim4-gpu/pull/185))
 - Stop the idle sculpture from jumping when the simulation resumes while it is returning to the sculpture ([#181](https://github.com/Meuna/biosim4-gpu/pull/181))
 - Reflow the header and keep telemetry on-screen on small (phone) viewports ([#149](https://github.com/Meuna/biosim4-gpu/pull/149))
 - Stop the expanded Brain view title from colliding with the version label ([#155](https://github.com/Meuna/biosim4-gpu/pull/155))
