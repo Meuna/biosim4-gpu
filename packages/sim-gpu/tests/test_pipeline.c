@@ -154,6 +154,52 @@ void test_pipeline_generation_boundary(void) {
     biosim_survivor_snap_free(&snap);
 }
 
+/* With profiling enabled, a step loop accumulates one timing per kernel per
+ * step and non-zero GPU time.  Uses its own profiling runner/pipeline (the
+ * shared fixture runner has profiling off).  IGNOREs without an OpenCL device. */
+void test_pipeline_profiling_collects_timings(void) {
+    cl_uint n = 0U;
+    if (clGetPlatformIDs(0U, NULL, &n) != CL_SUCCESS || n == 0U) {
+        TEST_IGNORE_MESSAGE("no OpenCL platform");
+    }
+
+    biosim_sim_t lsim;
+    biosim_gpu_runner_t lrunner;
+    biosim_gpu_pipeline_t lpipe;
+    memset(&lpipe, 0, sizeof(lpipe));
+
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_32x32(&lsim));
+    lsim.challenge.kind = BIOSIM_CHALLENGE_TOUCH_ANY_WALL;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_gpu_runner_create(0U, 0U, true, &lrunner));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_gpu_pipeline_create(&lsim, &lrunner, NULL, &lpipe));
+
+    uint32_t steps = lsim.steps_per_gen;
+    for (uint32_t s = 0U; s < steps; s++) {
+        lsim.step = s;
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_gpu_pipeline_step(&lpipe, &lsim));
+    }
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_gpu_pipeline_sync_to_host(&lpipe, &lsim));
+
+    biosim_gpu_profile_t prof;
+    biosim_gpu_pipeline_get_profile(&lpipe, &prof);
+    for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
+        TEST_ASSERT_EQUAL_UINT64((uint64_t)steps, prof.kernel_count[i]);
+        TEST_ASSERT_TRUE(prof.kernel_ns[i] > 0U);
+    }
+
+    /* reset_profile zeroes every accumulator. */
+    biosim_gpu_pipeline_reset_profile(&lpipe);
+    biosim_gpu_pipeline_get_profile(&lpipe, &prof);
+    for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
+        TEST_ASSERT_EQUAL_UINT64(0U, prof.kernel_count[i]);
+        TEST_ASSERT_EQUAL_UINT64(0U, prof.kernel_ns[i]);
+    }
+
+    biosim_gpu_pipeline_free(&lpipe);
+    biosim_gpu_runner_free(&lrunner);
+    biosim_sim_free(&lsim);
+}
+
 /* ── main ───────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -163,5 +209,6 @@ int main(void) {
     RUN_TEST(test_pipeline_step_loop_no_crash);
     RUN_TEST(test_pipeline_generation_boundary);
     fixture_teardown();
+    RUN_TEST(test_pipeline_profiling_collects_timings);
     return UNITY_END();
 }

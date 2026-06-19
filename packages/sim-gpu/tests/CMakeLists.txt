@@ -34,3 +34,9 @@ add_executable(sim-gpu-pipeline-tests test_pipeline.c)
 target_link_libraries(sim-gpu-pipeline-tests PRIVATE sim-gpu-test-utils)
 target_compile_features(sim-gpu-pipeline-tests PRIVATE c_std_11)
 add_test(NAME sim-gpu-pipeline-tests COMMAND sim-gpu-pipeline-tests)
+
+# GPU-free: exercises the pure metric math, runs in CI without an OpenCL device.
+add_executable(sim-gpu-benchmark-tests test_benchmark.c)
+target_link_libraries(sim-gpu-benchmark-tests PRIVATE sim-gpu-test-utils)
+target_compile_features(sim-gpu-benchmark-tests PRIVATE c_std_11)
+add_test(NAME sim-gpu-benchmark-tests COMMAND sim-gpu-benchmark-tests)
