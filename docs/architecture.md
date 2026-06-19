@@ -72,6 +72,7 @@ future GPU simulator need with identical behavior.
 | [`rng.h`](../packages/core/include/biosim/core/rng.h) | — | <ul><li>`biosim_rng_next` — advance xorshift64 and return state</li><li>`biosim_rng_seed` — initialize from two uint64_t seeds</li></ul> |
 | [`status.h`](../packages/core/include/biosim/core/status.h) | `biosim_status_t` | <ul><li>`biosim_strerror` — map status code to human-readable string</li></ul> |
 | [`log.h`](../packages/core/include/biosim/core/log.h) | `biosim_log_ctx_t` | <ul><li>`biosim_log_init` — set threshold, detect terminal color</li><li>`BIOSIM_ERRORF` / `WARNF` / `INFOF` / `DEBUGF` / `TRACEF` — level-gated macros</li></ul> |
+| [`terminal.h`](../packages/core/include/biosim/core/terminal.h) | `biosim_term_caps_t` | <ul><li>`biosim_term_init` — enable UTF-8 + ANSI on the Windows console (no-op on POSIX)</li><li>`biosim_term_detect` — report TTY / Unicode / color capabilities of a stream</li></ul> |
 | [`params.h`](../packages/core/include/biosim/core/params.h) | `biosim_params_t`, `biosim_param_entry_t` | <ul><li>`biosim_params_set_int` / `_float` / `_bool` / `_string` — typed setters</li><li>`biosim_params_get_int` / `_float` / `_bool` / `_string` — typed getters (abort on type mismatch)</li><li>`biosim_params_find` — locate an entry by key</li></ul> |
 
 `biosim_sim_t` is the complete simulation state. Call `biosim_sim_create` with a
