@@ -43,6 +43,13 @@ export class SimMachine {
     #pendingPlay = false;
     #pendingConfig: SimParams | null = null;
 
+    // Whether the seeded config diverges from the WASM bootstrap defaults
+    // (DEFAULTS). The worker inits the sim with DEFAULTS before the app can pass
+    // params, so a form-factor (or otherwise non-default) seed must be pushed to
+    // WASM on worker-ready to make the sim match the panel. False for desktop,
+    // keeping that startup path command-free.
+    readonly #needsInitialConfigure: boolean;
+
     readonly #send: SendFn;
 
     // Raw draft/last-played divergence. Not masked by phase: a draft edited
@@ -82,6 +89,8 @@ export class SimMachine {
         this.#send = send;
         this.#draftConfig = structuredClone(initialConfig);
         this.#lastPlayedConfig = structuredClone(initialConfig);
+        this.#needsInitialConfigure =
+            JSON.stringify(initialConfig) !== JSON.stringify(DEFAULTS);
     }
 
     get phase(): SimPhase {
@@ -246,7 +255,21 @@ export class SimMachine {
     // ── Worker-event methods ─────────────────────────────────────────────────
 
     onWorkerReady(): void {
-        if (this.#phase === "WORKER_PENDING") this.#phase = "WORKER_READY";
+        if (this.#phase !== "WORKER_PENDING") return;
+        this.#phase = "WORKER_READY";
+        // Reconcile the WASM sim (booted with DEFAULTS) to the seeded config
+        // when it diverges, so the running sim matches the panel from the start.
+        // Mirrors the dirty-toggle path: send configure, stay WORKER_READY until
+        // onConfigured() commits the (already-equal) draft and lands in
+        // GENERATION_SPAWNED — without marking the draft dirty. Benign race: a
+        // play/step click in the sub-frame window before that reply would set
+        // STEPS_RUNNING/PAUSED then be overwritten to GENERATION_SPAWNED (UI
+        // mislabel only; the sim runs the right config). The window is the
+        // instant controls first enable at load — not humanly clickable.
+        if (this.#needsInitialConfigure) {
+            this.#pendingConfig = this.#snapshotDraft();
+            this.#send({ type: "configure", params: this.#pendingConfig });
+        }
     }
 
     onConfigured(): void {

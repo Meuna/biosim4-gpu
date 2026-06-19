@@ -60,6 +60,32 @@ describe("onWorkerReady", () => {
         m.onWorkerReady();
         expect(m.phase).toBe("STEPS_RUNNING");
     });
+
+    it("sends no configure when seeded with the defaults", () => {
+        const { m, sent } = create();
+        m.onWorkerReady();
+        expect(sent).toEqual([]);
+        expect(m.phase).toBe("WORKER_READY");
+    });
+
+    it("reconciles the WASM sim when seeded with a non-default config", () => {
+        const params = makeParams({
+            population: 700,
+            gridSizeX: 64,
+            gridSizeY: 64,
+        });
+        const { m, sent } = create(params);
+        m.onWorkerReady();
+        // Stays WORKER_READY with the seed pushed to the worker, and the draft
+        // is not dirty (no spurious revert affordance at startup).
+        expect(sent).toEqual([{ type: "configure", params }]);
+        expect(m.phase).toBe("WORKER_READY");
+        expect(m.dirty).toBe(false);
+        // The configured reply commits the seed and lands the spawned generation.
+        m.onConfigured();
+        expect(m.phase).toBe("GENERATION_SPAWNED");
+        expect(m.dirty).toBe(false);
+    });
 });
 
 describe("toggle", () => {
