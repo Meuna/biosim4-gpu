@@ -17,11 +17,11 @@
 #include "biosim/sim-gpu/pipeline.h"
 #include "biosim/sim-gpu/runner.h"
 
-static volatile sig_atomic_t g_halt_requested = 0;
+static volatile sig_atomic_t halt_requested = 0;
 
 static void handle_signal(int sig) {
     (void)sig;
-    g_halt_requested = 1;
+    halt_requested = 1;
 }
 
 /* Derive the directory component of a path, storing it into buf.
@@ -195,7 +195,7 @@ int main(int argc, char **argv) {
     biosim_hud_t hud;
     biosim_hud_init(&hud, stdout, sim.max_generations);
 
-    while (sim.gen < sim.max_generations && !g_halt_requested) {
+    while (sim.gen < sim.max_generations && !halt_requested) {
         returncode = biosim_generation_spawn(&sim, &snap);
         if (returncode != BIOSIM_OK) {
             goto exit;
@@ -229,7 +229,11 @@ int main(int argc, char **argv) {
 
     biosim_hud_finish(&hud);
 
-    if (g_halt_requested) {
+    if (halt_requested) {
+        returncode = biosim_snapshot_session_write_final(&sim, &snap);
+        if (returncode != BIOSIM_OK) {
+            goto exit;
+        }
         BIOSIM_WARNF("simulation halted by signal after generation %u", sim.gen);
     }
 
