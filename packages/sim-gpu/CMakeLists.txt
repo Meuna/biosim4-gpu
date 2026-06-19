@@ -6,6 +6,7 @@ add_library(sim-gpu-lib STATIC
     src/registry.c
     src/runner.c
     src/pipeline.c
+    src/benchmark.c
 )
 target_compile_features(sim-gpu-lib PUBLIC c_std_11)
 target_include_directories(sim-gpu-lib PUBLIC include)

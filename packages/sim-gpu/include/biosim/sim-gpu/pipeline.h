@@ -12,6 +12,7 @@
 
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
+#include "biosim/sim-gpu/benchmark.h"
 #include "biosim/sim-gpu/runner.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -82,6 +83,8 @@ typedef struct {
     uint16_t max_genes;
     uint8_t max_neurons;
     uint32_t n_barrier_ctrs;
+    /* Profiling accumulators; populated only when runner->profiling is set. */
+    biosim_gpu_profile_t prof;
 } biosim_gpu_pipeline_t;
 
 /*
@@ -115,7 +118,7 @@ biosim_status_t biosim_gpu_pipeline_step(biosim_gpu_pipeline_t *p, const biosim_
  * biosim_sim_next_generation into *sim:
  *   alive, loc_x, loc_y, challenge_bits, signal.
  */
-biosim_status_t biosim_gpu_pipeline_sync_to_host(const biosim_gpu_pipeline_t *p, biosim_sim_t *sim);
+biosim_status_t biosim_gpu_pipeline_sync_to_host(biosim_gpu_pipeline_t *p, biosim_sim_t *sim);
 
 /*
  * Re-upload all mutable state from *sim after biosim_sim_next_generation:
@@ -128,6 +131,15 @@ biosim_status_t biosim_gpu_pipeline_sync_to_host(const biosim_gpu_pipeline_t *p,
 biosim_status_t biosim_gpu_pipeline_sync_from_host(
     biosim_gpu_pipeline_t *p, const biosim_sim_t *sim
 );
+
+/*
+ * Copy the accumulated profiling counters into *out.  Meaningful only when the
+ * runner was created with profiling enabled; otherwise all fields are zero.
+ */
+void biosim_gpu_pipeline_get_profile(const biosim_gpu_pipeline_t *p, biosim_gpu_profile_t *out);
+
+/* Zero the accumulated profiling counters (e.g. to discard warm-up steps). */
+void biosim_gpu_pipeline_reset_profile(biosim_gpu_pipeline_t *p);
 
 /* Release all GPU resources.  Safe on a zero-initialised struct. */
 void biosim_gpu_pipeline_free(biosim_gpu_pipeline_t *p);

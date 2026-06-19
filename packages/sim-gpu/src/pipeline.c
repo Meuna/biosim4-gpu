@@ -344,11 +344,39 @@ exit:
     return returncode;
 }
 
+/* ── profiling helpers ──────────────────────────────────────────────────── */
+
+/*
+ * Read a completed event's GPU timespan into *acc and release the event.
+ * Best-effort: if the profiling query fails the timing is skipped, but the
+ * event is always released so callers never leak.
+ */
+static void accumulate_event_ns(cl_event ev, uint64_t *acc) {
+    cl_ulong start = 0U;
+    cl_ulong end = 0U;
+    cl_int e_start =
+        clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_START, sizeof(start), &start, NULL);
+    cl_int e_end = clGetEventProfilingInfo(ev, CL_PROFILING_COMMAND_END, sizeof(end), &end, NULL);
+    if (e_start == CL_SUCCESS && e_end == CL_SUCCESS && end >= start) {
+        *acc += (uint64_t)(end - start);
+    }
+    (void)clReleaseEvent(ev);
+}
+
+/* ── step ───────────────────────────────────────────────────────────────── */
+
 biosim_status_t biosim_gpu_pipeline_step(biosim_gpu_pipeline_t *p, const biosim_sim_t *sim) {
     biosim_status_t returncode = BIOSIM_OK;
     cl_command_queue q = p->runner->queue;
+    bool prof = p->runner->profiling;
+    cl_event ev[BIOSIM_GPU_KERNEL_COUNT] = {0};
+    cl_event *evp[BIOSIM_GPU_KERNEL_COUNT];
     size_t pop_size = (size_t)p->population;
     size_t grid_size = (size_t)p->size_x * (size_t)p->size_y;
+
+    for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
+        evp[i] = prof ? &ev[i] : NULL;
+    }
 
     /* Only the per-step arg changes; all others were set in pipeline_create. */
     cl_uint step = (cl_uint)sim->step;
@@ -356,96 +384,82 @@ biosim_status_t biosim_gpu_pipeline_step(biosim_gpu_pipeline_t *p, const biosim_
     (void)clSetKernelArg(p->k5, 9U, sizeof(cl_uint), &step);
 
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k1, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+        clEnqueueNDRangeKernel(q, p->k1, 1U, NULL, &pop_size, NULL, 0U, NULL, evp[0])
     );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k2, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+        clEnqueueNDRangeKernel(q, p->k2, 1U, NULL, &pop_size, NULL, 0U, NULL, evp[1])
     );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k3, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+        clEnqueueNDRangeKernel(q, p->k3, 1U, NULL, &pop_size, NULL, 0U, NULL, evp[2])
     );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k4, 1U, NULL, &grid_size, NULL, 0U, NULL, NULL)
+        clEnqueueNDRangeKernel(q, p->k4, 1U, NULL, &grid_size, NULL, 0U, NULL, evp[3])
     );
     CL_GOTO_EXIT_ON_ERROR(
-        clEnqueueNDRangeKernel(q, p->k5, 1U, NULL, &pop_size, NULL, 0U, NULL, NULL)
+        clEnqueueNDRangeKernel(q, p->k5, 1U, NULL, &pop_size, NULL, 0U, NULL, evp[4])
     );
+
+    if (prof) {
+        (void)clWaitForEvents(BIOSIM_GPU_KERNEL_COUNT, ev);
+        for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
+            accumulate_event_ns(ev[i], &p->prof.kernel_ns[i]);
+            p->prof.kernel_count[i]++;
+        }
+    }
 
 exit:
     if (returncode != BIOSIM_OK) {
+        for (size_t i = 0U; i < BIOSIM_GPU_KERNEL_COUNT; i++) {
+            CL_SAFE_RELEASE(clReleaseEvent, ev[i]);
+        }
         BIOSIM_ERRORF("step %u dispatch failed (%s)", sim->step, biosim_strerror(returncode));
     }
     return returncode;
 }
 
-biosim_status_t biosim_gpu_pipeline_sync_to_host(
-    const biosim_gpu_pipeline_t *p, biosim_sim_t *sim
-) {
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+biosim_status_t biosim_gpu_pipeline_sync_to_host(biosim_gpu_pipeline_t *p, biosim_sim_t *sim) {
     biosim_status_t returncode = BIOSIM_OK;
     cl_command_queue q = p->runner->queue;
     uint32_t pop = p->population;
+    bool prof = p->runner->profiling;
+    cl_event ev[5] = {0};
+    size_t n_ev = 0U;
 
     CL_GOTO_EXIT_ON_ERROR(clFinish(q));
 
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
-        q,
-        p->bufs.alive,
-        CL_FALSE,
-        0U,
-        (size_t)pop * sizeof(uint8_t),
-        sim->agents.alive,
-        0U,
-        NULL,
-        NULL
-    ));
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
-        q,
-        p->bufs.loc_x,
-        CL_FALSE,
-        0U,
-        (size_t)pop * sizeof(int32_t),
-        sim->agents.loc_x,
-        0U,
-        NULL,
-        NULL
-    ));
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
-        q,
-        p->bufs.loc_y,
-        CL_FALSE,
-        0U,
-        (size_t)pop * sizeof(int32_t),
-        sim->agents.loc_y,
-        0U,
-        NULL,
-        NULL
-    ));
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
-        q,
-        p->bufs.challenge_bits,
-        CL_FALSE,
-        0U,
-        (size_t)pop * sizeof(uint32_t),
-        sim->agents.challenge_bits,
-        0U,
-        NULL,
-        NULL
-    ));
+#define READ_BUF(buf_field, host_ptr, elem_sz, count, blocking)                                    \
+    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(                                                     \
+        q,                                                                                         \
+        p->bufs.buf_field,                                                                         \
+        (blocking),                                                                                \
+        0U,                                                                                        \
+        (size_t)(count) * (size_t)(elem_sz),                                                       \
+        (host_ptr),                                                                                \
+        0U,                                                                                        \
+        NULL,                                                                                      \
+        prof ? &ev[n_ev] : NULL                                                                    \
+    ));                                                                                            \
+    n_ev += prof ? 1U : 0U
+
+    READ_BUF(alive, sim->agents.alive, sizeof(uint8_t), pop, CL_FALSE);
+    READ_BUF(loc_x, sim->agents.loc_x, sizeof(int32_t), pop, CL_FALSE);
+    READ_BUF(loc_y, sim->agents.loc_y, sizeof(int32_t), pop, CL_FALSE);
+    READ_BUF(challenge_bits, sim->agents.challenge_bits, sizeof(uint32_t), pop, CL_FALSE);
     /* Block on the last read to ensure all transfers are complete. */
-    CL_GOTO_EXIT_ON_ERROR(clEnqueueReadBuffer(
-        q,
-        p->bufs.signal,
-        CL_TRUE,
-        0U,
-        p->signal_len * sizeof(uint32_t),
-        sim->signal,
-        0U,
-        NULL,
-        NULL
-    ));
+    READ_BUF(signal, sim->signal, sizeof(uint32_t), p->signal_len, CL_TRUE);
+
+#undef READ_BUF
 
 exit:
-    if (returncode != BIOSIM_OK) {
+    if (returncode == BIOSIM_OK) {
+        for (size_t i = 0U; i < n_ev; i++) {
+            accumulate_event_ns(ev[i], &p->prof.sync_to_ns);
+        }
+    } else {
+        for (size_t i = 0U; i < n_ev; i++) {
+            CL_SAFE_RELEASE(clReleaseEvent, ev[i]);
+        }
         BIOSIM_ERRORF("sync to host failed (%s)", biosim_strerror(returncode));
     }
     return returncode;
@@ -460,6 +474,9 @@ biosim_status_t biosim_gpu_pipeline_sync_from_host(
     uint32_t pop = p->population;
     const biosim_agents_t *a = &sim->agents;
     const biosim_nnet_t *n = &sim->nnet;
+    bool prof = p->runner->profiling;
+    cl_event ev[18] = {0};
+    size_t n_ev = 0U;
 
 #define WRITE_BUF(buf_field, host_ptr, elem_sz, count)                                             \
     CL_GOTO_EXIT_ON_ERROR(clEnqueueWriteBuffer(                                                    \
@@ -471,8 +488,9 @@ biosim_status_t biosim_gpu_pipeline_sync_from_host(
         (const void *)(host_ptr),                                                                  \
         0U,                                                                                        \
         NULL,                                                                                      \
-        NULL                                                                                       \
-    ))
+        prof ? &ev[n_ev] : NULL                                                                    \
+    ));                                                                                            \
+    n_ev += prof ? 1U : 0U
 
     WRITE_BUF(alive, a->alive, sizeof(uint8_t), pop);
     WRITE_BUF(loc_x, a->loc_x, sizeof(int32_t), pop);
@@ -501,16 +519,32 @@ biosim_status_t biosim_gpu_pipeline_sync_from_host(
         (const void *)sim->grid.cells,
         0U,
         NULL,
-        NULL
+        prof ? &ev[n_ev] : NULL
     ));
+    n_ev += prof ? 1U : 0U;
 
 #undef WRITE_BUF
 
 exit:
-    if (returncode != BIOSIM_OK) {
+    if (returncode == BIOSIM_OK) {
+        for (size_t i = 0U; i < n_ev; i++) {
+            accumulate_event_ns(ev[i], &p->prof.sync_from_ns);
+        }
+    } else {
+        for (size_t i = 0U; i < n_ev; i++) {
+            CL_SAFE_RELEASE(clReleaseEvent, ev[i]);
+        }
         BIOSIM_ERRORF("sync from host failed (%s)", biosim_strerror(returncode));
     }
     return returncode;
+}
+
+void biosim_gpu_pipeline_get_profile(const biosim_gpu_pipeline_t *p, biosim_gpu_profile_t *out) {
+    *out = p->prof;
+}
+
+void biosim_gpu_pipeline_reset_profile(biosim_gpu_pipeline_t *p) {
+    memset(&p->prof, 0, sizeof(p->prof));
 }
 
 void biosim_gpu_pipeline_free(biosim_gpu_pipeline_t *p) {
