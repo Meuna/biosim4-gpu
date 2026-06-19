@@ -672,6 +672,7 @@
             gridSizeX={telemetry.gridSizeX}
             gridSizeY={telemetry.gridSizeY}
             blurred={machine.phase === "CONFIRM"}
+            onPlay={() => machine.toggle()}
         />
 
         {#if machine.phase === "FREE_RUNNING" || machine.phase === "FREE_RUN_STOPPING"}

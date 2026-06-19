@@ -7,6 +7,7 @@
         gridSizeX = 128,
         gridSizeY = 128,
         blurred = false,
+        onPlay = () => {},
     }: {
         geom: {
             x: number;
@@ -20,6 +21,7 @@
         gridSizeX?: number;
         gridSizeY?: number;
         blurred?: boolean;
+        onPlay?: () => void;
     } = $props();
 </script>
 
@@ -54,7 +56,11 @@
     {#if phase === "WORKER_PENDING" || phase === "WORKER_READY"}
         <div class="idle-overlay" aria-label="Simulation not started">
             <p class="idle-overlay__display">
-                press play<br /><em>to begin.</em>
+                press <button
+                    class="idle-overlay__play"
+                    type="button"
+                    onclick={onPlay}>play</button
+                ><br /><em>to begin.</em>
             </p>
         </div>
     {/if}
@@ -160,5 +166,39 @@
 
     .idle-overlay__display em {
         font-style: italic;
+    }
+
+    /* "play" is a real affordance: clicking it starts the simulation. Reset the
+       button so it reads as inline display text, then re-enable pointer events
+       (the .grid-view overlay disables them). */
+    .idle-overlay__play {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: 0;
+        padding: 0;
+        cursor: pointer;
+        pointer-events: auto;
+        /* Low highlight: a soft accent band behind the lower glyphs that grows
+           from the left on hover (background-position x=0, width 0% → 100%). */
+        background-image: linear-gradient(
+            var(--color-accent-surface),
+            var(--color-accent-surface)
+        );
+        background-repeat: no-repeat;
+        background-position: 0 88%;
+        background-size: 0% 40%;
+        transition: background-size 0.25s ease;
+    }
+
+    .idle-overlay__play:hover,
+    .idle-overlay__play:focus-visible {
+        background-size: 100% 40%;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .idle-overlay__play {
+            transition: none;
+        }
     }
 </style>
