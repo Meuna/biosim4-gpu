@@ -642,10 +642,23 @@ biosim_status_t biosim_snapshot_load_survivors(
 /* ── high-level write: sessions ─────────────────────────────────────────── */
 
 static int snap_should_write(uint32_t gen, uint32_t max_generation, uint32_t interval) {
+    if (gen == max_generation - 1U) {
+        return 1; /* always capture the final generation */
+    }
     if (interval > 0) {
         return gen % interval == 0;
     }
-    return gen == max_generation - 1;
+    return 0;
+}
+
+static biosim_status_t session_emit_record(biosim_sim_t *sim, const biosim_survivor_snap_t *snap) {
+    biosim_status_t st = biosim_snapshot_write_genome(sim->snap_f, sim, snap);
+    if (st != BIOSIM_OK) {
+        BIOSIM_ERRORF("snapshot write failed (%s)", biosim_strerror(st));
+        return st;
+    }
+    sim->snap_written_count++;
+    return BIOSIM_OK;
 }
 
 biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path, int interval) {
@@ -684,15 +697,19 @@ biosim_status_t biosim_snapshot_session_write(
     if (!snap_should_write(sim->gen, sim->max_generations, sim->snap_interval)) {
         return BIOSIM_OK;
     }
+    return session_emit_record(sim, snap);
+}
 
-    biosim_status_t st = biosim_snapshot_write_genome(sim->snap_f, sim, snap);
-    if (st != BIOSIM_OK) {
-        BIOSIM_ERRORF("snapshot write failed (%s)", biosim_strerror(st));
-        return st;
+biosim_status_t biosim_snapshot_session_write_final(
+    biosim_sim_t *sim, const biosim_survivor_snap_t *snap
+) {
+    if (sim->snap_f == NULL || snap->count == 0U) {
+        return BIOSIM_OK;
     }
-
-    sim->snap_written_count++;
-    return BIOSIM_OK;
+    if (snap_should_write(snap->gen, sim->max_generations, sim->snap_interval)) {
+        return BIOSIM_OK; /* the schedule already wrote this generation */
+    }
+    return session_emit_record(sim, snap);
 }
 
 biosim_status_t biosim_snapshot_session_close(biosim_sim_t *sim) {

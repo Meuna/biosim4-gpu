@@ -71,12 +71,23 @@ biosim_status_t biosim_snapshot_session_open(biosim_sim_t *sim, const char *path
 
 /*
  * Write a generation record if the current generation index satisfies the
- * schedule (interval > 0: every Nth gen; interval = 0: final gen only).
+ * schedule. The final generation (max_generations - 1) is always written;
+ * additionally, interval > 0 writes every Nth gen.
  * Skips silently when snap->count == 0 or sim->snap_f == NULL.
  * Returns BIOSIM_OK even on write failure (non-fatal); the error is logged to
  * stderr.
  */
 biosim_status_t biosim_snapshot_session_write(
+    biosim_sim_t *sim, const biosim_survivor_snap_t *snap
+);
+
+/*
+ * Force-write the survivors currently held in snap, e.g. when a run is halted
+ * by a signal before reaching the last generation. No-op when the schedule
+ * already captured this generation (keyed off snap->gen), when snap->count == 0,
+ * or when sim->snap_f == NULL.
+ */
+biosim_status_t biosim_snapshot_session_write_final(
     biosim_sim_t *sim, const biosim_survivor_snap_t *snap
 );
 

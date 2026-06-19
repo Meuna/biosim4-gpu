@@ -44,6 +44,16 @@ static biosim_status_t build_snap_from_agents(
     return BIOSIM_OK;
 }
 
+/* Read back the finalized generation_count from a closed session file. */
+static uint32_t read_gen_count(const char *path) {
+    FILE *f = fopen(path, "rb");
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_snap_header_t hdr;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_read_header(f, &hdr));
+    (void)fclose(f);
+    return hdr.generation_count;
+}
+
 /* ── fixture ─────────────────────────────────────────────────────────────── */
 
 static biosim_sim_t sim;
@@ -495,6 +505,175 @@ void test_load_survivors_f_roundtrip(void) {
     biosim_sim_free(&sim2);
 }
 
+/* ── session API ────────────────────────────────────────────────────────── */
+
+/* session_open refuses to clobber an existing file. */
+void test_session_open_refuses_existing_file(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_open_exists.bsm4";
+    (void)remove(path);
+
+    FILE *f = fopen(path, "wb");
+    TEST_ASSERT_NOT_NULL(f);
+    (void)fputc(0x00, f);
+    (void)fclose(f);
+
+    TEST_ASSERT_EQUAL_INT(BIOSIM_ERR_INVALID, biosim_snapshot_session_open(&sim, path, 0));
+    TEST_ASSERT_NULL(sim.snap_f);
+
+    (void)remove(path);
+}
+
+/* session_open writes a valid header; an empty session finalizes to 0 records. */
+void test_session_open_writes_header(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_open_header.bsm4";
+    (void)remove(path);
+
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim, path, 0));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim));
+
+    FILE *f = fopen(path, "rb");
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_snap_header_t hdr;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_read_header(f, &hdr));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_SNAP_FORMAT_VERSION, hdr.format_version);
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_IO_SCHEMA_VERSION, hdr.schema_version);
+    TEST_ASSERT_EQUAL_UINT16(sim.genome.max_genes, hdr.max_genes);
+    TEST_ASSERT_EQUAL_UINT8(sim.nnet.max_neurons, hdr.max_neurons);
+    TEST_ASSERT_EQUAL_UINT32(0U, hdr.generation_count);
+    (void)fclose(f);
+
+    (void)remove(path);
+}
+
+/* interval=2 over a span well short of the final gen writes every 2nd gen only. */
+void test_session_write_interval_schedule(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_interval.bsm4";
+    (void)remove(path);
+
+    sim.max_generations = 100U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim, path, 2));
+    for (uint32_t g = 0U; g < 10U; g++) {
+        sim.gen = g;
+        snap.gen = g;
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write(&sim, &snap));
+    }
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim));
+
+    /* gens 0,2,4,6,8 → 5 records */
+    TEST_ASSERT_EQUAL_UINT32(5U, read_gen_count(path));
+
+    (void)remove(path);
+}
+
+/* With an interval that does not divide the final gen, the final gen is still
+ * written.  max_gen=10, interval=4 → schedule alone writes 0,4,8 but not 9. */
+void test_session_write_final_gen_always_recorded(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_final_gen.bsm4";
+    (void)remove(path);
+
+    sim.max_generations = 10U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim, path, 4));
+    for (uint32_t g = 0U; g < 10U; g++) {
+        sim.gen = g;
+        snap.gen = g;
+        TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write(&sim, &snap));
+    }
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim));
+
+    /* gens 0,4,8 from the schedule + gen 9 as the final gen → 4 records */
+    TEST_ASSERT_EQUAL_UINT32(4U, read_gen_count(path));
+
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim2));
+    biosim_survivor_snap_t rsnap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim2, &rsnap));
+    TEST_ASSERT_EQUAL_UINT32(9U, rsnap.gen); /* last record is the final gen */
+
+    (void)remove(path);
+    biosim_survivor_snap_free(&rsnap);
+    biosim_sim_free(&sim2);
+}
+
+/* write_final flushes the held survivors when the schedule has not captured the
+ * current (halted) generation. */
+void test_session_write_final_writes_off_schedule(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_wf_writes.bsm4";
+    (void)remove(path);
+
+    sim.max_generations = 100U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim, path, 10));
+
+    sim.gen = 0U;
+    snap.gen = 0U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write(&sim, &snap)); /* gen 0 */
+
+    /* halt after gen 5: retire incremented sim.gen to 6, survivors are gen 5 */
+    sim.gen = 6U;
+    snap.gen = 5U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write_final(&sim, &snap));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim));
+
+    TEST_ASSERT_EQUAL_UINT32(2U, read_gen_count(path)); /* gen 0 + gen 5 */
+
+    biosim_sim_t sim2;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, sim_test_make_8x8(&sim2));
+    biosim_survivor_snap_t rsnap = {0};
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_load_survivors(path, &sim2, &rsnap));
+    TEST_ASSERT_EQUAL_UINT32(5U, rsnap.gen);
+
+    (void)remove(path);
+    biosim_survivor_snap_free(&rsnap);
+    biosim_sim_free(&sim2);
+}
+
+/* write_final is a no-op when the schedule already captured the held gen. */
+void test_session_write_final_dedups(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_wf_dedup.bsm4";
+    (void)remove(path);
+
+    sim.max_generations = 100U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim, path, 5));
+
+    sim.gen = 5U;
+    snap.gen = 5U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write(&sim, &snap)); /* 5%5==0 */
+
+    /* halt right after gen 5: write_final must not duplicate it */
+    sim.gen = 6U;
+    snap.gen = 5U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write_final(&sim, &snap));
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim));
+
+    TEST_ASSERT_EQUAL_UINT32(1U, read_gen_count(path)); /* only the scheduled write */
+
+    (void)remove(path);
+}
+
+/* write_final no-ops without an open session and with an empty survivor set. */
+void test_session_write_final_noops(void) {
+    static const char path[] = BIOSIM_TEST_TMPDIR "/biosim_snap_wf_noop.bsm4";
+    (void)remove(path);
+
+    /* no session open: snap_f == NULL */
+    TEST_ASSERT_NULL(sim.snap_f);
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write_final(&sim, &snap));
+
+    /* open session, but no survivors to flush */
+    sim.max_generations = 100U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_open(&sim, path, 0));
+    uint32_t saved_count = snap.count;
+    snap.count = 0U;
+    sim.gen = 6U;
+    snap.gen = 5U;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_write_final(&sim, &snap));
+    snap.count = saved_count;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_snapshot_session_close(&sim));
+
+    TEST_ASSERT_EQUAL_UINT32(0U, read_gen_count(path));
+
+    (void)remove(path);
+}
+
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -512,5 +691,12 @@ int main(void) {
     RUN_TEST(test_load_survivors_neuron_mismatch_rejected);
     RUN_TEST(test_session_restore_identical_second_generation);
     RUN_TEST(test_load_survivors_f_roundtrip);
+    RUN_TEST(test_session_open_refuses_existing_file);
+    RUN_TEST(test_session_open_writes_header);
+    RUN_TEST(test_session_write_interval_schedule);
+    RUN_TEST(test_session_write_final_gen_always_recorded);
+    RUN_TEST(test_session_write_final_writes_off_schedule);
+    RUN_TEST(test_session_write_final_dedups);
+    RUN_TEST(test_session_write_final_noops);
     return UNITY_END();
 }
