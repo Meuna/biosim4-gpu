@@ -61,10 +61,10 @@ const WAVE_A = { kx: 6.0, ky: 4.0, omega: 1.1 };
 const WAVE_B = { kx: 3.0, ky: -5.0, omega: 0.7 };
 /** Beat gain: how much a full-intensity beat amplifies displacement and radius. */
 const BEAT_AMP_GAIN = 1.6;
-const BEAT_R_GAIN = 2.2;
+const BEAT_R_GAIN = 1.5;
 /** Click-beat falloff: epicentre influence radius, as a fraction of the canvas
  *  diagonal. Dormant while `beat = 0`. */
-const BEAT_SIGMA = 0.28;
+const BEAT_SIGMA = 0.15;
 
 /** Near-square (col, row) layout for `pop` cells over a `canvasW`×`canvasH` box. */
 function waveGrid(
@@ -130,8 +130,8 @@ export function kinematicPosition(
     const ampFactor = 1 + BEAT_AMP_GAIN * beat;
 
     return {
-        x: bx + AMP_X * canvasW * sway * ampFactor,
-        y: by + AMP_Y * canvasH * wave * ampFactor,
+        x: bx + AMP_X * canvasW * sway,
+        y: by + AMP_Y * canvasH * wave - ampFactor * AMP_X * canvasW,
         r: R_BASE + R_SWING * wave + BEAT_R_GAIN * beat,
         opacity: liftByBeat(OPACITY_BASE + OPACITY_SWING * wave, beat),
     };
