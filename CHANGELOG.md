@@ -13,6 +13,10 @@
 
 - Define barrier position and size as grid ratios in [0, 1] so layouts scale with the grid size ([#162](https://github.com/Meuna/biosim4-gpu/pull/162))
 
+#### Fixed
+
+- Render the CLI help and HUD as ASCII on terminals without UTF-8, and enable Unicode and colors on the Windows console ([#188](https://github.com/Meuna/biosim4-gpu/pull/188))
+
 ### Webapp
 
 #### Added
