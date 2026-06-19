@@ -74,3 +74,8 @@ add_executable(core-hud-tests test_hud.c)
 target_link_libraries(core-hud-tests PRIVATE core unity)
 target_compile_features(core-hud-tests PRIVATE c_std_11)
 add_test(NAME core-hud-tests COMMAND core-hud-tests)
+
+add_executable(core-terminal-tests test_terminal.c)
+target_link_libraries(core-terminal-tests PRIVATE core unity)
+target_compile_features(core-terminal-tests PRIVATE c_std_11)
+add_test(NAME core-terminal-tests COMMAND core-terminal-tests)
