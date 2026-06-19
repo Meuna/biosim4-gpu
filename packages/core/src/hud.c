@@ -143,7 +143,8 @@ void biosim_hud_init(biosim_hud_t *hud, FILE *stream, uint32_t max_generations) 
     hud->max_generations = max_generations;
     hud->is_tty = caps.is_tty;
     hud->unicode = caps.unicode;
-    hud->color = caps.color;
+    /* The HUD interleaves color with glyphs, so its top tier needs both. */
+    hud->color = caps.color && caps.unicode;
     hud->started = false;
     hud->spinner_index = 0U;
     hud->max_survival_rate = 0.0F;

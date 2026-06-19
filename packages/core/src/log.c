@@ -6,6 +6,8 @@
 
 #include "biosim/core/log.h"
 
+#include "biosim/core/terminal.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,7 +61,7 @@ bool biosim_isatty(FILE *stream) {
 void biosim_log_init(biosim_log_ctx_t *ctx) {
     ctx->threshold = BIOSIM_LOG_WARN;
     ctx->sink = NULL;
-    ctx->use_color = biosim_isatty(stderr);
+    ctx->use_color = biosim_term_detect(stderr).color;
 }
 
 void biosim_log_emit(

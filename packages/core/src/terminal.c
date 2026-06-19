@@ -72,7 +72,7 @@ void biosim_term_init(void) {
 biosim_term_caps_t biosim_term_caps_for(bool is_tty) {
     biosim_term_caps_t caps = {.is_tty = is_tty, .unicode = false, .color = false};
     caps.unicode = is_tty && locale_is_utf8();
-    caps.color = caps.unicode && color_allowed();
+    caps.color = is_tty && color_allowed();
     return caps;
 }
 

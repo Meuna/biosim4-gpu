@@ -28,7 +28,7 @@ typedef enum {
 typedef struct {
     biosim_log_level_t threshold; /* runtime cutoff; set from CLI -v/-vv */
     FILE *sink;                   /* NULL → stderr */
-    int use_color;                /* set by biosim_log_init via isatty */
+    int use_color;                /* set by biosim_log_init via terminal detection */
 } biosim_log_ctx_t;
 
 extern biosim_log_ctx_t biosim_log_default_ctx;

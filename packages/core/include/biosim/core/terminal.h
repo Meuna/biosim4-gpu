@@ -14,7 +14,7 @@
  *
  * is_tty  — stream is connected to an interactive terminal
  * unicode — safe to emit UTF-8 glyphs (em-dash, braille spinner, block bars)
- * color   — safe to emit ANSI color escapes (implies unicode)
+ * color   — safe to emit ANSI color escapes (independent of unicode)
  */
 typedef struct {
     bool is_tty;

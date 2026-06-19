@@ -50,11 +50,11 @@ void test_utf8_locale_enables_unicode(void) {
     TEST_ASSERT_TRUE(caps.unicode);
 }
 
-void test_non_utf8_locale_disables_unicode_and_color(void) {
+void test_non_utf8_locale_disables_unicode_only(void) {
     (void)setenv("LC_ALL", "C", 1);
     biosim_term_caps_t caps = biosim_term_caps_for(true);
     TEST_ASSERT_FALSE(caps.unicode);
-    TEST_ASSERT_FALSE(caps.color); /* color implies unicode */
+    TEST_ASSERT_TRUE(caps.color); /* color is independent of unicode */
 }
 
 void test_lang_fallback_when_lc_unset(void) {
@@ -95,7 +95,7 @@ int main(void) {
     RUN_TEST(test_non_tty_has_no_caps);
 #ifndef _WIN32
     RUN_TEST(test_utf8_locale_enables_unicode);
-    RUN_TEST(test_non_utf8_locale_disables_unicode_and_color);
+    RUN_TEST(test_non_utf8_locale_disables_unicode_only);
     RUN_TEST(test_lang_fallback_when_lc_unset);
     RUN_TEST(test_no_color_disables_color_only);
     RUN_TEST(test_term_dumb_disables_color_only);
