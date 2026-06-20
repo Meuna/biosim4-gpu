@@ -20,25 +20,26 @@
 #endif
 
 #include "biosim/cfgparse/challenges.h"
+#include "biosim/core/hud.h"
 #include "biosim/core/log.h"
 #include "biosim/core/params.h"
 #include "biosim/core/sim.h"
 #include "biosim/core/status.h"
 #include "biosim/core/terminal.h"
 #include "biosim/sim-gpu/benchmark.h"
+#include "biosim/sim-gpu/info.h"
 #include "biosim/sim-gpu/pipeline.h"
 #include "biosim/sim-gpu/runner.h"
 
 // clang-format off
 static const biosim_param_entry_t bench_params[] = {
     {"verbose",                   NULL,         {.i = 0},         PARAM_COUNT,  false, false, "verbose",        "v"},
-    {"gens",                      "benchmark",  {.i = 20},        PARAM_INT,    false, true,  "gens",           NULL},
     {"warmup",                    "benchmark",  {.i = 2},         PARAM_INT,    false, true,  "warmup",         NULL},
     {"population",                "simulation", {.i = 8192},      PARAM_INT,    false, true,  "pop",            "p"},
     {"grid-size-x",               "simulation", {.i = 256},       PARAM_INT,    false, true,  "grid-size-x",    "x"},
     {"grid-size-y",               "simulation", {.i = 256},       PARAM_INT,    false, true,  "grid-size-y",    "y"},
     {"steps-per-gen",             "simulation", {.i = 300},       PARAM_INT,    false, true,  "steps-per-gen",  NULL},
-    {"max-generations",           "simulation", {.i = 1000},      PARAM_INT,    false, true,  "max-gen",        NULL},
+    {"max-generations",           "simulation", {.i = 20},        PARAM_INT,    false, true,  "max-gen",        NULL},
     {"max-genes",                 "genome",     {.i = 64},        PARAM_INT,    false, true,  "max-genes",      NULL},
     {"max-neurons",               "genome",     {.i = 32},        PARAM_INT,    false, true,  "max-neurons",    NULL},
     {"point-mutation-rate",       "genome",     {.f = 0.001},     PARAM_FLOAT,  false, true,  "point-mut-rate", NULL},
@@ -81,12 +82,16 @@ static uint64_t now_ns(void) {
 #endif
 }
 
-/* Run `gens` full generations of the GPU pipeline (upload, step loop, download)
- * without CPU-side genetics, isolating the pipeline cost. */
+/* Run `generations` full generations of the GPU pipeline (upload, step loop,
+ * download) without CPU-side genetics, isolating the pipeline cost. When
+ * `progress` is non-NULL, advances it once per completed generation. */
 static biosim_status_t run_generations(
-    biosim_gpu_pipeline_t *pipeline, biosim_sim_t *sim, uint32_t gens
+    biosim_gpu_pipeline_t *pipeline,
+    biosim_sim_t *sim,
+    uint32_t generations,
+    biosim_progress_t *progress
 ) {
-    for (uint32_t g = 0U; g < gens; g++) {
+    for (uint32_t g = 0U; g < generations; g++) {
         biosim_status_t rc = biosim_gpu_pipeline_sync_from_host(pipeline, sim);
         if (rc != BIOSIM_OK) {
             return rc;
@@ -101,6 +106,9 @@ static biosim_status_t run_generations(
         rc = biosim_gpu_pipeline_sync_to_host(pipeline, sim);
         if (rc != BIOSIM_OK) {
             return rc;
+        }
+        if (progress != NULL) {
+            biosim_progress_update(progress, g + 1U);
         }
     }
     return BIOSIM_OK;
@@ -171,19 +179,28 @@ int main(int argc, char **argv) {
         goto exit;
     }
 
-    uint32_t gens = (uint32_t)biosim_params_get_int(&p, "gens");
-    uint32_t warmup = (uint32_t)biosim_params_get_int(&p, "warmup");
-
-    /* Warm-up generations are not timed (driver JIT, first-touch allocations). */
-    returncode = run_generations(&pipeline, &sim, warmup);
+    returncode = biosim_gpu_info_print(&p, &runner, version_buf, verbosity >= 1, stdout);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
+    uint32_t generations = (uint32_t)biosim_params_get_int(&p, "max-generations");
+    uint32_t warmup = (uint32_t)biosim_params_get_int(&p, "warmup");
+
+    /* Warm-up generations are not timed (driver JIT, first-touch allocations). */
+    returncode = run_generations(&pipeline, &sim, warmup, NULL);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    biosim_progress_t progress;
+    biosim_progress_init(&progress, stdout, generations);
+
     biosim_gpu_pipeline_reset_profile(&pipeline);
     uint64_t wall_start = now_ns();
-    returncode = run_generations(&pipeline, &sim, gens);
+    returncode = run_generations(&pipeline, &sim, generations, &progress);
     uint64_t wall_ns = now_ns() - wall_start;
+    biosim_progress_finish(&progress);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -192,14 +209,16 @@ int main(int argc, char **argv) {
     biosim_gpu_pipeline_get_profile(&pipeline, &profile);
 
     biosim_gpu_bench_metrics_t metrics;
-    biosim_gpu_bench_compute(&profile, wall_ns, sim.population, sim.steps_per_gen, gens, &metrics);
+    biosim_gpu_bench_compute(
+        &profile, wall_ns, sim.population, sim.steps_per_gen, generations, &metrics
+    );
 
     (void)printf(
-        "=== GPU benchmark (pop=%u genes=%u neurons=%u, gens=%u) ===\n",
+        "=== GPU benchmark (pop=%u genes=%u neurons=%u, generations=%u) ===\n",
         sim.population,
         (unsigned)sim.max_genes,
         (unsigned)sim.max_neurons,
-        gens
+        generations
     );
     biosim_gpu_bench_report_print(&metrics, stdout);
 
