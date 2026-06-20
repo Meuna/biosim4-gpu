@@ -8,6 +8,10 @@
 
 - Add `biosim-gpu-bench`, a developer tool that profiles the GPU pipeline and reports per-kernel time, transfer time, and throughput ([#191](https://github.com/Meuna/biosim4-gpu/pull/191))
 
+#### Fixed
+
+- Feed each step's freshly computed neuron outputs into the actions, instead of using the previous step's values ([#193](https://github.com/Meuna/biosim4-gpu/pull/193))
+
 ## [1.1.0] - 2026-06-19
 
 ### Biosim4-gpu
