@@ -16,23 +16,12 @@
 #include <stdio.h>
 
 /*
- * Print a startup info dump to out:
- *   - the version string,
- *   - the OpenCL platform and device the runner selected,
- *   - the key performance params (max-generations, population, max-genes,
- *     max-neurons).
- * When verbose, additionally lists every parameter value.
+ * Print a startup info dump the OpenCL platform and device the runner selected,
  *
  * Returns:
  *   BIOSIM_OK         — the dump was written
  *   BIOSIM_ERR_OPENCL — an OpenCL platform/device query failed
  */
-biosim_status_t biosim_gpu_info_print(
-    const biosim_params_t *p,
-    const biosim_gpu_runner_t *runner,
-    const char *version,
-    bool verbose,
-    FILE *out
-);
+biosim_status_t biosim_gpu_info_print(const biosim_gpu_runner_t *runner, FILE *out);
 
 #endif /* BIOSIM_SIM_GPU_INFO_H */

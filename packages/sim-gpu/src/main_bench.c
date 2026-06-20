@@ -179,9 +179,13 @@ int main(int argc, char **argv) {
         goto exit;
     }
 
-    returncode = biosim_gpu_info_print(&p, &runner, version_buf, verbosity >= 1, stdout);
+    returncode = biosim_gpu_info_print(&runner, stdout);
     if (returncode != BIOSIM_OK) {
         goto exit;
+    }
+    if (verbosity >= 1) {
+        (void)fprintf(stdout, "all parameters:\n");
+        biosim_params_dump(&p, stdout);
     }
 
     uint32_t generations = (uint32_t)biosim_params_get_int(&p, "max-generations");
