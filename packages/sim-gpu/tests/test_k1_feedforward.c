@@ -348,9 +348,13 @@ void test_k1_matches_host_reference(void) {
     uint32_t mismatches_osc = 0U;
     uint32_t mismatches_los_range = 0U;
     uint32_t mismatches_km = 0U;
+    uint32_t agents_with_neurons = 0U;
     for (uint32_t i = 0U; i < pop; i++) {
         if (!sim.agents.alive[i]) {
             continue;
+        }
+        if (sim.nnet.neuron_count[i] > 0U) {
+            agents_with_neurons++;
         }
         run_host_step_agent(i);
 
@@ -371,6 +375,12 @@ void test_k1_matches_host_reference(void) {
             mismatches_km++;
         }
     }
+
+    /* Guard against the cross-check passing vacuously: the rewritten feedforward
+     * neuron-flush path is only exercised when some agent has alive neurons. */
+    TEST_ASSERT_GREATER_THAN_UINT32_MESSAGE(
+        0U, agents_with_neurons, "fixture has no agents with neurons; neuron path untested"
+    );
 
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(
         0U, mismatches_dxy, "dxy per-agent buffer mismatch(es) between GPU and host"
