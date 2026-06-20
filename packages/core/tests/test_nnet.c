@@ -143,6 +143,30 @@ void test_neuron_sink_before_action_sink(void) {
     TEST_ASSERT_EQUAL_UINT8(BIOSIM_GENE_IO, BIOSIM_GENE_SINK_TYPE(p1));
 }
 
+void test_conns_sorted_by_sink(void) {
+    /* Two alive neurons and two action sinks, emitted out of sink order.
+     * After compilation the connections must be sorted by sink key
+     * (packed & 0xFF = [sinkType:1][sinkNum:7]): neuron sinks (type 0) ascending,
+     * then action sinks (type 1) ascending — i.e. non-decreasing across slots. */
+    set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 1, 100); /* sink N1 */
+    set_gene(AGENT_IDX, 1, BIOSIM_GENE_IO, 1, BIOSIM_GENE_NEURON, 0, 100); /* sink N0 */
+    set_gene(AGENT_IDX, 2, BIOSIM_GENE_NEURON, 1, BIOSIM_GENE_IO, 1, 100); /* sink A1 */
+    set_gene(AGENT_IDX, 3, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100); /* sink A0 */
+    genome.len[AGENT_IDX] = 4;
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS)
+    );
+
+    uint16_t nconn = nnet.conn_length[AGENT_IDX];
+    TEST_ASSERT_EQUAL_UINT16(4, nconn);
+    uint8_t prev = 0;
+    for (uint16_t j = 0; j < nconn; j++) {
+        uint8_t key = (uint8_t)(nnet.genome_conn[(size_t)j * CAP + AGENT_IDX] & 0xFFU);
+        TEST_ASSERT_TRUE(key >= prev);
+        prev = key;
+    }
+}
+
 void test_neuron_driven_set(void) {
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 100);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 100);
@@ -477,9 +501,10 @@ void test_feedforward_sensor_to_action_direct(void) {
 }
 
 void test_feedforward_sensor_neuron_action_chain(void) {
-    /* S0→N0 (w=8192), N0→A0 (w=8192).
-     * On the first call neuron_output[N0] starts at 0, so A0 receives 0.
-     * After the call neuron_output[N0] = tanhf(1.0). */
+    /* S0→N0 (w=8192), N0→A0 (w=8192).  Connections are sorted by sink, so the
+     * neuron sink N0 is committed (neuron_output[N0] = tanhf(1.0)) before the
+     * action-sink connection reads it.  The action therefore reads the
+     * freshly committed current-step value: action_vals[0] = tanhf(1.0). */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
     genome.len[AGENT_IDX] = 2;
@@ -492,13 +517,15 @@ void test_feedforward_sensor_neuron_action_chain(void) {
     biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, action_vals);
 
     TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), nnet.neuron_output[0 * CAP + AGENT_IDX]);
-    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 0.0F, action_vals[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), action_vals[0]);
 }
 
-void test_feedforward_neuron_state_carry(void) {
-    /* Same S0→N0→A0 chain.  After a warm-up call with sensor=1.0, a second
-     * call with sensor=0.0 reads the stored neuron_output as the source for
-     * the N0→A0 connection, so action_vals[0] ≈ tanhf(1.0). */
+void test_feedforward_action_reads_current_step_neuron(void) {
+    /* Same S0→N0→A0 chain.  A warm-up call with sensor=1.0 leaves
+     * neuron_output[N0] = tanhf(1.0).  A second call with sensor=0.0 recomputes
+     * N0 from the new sensor (tanhf(0)=0) and commits it before the action
+     * reads it, so action_vals[0] reflects the current step (0.0F), not the
+     * carried-over previous-step value. */
     set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
     set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_IO, 0, 8192);
     genome.len[AGENT_IDX] = 2;
@@ -514,7 +541,29 @@ void test_feedforward_neuron_state_carry(void) {
     float av2[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
     biosim_nnet_feedforward(&nnet, AGENT_IDX, sv2, av2);
 
-    TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), av2[0]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, 0.0F, av2[0]);
+}
+
+void test_feedforward_multilayer_current_step_propagation(void) {
+    /* S0→N0, N0→N1, N1→A0 (all w=8192), sensor=1.0.  Connections sort by sink:
+     * N0 (key 0), N1 (key 1), A0.  N0 commits tanhf(1.0); N1 then reads that
+     * current-step value → tanhf(tanhf(1.0)); A0 reads N1's current-step value.
+     * This pins the forward-edge current-step propagation semantics. */
+    set_gene(AGENT_IDX, 0, BIOSIM_GENE_IO, 0, BIOSIM_GENE_NEURON, 0, 8192);
+    set_gene(AGENT_IDX, 1, BIOSIM_GENE_NEURON, 0, BIOSIM_GENE_NEURON, 1, 8192);
+    set_gene(AGENT_IDX, 2, BIOSIM_GENE_NEURON, 1, BIOSIM_GENE_IO, 0, 8192);
+    genome.len[AGENT_IDX] = 3;
+    TEST_ASSERT_EQUAL_INT(
+        BIOSIM_OK, biosim_nnet_compile_slot(&nnet, &genome, AGENT_IDX, NUM_SENSORS, NUM_ACTIONS)
+    );
+
+    float sensor_vals[NUM_SENSORS] = {1.0F, 0.0F, 0.0F, 0.0F};
+    float action_vals[NUM_ACTIONS] = {0.0F, 0.0F, 0.0F, 0.0F};
+    biosim_nnet_feedforward(&nnet, AGENT_IDX, sensor_vals, action_vals);
+
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(1.0F), nnet.neuron_output[0 * CAP + AGENT_IDX]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(tanhf(1.0F)), nnet.neuron_output[1 * CAP + AGENT_IDX]);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5F, tanhf(tanhf(1.0F)), action_vals[0]);
 }
 
 void test_feedforward_undriven_neuron_defaults_to_half(void) {
@@ -588,6 +637,7 @@ int main(void) {
     RUN_TEST(test_sensor_to_action_correct_packed_bits);
     RUN_TEST(test_one_neuron_alive);
     RUN_TEST(test_neuron_sink_before_action_sink);
+    RUN_TEST(test_conns_sorted_by_sink);
     RUN_TEST(test_neuron_driven_set);
     RUN_TEST(test_neuron_output_zeroed);
     RUN_TEST(test_no_input_neuron_culled);
@@ -610,7 +660,8 @@ int main(void) {
     RUN_TEST(test_fingerprint_phenotypic_equivalence);
     RUN_TEST(test_feedforward_sensor_to_action_direct);
     RUN_TEST(test_feedforward_sensor_neuron_action_chain);
-    RUN_TEST(test_feedforward_neuron_state_carry);
+    RUN_TEST(test_feedforward_action_reads_current_step_neuron);
+    RUN_TEST(test_feedforward_multilayer_current_step_propagation);
     RUN_TEST(test_feedforward_undriven_neuron_defaults_to_half);
     RUN_TEST(test_feedforward_multiple_sensors_sum_to_action);
     RUN_TEST(test_feedforward_no_connections_noop);

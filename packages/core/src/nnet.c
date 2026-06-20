@@ -206,6 +206,37 @@ static uint16_t emit_action_sink(
     return out_slot;
 }
 
+/* Stable insertion sort of the compiled connections for one agent by sink key
+ * (the packed gene's low byte = [sinkType:1][sinkNum:7]).  Neuron sinks
+ * (type 0) therefore sort ahead of action sinks (type 1), and each group is
+ * ordered by sink number ascending — the contiguity the scalar-accumulator
+ * feedforward relies on.  Stability preserves genome order within a sink group,
+ * keeping the summation order (and thus the float result) identical to an
+ * indexed accumulator. */
+static void sort_conns_by_sink(biosim_nnet_t *n, uint32_t idx, uint16_t count) {
+    uint32_t pop = n->population;
+    for (uint16_t i = 1; i < count; i++) {
+        size_t islot = (size_t)i * pop + idx;
+        uint16_t conn = n->genome_conn[islot];
+        int16_t wgt = n->genome_wgt[islot];
+        uint8_t key = (uint8_t)(conn & 0xFFU);
+        uint16_t j = i;
+        while (j > 0) {
+            size_t pslot = (size_t)(j - 1) * pop + idx;
+            if ((uint8_t)(n->genome_conn[pslot] & 0xFFU) <= key) {
+                break;
+            }
+            size_t cslot = (size_t)j * pop + idx;
+            n->genome_conn[cslot] = n->genome_conn[pslot];
+            n->genome_wgt[cslot] = n->genome_wgt[pslot];
+            j--;
+        }
+        size_t dslot = (size_t)j * pop + idx;
+        n->genome_conn[dslot] = conn;
+        n->genome_wgt[dslot] = wgt;
+    }
+}
+
 biosim_status_t biosim_nnet_compile_slot(
     biosim_nnet_t *n,
     const biosim_genome_t *genome,
@@ -261,9 +292,12 @@ biosim_status_t biosim_nnet_compile_slot(
     }
     uint8_t alive_count = next_id;
 
-    /* Phase 5: emit culled connections — neuron-sink first, action-sink second */
+    /* Phase 5: emit culled connections — neuron-sink first, action-sink second —
+     * then sort by sink so every sink's connections are contiguous and appear in
+     * ascending sink order (neuron sinks before action sinks). */
     uint16_t out_slot = emit_neuron_sink(n, genes, gene_count, idx, alive, remap, 0);
     out_slot = emit_action_sink(n, genes, gene_count, idx, alive, remap, out_slot);
+    sort_conns_by_sink(n, idx, out_slot);
 
     /* Phase 6: write metadata and initialise neuron state */
     n->conn_length[idx] = out_slot;
@@ -298,6 +332,22 @@ uint64_t biosim_nnet_fingerprint(const biosim_nnet_t *n, uint32_t idx) {
 
 /* ── feedforward ────────────────────────────────────────────────────────── */
 
+/* Commit one sink's accumulated input.  A neuron sink applies tanh to driven
+ * neurons (undriven neurons hold the quiescent baseline 0.5F); an action sink
+ * stores the raw accumulator.  Each sink owns one contiguous run of sorted
+ * connections, so a plain store (not +=) is correct. */
+static void flush_sink(
+    biosim_nnet_t *n, uint32_t idx, float *action_vals, uint8_t cur_type, uint8_t cur_num, float acc
+) {
+    uint32_t pop = n->population;
+    if (cur_type == BIOSIM_GENE_NEURON) {
+        size_t nslot = (size_t)cur_num * pop + idx;
+        n->neuron_output[nslot] = n->neuron_driven[nslot] ? tanhf(acc) : 0.5F;
+    } else {
+        action_vals[cur_num] = acc;
+    }
+}
+
 void biosim_nnet_feedforward(
     biosim_nnet_t *n, uint32_t idx, const float *sensor_vals, float *action_vals
 ) {
@@ -308,19 +358,21 @@ void biosim_nnet_feedforward(
 
     uint32_t pop = n->population;
     uint16_t nconn = n->conn_length[idx];
-    uint8_t ncount = n->neuron_count[idx];
+    if (nconn == 0) {
+        return;
+    }
 
-    /* Stack-allocated neuron accumulator.  max_neurons ≤ 128 is an invariant
-     * enforced by compile_slot, so this array always has enough slots.
-     * Clearing all 128 avoids any stale-slot bugs if ncount is wrong. */
-    float nacc[128];
-    memset(nacc, 0, sizeof nacc);
+    /* Single pass over connections sorted by sink (neuron sinks first, then
+     * actions, each ascending by number).  A scalar accumulator collects one
+     * sink's inputs and is flushed when the sink changes, so neuron outputs are
+     * committed before later connections — including every action sink — read
+     * them.  Neuron sources whose sink group has already flushed therefore read
+     * the freshly committed value. */
+    float acc = 0.0F;
+    uint16_t packed0 = n->genome_conn[(size_t)idx];
+    uint8_t cur_type = (uint8_t)BIOSIM_GENE_SINK_TYPE(packed0);
+    uint8_t cur_num = (uint8_t)BIOSIM_GENE_SINK_NUM(packed0);
 
-    /* Single pass over compiled connections.  compile_slot places all
-     * neuron-sink connections before action-sink connections, so neuron
-     * accumulators are fully populated before any action accumulator is
-     * written.  Neuron sources read from the previous step's neuron_output,
-     * which has not yet been overwritten in this call. */
     for (uint16_t j = 0; j < nconn; j++) {
         size_t slot = (size_t)j * pop + idx;
         uint16_t packed = n->genome_conn[slot];
@@ -331,22 +383,18 @@ void biosim_nnet_feedforward(
         uint8_t sink_type = (uint8_t)BIOSIM_GENE_SINK_TYPE(packed);
         uint8_t sink_num = (uint8_t)BIOSIM_GENE_SINK_NUM(packed);
 
+        if (sink_type != cur_type || sink_num != cur_num) {
+            flush_sink(n, idx, action_vals, cur_type, cur_num, acc);
+            acc = 0.0F;
+            cur_type = sink_type;
+            cur_num = sink_num;
+        }
+
         float source = (src_type == BIOSIM_GENE_IO) ? sensor_vals[src_num]
                                                     : n->neuron_output[(size_t)src_num * pop + idx];
 
-        float weighted = source * ((float)raw_wgt / BIOSIM_GENE_WEIGHT_SCALE);
-
-        if (sink_type == BIOSIM_GENE_NEURON) {
-            nacc[sink_num] += weighted;
-        } else {
-            action_vals[sink_num] += weighted;
-        }
+        acc += source * ((float)raw_wgt / BIOSIM_GENE_WEIGHT_SCALE);
     }
 
-    /* Apply tanh to driven neurons; undriven neurons hold the quiescent
-     * baseline of 0.5F (midpoint of the [0,1] sensor range). */
-    for (uint8_t k = 0; k < ncount; k++) {
-        size_t nslot = (size_t)k * pop + idx;
-        n->neuron_output[nslot] = n->neuron_driven[nslot] ? tanhf(nacc[k]) : 0.5F;
-    }
+    flush_sink(n, idx, action_vals, cur_type, cur_num, acc);
 }
