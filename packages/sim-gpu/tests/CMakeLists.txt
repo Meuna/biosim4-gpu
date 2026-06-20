@@ -40,3 +40,9 @@ add_executable(sim-gpu-benchmark-tests test_benchmark.c)
 target_link_libraries(sim-gpu-benchmark-tests PRIVATE sim-gpu-test-utils)
 target_compile_features(sim-gpu-benchmark-tests PRIVATE c_std_11)
 add_test(NAME sim-gpu-benchmark-tests COMMAND sim-gpu-benchmark-tests)
+
+# IGNOREs without an OpenCL device (needs a runner to query platform/device).
+add_executable(sim-gpu-info-tests test_info.c)
+target_link_libraries(sim-gpu-info-tests PRIVATE sim-gpu-test-utils)
+target_compile_features(sim-gpu-info-tests PRIVATE c_std_11)
+add_test(NAME sim-gpu-info-tests COMMAND sim-gpu-info-tests)
