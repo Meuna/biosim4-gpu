@@ -73,17 +73,19 @@ static void format_bar(char *buf, float fraction, bool unicode) {
     buf[pos] = '\0';
 }
 
-/* Current spinner glyph for the active charset. */
-static const char *spinner_glyph(const biosim_hud_t *hud) {
-    if (hud->unicode) {
-        return spinner_frames[hud->spinner_index];
+/* Current spinner glyph for the active charset. Shared by the HUD and the
+ * standalone progress widget. */
+static const char *spinner_glyph(bool unicode, uint8_t index) {
+    if (unicode) {
+        return spinner_frames[index];
     }
-    return spinner_frames_ascii[hud->spinner_index % SPINNER_FRAMES_ASCII];
+    return spinner_frames_ascii[index % SPINNER_FRAMES_ASCII];
 }
 
-/* Return code when hud->color, else "" — lets one format string serve both. */
-static const char *col(const biosim_hud_t *hud, const char *code) {
-    return hud->color ? code : "";
+/* Return code when color is enabled, else "" — lets one format string serve
+ * both color tiers. */
+static const char *col(bool color, const char *code) {
+    return color ? code : "";
 }
 
 static void render_tty(biosim_hud_t *hud, const biosim_census_t *c) {
@@ -94,7 +96,7 @@ static void render_tty(biosim_hud_t *hud, const biosim_census_t *c) {
 
     char bar[(BAR_WIDTH * 3U) + 1U];
     format_bar(bar, progress, hud->unicode);
-    const char *reset = col(hud, ANSI_RESET);
+    const char *reset = col(hud->color, ANSI_RESET);
 
     if (hud->started) {
         (void)fputs(CURSOR_UP_3, hud->stream);
@@ -104,8 +106,8 @@ static void render_tty(biosim_hud_t *hud, const biosim_census_t *c) {
     (void)fprintf(
         hud->stream,
         CLEAR_LINE "%s%s%s Generation %u / %u\n",
-        col(hud, ANSI_SPINNER),
-        spinner_glyph(hud),
+        col(hud->color, ANSI_SPINNER),
+        spinner_glyph(hud->unicode, hud->spinner_index),
         reset,
         completed,
         hud->max_generations
@@ -113,7 +115,7 @@ static void render_tty(biosim_hud_t *hud, const biosim_census_t *c) {
     (void)fprintf(
         hud->stream,
         CLEAR_LINE "  [%s%s%s] %.0f%%\n",
-        col(hud, ANSI_BAR),
+        col(hud->color, ANSI_BAR),
         bar,
         reset,
         (double)(clamp_unit(progress) * 100.0F)
@@ -124,7 +126,7 @@ static void render_tty(biosim_hud_t *hud, const biosim_census_t *c) {
         (double)(survival_rate * 100.0F),
         c->survivors,
         c->population,
-        col(hud, ANSI_MAX),
+        col(hud->color, ANSI_MAX),
         (double)(hud->max_survival_rate * 100.0F),
         reset,
         (double)(kill_rate * 100.0F),
@@ -170,5 +172,60 @@ void biosim_hud_update(biosim_hud_t *hud, const biosim_census_t *c) {
 void biosim_hud_finish(biosim_hud_t *hud) {
     if (hud->is_tty && hud->started) {
         (void)fflush(hud->stream);
+    }
+}
+
+/* ── progress widget ────────────────────────────────────────────────────── */
+
+/* Redraw the single-line "spinner X / total [bar] NN%" in place (TTY only). */
+static void render_progress_tty(biosim_progress_t *pg, uint32_t completed) {
+    float progress = ratio(completed, pg->total);
+    char bar[(BAR_WIDTH * 3U) + 1U];
+    format_bar(bar, progress, pg->unicode);
+    const char *reset = col(pg->color, ANSI_RESET);
+
+    (void)fprintf(
+        pg->stream,
+        CLEAR_LINE "%s%s%s %u / %u [%s%s%s] %.0f%%",
+        col(pg->color, ANSI_SPINNER),
+        spinner_glyph(pg->unicode, pg->spinner_index),
+        reset,
+        completed,
+        pg->total,
+        col(pg->color, ANSI_BAR),
+        bar,
+        reset,
+        (double)(clamp_unit(progress) * 100.0F)
+    );
+    (void)fflush(pg->stream);
+
+    pg->spinner_index = (uint8_t)((pg->spinner_index + 1U) % SPINNER_FRAMES);
+    pg->started = true;
+}
+
+void biosim_progress_init(biosim_progress_t *pg, FILE *stream, uint32_t total) {
+    biosim_term_caps_t caps = biosim_term_detect(stream);
+    pg->stream = stream;
+    pg->total = total;
+    pg->is_tty = caps.is_tty;
+    pg->unicode = caps.unicode;
+    /* Color interleaves with glyphs, so the colored tier needs Unicode too. */
+    pg->color = caps.color && caps.unicode;
+    pg->started = false;
+    pg->spinner_index = 0U;
+}
+
+void biosim_progress_update(biosim_progress_t *pg, uint32_t completed) {
+    /* In-place redraw only makes sense on a TTY; stay silent otherwise so pipes
+     * and CI logs are not flooded with carriage returns. */
+    if (pg->is_tty) {
+        render_progress_tty(pg, completed);
+    }
+}
+
+void biosim_progress_finish(biosim_progress_t *pg) {
+    if (pg->is_tty && pg->started) {
+        (void)fputc('\n', pg->stream);
+        (void)fflush(pg->stream);
     }
 }

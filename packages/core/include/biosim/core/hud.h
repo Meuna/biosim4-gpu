@@ -58,4 +58,46 @@ void biosim_hud_update(biosim_hud_t *hud, const biosim_census_t *c);
  */
 void biosim_hud_finish(biosim_hud_t *hud);
 
+/*
+ * Lightweight progress widget: a single-line spinner + progress bar, with no
+ * census statistics. Suitable for any "completed / total" loop (e.g. the GPU
+ * benchmark, which runs the pipeline without per-generation census data).
+ * Shares the HUD's spinner/bar rendering and terminal-capability detection.
+ *
+ * stream        — destination stream (typically stdout)
+ * total         — denominator for the progress bar / counter
+ * is_tty        — chosen output mode, detected at init (non-TTY stays silent)
+ * unicode       — emit UTF-8 glyphs (braille spinner, block bar) vs ASCII
+ * color         — wrap the line in ANSI color (implies unicode)
+ * started       — whether at least one frame has been drawn
+ * spinner_index — current spinner frame, advances each update
+ */
+typedef struct biosim_progress {
+    FILE *stream;
+    uint32_t total;
+    bool is_tty;
+    bool unicode;
+    bool color;
+    bool started;
+    uint8_t spinner_index;
+} biosim_progress_t;
+
+/*
+ * Initialise the progress widget for stream. Detects terminal capabilities and
+ * selects the rendering mode (in non-TTY mode, updates are silent).
+ */
+void biosim_progress_init(biosim_progress_t *pg, FILE *stream, uint32_t total);
+
+/*
+ * Present progress as `completed` of `total`. In TTY mode, redraws the single
+ * line in place; in non-TTY mode, this is a no-op.
+ */
+void biosim_progress_update(biosim_progress_t *pg, uint32_t completed);
+
+/*
+ * Finish the progress widget. In TTY mode, emits a trailing newline so
+ * subsequent output starts on a clean line. In non-TTY mode, this is a no-op.
+ */
+void biosim_progress_finish(biosim_progress_t *pg);
+
 #endif /* BIOSIM_CORE_HUD_H */

@@ -202,6 +202,72 @@ void test_color_tier_emits_ansi_color(void) {
     (void)fclose(f);
 }
 
+/* ── progress widget ────────────────────────────────────────────────────── */
+
+/* A regular file is never a TTY, so the widget selects the silent mode. */
+void test_progress_non_tty_is_silent(void) {
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_progress_t pg;
+    biosim_progress_init(&pg, f, 10U);
+    TEST_ASSERT_FALSE(pg.is_tty);
+
+    biosim_progress_update(&pg, 1U);
+    biosim_progress_update(&pg, 2U);
+    biosim_progress_finish(&pg);
+
+    char buf[256];
+    capture(f, buf, sizeof(buf));
+    TEST_ASSERT_EQUAL_STRING("", buf); /* nothing written on a non-TTY */
+
+    (void)fclose(f);
+}
+
+/* In TTY mode the spinner advances and the line is redrawn with CLEAR_LINE. */
+void test_progress_tty_advances_and_redraws_in_place(void) {
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_progress_t pg;
+    biosim_progress_init(&pg, f, 10U);
+    pg.is_tty = true; /* force the rendering path */
+
+    TEST_ASSERT_EQUAL_UINT8(0U, pg.spinner_index);
+    biosim_progress_update(&pg, 1U);
+    TEST_ASSERT_EQUAL_UINT8(1U, pg.spinner_index);
+
+    char buf[1024];
+    capture(f, buf, sizeof(buf));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "\r\033[K")); /* CLEAR_LINE redraw */
+    TEST_ASSERT_NOT_NULL(strstr(buf, "1 / 10"));   /* completed / total */
+
+    for (uint32_t i = 0U; i < 7U; i++) {
+        biosim_progress_update(&pg, 1U);
+    }
+    TEST_ASSERT_EQUAL_UINT8(0U, pg.spinner_index); /* 8 advances wrap to 0 */
+
+    (void)fclose(f);
+}
+
+/* ASCII tier uses ASCII bar cells and no UTF-8 lead bytes. */
+void test_progress_ascii_tier_uses_ascii_glyphs(void) {
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_progress_t pg;
+    biosim_progress_init(&pg, f, 10U);
+    pg.is_tty = true;
+    pg.unicode = false;
+    pg.color = false;
+
+    biosim_progress_update(&pg, 5U);
+    char buf[1024];
+    capture(f, buf, sizeof(buf));
+
+    TEST_ASSERT_NULL(strstr(buf, "\xe2"));  /* no UTF-8 multibyte lead byte */
+    TEST_ASSERT_NOT_NULL(strstr(buf, "#")); /* ASCII filled bar cell */
+
+    (void)fclose(f);
+}
+
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -214,5 +280,8 @@ int main(void) {
     RUN_TEST(test_ascii_tier_uses_ascii_glyphs);
     RUN_TEST(test_unicode_tier_uses_glyphs_without_color);
     RUN_TEST(test_color_tier_emits_ansi_color);
+    RUN_TEST(test_progress_non_tty_is_silent);
+    RUN_TEST(test_progress_tty_advances_and_redraws_in_place);
+    RUN_TEST(test_progress_ascii_tier_uses_ascii_glyphs);
     return UNITY_END();
 }
