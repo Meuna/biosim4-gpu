@@ -500,12 +500,12 @@ __kernel void k_feedforward(
     /* ── Phase 2: feedforward ────────────────────────────────────────────── */
 
     float nacc[128];
-    float aval[BIOSIM_NUM_ACTIONS];
+    float action_vals[BIOSIM_NUM_ACTIONS];
     for (int k = 0; k < 128; k++) {
         nacc[k] = 0.0F;
     }
     for (int a = 0; a < BIOSIM_NUM_ACTIONS; a++) {
-        aval[a] = 0.0F;
+        action_vals[a] = 0.0F;
     }
 
     uint nconn = (uint)conn_length[idx];
@@ -529,7 +529,7 @@ __kernel void k_feedforward(
         if (sink_type == BIOSIM_GENE_NEURON) {
             nacc[sink_num] += weighted;
         } else {
-            aval[sink_num] += weighted;
+            action_vals[sink_num] += weighted;
         }
     }
 
@@ -545,12 +545,12 @@ __kernel void k_feedforward(
 
     /* Group A: self-field writers */
     {
-        responsiveness[idx] = tanh(aval[BIOSIM_ACTION_SET_RESPONSIVENESS]) * 0.5F + 0.5F;
+        responsiveness[idx] = tanh(action_vals[BIOSIM_ACTION_SET_RESPONSIVENESS]) * 0.5F + 0.5F;
         resp = response_curve(responsiveness[idx], resp_curve_k);
     }
 
     {
-        float s = tanh(aval[BIOSIM_ACTION_SET_OSCILLATOR_PERIOD]) * 0.5F + 0.5F;
+        float s = tanh(action_vals[BIOSIM_ACTION_SET_OSCILLATOR_PERIOD]) * 0.5F + 0.5F;
         float f = 2.0F * pow(1024.0F, s);
         if (f < 2.0F) {
             f = 2.0F;
@@ -562,7 +562,7 @@ __kernel void k_feedforward(
     }
 
     {
-        float s = tanh(aval[BIOSIM_ACTION_SET_LONGPROBE_DIST]) * 0.5F + 0.5F;
+        float s = tanh(action_vals[BIOSIM_ACTION_SET_LONGPROBE_DIST]) * 0.5F + 0.5F;
         float f = 1.0F + 31.0F * s;
         if (f < 1.0F) {
             f = 1.0F;
@@ -574,56 +574,58 @@ __kernel void k_feedforward(
     }
 
     /* Group B: movement accumulators */
-    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_X];
-    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_Y];
+    dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_X];
+    dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_Y];
 
     {
         int dir = (int)(ldir & 7u);
-        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_FORWARD] * (float)BIOSIM_DIR_DX[dir];
-        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_FORWARD] * (float)BIOSIM_DIR_DY[dir];
+        dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_FORWARD] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_FORWARD] * (float)BIOSIM_DIR_DY[dir];
     }
 
     {
         int dir = (int)((ldir + 4u) & 7u);
-        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_REVERSE] * (float)BIOSIM_DIR_DX[dir];
-        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_REVERSE] * (float)BIOSIM_DIR_DY[dir];
+        dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_REVERSE] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_REVERSE] * (float)BIOSIM_DIR_DY[dir];
     }
 
     {
         int dir = (int)((ldir + 2u) & 7u);
-        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_LEFT] * (float)BIOSIM_DIR_DX[dir];
-        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_LEFT] * (float)BIOSIM_DIR_DY[dir];
+        dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_LEFT] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_LEFT] * (float)BIOSIM_DIR_DY[dir];
     }
 
     {
         int dir = (int)((ldir + 6u) & 7u);
-        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DX[dir];
-        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DY[dir];
+        dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DX[dir];
+        dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_RIGHT] * (float)BIOSIM_DIR_DY[dir];
     }
 
     {
         ulong state = rng_state[idx];
         int rdir = (int)(biosim_rng_next(&state) % 8u);
         rng_state[idx] = state;
-        dx_sum += resp * aval[BIOSIM_ACTION_MOVE_RANDOM] * (float)BIOSIM_DIR_DX[rdir];
-        dy_sum += resp * aval[BIOSIM_ACTION_MOVE_RANDOM] * (float)BIOSIM_DIR_DY[rdir];
+        dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_RANDOM] * (float)BIOSIM_DIR_DX[rdir];
+        dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_RANDOM] * (float)BIOSIM_DIR_DY[rdir];
     }
 
-    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_EAST] * (float)BIOSIM_DIR_DX[0]; /* MOVE_EAST */
-    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_EAST] * (float)BIOSIM_DIR_DY[0];
+    dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_EAST] * (float)BIOSIM_DIR_DX[0]; /* MOVE_EAST */
+    dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_EAST] * (float)BIOSIM_DIR_DY[0];
 
-    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_WEST] * (float)BIOSIM_DIR_DX[4]; /* MOVE_WEST */
-    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_WEST] * (float)BIOSIM_DIR_DY[4];
+    dx_sum += resp * action_vals[BIOSIM_ACTION_MOVE_WEST] * (float)BIOSIM_DIR_DX[4]; /* MOVE_WEST */
+    dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_WEST] * (float)BIOSIM_DIR_DY[4];
 
-    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_NORTH] * (float)BIOSIM_DIR_DX[2]; /* MOVE_NORTH */
-    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_NORTH] * (float)BIOSIM_DIR_DY[2];
+    dx_sum +=
+        resp * action_vals[BIOSIM_ACTION_MOVE_NORTH] * (float)BIOSIM_DIR_DX[2]; /* MOVE_NORTH */
+    dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_NORTH] * (float)BIOSIM_DIR_DY[2];
 
-    dx_sum += resp * aval[BIOSIM_ACTION_MOVE_SOUTH] * (float)BIOSIM_DIR_DX[6]; /* MOVE_SOUTH */
-    dy_sum += resp * aval[BIOSIM_ACTION_MOVE_SOUTH] * (float)BIOSIM_DIR_DY[6];
+    dx_sum +=
+        resp * action_vals[BIOSIM_ACTION_MOVE_SOUTH] * (float)BIOSIM_DIR_DX[6]; /* MOVE_SOUTH */
+    dy_sum += resp * action_vals[BIOSIM_ACTION_MOVE_SOUTH] * (float)BIOSIM_DIR_DY[6];
 
     /* Group C: signal emission */
     {
-        float act = tanh(aval[BIOSIM_ACTION_EMIT_SIGNAL0]) * resp;
+        float act = tanh(action_vals[BIOSIM_ACTION_EMIT_SIGNAL0]) * resp;
         if (act > 0.0F) {
             int r = 1 + (int)round(act * 4.0F);
             int center_mag = (int)round(2.0F + act * 3.0F);
@@ -651,7 +653,7 @@ __kernel void k_feedforward(
 
     /* Group D: KILL_FORWARD */
     if (enable_kill) {
-        float s = (tanh(aval[BIOSIM_ACTION_KILL_FORWARD]) + 1.0F) * 0.5F * resp;
+        float s = (tanh(action_vals[BIOSIM_ACTION_KILL_FORWARD]) + 1.0F) * 0.5F * resp;
         if (s > 0.5F) {
             ulong kf_state = rng_state[idx];
             uint i = (uint)(s * 16777216.0F);
