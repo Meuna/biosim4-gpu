@@ -2,6 +2,9 @@
 #include "biosim/core/status.h"
 #include "unity.h"
 
+#include <stdio.h>
+#include <string.h>
+
 // clang-format off
 static const biosim_param_entry_t test_entries[] = {
     {"population",   "simulation", {.i = 3000},      PARAM_INT,    false, true,  "pop",      "p"},
@@ -86,6 +89,31 @@ void test_unknown_key_returns_warn(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_WARN_UNKNOWN_KEY, st);
 }
 
+/* ── dump ───────────────────────────────────────────────────────────────── */
+
+void test_dump_renders_each_type(void) {
+    biosim_params_set_int(&p, "population", 1234);
+    biosim_params_set_float(&p, "mutation-rate", 0.5);
+    biosim_params_set_string(&p, "sim-name", "demo");
+    biosim_params_set_bool(&p, "enable-kill", true);
+
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_params_dump(&p, f);
+
+    (void)fflush(f);
+    TEST_ASSERT_EQUAL_INT(0, fseek(f, 0L, SEEK_SET));
+    char buf[1024];
+    size_t n = fread(buf, 1U, sizeof(buf) - 1U, f);
+    buf[n] = '\0';
+    (void)fclose(f);
+
+    TEST_ASSERT_NOT_NULL(strstr(buf, "[simulation] population = 1234"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "[simulation] mutation-rate = 0.5"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "[simulation] sim-name = demo"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "[simulation] enable-kill = true"));
+}
+
 /* ── runner ─────────────────────────────────────────────────────────────── */
 
 int main(void) {
@@ -96,5 +124,6 @@ int main(void) {
     RUN_TEST(test_set_marks_is_set);
     RUN_TEST(test_set_wrong_type_returns_err);
     RUN_TEST(test_unknown_key_returns_warn);
+    RUN_TEST(test_dump_renders_each_type);
     return UNITY_END();
 }

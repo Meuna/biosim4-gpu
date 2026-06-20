@@ -176,3 +176,29 @@ const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const c
     }
     return NULL;
 }
+
+void biosim_params_dump(const biosim_params_t *p, FILE *out) {
+    for (size_t i = 0; i < p->count; i++) {
+        const biosim_param_entry_t *e = &p->entries[i];
+        if (e->table != NULL) {
+            (void)fprintf(out, "[%s] %s = ", e->table, e->name);
+        } else {
+            (void)fprintf(out, "%s = ", e->name);
+        }
+        switch (e->type) {
+        case PARAM_INT:
+        case PARAM_COUNT:
+            (void)fprintf(out, "%d\n", e->value.i);
+            break;
+        case PARAM_FLOAT:
+            (void)fprintf(out, "%g\n", e->value.f);
+            break;
+        case PARAM_BOOL:
+            (void)fprintf(out, "%s\n", e->value.b ? "true" : "false");
+            break;
+        case PARAM_STRING:
+            (void)fprintf(out, "%s\n", e->value.s != NULL ? e->value.s : "");
+            break;
+        }
+    }
+}
