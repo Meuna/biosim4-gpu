@@ -102,9 +102,13 @@ uint8_t  neuron_driven[MAX_NEURONS * N];  // 1 if driven by input
 uint8_t  neuron_count[N];
 ```
 
-Connections whose sink is a neuron are placed before connections whose sink is
-an action — the same invariant as the host implementation. This enables a
-single-pass feedforward where accumulators stay in private (register) memory.
+Connections are sorted by sink — neuron sinks (type 0) before action sinks
+(type 1), each group ascending by sink number — the same invariant as the host
+implementation. Every sink's connections are therefore contiguous, so a
+single-pass feedforward uses one scalar accumulator (kept in a register) that is
+flushed to `neuron_output` / `action_vals` whenever the sink changes; there is
+no per-neuron accumulator array. Because neuron sinks flush before any action
+sink is read, actions read the current step's committed neuron outputs.
 
 ## Grid representation
 

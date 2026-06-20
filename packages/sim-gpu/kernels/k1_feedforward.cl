@@ -39,6 +39,28 @@ static float response_curve(float r, float k) {
     return pow(2.0F - r, -2.0F * k) - pow(2.0F, -2.0F * k) * (1.0F - r);
 }
 
+/* Commit one sink's accumulated feedforward input.  A neuron sink applies tanh
+ * to driven neurons (undriven hold the quiescent baseline 0.5F); an action sink
+ * stores the raw accumulator.  Each sink owns one contiguous run of sorted
+ * connections, so a plain store is correct. */
+static void flush_sink(
+    __global float *neuron_output,
+    __global const uchar *neuron_driven,
+    float *action_vals,
+    uint cur_type,
+    uint cur_num,
+    float acc,
+    uint idx,
+    uint pop
+) {
+    if (cur_type == BIOSIM_GENE_NEURON) {
+        uint nslot = cur_num * pop + idx;
+        neuron_output[nslot] = neuron_driven[nslot] ? tanh(acc) : 0.5F;
+    } else {
+        action_vals[cur_num] = acc;
+    }
+}
+
 /* ── sensor evaluation ──────────────────────────────────────────────────── */
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -499,43 +521,49 @@ __kernel void k_feedforward(
 
     /* ── Phase 2: feedforward ────────────────────────────────────────────── */
 
-    float nacc[128];
     float action_vals[BIOSIM_NUM_ACTIONS];
-    for (int k = 0; k < 128; k++) {
-        nacc[k] = 0.0F;
-    }
     for (int a = 0; a < BIOSIM_NUM_ACTIONS; a++) {
         action_vals[a] = 0.0F;
     }
 
     uint nconn = (uint)conn_length[idx];
-    uint ncount = (uint)neuron_count[idx];
 
-    for (uint j = 0u; j < nconn; j++) {
-        uint slot = j * pop + idx;
-        ushort packed = conn_packed[slot];
-        short raw_wgt = conn_weight[slot];
+    /* Connections are sorted by sink (neuron sinks first, then actions, each
+     * ascending by number), so a single scalar accumulator collects one sink's
+     * inputs and is flushed when the sink changes.  Neuron outputs are committed
+     * before later connections — including every action sink — read them. */
+    if (nconn > 0u) {
+        float acc = 0.0F;
+        ushort packed0 = conn_packed[idx];
+        uint cur_type = BIOSIM_GENE_SINK_TYPE(packed0);
+        uint cur_num = BIOSIM_GENE_SINK_NUM(packed0);
 
-        uint src_type = BIOSIM_GENE_SRC_TYPE(packed);
-        uint src_num = BIOSIM_GENE_SRC_NUM(packed);
-        uint sink_type = BIOSIM_GENE_SINK_TYPE(packed);
-        uint sink_num = BIOSIM_GENE_SINK_NUM(packed);
+        for (uint j = 0u; j < nconn; j++) {
+            uint slot = j * pop + idx;
+            ushort packed = conn_packed[slot];
+            short raw_wgt = conn_weight[slot];
 
-        float source = (src_type == BIOSIM_GENE_IO) ? sensor_vals[src_num]
-                                                    : neuron_output[src_num * pop + idx];
+            uint src_type = BIOSIM_GENE_SRC_TYPE(packed);
+            uint src_num = BIOSIM_GENE_SRC_NUM(packed);
+            uint sink_type = BIOSIM_GENE_SINK_TYPE(packed);
+            uint sink_num = BIOSIM_GENE_SINK_NUM(packed);
 
-        float weighted = source * ((float)raw_wgt / BIOSIM_GENE_WEIGHT_SCALE);
+            if (sink_type != cur_type || sink_num != cur_num) {
+                flush_sink(
+                    neuron_output, neuron_driven, action_vals, cur_type, cur_num, acc, idx, pop
+                );
+                acc = 0.0F;
+                cur_type = sink_type;
+                cur_num = sink_num;
+            }
 
-        if (sink_type == BIOSIM_GENE_NEURON) {
-            nacc[sink_num] += weighted;
-        } else {
-            action_vals[sink_num] += weighted;
+            float source = (src_type == BIOSIM_GENE_IO) ? sensor_vals[src_num]
+                                                        : neuron_output[src_num * pop + idx];
+
+            acc += source * ((float)raw_wgt / BIOSIM_GENE_WEIGHT_SCALE);
         }
-    }
 
-    for (uint k = 0u; k < ncount; k++) {
-        uint nslot = k * pop + idx;
-        neuron_output[nslot] = neuron_driven[nslot] ? tanh(nacc[k]) : 0.5F;
+        flush_sink(neuron_output, neuron_driven, action_vals, cur_type, cur_num, acc, idx, pop);
     }
 
     /* ── Phase 3: apply actions ──────────────────────────────────────────── */
