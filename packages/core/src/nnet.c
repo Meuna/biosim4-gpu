@@ -1,5 +1,6 @@
 #include "biosim/core/nnet.h"
 
+#include "biosim/core/io_defs.h"
 #include <assert.h>
 #include <math.h>
 #include <stdlib.h>
@@ -82,6 +83,9 @@ typedef struct {
     uint8_t sink_type;
     uint8_t sink_num;
     int16_t weight;
+    uint16_t packed;  /* compiled connection word — valid only when survives */
+    uint16_t bucket;  /* sink bucket index      — valid only when survives */
+    uint8_t survives; /* 1 if emitted, 0 if culled (set by classify_conn) */
 } remapped_gene_t;
 
 static void parse_genes(
@@ -146,95 +150,87 @@ static void propagate_output_paths(
     }
 }
 
-static uint16_t emit_neuron_sink(
+/* Classify one parsed gene for the compiled SoA.  Sets g->survives to 0 if the
+ * connection is culled (a neuron source or sink that is not alive), otherwise 1,
+ * filling g->packed (the compiled connection word) and g->bucket (its sink
+ * bucket).  Buckets order the compiled connections: neuron sinks occupy
+ * [0, max_neurons) by remapped sink id, action sinks occupy
+ * [max_neurons, max_neurons + num_actions) by action number — so every sink's
+ * connections are contiguous, neuron sinks ahead of action sinks, each ascending
+ * by number.  This is the contiguity the scalar-accumulator feedforward relies on. */
+static void classify_conn(
+    remapped_gene_t *g, const uint8_t *alive, const uint8_t *remap, uint8_t max_neurons
+) {
+    if (g->src_type == BIOSIM_GENE_NEURON && !alive[g->src_num]) {
+        g->survives = 0;
+        return;
+    }
+    uint8_t new_sn = (g->src_type == BIOSIM_GENE_NEURON) ? remap[g->src_num] : g->src_num;
+    if (g->sink_type == BIOSIM_GENE_NEURON) {
+        if (!alive[g->sink_num]) {
+            g->survives = 0;
+            return;
+        }
+        uint8_t new_dn = remap[g->sink_num];
+        g->packed = BIOSIM_GENE_PACK(g->src_type, new_sn, BIOSIM_GENE_NEURON, new_dn);
+        g->bucket = new_dn;
+    } else {
+        g->packed = BIOSIM_GENE_PACK(g->src_type, new_sn, BIOSIM_GENE_IO, g->sink_num);
+        g->bucket = (uint16_t)max_neurons + g->sink_num;
+    }
+    g->survives = 1;
+}
+
+/* Emit the compiled connections for one agent in sink-bucketed order using a
+ * linear counting sort.  One classify pass culls each gene and records its packed
+ * word and sink bucket; counting those buckets, then exclusive-prefix-summing them,
+ * yields a per-bucket insertion offset; a final pass places each surviving gene at
+ * its bucket offset and advances it.  Both data passes walk genome order, so
+ * connections within a bucket keep genome order and the float summation order is
+ * identical to a stable sort.  Writes are dropped once the SoA capacity (max_genes)
+ * is reached; the returned count is clamped to it. */
+static uint16_t emit_conns_bucketed(
     biosim_nnet_t *n,
-    const remapped_gene_t *genes,
+    remapped_gene_t *genes,
     uint16_t gene_count,
     uint32_t idx,
     const uint8_t *alive,
-    const uint8_t *remap,
-    uint16_t out_slot
+    const uint8_t *remap
 ) {
     uint32_t pop = n->population;
-    for (uint16_t j = 0; j < gene_count && out_slot < n->max_genes; j++) {
-        if (genes[j].sink_type != BIOSIM_GENE_NEURON) {
-            continue;
-        }
-        uint8_t dn = genes[j].sink_num;
-        if (!alive[dn]) {
-            continue;
-        }
-        if (genes[j].src_type == BIOSIM_GENE_NEURON && !alive[genes[j].src_num]) {
-            continue;
-        }
-        uint8_t new_sn =
-            (genes[j].src_type == BIOSIM_GENE_NEURON) ? remap[genes[j].src_num] : genes[j].src_num;
-        uint8_t new_dn = remap[dn];
-        uint16_t packed = BIOSIM_GENE_PACK(genes[j].src_type, new_sn, BIOSIM_GENE_NEURON, new_dn);
-        n->genome_conn[(size_t)out_slot * pop + idx] = packed;
-        n->genome_wgt[(size_t)out_slot * pop + idx] = genes[j].weight;
-        out_slot++;
-    }
-    return out_slot;
-}
+    uint8_t max_neurons = n->max_neurons;
+    uint16_t bucket_count = (uint16_t)max_neurons + BIOSIM_NUM_ACTIONS;
 
-static uint16_t emit_action_sink(
-    biosim_nnet_t *n,
-    const remapped_gene_t *genes,
-    uint16_t gene_count,
-    uint32_t idx,
-    const uint8_t *alive,
-    const uint8_t *remap,
-    uint16_t out_slot
-) {
-    uint32_t pop = n->population;
-    for (uint16_t j = 0; j < gene_count && out_slot < n->max_genes; j++) {
-        if (genes[j].sink_type != BIOSIM_GENE_IO) {
-            continue;
-        }
-        if (genes[j].src_type == BIOSIM_GENE_NEURON && !alive[genes[j].src_num]) {
-            continue;
-        }
-        uint8_t new_sn =
-            (genes[j].src_type == BIOSIM_GENE_NEURON) ? remap[genes[j].src_num] : genes[j].src_num;
-        uint16_t packed =
-            BIOSIM_GENE_PACK(genes[j].src_type, new_sn, BIOSIM_GENE_IO, genes[j].sink_num);
-        n->genome_conn[(size_t)out_slot * pop + idx] = packed;
-        n->genome_wgt[(size_t)out_slot * pop + idx] = genes[j].weight;
-        out_slot++;
+    uint16_t offset[128 + BIOSIM_NUM_ACTIONS];
+    for (uint16_t b = 0; b < bucket_count; b++) {
+        offset[b] = 0;
     }
-    return out_slot;
-}
+    for (uint16_t j = 0; j < gene_count; j++) {
+        classify_conn(&genes[j], alive, remap, max_neurons);
+        if (genes[j].survives) {
+            offset[genes[j].bucket]++;
+        }
+    }
 
-/* Stable insertion sort of the compiled connections for one agent by sink key
- * (the packed gene's low byte = [sinkType:1][sinkNum:7]).  Neuron sinks
- * (type 0) therefore sort ahead of action sinks (type 1), and each group is
- * ordered by sink number ascending — the contiguity the scalar-accumulator
- * feedforward relies on.  Stability preserves genome order within a sink group,
- * keeping the summation order (and thus the float result) identical to an
- * indexed accumulator. */
-static void sort_conns_by_sink(biosim_nnet_t *n, uint32_t idx, uint16_t count) {
-    uint32_t pop = n->population;
-    for (uint16_t i = 1; i < count; i++) {
-        size_t islot = (size_t)i * pop + idx;
-        uint16_t conn = n->genome_conn[islot];
-        int16_t wgt = n->genome_wgt[islot];
-        uint8_t key = (uint8_t)(conn & 0xFFU);
-        uint16_t j = i;
-        while (j > 0) {
-            size_t pslot = (size_t)(j - 1) * pop + idx;
-            if ((uint8_t)(n->genome_conn[pslot] & 0xFFU) <= key) {
-                break;
-            }
-            size_t cslot = (size_t)j * pop + idx;
-            n->genome_conn[cslot] = n->genome_conn[pslot];
-            n->genome_wgt[cslot] = n->genome_wgt[pslot];
-            j--;
-        }
-        size_t dslot = (size_t)j * pop + idx;
-        n->genome_conn[dslot] = conn;
-        n->genome_wgt[dslot] = wgt;
+    uint16_t total = 0;
+    for (uint16_t b = 0; b < bucket_count; b++) {
+        uint16_t c = offset[b];
+        offset[b] = total;
+        total += c;
     }
+
+    for (uint16_t j = 0; j < gene_count; j++) {
+        if (!genes[j].survives) {
+            continue;
+        }
+        uint16_t slot = offset[genes[j].bucket]++;
+        if (slot < n->max_genes) {
+            n->genome_conn[(size_t)slot * pop + idx] = genes[j].packed;
+            n->genome_wgt[(size_t)slot * pop + idx] = genes[j].weight;
+        }
+    }
+
+    return (total > n->max_genes) ? n->max_genes : total;
 }
 
 biosim_status_t biosim_nnet_compile_slot(
@@ -249,6 +245,7 @@ biosim_status_t biosim_nnet_compile_slot(
     assert(idx < genome->population);
     assert(n->population == genome->population);
     assert(num_sensors > 0 && num_actions > 0);
+    assert(num_actions <= BIOSIM_NUM_ACTIONS);
     assert(n->max_neurons > 0 && n->max_neurons <= 128);
 
     uint16_t gene_count = genome->len[idx];
@@ -292,12 +289,10 @@ biosim_status_t biosim_nnet_compile_slot(
     }
     uint8_t alive_count = next_id;
 
-    /* Phase 5: emit culled connections — neuron-sink first, action-sink second —
-     * then sort by sink so every sink's connections are contiguous and appear in
-     * ascending sink order (neuron sinks before action sinks). */
-    uint16_t out_slot = emit_neuron_sink(n, genes, gene_count, idx, alive, remap, 0);
-    out_slot = emit_action_sink(n, genes, gene_count, idx, alive, remap, out_slot);
-    sort_conns_by_sink(n, idx, out_slot);
+    /* Phase 5: emit culled connections, bucketed by sink so every sink's
+     * connections are contiguous and appear in ascending sink order (neuron sinks
+     * before action sinks). */
+    uint16_t out_slot = emit_conns_bucketed(n, genes, gene_count, idx, alive, remap);
 
     /* Phase 6: write metadata and initialise neuron state */
     n->conn_length[idx] = out_slot;
