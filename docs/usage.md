@@ -61,19 +61,15 @@ A developer-only benchmark for the GPU pipeline. It is built but **not
 installed**; run it from the build tree. It creates the command queue with
 `CL_QUEUE_PROFILING_ENABLE`, drives the pipeline (upload → K1–K5 × steps →
 download) without CPU-side genetics, and prints per-kernel GPU time,
-host↔device transfer time, and throughput. At startup it prints an info dump
-(version, OpenCL platform/device, key performance params) — add `-v` to list
-every parameter value — and shows a live spinner/progress bar during the timed
-run on a TTY.
+host↔device transfer time, and throughput.
 
 ```sh
 build/debug/packages/sim-gpu/biosim-gpu-bench --max-gen 20
 ```
 
-It defaults to a large brain (population 8192, 64 genes, 32 neurons) to stress
+It defaults to a large brain (population 8192, 2048 genes, 127 neurons) to stress
 the feedforward kernel; all simulation/genome/challenge flags from `biosim-gpu`
-are accepted. The number of timed generations is taken from `--max-gen`
-(`max-generations`), plus:
+are accepted.
 
 | CLI flag | Default | Description |
 |----------|---------|-------------|

@@ -81,7 +81,7 @@ install(TARGETS biosim-gpu RUNTIME)
 
 # ── biosim-gpu-bench — developer profiling benchmark (not installed) ────────
 
-add_executable(biosim-gpu-bench src/bench_main.c)
+add_executable(biosim-gpu-bench src/main_bench.c)
 target_compile_features(biosim-gpu-bench PRIVATE c_std_11)
 target_link_libraries(biosim-gpu-bench PRIVATE sim-gpu-lib cfgparse core OpenCL::OpenCL
     $<$<PLATFORM_ID:Linux>:m>)

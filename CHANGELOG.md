@@ -6,7 +6,7 @@
 
 #### Added
 
-- Add `biosim-gpu-bench`, a developer tool that profiles the GPU pipeline and reports per-kernel time, transfer time, and throughput. It prints a startup info dump (version, OpenCL platform/device, key params; `-v` lists all params) and a live progress bar during the timed run ([#191](https://github.com/Meuna/biosim4-gpu/pull/191))
+- Add `biosim-gpu-bench`, a developer tool that profiles the GPU pipeline and reports per-kernel time, transfer time, and throughput ([#191](https://github.com/Meuna/biosim4-gpu/pull/191))
 
 ## [1.1.0] - 2026-06-19
 

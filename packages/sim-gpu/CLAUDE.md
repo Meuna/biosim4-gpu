@@ -8,7 +8,7 @@ platform/device/context/queue lifecycle (optionally with
 `CL_QUEUE_PROFILING_ENABLE`). `biosim_gpu_pipeline_t` owns programs, kernels, and
 buffers; it drives K1→K5 per simulation step and, when the runner has profiling
 on, accumulates per-kernel/transfer `cl_event` timings. `benchmark.{c,h}` turns
-those into metrics for `biosim-gpu-bench` (driven by `src/bench_main.c`).
+those into metrics for `biosim-gpu-bench` (driven by `src/main_bench.c`).
 
 Non-deterministic: movement conflict resolution uses `atomic_cmpxchg`; the
 winner depends on hardware scheduling.

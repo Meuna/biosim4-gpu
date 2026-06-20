@@ -40,8 +40,8 @@ static const biosim_param_entry_t bench_params[] = {
     {"grid-size-y",               "simulation", {.i = 256},       PARAM_INT,    false, true,  "grid-size-y",    "y"},
     {"steps-per-gen",             "simulation", {.i = 300},       PARAM_INT,    false, true,  "steps-per-gen",  NULL},
     {"max-generations",           "simulation", {.i = 20},        PARAM_INT,    false, true,  "max-gen",        NULL},
-    {"max-genes",                 "genome",     {.i = 64},        PARAM_INT,    false, true,  "max-genes",      NULL},
-    {"max-neurons",               "genome",     {.i = 32},        PARAM_INT,    false, true,  "max-neurons",    NULL},
+    {"max-genes",                 "genome",     {.i = 2048},      PARAM_INT,    false, true,  "max-genes",      NULL},
+    {"max-neurons",               "genome",     {.i = 127},       PARAM_INT,    false, true,  "max-neurons",    NULL},
     {"point-mutation-rate",       "genome",     {.f = 0.001},     PARAM_FLOAT,  false, true,  "point-mut-rate", NULL},
     {"sexual-reproduction",       "genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
     {"choose-parents-by-fitness", "genome",     {.b = false},     PARAM_BOOL,   false, true,  NULL,             NULL},
@@ -188,6 +188,8 @@ int main(int argc, char **argv) {
     uint32_t warmup = (uint32_t)biosim_params_get_int(&p, "warmup");
 
     /* Warm-up generations are not timed (driver JIT, first-touch allocations). */
+    (void)fprintf(stdout, "Benchmark warming up ...");
+    (void)fflush(stdout);
     returncode = run_generations(&pipeline, &sim, warmup, NULL);
     if (returncode != BIOSIM_OK) {
         goto exit;

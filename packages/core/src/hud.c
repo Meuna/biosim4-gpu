@@ -213,6 +213,7 @@ void biosim_progress_init(biosim_progress_t *pg, FILE *stream, uint32_t total) {
     pg->color = caps.color && caps.unicode;
     pg->started = false;
     pg->spinner_index = 0U;
+    biosim_progress_update(pg, 0U);
 }
 
 void biosim_progress_update(biosim_progress_t *pg, uint32_t completed) {
