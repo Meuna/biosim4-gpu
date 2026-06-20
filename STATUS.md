@@ -7,7 +7,7 @@
 | `core` | Complete | Simulation logic, genome, nnet, agents, grid, challenges, snapshot |
 | `cfgparse` | Complete | CLI/TOML/parameter management |
 | `sim-ref` | Complete | Single-threaded CPU reference simulator |
-| `sim-gpu` | Functional | Runs full generations end-to-end. The per-step pipeline (K1–K5: feedforward, kill-marked grid cleanup, movement resolution, signal fade, challenge eval) runs on the GPU; survivor selection and reproduction run host-side at the generation boundary. Snapshot import/export wired into the main loop. |
+| `sim-gpu` | Functional | Runs full generations end-to-end. The per-step pipeline (K1–K5: feedforward, kill-marked grid cleanup, movement resolution, signal fade, challenge eval) runs on the GPU; survivor selection and reproduction run host-side at the generation boundary. Snapshot import/export wired into the main loop. Include an OpenCL benchmark utility |
 | `sim-wasm` | Feature-complete | Lifecycle/stepping, by-name parameter setters, challenge-spec and barrier-list setters, snapshot import/export, and `nnet`/inspection buffer getters — the full surface the webapp drives. |
 | `webapp` | Functional | Config panel for all scalar params, challenge spec, and barriers; live canvas rendering with agent inspection and a brain explorer wired to live `nnet` data; the simulation lifecycle is encapsulated in the `SimMachine` state machine (composite phase × dirty); TOML config and snapshot import/export round-trip with the native CLI. |
 
@@ -16,8 +16,6 @@
 - **GPU-side reproduction**: the per-step pipeline (K1–K5) runs on the GPU, but survivor selection and reproduction run on the host at each generation boundary. Moving them onto the GPU is open — see the design questions below. The five-kernel per-step pipeline is documented in [`docs/gpu-design.md`](docs/gpu-design.md).
 - **CI/CD**: native, webapp, and Windows quality-check workflows run on GitHub Actions; there is no deployment or publish step, so the webapp is not yet hosted.
 - **Altruism challenge**: placeholder — the evaluator always returns `{false, 0.0f}`, and the `GENETIC_SIM_FWD` genome-similarity sensor stays commented out, pending a GPU-friendly similarity design.
-- **Benchmark harness**: no `benchmarks/` directory.
-- **Developer tools**: no `tools/` directory (`snapshot-inspect`, `genome-dump`).
 
 ## Open GPU design questions
 

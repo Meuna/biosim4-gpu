@@ -2,7 +2,7 @@
 # (format, lint, benchmark)
 #
 # Included from the root CMakeLists.txt after all packages are configured.
-# Variables consumed: BIOSIM_BUILD_BENCHMARKS, CMAKE_SOURCE_DIR, CMAKE_BINARY_DIR.
+# Variables consumed: CMAKE_SOURCE_DIR, CMAKE_BINARY_DIR.
 #
 # Targets produced:   format, lint, benchmark
 
@@ -35,12 +35,11 @@ if(CLANG_TIDY_EXECUTABLE)
   )
 endif()
 
-if(BIOSIM_BUILD_BENCHMARKS)
-  add_custom_target(benchmark
-    COMMAND ${CMAKE_COMMAND} -E echo "Running benchmarks..."
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Running benchmarks"
-    USES_TERMINAL
-    VERBATIM
-  )
-endif()
+add_custom_target(benchmark
+  COMMAND ${CMAKE_COMMAND} -E echo "Running ${CMAKE_BINARY_DIR}/biosim-gpu-bench..."
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  COMMAND biosim-gpu-bench
+  COMMENT "Running benchmarks"
+  USES_TERMINAL
+  VERBATIM
+)

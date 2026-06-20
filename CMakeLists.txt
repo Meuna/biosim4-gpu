@@ -31,9 +31,6 @@ set(CMAKE_C_EXTENSIONS OFF)
 # Build unit test executables (requires Unity via FetchContent)
 option(BIOSIM_BUILD_TESTS      "Build the test suite" ON)
 
-# Build standalone benchmark executables under benchmarks/
-option(BIOSIM_BUILD_BENCHMARKS "Build benchmark executables" OFF)
-
 # Build the OpenCL GPU simulator (requires OpenCL headers; runtime requires POCL or another ICD)
 option(BIOSIM_BUILD_GPU        "Build the OpenCL GPU simulator (sim-gpu)" ON)
 
@@ -94,10 +91,4 @@ else()
   endif()
   # Developer workflow targets for the webapp tree (format, lint)
   include(WebappDevWorkflow)
-endif()
-
-# ── Benchmarks ────────────────────────────────────────────────────────────────
-
-if(BIOSIM_BUILD_BENCHMARKS)
-  # add_subdirectory(benchmarks)         # uncomment once the directory is scaffolded
 endif()
