@@ -1,6 +1,9 @@
 #include "biosim/core/params.h"
 
+#include "biosim/core/terminal.h"
+
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -177,16 +180,84 @@ const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const c
     return NULL;
 }
 
+/* ── info card ──────────────────────────────────────────────────────────── */
+
+/* UTF-8 box-drawing glyphs with single-byte ASCII fallbacks. */
+#define BOX_H  "\xe2\x94\x80" /* ─ */
+#define BOX_V  "\xe2\x94\x82" /* │ */
+#define BOX_TL "\xe2\x94\x8c" /* ┌ */
+#define BOX_TR "\xe2\x94\x90" /* ┐ */
+#define BOX_BL "\xe2\x94\x94" /* └ */
+#define BOX_BR "\xe2\x94\x98" /* ┘ */
+#define BOX_TT "\xe2\x94\xac" /* ┬ */
+#define BOX_BT "\xe2\x94\xb4" /* ┴ */
+
+/* Row format: │ %-11s %11s │ %-11s %11s │  — 25 chars per cell section. */
+#define CARD_CELL_INNER 25
+
+static void print_hborder(
+    FILE *out, bool unicode, const char *left, const char *mid, const char *right
+) {
+    const char *h = unicode ? BOX_H : "-";
+    (void)fputs(left, out);
+    for (int i = 0; i < CARD_CELL_INNER; i++) {
+        (void)fputs(h, out);
+    }
+    (void)fputs(mid, out);
+    for (int i = 0; i < CARD_CELL_INNER; i++) {
+        (void)fputs(h, out);
+    }
+    (void)fputs(right, out);
+    (void)fputc('\n', out);
+}
+
+static void print_row(
+    FILE *out, bool unicode, const char *l1, const char *v1, const char *l2, const char *v2
+) {
+    const char *v = unicode ? BOX_V : "|";
+    (void)fprintf(out, "%s %-11s %11s   %-11s %11s %s\n", v, l1, v1, l2, v2, v);
+}
+
 void biosim_params_print_info_card(const biosim_params_t *p, uint32_t n_barriers, FILE *out) {
-    int sx = biosim_params_get_int(p, "grid-size-x");
-    int sy = biosim_params_get_int(p, "grid-size-y");
-    (void)fprintf(out, "population:      %d\n", biosim_params_get_int(p, "population"));
-    (void)fprintf(out, "grid-size:       %d x %d\n", sx, sy);
-    (void)fprintf(out, "max-generations: %d\n", biosim_params_get_int(p, "max-generations"));
-    (void)fprintf(out, "max-genes:       %d\n", biosim_params_get_int(p, "max-genes"));
-    (void)fprintf(out, "max-neurons:     %d\n", biosim_params_get_int(p, "max-neurons"));
-    (void)fprintf(out, "challenge:       %s\n", biosim_params_get_string(p, "kind"));
-    (void)fprintf(out, "barriers:        %u\n", n_barriers);
+    bool unicode = biosim_term_detect(out).unicode;
+
+    char grid_buf[24];
+    (void)snprintf(
+        grid_buf,
+        sizeof(grid_buf),
+        "%d x %d",
+        biosim_params_get_int(p, "grid-size-x"),
+        biosim_params_get_int(p, "grid-size-y")
+    );
+
+    char mut_buf[16];
+    double mut_rate = biosim_params_get_float(p, "point-mutation-rate");
+    (void)snprintf(mut_buf, sizeof(mut_buf), "%.3g%%", mut_rate * 100.0);
+
+    char pop_buf[16];
+    char gen_buf[16];
+    char genes_buf[16];
+    char neurons_buf[16];
+    char bar_buf[16];
+    (void)snprintf(pop_buf, sizeof(pop_buf), "%d", biosim_params_get_int(p, "population"));
+    (void)snprintf(gen_buf, sizeof(gen_buf), "%d", biosim_params_get_int(p, "max-generations"));
+    (void)snprintf(genes_buf, sizeof(genes_buf), "%d", biosim_params_get_int(p, "max-genes"));
+    (void)snprintf(neurons_buf, sizeof(neurons_buf), "%d", biosim_params_get_int(p, "max-neurons"));
+    (void)snprintf(bar_buf, sizeof(bar_buf), "%u", n_barriers);
+
+    const char *tl = unicode ? BOX_TL : "+";
+    const char *tr = unicode ? BOX_TR : "+";
+    const char *bl = unicode ? BOX_BL : "+";
+    const char *br = unicode ? BOX_BR : "+";
+    const char *tt = unicode ? BOX_TT : "+";
+    const char *bt = unicode ? BOX_BT : "+";
+
+    print_hborder(out, unicode, tl, tt, tr);
+    print_row(out, unicode, "population", pop_buf, "max-genes", genes_buf);
+    print_row(out, unicode, "generations", gen_buf, "max-neurons", neurons_buf);
+    print_row(out, unicode, "grid-size", grid_buf, "mutation", mut_buf);
+    print_row(out, unicode, "challenge", biosim_params_get_string(p, "kind"), "barriers", bar_buf);
+    print_hborder(out, unicode, bl, bt, br);
 }
 
 void biosim_params_dump(const biosim_params_t *p, FILE *out) {

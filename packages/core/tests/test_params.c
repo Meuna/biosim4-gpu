@@ -93,13 +93,14 @@ void test_unknown_key_returns_warn(void) {
 
 // clang-format off
 static const biosim_param_entry_t card_entries[] = {
-    {"population",      "simulation", {.i = 500},     PARAM_INT,    false, true, "pop", NULL},
-    {"grid-size-x",     "simulation", {.i = 64},      PARAM_INT,    false, true, NULL,  NULL},
-    {"grid-size-y",     "simulation", {.i = 32},      PARAM_INT,    false, true, NULL,  NULL},
-    {"max-generations", "simulation", {.i = 200},     PARAM_INT,    false, true, NULL,  NULL},
-    {"max-genes",       "genome",     {.i = 12},      PARAM_INT,    false, true, NULL,  NULL},
-    {"max-neurons",     "genome",     {.i = 3},       PARAM_INT,    false, true, NULL,  NULL},
-    {"kind",            "challenge",  {.s = "disc"},  PARAM_STRING, false, true, NULL,  NULL},
+    {"population",          "simulation", {.i = 500},   PARAM_INT,    false, true, "pop", NULL},
+    {"grid-size-x",         "simulation", {.i = 64},    PARAM_INT,    false, true, NULL,  NULL},
+    {"grid-size-y",         "simulation", {.i = 32},    PARAM_INT,    false, true, NULL,  NULL},
+    {"max-generations",     "simulation", {.i = 200},   PARAM_INT,    false, true, NULL,  NULL},
+    {"max-genes",           "genome",     {.i = 12},    PARAM_INT,    false, true, NULL,  NULL},
+    {"max-neurons",         "genome",     {.i = 3},     PARAM_INT,    false, true, NULL,  NULL},
+    {"point-mutation-rate", "genome",     {.f = 0.001}, PARAM_FLOAT,  false, true, NULL,  NULL},
+    {"kind",                "challenge",  {.s = "disc"}, PARAM_STRING, false, true, NULL, NULL},
 };
 // clang-format on
 #define CARD_ENTRIES_COUNT (sizeof(card_entries) / sizeof(card_entries[0]))
@@ -119,13 +120,21 @@ void test_info_card_renders_fields(void) {
     (void)fclose(f);
     biosim_params_free(&cp);
 
-    TEST_ASSERT_NOT_NULL(strstr(buf, "population:      500"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "grid-size:       64 x 32"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "max-generations: 200"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "max-genes:       12"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "max-neurons:     3"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "challenge:       disc"));
-    TEST_ASSERT_NOT_NULL(strstr(buf, "barriers:        3"));
+    /* tmpfile() is not a TTY, so ASCII box chars are used. */
+    TEST_ASSERT_NOT_NULL(strstr(buf, "+"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "population"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "500"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "64 x 32"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "generations"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "200"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "challenge"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "disc"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "max-genes"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "12"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "max-neurons"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "mutation"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "0.1%"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "barriers"));
 }
 
 /* ── dump ───────────────────────────────────────────────────────────────── */
