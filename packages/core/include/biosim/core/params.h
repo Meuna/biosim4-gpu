@@ -4,6 +4,7 @@
 #include "biosim/core/status.h"
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 typedef enum {
@@ -70,5 +71,9 @@ const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const c
 /* Print every registered param as "[table] name = value" (one per line), with
  * the value rendered per its type. Reusable for startup info dumps. */
 void biosim_params_dump(const biosim_params_t *p, FILE *out);
+
+/* Print a compact info card: pop, grid-size, max-generations, max-genes,
+ * max-neurons, challenge kind, and barrier count. */
+void biosim_params_print_info_card(const biosim_params_t *p, uint32_t n_barriers, FILE *out);
 
 #endif /* BIOSIM_CORE_PARAMS_H */

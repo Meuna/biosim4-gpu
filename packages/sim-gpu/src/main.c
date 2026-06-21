@@ -161,6 +161,8 @@ int main(int argc, char **argv) {
         goto exit;
     }
 
+    biosim_params_print_info_card(&p, n_barriers, stdout);
+
     /* ── OpenCL initialisation ──────────────────────────────────────────── */
 
     uint32_t platform_idx = (uint32_t)biosim_params_get_int(&p, "platform-index");

@@ -89,6 +89,45 @@ void test_unknown_key_returns_warn(void) {
     TEST_ASSERT_EQUAL_INT(BIOSIM_WARN_UNKNOWN_KEY, st);
 }
 
+/* ── info card ──────────────────────────────────────────────────────────── */
+
+// clang-format off
+static const biosim_param_entry_t card_entries[] = {
+    {"population",      "simulation", {.i = 500},     PARAM_INT,    false, true, "pop", NULL},
+    {"grid-size-x",     "simulation", {.i = 64},      PARAM_INT,    false, true, NULL,  NULL},
+    {"grid-size-y",     "simulation", {.i = 32},      PARAM_INT,    false, true, NULL,  NULL},
+    {"max-generations", "simulation", {.i = 200},     PARAM_INT,    false, true, NULL,  NULL},
+    {"max-genes",       "genome",     {.i = 12},      PARAM_INT,    false, true, NULL,  NULL},
+    {"max-neurons",     "genome",     {.i = 3},       PARAM_INT,    false, true, NULL,  NULL},
+    {"kind",            "challenge",  {.s = "disc"},  PARAM_STRING, false, true, NULL,  NULL},
+};
+// clang-format on
+#define CARD_ENTRIES_COUNT (sizeof(card_entries) / sizeof(card_entries[0]))
+
+void test_info_card_renders_fields(void) {
+    biosim_params_t cp;
+    TEST_ASSERT_EQUAL_INT(BIOSIM_OK, biosim_params_init(&cp, card_entries, CARD_ENTRIES_COUNT));
+
+    FILE *f = tmpfile();
+    TEST_ASSERT_NOT_NULL(f);
+    biosim_params_print_info_card(&cp, 3U, f);
+    (void)fflush(f);
+    TEST_ASSERT_EQUAL_INT(0, fseek(f, 0L, SEEK_SET));
+    char buf[512];
+    size_t n = fread(buf, 1U, sizeof(buf) - 1U, f);
+    buf[n] = '\0';
+    (void)fclose(f);
+    biosim_params_free(&cp);
+
+    TEST_ASSERT_NOT_NULL(strstr(buf, "population:      500"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "grid-size:       64 x 32"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "max-generations: 200"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "max-genes:       12"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "max-neurons:     3"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "challenge:       disc"));
+    TEST_ASSERT_NOT_NULL(strstr(buf, "barriers:        3"));
+}
+
 /* ── dump ───────────────────────────────────────────────────────────────── */
 
 void test_dump_renders_each_type(void) {
@@ -124,6 +163,7 @@ int main(void) {
     RUN_TEST(test_set_marks_is_set);
     RUN_TEST(test_set_wrong_type_returns_err);
     RUN_TEST(test_unknown_key_returns_warn);
+    RUN_TEST(test_info_card_renders_fields);
     RUN_TEST(test_dump_renders_each_type);
     return UNITY_END();
 }

@@ -177,6 +177,18 @@ const biosim_param_entry_t *biosim_params_find(const biosim_params_t *p, const c
     return NULL;
 }
 
+void biosim_params_print_info_card(const biosim_params_t *p, uint32_t n_barriers, FILE *out) {
+    int sx = biosim_params_get_int(p, "grid-size-x");
+    int sy = biosim_params_get_int(p, "grid-size-y");
+    (void)fprintf(out, "population:      %d\n", biosim_params_get_int(p, "population"));
+    (void)fprintf(out, "grid-size:       %d x %d\n", sx, sy);
+    (void)fprintf(out, "max-generations: %d\n", biosim_params_get_int(p, "max-generations"));
+    (void)fprintf(out, "max-genes:       %d\n", biosim_params_get_int(p, "max-genes"));
+    (void)fprintf(out, "max-neurons:     %d\n", biosim_params_get_int(p, "max-neurons"));
+    (void)fprintf(out, "challenge:       %s\n", biosim_params_get_string(p, "kind"));
+    (void)fprintf(out, "barriers:        %u\n", n_barriers);
+}
+
 void biosim_params_dump(const biosim_params_t *p, FILE *out) {
     for (size_t i = 0; i < p->count; i++) {
         const biosim_param_entry_t *e = &p->entries[i];

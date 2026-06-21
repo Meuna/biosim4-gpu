@@ -132,6 +132,8 @@ int main(int argc, char **argv) {
         goto exit;
     }
 
+    biosim_params_print_info_card(&p, n_barriers, stdout);
+
     /* ── apply snapshot-in if configured ────────────────────────────────── */
 
     const char *snap_in_path = biosim_params_get_string(&p, "in");
