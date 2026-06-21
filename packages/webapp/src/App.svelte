@@ -10,6 +10,7 @@
     import TelemetryHUD from "./lib/TelemetryHUD.svelte";
     import RightRail from "./lib/RightRail.svelte";
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
+    import SimTabActions from "./lib/SimTabActions.svelte";
     import CellPanel from "./lib/CellPanel.svelte";
     import HoverCard from "./lib/HoverCard.svelte";
     import BrainExplorer from "./lib/BrainExplorer.svelte";
@@ -726,15 +727,22 @@
         hasSelection={focus.hasSelection}
         onTabChange={(t) => (activeTab = t)}
     >
+        {#snippet simTabActions()}
+            <SimTabActions
+                dirty={machine.dirty}
+                disabled={machine.genomIncompatible || changeDisabled}
+                onRevert={() => machine.revertDraft()}
+                onNextGen={handleNextGen}
+                onRewind={handleRewind}
+            />
+        {/snippet}
         {#snippet sim()}
             <SimConfigPanel
                 draftConfig={machine.draftConfig}
-                isDirty={machine.dirty}
                 incompatibleFields={machine.incompatibleFields}
                 requiredGenomeLen={machine.requiredGenomeLen}
                 requiredNeurons={machine.requiredNeurons}
                 onDraftChange={(p) => machine.setDraft(p)}
-                onRevert={() => machine.revertDraft()}
                 onConfUpload={() => void importConfig()}
                 onConfDownload={handleConfDownload}
                 onConfCopy={handleConfCopy}

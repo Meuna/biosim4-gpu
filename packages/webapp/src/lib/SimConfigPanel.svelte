@@ -15,14 +15,11 @@
         Download,
         FileUp,
         TriangleAlert,
-        Undo2,
     } from "lucide-svelte";
 
     interface Props {
         draftConfig: SimParams;
-        isDirty: boolean;
         onDraftChange: (params: SimParams) => void;
-        onRevert: () => void;
         incompatibleFields?: string[];
         requiredGenomeLen?: number;
         requiredNeurons?: number;
@@ -40,9 +37,7 @@
     }
     const {
         draftConfig,
-        isDirty,
         onDraftChange,
-        onRevert,
         incompatibleFields = [],
         requiredGenomeLen = 0,
         requiredNeurons = 0,
@@ -71,18 +66,7 @@
     <!-- Panel header -->
     <div class="sim-config__header">
         <p class="small-caps sim-config__eyebrow">Configuration</p>
-        <div class="sim-config__title-row">
-            <h2 class="sim-config__title">Simulation</h2>
-            {#if isDirty}
-                <button
-                    class="button button--utility sim-config__revert"
-                    onclick={onRevert}
-                    aria-label="Revert all changes"
-                >
-                    <Undo2 size={14} /> revert
-                </button>
-            {/if}
-        </div>
+        <h2 class="sim-config__title">Simulation</h2>
         <p class="sim-config__subtitle">biosim4-gpu / OpenCL stepper</p>
         <div class="sim-config__io-row">
             <span class="small-caps sim-config__io-label">Conf</span>
@@ -433,12 +417,6 @@
         margin: 0 0 var(--space-1) 0;
     }
 
-    .sim-config__title-row {
-        display: flex;
-        align-items: baseline;
-        gap: var(--space-3);
-    }
-
     .sim-config__title {
         font-family: var(--font-sans);
         font-size: var(--text-2xl);
@@ -446,11 +424,6 @@
         line-height: 1.12;
         color: var(--color-text);
         margin: 0;
-    }
-
-    .sim-config__revert {
-        margin-left: auto;
-        display: inline-flex;
     }
 
     .sim-config__subtitle {

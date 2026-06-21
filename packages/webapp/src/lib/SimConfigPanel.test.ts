@@ -25,9 +25,7 @@ function renderPanel(overrides?: Partial<Parameters<typeof render>[1]>) {
     return render(SimConfigPanel, {
         props: {
             draftConfig: { ...DEFAULTS },
-            isDirty: false,
             onDraftChange: vi.fn(),
-            onRevert: vi.fn(),
             onConfUpload: vi.fn(),
             onConfDownload: vi.fn(),
             onConfCopy: vi.fn().mockResolvedValue(true),
@@ -151,29 +149,6 @@ describe("SimConfigPanel", () => {
             },
         });
         expect(screen.queryByText(/add a barrier here/i)).toBeNull();
-    });
-
-    it("does not render revert button when isDirty is false", () => {
-        renderPanel({ props: { isDirty: false } });
-        expect(
-            screen.queryByRole("button", { name: "Revert all changes" }),
-        ).toBeNull();
-    });
-
-    it("renders revert button when isDirty is true", () => {
-        renderPanel({ props: { isDirty: true } });
-        expect(
-            screen.getByRole("button", { name: "Revert all changes" }),
-        ).toBeTruthy();
-    });
-
-    it("calls onRevert when revert button is clicked", async () => {
-        const onRevert = vi.fn();
-        renderPanel({ props: { isDirty: true, onRevert } });
-        await fireEvent.click(
-            screen.getByRole("button", { name: "Revert all changes" }),
-        );
-        expect(onRevert).toHaveBeenCalledOnce();
     });
 
     it("calls onDraftChange with updated population when slider changes", async () => {

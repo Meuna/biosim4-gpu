@@ -40,6 +40,11 @@
     outline-offset: 2px;
 }
 
+.button:disabled {
+    opacity: var(--opacity-faint);
+    cursor: default;
+}
+
 /* Pill variant — rounded, sans-serif, normal case */
 .button--pill {
     text-transform: uppercase;

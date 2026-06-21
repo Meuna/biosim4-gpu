@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/svelte";
+import { createRawSnippet } from "svelte";
 import RightRail from "./RightRail.svelte";
 
 describe("RightRail", () => {
@@ -48,5 +49,30 @@ describe("RightRail", () => {
         });
         fireEvent.click(screen.getByRole("tab", { name: /cell/i }));
         expect(switched).toBe("cell");
+    });
+
+    it("renders the simTabActions snippet in the tab bar when provided", () => {
+        const simTabActions = createRawSnippet(() => ({
+            render: () => `<button data-testid="sim-action">go</button>`,
+        }));
+        const { container } = render(RightRail, {
+            open: true,
+            activeTab: "sim",
+            hasSelection: false,
+            onTabChange: () => {},
+            simTabActions,
+        });
+        expect(container.querySelector(".rail__tab-actions")).not.toBeNull();
+        expect(screen.getByTestId("sim-action")).toBeTruthy();
+    });
+
+    it("omits the tab-actions container when no snippet is provided", () => {
+        const { container } = render(RightRail, {
+            open: true,
+            activeTab: "sim",
+            hasSelection: false,
+            onTabChange: () => {},
+        });
+        expect(container.querySelector(".rail__tab-actions")).toBeNull();
     });
 });
