@@ -11,6 +11,7 @@
 #### Changed
 
 - OpenCL compiler info are now logged at the warning level ([gh-142](https://github.com/Meuna/biosim4-gpu/issues/142))
+- Resolve omitted barrier fields to fixed per-kind defaults instead of random values ([gh-171](https://github.com/Meuna/biosim4-gpu/issues/171))
 
 #### Fixed
 

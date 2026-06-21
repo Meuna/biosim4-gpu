@@ -330,10 +330,10 @@ num-barriers = 2
 
 [barrier-1]
 kind   = "hbar"    # required: hbar | vbar | square | circle | corner
-x      = 0.5       # centre x (grid ratio 0..1); omit for random
-y      = 0.25      # centre y (grid ratio 0..1); omit for random
-length = 0.3       # extent along bar axis (ratio); omit for random
-width  = 0.02      # thickness perpendicular to bar axis (ratio); omit for random
+x      = 0.5       # centre x (grid ratio 0..1); omit for default (centred)
+y      = 0.25      # centre y (grid ratio 0..1); omit for default (centred)
+length = 0.3       # extent along bar axis (ratio); omit for the per-kind default
+width  = 0.02      # thickness perpendicular to bar axis (ratio); omit for the per-kind default
 
 [barrier-2]
 kind   = "circle"
@@ -375,6 +375,7 @@ origin at the bottom-left; `length`/`width` are fractions of the smaller grid
 axis (`min(W, H)`). They resolve to cells against the target grid; out-of-bounds
 cells are clipped silently.
 
-When position or dimension is omitted, a value is drawn from the
-simulation RNG seeded with `biosim_rng_seed(0, 0)` — the same seed
-every run, so random barrier layouts are reproducible.
+When position or dimension is omitted it resolves to a fixed default: the
+barrier is centred (ratio `0.5`) and each shape uses a per-kind default size.
+Placement is fully deterministic — omitted fields give the same layout every
+run.
