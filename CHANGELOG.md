@@ -16,6 +16,12 @@
 
 - Feed each step's freshly computed neuron outputs into the actions, instead of using the previous step's values ([#193](https://github.com/Meuna/biosim4-gpu/pull/193))
 
+### Webapp
+
+#### Changed
+
+- Surface the revert, next-generation, and rewind controls in the always-visible Simulation rail tab ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))
+
 ## [1.1.0] - 2026-06-19
 
 ### Biosim4-gpu
