@@ -59,12 +59,12 @@
         <div class="divider-v" aria-hidden="true"></div>
 
         <div class="dirty-bar__group">
-            <span class="dirty-bar__label" aria-hidden="true">revert</span>
             <button
                 class="button button--utility"
                 onclick={onRevert}
                 aria-label="Revert all changes"
             >
+                <span class="dirty-bar__label" aria-hidden="true">revert</span>
                 <Undo2 size={14} />
             </button>
         </div>
