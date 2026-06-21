@@ -30,8 +30,7 @@ static biosim_status_t sim_place_barriers(
         returncode = BIOSIM_ERR_NOMEM;
         goto exit;
     }
-    uint64_t barrier_rng = biosim_rng_seed(0, 0);
-    biosim_barriers_place(&sim->grid, barriers, n_barriers, &barrier_rng, sim->barrier_ctrs);
+    biosim_barriers_place(&sim->grid, barriers, n_barriers, sim->barrier_ctrs);
 
     sim->n_barrier_ctrs = n_barriers;
 

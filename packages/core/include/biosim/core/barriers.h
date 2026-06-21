@@ -32,7 +32,7 @@ typedef enum {
     BIOSIM_CORNER_SW,
 } biosim_corner_quadrant_t;
 
-/* Sentinel: use random placement / dimension */
+/* Sentinel: field omitted — resolve to its default placement / dimension */
 #define BIOSIM_BARRIER_POS_UNSET (-1.0F)
 #define BIOSIM_BARRIER_DIM_UNSET (0.0F)
 
@@ -42,12 +42,13 @@ typedef enum {
  * cell coordinates against the target grid.
  *
  * x, y    — centre of the barrier as a fraction of grid width/height;
- *           BIOSIM_BARRIER_POS_UNSET picks a random position.
+ *           BIOSIM_BARRIER_POS_UNSET centres the barrier (ratio 0.5).
  * length  — primary dimension (bar length, square side, circle radius) as a
- *           fraction of min(width, height); BIOSIM_BARRIER_DIM_UNSET picks a
- *           random value.
+ *           fraction of min(width, height); BIOSIM_BARRIER_DIM_UNSET uses a
+ *           per-kind default.
  * width   — thickness perpendicular to the bar axis (bars only) as a fraction
- *           of min(width, height); BIOSIM_BARRIER_DIM_UNSET picks a random value.
+ *           of min(width, height); BIOSIM_BARRIER_DIM_UNSET uses a per-kind
+ *           default.
  *
  * For a CORNER, x/y are the arm junction, length is each arm's length, width is
  * the arm thickness, and quadrant picks which way the arms extend. quadrant is
@@ -64,18 +65,14 @@ typedef struct {
 
 /*
  * Write all barriers described by specs[0..n-1] onto grid as BIOSIM_GRID_BARRIER cells.
- * rng_state drives random position/dimension resolution; it is advanced in-place so
- * multiple calls with the same initial state produce the same layout (deterministic).
+ * Omitted (BIOSIM_BARRIER_*_UNSET) fields resolve to per-kind defaults, so placement is
+ * fully deterministic from the specs alone.
  * If centers_out is non-NULL it must point to an array of n biosim_coord_t elements;
- * centers_out[i] receives the resolved centre of barrier i after random draws.
+ * centers_out[i] receives the resolved centre of barrier i.
  * Returns BIOSIM_OK; placement is tolerant of out-of-bounds — cells are clipped silently.
  */
 void biosim_barriers_place(
-    biosim_grid_t *grid,
-    const biosim_barrier_spec_t *specs,
-    uint32_t n,
-    uint64_t *rng_state,
-    biosim_coord_t *centers_out
+    biosim_grid_t *grid, const biosim_barrier_spec_t *specs, uint32_t n, biosim_coord_t *centers_out
 );
 
 #endif /* BIOSIM_CORE_BARRIERS_H */
