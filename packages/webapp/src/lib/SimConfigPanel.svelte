@@ -8,6 +8,10 @@
     import ChallengeControl from "./ChallengeControl.svelte";
     import BarrierControl from "./BarrierControl.svelte";
     import BarrierPresets from "./BarrierPresets.svelte";
+    import PresetSelector from "./PresetSelector.svelte";
+    import FormFactorControl from "./FormFactorControl.svelte";
+    import type { Preset } from "./presets";
+    import { activeFormFactor, applyFormFactor } from "./formFactor";
     import {
         Check,
         Copy,
@@ -20,6 +24,10 @@
     interface Props {
         draftConfig: SimParams;
         onDraftChange: (params: SimParams) => void;
+        // Named-preset list + selection (the selector replaces the panel title).
+        presets: Preset[];
+        selectedPresetId: string;
+        onSelectPreset: (preset: Preset) => void;
         incompatibleFields?: string[];
         requiredGenomeLen?: number;
         requiredNeurons?: number;
@@ -38,6 +46,9 @@
     const {
         draftConfig,
         onDraftChange,
+        presets,
+        selectedPresetId,
+        onSelectPreset,
         incompatibleFields = [],
         requiredGenomeLen = 0,
         requiredNeurons = 0,
@@ -65,9 +76,12 @@
 <div class="sim-config">
     <!-- Panel header -->
     <div class="sim-config__header">
-        <p class="small-caps sim-config__eyebrow">Configuration</p>
-        <h2 class="sim-config__title">Simulation</h2>
-        <p class="sim-config__subtitle">biosim4-gpu / OpenCL stepper</p>
+        <PresetSelector
+            {presets}
+            selectedId={selectedPresetId}
+            disabled={changeDisabled}
+            onSelect={onSelectPreset}
+        />
         <div class="sim-config__io-row">
             <span class="small-caps sim-config__io-label">Conf</span>
             <button
@@ -115,6 +129,21 @@
             </button>
         </div>
     </div>
+
+    <!-- Form factor — the orthogonal preset half: sets population + grid in one
+         click. Active pill is derived from the draft; manual pop/grid edits
+         deactivate it. -->
+    <div class="section-label">
+        <span class="small-caps">Form factor</span>
+    </div>
+
+    <FormFactorControl
+        value={activeFormFactor(draftConfig)}
+        disabled={changeDisabled}
+        onchange={(ff) => onDraftChange(applyFormFactor(draftConfig, ff))}
+    />
+
+    <div class="sim-config__spacer"></div>
 
     <!-- sim.h ────────────────────────────────────────────────────────────── -->
     <div class="section-label">
@@ -411,26 +440,6 @@
 
     .sim-config__header {
         margin-bottom: var(--space-6);
-    }
-
-    .sim-config__eyebrow {
-        margin: 0 0 var(--space-1) 0;
-    }
-
-    .sim-config__title {
-        font-family: var(--font-sans);
-        font-size: var(--text-2xl);
-        font-weight: 700;
-        line-height: 1.12;
-        color: var(--color-text);
-        margin: 0;
-    }
-
-    .sim-config__subtitle {
-        font-family: var(--font-sans);
-        font-size: var(--text-xs);
-        color: var(--color-text-muted);
-        margin: var(--space-1) 0 0 0;
     }
 
     .sim-config__hint {

@@ -32,6 +32,8 @@
     import { SimTelemetry } from "./lib/simTelemetry.svelte";
     import { computeGridGeom, hudBounds, hamburgerInset } from "./lib/gridGeom";
     import { configForFormFactor, detectFormFactor } from "./lib/formFactor";
+    import { DEFAULT_PRESET, loadPresets, type Preset } from "./lib/presets";
+    import { onMount } from "svelte";
 
     // ── Canvas / worker ──────────────────────────────────────────────────────
     let canvasEl = $state<HTMLCanvasElement | undefined>();
@@ -74,6 +76,56 @@
     const telemetry = new SimTelemetry();
 
     const workerReady = $derived(machine.phase !== "WORKER_PENDING");
+
+    // ── Simulation presets ────────────────────────────────────────────────────
+    // The named-preset list (built-in Default + the fetched manifest entries)
+    // and the current selection. Fetched once on mount; on failure the list
+    // stays at [Default] and a banner reports it. Selecting a preset applies its
+    // config (preserving the current form-factor pop/grid) and, when it carries
+    // one, loads its survivor snapshot through the existing snapshot path.
+    let presets = $state<Preset[]>([DEFAULT_PRESET]);
+    let selectedPresetId = $state(DEFAULT_PRESET.id);
+
+    onMount(() => {
+        loadPresets().then(
+            (list) => (presets = list),
+            () => (bannerError = "Failed to load simulation presets"),
+        );
+    });
+
+    async function handleSelectPreset(preset: Preset): Promise<void> {
+        selectedPresetId = preset.id;
+        let conf: SimParams;
+        try {
+            conf = await preset.loadConf();
+        } catch {
+            bannerError = `Failed to load preset "${preset.name}"`;
+            return;
+        }
+        // The named preset owns everything except pop/grid, which the form
+        // factor owns — keep the current draft's values so switching scenario
+        // does not clobber a chosen form factor or custom grid.
+        const d = machine.draftConfig;
+        machine.setDraft({
+            ...conf,
+            population: d.population,
+            gridSizeX: d.gridSizeX,
+            gridSizeY: d.gridSizeY,
+        });
+        // setDraft must land before loadSnapshot so onSnapshotLoaded reads the
+        // new draft caps for its compatibility check.
+        if (preset.hasSnapshot) {
+            try {
+                machine.loadSnapshot(await preset.loadSnapshot());
+            } catch {
+                bannerError = `Failed to load snapshot for "${preset.name}"`;
+            }
+        } else {
+            // A conf-only preset clears any stale gate left by a previously
+            // loaded incompatible snapshot.
+            machine.clearGenomeRequirement();
+        }
+    }
 
     // Transfers the canvas to the worker and hands it the initial layout. Stays
     // in-component: it closes over `canvasEl`, the viewport dims and `gridGeom`.
@@ -739,6 +791,9 @@
         {#snippet sim()}
             <SimConfigPanel
                 draftConfig={machine.draftConfig}
+                {presets}
+                {selectedPresetId}
+                onSelectPreset={(p) => void handleSelectPreset(p)}
                 incompatibleFields={machine.incompatibleFields}
                 requiredGenomeLen={machine.requiredGenomeLen}
                 requiredNeurons={machine.requiredNeurons}

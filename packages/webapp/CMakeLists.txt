@@ -19,6 +19,11 @@ add_custom_target(copy-wasm-into-public-dir
           "${CMAKE_CURRENT_SOURCE_DIR}/public/apple-touch-icon.png"
           "${CMAKE_CURRENT_SOURCE_DIR}/public/icon-32.png"
           "${PUBLIC_DIR}/"
+  # Simulation presets (manifest + conf + optional snapshot assets) fetched at
+  # runtime from /presets/. copy_directory keeps the whole tree in sync.
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          "${CMAKE_CURRENT_SOURCE_DIR}/public/presets"
+          "${PUBLIC_DIR}/presets"
 )
 
 add_custom_target(webapp ALL

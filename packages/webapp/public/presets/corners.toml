@@ -1,0 +1,28 @@
+[simulation]
+population    = 3000
+grid-size-x   = 128
+grid-size-y   = 128
+steps-per-gen = 300
+
+[genome]
+max-genes                 = 24
+max-neurons               = 5
+point-mutation-rate       = 0.001
+sexual-reproduction       = false
+choose-parents-by-fitness = false
+
+[sensors]
+los-range     = 16
+sensor-radius = 2
+
+[actions]
+enable-kill            = false
+responsiveness-curve-k = 2.0
+
+[challenge]
+kind     = "corners"
+radius   = 0.2
+weighted = true
+
+[barriers]
+num-barriers = 0

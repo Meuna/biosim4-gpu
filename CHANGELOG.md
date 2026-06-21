@@ -18,6 +18,10 @@
 
 ### Webapp
 
+#### Added
+
+- Add simulation presets: a preset selector (replacing the panel title) for curated config + optional survivor-snapshot bundles, and desktop/tablet/phone form-factor pills that set population and grid size ([gh-79](https://github.com/Meuna/biosim4-gpu/issues/79))
+
 #### Changed
 
 - Surface the revert, next-generation, and rewind controls in a dirty-state action bar that slides open beneath the Simulation rail tab ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))

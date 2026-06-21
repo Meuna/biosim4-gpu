@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/svelte";
 import { vi } from "vitest";
 import SimConfigPanel from "./SimConfigPanel.svelte";
 import type { SimParams } from "../workers/sim.worker";
+import { DEFAULT_PRESET } from "./presets";
 
 const DEFAULTS: SimParams = {
     population: 3000,
@@ -25,6 +26,9 @@ function renderPanel(overrides?: Partial<Parameters<typeof render>[1]>) {
     return render(SimConfigPanel, {
         props: {
             draftConfig: { ...DEFAULTS },
+            presets: [DEFAULT_PRESET],
+            selectedPresetId: DEFAULT_PRESET.id,
+            onSelectPreset: vi.fn(),
             onDraftChange: vi.fn(),
             onConfUpload: vi.fn(),
             onConfDownload: vi.fn(),
@@ -37,12 +41,11 @@ function renderPanel(overrides?: Partial<Parameters<typeof render>[1]>) {
 }
 
 describe("SimConfigPanel", () => {
-    it("renders the Simulation heading and Configuration eyebrow", () => {
+    it("renders the preset selector and Form factor pills", () => {
         renderPanel();
-        expect(
-            screen.getByRole("heading", { name: "Simulation" }),
-        ).toBeTruthy();
-        expect(screen.getByText("Configuration")).toBeTruthy();
+        expect(screen.getByText("Default")).toBeTruthy();
+        expect(screen.getByText("Form factor")).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Desktop" })).toBeTruthy();
     });
 
     it("shows section labels sim.h, genome.h, io.h directly (no global toggle)", () => {

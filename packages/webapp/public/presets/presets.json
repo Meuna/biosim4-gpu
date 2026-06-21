@@ -1,0 +1,4 @@
+[
+    { "id": "corners", "name": "Corners", "conf": "corners.toml" },
+    { "id": "near-barrier", "name": "Near barrier", "conf": "near-barrier.toml" }
+]

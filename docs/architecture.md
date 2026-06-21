@@ -481,6 +481,49 @@ event to several holders (e.g. `census` feeds both `SimMachine` and
 | `idleReturn.ts` | `shouldIdleReturn` — pure predicate gating the worker's idle-timeout return to the sculpture (at-rest, elapsed); shares the `RenderLoopMode` type with the worker. |
 | `beatTrigger.ts` | `shouldSpaceBeat` — pure predicate gating the space-key sculpture beat (kinematic mode + non-editable focus). |
 | `headings.ts` | `HEADINGS`: compass-direction labels indexed by an agent's heading (0–7). |
+| `formFactor.ts` | The form-factor preset half: `classifyFormFactor`/`detectFormFactor`, the per-device pop/grid `OVERRIDES`, and the `applyFormFactor`/`activeFormFactor`/`configForFormFactor` composition helpers. |
+| `presets.ts` | The named-preset half: the manifest types, the built-in `DEFAULT_PRESET`, `loadPresets` (fetch + lazy conf/snapshot loaders), and `parseSnapshotCaps`/`checkSnapshotCaps`. |
+
+### Simulation presets
+
+A **preset** is a curated starting point, split into two orthogonal halves:
+
+- **Form-factor preset** (`formFactor.ts`) — desktop / tablet / phone, owning
+  only `population` + `gridSizeX/Y`. Rendered as the icon pills in
+  `FormFactorControl.svelte`; the active pill is derived with `activeFormFactor`
+  (a manual pop/grid edit matches none, so all go inactive).
+- **Named preset** (`presets.ts`) — owns everything else (challenge, barriers,
+  genome, sensors, actions) plus an optional survivor snapshot. Picked from
+  `PresetSelector.svelte`, the dropdown that replaces the panel title; snapshot
+  presets show a DNA glyph.
+
+Named presets are shipped as static assets under `public/presets/`: a
+`presets.json` manifest (`{ id, name, conf, snapshot? }[]`) plus `.toml` configs
+and optional `.snap` snapshots. CMake's `copy-wasm-into-public-dir` target copies
+the directory into the build's public dir; the app fetches them at runtime via
+`import.meta.env.BASE_URL`-relative URLs (so a GitHub Pages base path resolves).
+The list shown is the built-in `DEFAULT_PRESET` (the in-code `DEFAULTS`, fetch
+-free so startup seeding stays synchronous) followed by the manifest entries.
+
+Selecting a preset (`App.handleSelectPreset`) applies its conf while **preserving
+the current draft's pop/grid** (the form factor owns those), then:
+
+- **conf-only** → `setDraft` leaves the draft dirty; Play applies it. The gate is
+  cleared via `SimMachine.clearGenomeRequirement` so a stale snapshot requirement
+  cannot bleed in.
+- **conf + snapshot** → `setDraft` (synchronously, before the fetch) then
+  `loadSnapshot`. This rides the existing snapshot path: `onSnapshotLoaded` sees a
+  compatible dirty draft and auto-respawns through `rewindConfigured`, which
+  re-applies the config and breeds the imported survivors, then commits the draft
+  non-dirty.
+
+**Authoring a preset:** drop the `.toml` (and optional `.snap`, produced by the
+app's snapshot export or `sim-gpu`) into `public/presets/`, add a manifest entry,
+and rebuild. A snapshot preset's conf caps **must** match the snapshot's
+originating caps: `max-genes >=` the snapshot's, and `max-neurons` **exactly**
+equal (a different neuron cap silently rewires genomes via the `% max_neurons`
+remap). `checkSnapshotCaps` asserts this over the shipped manifest in
+`presets.test.ts`, so a mismatched publish fails the test suite.
 
 ### Brain explorer
 

@@ -461,6 +461,20 @@ describe("genome compatibility", () => {
         m.clearGenom();
         expect(m.phase).toBe("FREE_RUNNING");
     });
+
+    it("clearGenomeRequirement clears the gate without a worker command or phase change", () => {
+        const { m, sent } = create(makeParams({ maxGenes: 24 }));
+        m.onWorkerReady();
+        m.onCensus(32, 12);
+        expect(m.genomIncompatible).toBe(true);
+        const phaseBefore = m.phase;
+        m.clearGenomeRequirement();
+        expect(m.genomIncompatible).toBe(false);
+        expect(m.requiredGenomeLen).toBe(0);
+        expect(m.requiredNeurons).toBe(0);
+        expect(m.phase).toBe(phaseBefore);
+        expect(types(sent)).not.toContain("clearGenom");
+    });
 });
 
 describe("draft config", () => {

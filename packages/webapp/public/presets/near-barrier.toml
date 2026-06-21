@@ -1,0 +1,34 @@
+[simulation]
+population    = 3000
+grid-size-x   = 128
+grid-size-y   = 128
+steps-per-gen = 300
+
+[genome]
+max-genes                 = 24
+max-neurons               = 5
+point-mutation-rate       = 0.001
+sexual-reproduction       = false
+choose-parents-by-fitness = false
+
+[sensors]
+los-range     = 16
+sensor-radius = 2
+
+[actions]
+enable-kill            = false
+responsiveness-curve-k = 2.0
+
+[challenge]
+kind   = "near_barrier"
+radius = 0.333
+
+[barriers]
+num-barriers = 1
+
+[barrier-1]
+kind   = "vbar"
+x      = 0.5
+y      = 0.5
+length = 0.4
+width  = 0.02

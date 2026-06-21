@@ -1,9 +1,12 @@
 import {
+    activeFormFactor,
+    applyFormFactor,
     classifyFormFactor,
     configForFormFactor,
     detectFormFactor,
 } from "./formFactor";
 import { DEFAULTS } from "./tomlConfig";
+import type { SimParams } from "../workers/sim.worker";
 
 describe("classifyFormFactor", () => {
     it("is desktop whenever a hover-capable fine pointer is present", () => {
@@ -69,6 +72,53 @@ describe("configForFormFactor", () => {
         cfg.challenge = { kind: "radioactive_walls" };
         expect(DEFAULTS.barriers).toEqual([]);
         expect(DEFAULTS.challenge.kind).toBe("x_band");
+    });
+});
+
+describe("applyFormFactor", () => {
+    it("overrides only pop/grid and keeps the rest of the base config", () => {
+        const base = {
+            ...DEFAULTS,
+            challenge: { kind: "corners", radius: 0.2, weighted: true },
+            maxNeurons: 9,
+        } as SimParams;
+        const out = applyFormFactor(base, "phone");
+        expect(out).toEqual({
+            ...base,
+            population: 700,
+            gridSizeX: 64,
+            gridSizeY: 64,
+        });
+    });
+
+    it("does not mutate the base config", () => {
+        const base = structuredClone(DEFAULTS);
+        applyFormFactor(base, "phone");
+        expect(base.population).toBe(DEFAULTS.population);
+        expect(base.gridSizeX).toBe(DEFAULTS.gridSizeX);
+    });
+
+    it("passes nested challenge/barriers through to the result", () => {
+        const challenge = { kind: "corners", radius: 0.2, weighted: true };
+        const base = { ...DEFAULTS, challenge } as SimParams;
+        expect(applyFormFactor(base, "tablet").challenge).toBe(challenge);
+    });
+});
+
+describe("activeFormFactor", () => {
+    it("returns the matching form factor for desktop/tablet/phone pop+grid", () => {
+        expect(activeFormFactor(configForFormFactor("desktop"))).toBe(
+            "desktop",
+        );
+        expect(activeFormFactor(configForFormFactor("tablet"))).toBe("tablet");
+        expect(activeFormFactor(configForFormFactor("phone"))).toBe("phone");
+    });
+
+    it("returns null when pop/grid do not match any form factor", () => {
+        expect(
+            activeFormFactor({ ...DEFAULTS, gridSizeX: 100, gridSizeY: 100 }),
+        ).toBeNull();
+        expect(activeFormFactor({ ...DEFAULTS, population: 1234 })).toBeNull();
     });
 });
 

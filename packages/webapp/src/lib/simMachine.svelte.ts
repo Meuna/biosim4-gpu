@@ -252,6 +252,15 @@ export class SimMachine {
         this.#send({ type: "exportSnapshot" });
     }
 
+    // Drop the genome-compatibility requirement without touching the live sim.
+    // Used when applying a snapshot-less preset, so a stale gate left by a
+    // previously loaded incompatible snapshot cannot bleed into the fresh
+    // preset. Unlike clearGenom() this sends no worker command and no phase
+    // change — the new conf is applied later through the normal play/respawn.
+    clearGenomeRequirement(): void {
+        this.#resetGenomeRequired();
+    }
+
     // ── Worker-event methods ─────────────────────────────────────────────────
 
     onWorkerReady(): void {
