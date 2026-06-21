@@ -79,6 +79,8 @@ int main(int argc, char **argv) {
     (void)signal(SIGBREAK, handle_signal);
 #endif
 
+    /* ── parse parameters ───────────────────────────────────────────────── */
+
     returncode = biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
     if (returncode != BIOSIM_OK) {
         goto exit;
@@ -104,6 +106,11 @@ int main(int argc, char **argv) {
         biosim_log_default_ctx.threshold = BIOSIM_LOG_DEBUG;
     } else if (verbosity == 1) {
         biosim_log_default_ctx.threshold = BIOSIM_LOG_INFO;
+    }
+
+    if (verbosity >= 2) {
+        (void)fprintf(stdout, "Parameters dump:\n");
+        biosim_params_dump(&p, stdout);
     }
 
     uint32_t n_barriers = 0U;

@@ -14,6 +14,7 @@
 #include "biosim/core/snapshot.h"
 #include "biosim/core/status.h"
 #include "biosim/core/terminal.h"
+#include "biosim/sim-gpu/info.h"
 #include "biosim/sim-gpu/pipeline.h"
 #include "biosim/sim-gpu/runner.h"
 
@@ -108,6 +109,8 @@ int main(int argc, char **argv) {
     (void)signal(SIGBREAK, handle_signal);
 #endif
 
+    /* ── parse parameters ───────────────────────────────────────────────── */
+
     returncode = biosim_params_init(&p, sim_params, SIM_PARAMS_COUNT);
     if (returncode != BIOSIM_OK) {
         goto exit;
@@ -135,6 +138,11 @@ int main(int argc, char **argv) {
         biosim_log_default_ctx.threshold = BIOSIM_LOG_DEBUG;
     }
 
+    if (verbosity >= 2) {
+        (void)fprintf(stdout, "Parameters dump:\n");
+        biosim_params_dump(&p, stdout);
+    }
+
     uint32_t n_barriers = 0U;
     returncode = biosim_barrier_params_load(p.config_path, &barriers, &n_barriers);
     if (returncode != BIOSIM_OK) {
@@ -146,7 +154,32 @@ int main(int argc, char **argv) {
         goto exit;
     }
 
+    /* ── create simulation ───────────────────────────────────────────────── */
+
     returncode = biosim_sim_create(&sim, &p, &challenge, barriers, n_barriers);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    /* ── OpenCL initialisation ──────────────────────────────────────────── */
+
+    uint32_t platform_idx = (uint32_t)biosim_params_get_int(&p, "platform-index");
+    uint32_t device_idx = (uint32_t)biosim_params_get_int(&p, "device-index");
+
+    returncode = biosim_gpu_runner_create(platform_idx, device_idx, false, &runner);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    returncode = biosim_gpu_info_print(&runner, stdout);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    char exec_dir[4096];
+    path_dirname(argv[0], exec_dir, sizeof(exec_dir));
+
+    returncode = biosim_gpu_pipeline_create(&sim, &runner, exec_dir, &pipeline);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -172,22 +205,6 @@ int main(int argc, char **argv) {
         if (returncode != BIOSIM_OK) {
             goto exit;
         }
-    }
-
-    uint32_t platform_idx = (uint32_t)biosim_params_get_int(&p, "platform-index");
-    uint32_t device_idx = (uint32_t)biosim_params_get_int(&p, "device-index");
-
-    returncode = biosim_gpu_runner_create(platform_idx, device_idx, false, &runner);
-    if (returncode != BIOSIM_OK) {
-        goto exit;
-    }
-
-    char exec_dir[4096];
-    path_dirname(argv[0], exec_dir, sizeof(exec_dir));
-
-    returncode = biosim_gpu_pipeline_create(&sim, &runner, exec_dir, &pipeline);
-    if (returncode != BIOSIM_OK) {
-        goto exit;
     }
 
     /* ── main generation loop ────────────────────────────────────────────── */

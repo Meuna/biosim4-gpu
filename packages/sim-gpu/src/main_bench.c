@@ -130,6 +130,8 @@ int main(int argc, char **argv) {
     biosim_term_init();
     biosim_log_init(&biosim_log_default_ctx);
 
+    /* ── parse parameters ───────────────────────────────────────────────── */
+
     returncode = biosim_params_init(&p, bench_params, BENCH_PARAMS_COUNT);
     if (returncode != BIOSIM_OK) {
         goto exit;
@@ -157,19 +159,33 @@ int main(int argc, char **argv) {
         biosim_log_default_ctx.threshold = BIOSIM_LOG_DEBUG;
     }
 
+    if (verbosity >= 1) {
+        (void)fprintf(stdout, "Parameters dump:\n");
+        biosim_params_dump(&p, stdout);
+    }
+
     returncode = biosim_challenge_spec_from_params(&p, &challenge);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
+
+    /* ── create simulation ───────────────────────────────────────────────── */
 
     returncode = biosim_sim_create(&sim, &p, &challenge, NULL, 0U);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
 
+    /* ── OpenCL initialisation ──────────────────────────────────────────── */
+
     uint32_t platform_idx = (uint32_t)biosim_params_get_int(&p, "platform-index");
     uint32_t device_idx = (uint32_t)biosim_params_get_int(&p, "device-index");
     returncode = biosim_gpu_runner_create(platform_idx, device_idx, true, &runner);
+    if (returncode != BIOSIM_OK) {
+        goto exit;
+    }
+
+    returncode = biosim_gpu_info_print(&runner, stdout);
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
@@ -179,17 +195,10 @@ int main(int argc, char **argv) {
         goto exit;
     }
 
-    returncode = biosim_gpu_info_print(&runner, stdout);
-    if (returncode != BIOSIM_OK) {
-        goto exit;
-    }
-    if (verbosity >= 1) {
-        (void)fprintf(stdout, "all parameters:\n");
-        biosim_params_dump(&p, stdout);
-    }
-
     uint32_t generations = (uint32_t)biosim_params_get_int(&p, "max-generations");
     uint32_t warmup = (uint32_t)biosim_params_get_int(&p, "warmup");
+
+    /* ── benchmark ───────────────────────────────────────────────────────── */
 
     /* Warm-up generations are not timed (driver JIT, first-touch allocations). */
     (void)fprintf(stdout, "Benchmark warming up ...");
@@ -210,6 +219,8 @@ int main(int argc, char **argv) {
     if (returncode != BIOSIM_OK) {
         goto exit;
     }
+
+    /* ── benchmark report ────────────────────────────────────────────────── */
 
     biosim_gpu_profile_t profile;
     biosim_gpu_pipeline_get_profile(&pipeline, &profile);
