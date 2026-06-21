@@ -36,7 +36,7 @@ static biosim_status_t log_build_info(
     );
 
     /* Log happen here */
-    BIOSIM_INFOF("OpenCL build info:\n%s", log_buf);
+    BIOSIM_WARNF("OpenCL build info:\n%s", log_buf);
 
 exit:
     free(log_buf);

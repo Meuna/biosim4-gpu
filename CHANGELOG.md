@@ -8,6 +8,10 @@
 
 - Add `biosim-gpu-bench`, a developer tool that profiles the GPU pipeline and reports per-kernel time, transfer time, and throughput ([#191](https://github.com/Meuna/biosim4-gpu/pull/191))
 
+#### Changed
+
+- OpenCL compiler info are now logged at the warning level ([gh-142](https://github.com/Meuna/biosim4-gpu/issues/142))
+
 #### Fixed
 
 - Feed each step's freshly computed neuron outputs into the actions, instead of using the previous step's values ([#193](https://github.com/Meuna/biosim4-gpu/pull/193))
