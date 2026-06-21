@@ -51,28 +51,31 @@ describe("RightRail", () => {
         expect(switched).toBe("cell");
     });
 
-    it("renders the simTabActions snippet in the tab bar when provided", () => {
-        const simTabActions = createRawSnippet(() => ({
-            render: () => `<button data-testid="sim-action">go</button>`,
+    it("renders the simDirtyBar snippet on the sim tab when provided", () => {
+        const simDirtyBar = createRawSnippet(() => ({
+            render: () => `<button data-testid="dirty-action">go</button>`,
         }));
-        const { container } = render(RightRail, {
+        render(RightRail, {
             open: true,
             activeTab: "sim",
             hasSelection: false,
             onTabChange: () => {},
-            simTabActions,
+            simDirtyBar,
         });
-        expect(container.querySelector(".rail__tab-actions")).not.toBeNull();
-        expect(screen.getByTestId("sim-action")).toBeTruthy();
+        expect(screen.getByTestId("dirty-action")).toBeTruthy();
     });
 
-    it("omits the tab-actions container when no snippet is provided", () => {
-        const { container } = render(RightRail, {
+    it("omits the simDirtyBar snippet on the cell tab", () => {
+        const simDirtyBar = createRawSnippet(() => ({
+            render: () => `<button data-testid="dirty-action">go</button>`,
+        }));
+        render(RightRail, {
             open: true,
-            activeTab: "sim",
+            activeTab: "cell",
             hasSelection: false,
             onTabChange: () => {},
+            simDirtyBar,
         });
-        expect(container.querySelector(".rail__tab-actions")).toBeNull();
+        expect(screen.queryByTestId("dirty-action")).toBeNull();
     });
 });

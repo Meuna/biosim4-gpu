@@ -10,7 +10,7 @@
     import TelemetryHUD from "./lib/TelemetryHUD.svelte";
     import RightRail from "./lib/RightRail.svelte";
     import SimConfigPanel from "./lib/SimConfigPanel.svelte";
-    import SimTabActions from "./lib/SimTabActions.svelte";
+    import SimDirtyBar from "./lib/SimDirtyBar.svelte";
     import CellPanel from "./lib/CellPanel.svelte";
     import HoverCard from "./lib/HoverCard.svelte";
     import BrainExplorer from "./lib/BrainExplorer.svelte";
@@ -727,8 +727,8 @@
         hasSelection={focus.hasSelection}
         onTabChange={(t) => (activeTab = t)}
     >
-        {#snippet simTabActions()}
-            <SimTabActions
+        {#snippet simDirtyBar()}
+            <SimDirtyBar
                 dirty={machine.dirty}
                 disabled={machine.genomIncompatible || changeDisabled}
                 onRevert={() => machine.revertDraft()}

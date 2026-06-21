@@ -6,7 +6,7 @@
         activeTab,
         hasSelection,
         onTabChange,
-        simTabActions,
+        simDirtyBar,
         sim,
         cell,
     }: {
@@ -14,7 +14,7 @@
         activeTab: "sim" | "cell";
         hasSelection: boolean;
         onTabChange: (t: "sim" | "cell") => void;
-        simTabActions?: Snippet;
+        simDirtyBar?: Snippet;
         sim?: Snippet;
         cell?: Snippet;
     } = $props();
@@ -24,39 +24,38 @@
     <aside class="rail" aria-label="Configuration panel">
         <!-- Tab bar -->
         <div class="rail__tabs" role="tablist">
-            <div class="rail__tab-cell">
-                <button
-                    class="rail__tab"
-                    class:rail__tab--active={activeTab === "sim"}
-                    role="tab"
-                    aria-selected={activeTab === "sim"}
-                    aria-controls="rail-panel-sim"
-                    onclick={() => onTabChange("sim")}
-                >
-                    Simulation
-                </button>
-                {#if simTabActions}
-                    <div class="rail__tab-actions">
-                        {@render simTabActions()}
-                    </div>
+            <button
+                class="rail__tab"
+                class:rail__tab--active={activeTab === "sim"}
+                role="tab"
+                aria-selected={activeTab === "sim"}
+                aria-controls="rail-panel-sim"
+                onclick={() => onTabChange("sim")}
+            >
+                Simulation
+            </button>
+            <button
+                class="rail__tab"
+                class:rail__tab--active={activeTab === "cell"}
+                role="tab"
+                aria-selected={activeTab === "cell"}
+                aria-controls="rail-panel-cell"
+                onclick={() => onTabChange("cell")}
+            >
+                {#if hasSelection}
+                    <span class="pulse-dot" aria-hidden="true"></span>
                 {/if}
-            </div>
-            <div class="rail__tab-cell">
-                <button
-                    class="rail__tab"
-                    class:rail__tab--active={activeTab === "cell"}
-                    role="tab"
-                    aria-selected={activeTab === "cell"}
-                    aria-controls="rail-panel-cell"
-                    onclick={() => onTabChange("cell")}
-                >
-                    {#if hasSelection}
-                        <span class="pulse-dot" aria-hidden="true"></span>
-                    {/if}
-                    Cell
-                </button>
-            </div>
+                Cell
+            </button>
         </div>
+
+        <!-- Dirty-config action bar — sits between the tab bar and the
+             scrollable body so it never scrolls away. Only on the Simulation
+             tab; its dirty-state visibility + slide animation live inside the
+             snippet's component. -->
+        {#if activeTab === "sim" && simDirtyBar}
+            {@render simDirtyBar()}
+        {/if}
 
         <!-- Tab body -->
         <div class="rail__body">
@@ -114,26 +113,13 @@
     /* ── Tab bar ── */
     .rail__tabs {
         display: flex;
-        height: 4rem;
+        height: 3.5rem;
         border-bottom: 1px solid var(--color-border-subtle);
         flex-shrink: 0;
     }
 
-    /* Each tab is a column cell: the switch button sits on the top line so the
-       "Simulation" / "Cell" labels stay aligned, and the Simulation glyph row
-       flows beneath its label. */
-    .rail__tab-cell {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: flex-start;
-        gap: var(--space-1);
-        padding-block-start: var(--space-3);
-        position: relative;
-    }
-
     .rail__tab {
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -150,11 +136,6 @@
         transition: color 0.1s;
     }
 
-    .rail__tab-actions {
-        display: flex;
-        gap: var(--space-2);
-    }
-
     .rail__tab:hover {
         color: var(--color-text);
     }
@@ -164,9 +145,8 @@
         font-weight: 600;
     }
 
-    /* Active underline indicator — anchored to the bottom edge of the tab bar
-       (the cell), not the label button, so it clears the glyph row. */
-    .rail__tab-cell:has(.rail__tab--active)::after {
+    /* Active underline indicator */
+    .rail__tab--active::after {
         content: "";
         position: absolute;
         bottom: 0;

@@ -20,7 +20,7 @@
 
 #### Changed
 
-- Surface the revert, next-generation, and rewind controls in the always-visible Simulation rail tab ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))
+- Surface the revert, next-generation, and rewind controls in a dirty-state action bar that slides open beneath the Simulation rail tab, so the pending-config signal and its commit/revert actions stay visible regardless of panel scroll ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))
 
 ## [1.1.0] - 2026-06-19
 
