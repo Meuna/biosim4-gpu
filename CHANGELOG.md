@@ -24,7 +24,7 @@
 
 #### Changed
 
-- Surface the revert, next-generation, and rewind controls in a dirty-state action bar that slides open beneath the Simulation rail tab ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))
+- Surface the revert and rewind controls in a dirty-state action bar that slides open beneath the Simulation rail tab ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))
 
 ## [1.1.0] - 2026-06-19
 

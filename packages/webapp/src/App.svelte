@@ -784,7 +784,6 @@
                 dirty={machine.dirty}
                 disabled={machine.genomIncompatible || changeDisabled}
                 onRevert={() => machine.revertDraft()}
-                onNextGen={handleNextGen}
                 onRewind={handleRewind}
             />
         {/snippet}

@@ -1,22 +1,20 @@
 <script lang="ts">
     // SimDirtyBar — a dirty-state action bar that slides open beneath the
     // Simulation rail tab (outside the scrollable body, so it never scrolls
-    // away). It pairs the two ways to commit a dirty draft — "save" via next-gen
-    // (Baby) or rewind (History) — with "revert" (Undo2) to discard it.
+    // away). It pairs the rewind (History) way to commit a dirty draft with
+    // "revert" (Undo2) to discard it.
     import { slide } from "svelte/transition";
-    import { Undo2, Baby, History } from "lucide-svelte";
+    import { Undo2, History } from "lucide-svelte";
 
     let {
         dirty,
         disabled,
         onRevert,
-        onNextGen,
         onRewind,
     }: {
         dirty: boolean;
         disabled: boolean;
         onRevert: () => void;
-        onNextGen: (autoPlay: boolean) => void;
         onRewind: (autoPlay: boolean) => void;
     } = $props();
 
@@ -37,21 +35,13 @@
         transition:slide={{ duration: slideDuration }}
     >
         <div class="dirty-bar__group">
-            <span class="dirty-bar__label" aria-hidden="true">save</span>
-            <button
-                class="button button--utility"
-                {disabled}
-                onclick={(e) => onNextGen(e.ctrlKey)}
-                aria-label="Advance one generation (Ctrl+click to auto play)"
-            >
-                <Baby size={14} />
-            </button>
             <button
                 class="button button--utility"
                 {disabled}
                 onclick={(e) => onRewind(e.ctrlKey)}
                 aria-label="Rewind: reproduce from last survivors (Ctrl+click to auto play)"
             >
+                <span class="dirty-bar__label" aria-hidden="true">save</span>
                 <History size={14} />
             </button>
         </div>
