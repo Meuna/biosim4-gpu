@@ -20,7 +20,7 @@ const PRESETS = [
 ];
 
 describe("PresetSelector", () => {
-    it("shows the selected preset name", () => {
+    it("reflects the selected preset in the select value", () => {
         render(PresetSelector, {
             props: {
                 presets: PRESETS,
@@ -28,11 +28,11 @@ describe("PresetSelector", () => {
                 onSelect: vi.fn(),
             },
         });
-        expect(screen.getByRole("button", { expanded: false })).toBeTruthy();
-        expect(screen.getByText("Corners")).toBeTruthy();
+        const select = screen.getByRole("combobox") as HTMLSelectElement;
+        expect(select.value).toBe("corners");
     });
 
-    it("opens the list on click and lists every preset", async () => {
+    it("lists every preset as a plain-text option", () => {
         render(PresetSelector, {
             props: {
                 presets: PRESETS,
@@ -40,8 +40,6 @@ describe("PresetSelector", () => {
                 onSelect: vi.fn(),
             },
         });
-        expect(screen.queryByRole("listbox")).toBeNull();
-        await fireEvent.click(screen.getByRole("button", { expanded: false }));
         const options = screen.getAllByRole("option");
         expect(options.map((o) => o.textContent?.trim())).toEqual([
             "Default",
@@ -50,38 +48,20 @@ describe("PresetSelector", () => {
         ]);
     });
 
-    it("marks the selected option and calls onSelect with the chosen preset", async () => {
+    it("calls onSelect with the chosen preset on change", async () => {
         const onSelect = vi.fn();
         render(PresetSelector, {
             props: { presets: PRESETS, selectedId: "default", onSelect },
         });
-        await fireEvent.click(screen.getByRole("button", { expanded: false }));
-        const corners = screen
-            .getAllByRole("option")
-            .find((o) => o.textContent?.includes("Corners"))!;
-        await fireEvent.click(corners.querySelector("button")!);
+        await fireEvent.change(screen.getByRole("combobox"), {
+            target: { value: "corners" },
+        });
         expect(onSelect).toHaveBeenCalledWith(
             expect.objectContaining({ id: "corners" }),
         );
-        // The menu closes after a selection.
-        expect(screen.queryByRole("listbox")).toBeNull();
     });
 
-    it("closes on Escape", async () => {
-        render(PresetSelector, {
-            props: {
-                presets: PRESETS,
-                selectedId: "default",
-                onSelect: vi.fn(),
-            },
-        });
-        await fireEvent.click(screen.getByRole("button", { expanded: false }));
-        expect(screen.getByRole("listbox")).toBeTruthy();
-        await fireEvent.keyDown(window, { key: "Escape" });
-        expect(screen.queryByRole("listbox")).toBeNull();
-    });
-
-    it("disables the trigger when disabled", () => {
+    it("disables the select when disabled", () => {
         render(PresetSelector, {
             props: {
                 presets: PRESETS,
@@ -90,8 +70,26 @@ describe("PresetSelector", () => {
                 onSelect: vi.fn(),
             },
         });
-        expect((screen.getByRole("button") as HTMLButtonElement).disabled).toBe(
-            true,
-        );
+        expect(
+            (screen.getByRole("combobox") as HTMLSelectElement).disabled,
+        ).toBe(true);
+    });
+
+    it("shows the DNA glyph only when the selected preset has a snapshot", () => {
+        const { container, rerender } = render(PresetSelector, {
+            props: {
+                presets: PRESETS,
+                selectedId: "default",
+                onSelect: vi.fn(),
+            },
+        });
+        expect(container.querySelector(".preset__dna")).toBeNull();
+
+        rerender({
+            presets: PRESETS,
+            selectedId: "evolved",
+            onSelect: vi.fn(),
+        });
+        expect(container.querySelector(".preset__dna")).not.toBeNull();
     });
 });
