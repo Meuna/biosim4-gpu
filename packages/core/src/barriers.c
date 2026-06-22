@@ -9,51 +9,17 @@
 
 /*
  * Default ratios substituted for omitted (BIOSIM_BARRIER_*_UNSET) fields. The
- * position default centres the barrier; the per-kind dimension defaults sit
- * near the middle of each shape's useful range and scale with the grid via the
- * same ratio_to_dim path the explicit values use.
+ * position default centres the barrier; the dimension defaults are shared by
+ * every kind and scale with the grid via the same ratio_to_dim path the
+ * explicit values use (width is ignored where the shape has none).
  */
-#define DEFAULT_BARRIER_POS   (0.5F)
-#define DEFAULT_BAR_LENGTH    (0.375F)
-#define DEFAULT_BAR_WIDTH     (0.03F)
-#define DEFAULT_SQUARE_SIDE   (0.1875F)
-#define DEFAULT_CIRCLE_RADIUS (0.10F)
-#define DEFAULT_CORNER_LENGTH (0.1875F)
-#define DEFAULT_CORNER_WIDTH  (0.03F)
-
-/* Per-kind dimension defaults. width is ignored where the shape has none. */
-static void kind_dim_defaults(biosim_barrier_kind_t kind, float *length, float *width) {
-    switch (kind) {
-    case BIOSIM_BARRIER_HBAR:
-    case BIOSIM_BARRIER_VBAR:
-        *length = DEFAULT_BAR_LENGTH;
-        *width = DEFAULT_BAR_WIDTH;
-        break;
-    case BIOSIM_BARRIER_SQUARE:
-        *length = DEFAULT_SQUARE_SIDE;
-        *width = DEFAULT_BAR_WIDTH;
-        break;
-    case BIOSIM_BARRIER_CIRCLE:
-        *length = DEFAULT_CIRCLE_RADIUS;
-        *width = DEFAULT_BAR_WIDTH;
-        break;
-    case BIOSIM_BARRIER_CORNER:
-        *length = DEFAULT_CORNER_LENGTH;
-        *width = DEFAULT_CORNER_WIDTH;
-        break;
-    default:
-        *length = DEFAULT_BAR_LENGTH;
-        *width = DEFAULT_BAR_WIDTH;
-        break;
-    }
-}
+#define DEFAULT_BARRIER_POS    (0.5F)
+#define DEFAULT_BARRIER_LENGTH (0.25F)
+#define DEFAULT_BARRIER_WIDTH  (0.02F)
 
 /* Return a copy of spec with every omitted field replaced by its default. */
 static biosim_barrier_spec_t resolve_defaults(const biosim_barrier_spec_t *spec) {
     biosim_barrier_spec_t out = *spec;
-    float default_length = 0.0F;
-    float default_width = 0.0F;
-    kind_dim_defaults(spec->kind, &default_length, &default_width);
 
     if (out.x == BIOSIM_BARRIER_POS_UNSET) {
         out.x = DEFAULT_BARRIER_POS;
@@ -62,10 +28,10 @@ static biosim_barrier_spec_t resolve_defaults(const biosim_barrier_spec_t *spec)
         out.y = DEFAULT_BARRIER_POS;
     }
     if (out.length == BIOSIM_BARRIER_DIM_UNSET) {
-        out.length = default_length;
+        out.length = DEFAULT_BARRIER_LENGTH;
     }
     if (out.width == BIOSIM_BARRIER_DIM_UNSET) {
-        out.width = default_width;
+        out.width = DEFAULT_BARRIER_WIDTH;
     }
     return out;
 }

@@ -158,9 +158,9 @@ void test_corner_quadrants(void) {
 
 /* ── default placement (omitted fields) ─────────────────────────────────── */
 
-/* An all-UNSET hbar resolves to centre (0.5, 0.5), length 0.375, width 0.03.
- * On the 64×64 grid that is centre (32,32), len=24 (half 12), width=1 (half 0):
- * a single row 32, cols 20..44. */
+/* An all-UNSET hbar resolves to centre (0.5, 0.5), length 0.25, width 0.02.
+ * On the 64×64 grid that is centre (32,32), len=16 (half 8), width=1 (half 0):
+ * a single row 32, cols 24..40. */
 void test_default_hbar(void) {
     biosim_barrier_spec_t spec = {
         BIOSIM_BARRIER_HBAR,
@@ -171,18 +171,18 @@ void test_default_hbar(void) {
     };
     biosim_barriers_place(&g, &spec, 1, NULL);
 
-    for (int16_t x = 20; x <= 44; x++) {
+    for (int16_t x = 24; x <= 40; x++) {
         TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(x, 32)));
     }
     /* Just past each end of the bar, and off its single-row thickness, is empty. */
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(19, 32)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(45, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(23, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(41, 32)));
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 31)));
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 33)));
 }
 
-/* An all-UNSET corner resolves to junction (32,32), arm length 0.1875 → 12.
- * NE extends +x and -y, so tips land at (44,32) and (32,20). */
+/* An all-UNSET corner resolves to junction (32,32), arm length 0.25 → 16.
+ * NE extends +x and -y, so tips land at (48,32) and (32,16). */
 void test_default_corner(void) {
     biosim_barrier_spec_t spec = {
         BIOSIM_BARRIER_CORNER,
@@ -195,14 +195,14 @@ void test_default_corner(void) {
     biosim_barriers_place(&g, &spec, 1, NULL);
 
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 32)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(44, 32)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 20)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(48, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 16)));
     /* Arms do not extend the opposite way. */
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(20, 32)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 44)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(16, 32)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 48)));
 }
 
-/* An all-UNSET circle resolves to centre (32,32), radius 0.10 → 6 cells. */
+/* An all-UNSET circle resolves to centre (32,32), radius 0.25 → 16 cells. */
 void test_default_circle(void) {
     biosim_barrier_spec_t spec = {
         BIOSIM_BARRIER_CIRCLE,
@@ -214,9 +214,9 @@ void test_default_circle(void) {
     biosim_barriers_place(&g, &spec, 1, NULL);
 
     TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_BARRIER, biosim_grid_at(&g, coord(32, 32)));
-    /* Cells well beyond radius 6 are empty. */
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 24)));
-    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 40)));
+    /* Cells well beyond radius 16 are empty. */
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 8)));
+    TEST_ASSERT_EQUAL_UINT16(BIOSIM_GRID_EMPTY, biosim_grid_at(&g, coord(32, 56)));
 }
 
 void test_empty_spec_list(void) {

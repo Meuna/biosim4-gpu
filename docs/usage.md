@@ -332,8 +332,8 @@ num-barriers = 2
 kind   = "hbar"    # required: hbar | vbar | square | circle | corner
 x      = 0.5       # centre x (grid ratio 0..1); omit for default (centred)
 y      = 0.25      # centre y (grid ratio 0..1); omit for default (centred)
-length = 0.3       # extent along bar axis (ratio); omit for the per-kind default
-width  = 0.02      # thickness perpendicular to bar axis (ratio); omit for the per-kind default
+length = 0.3       # extent along bar axis (ratio); omit for the default (0.25)
+width  = 0.02      # thickness perpendicular to bar axis (ratio); omit for the default (0.02)
 
 [barrier-2]
 kind   = "circle"
@@ -376,6 +376,6 @@ axis (`min(W, H)`). They resolve to cells against the target grid; out-of-bounds
 cells are clipped silently.
 
 When position or dimension is omitted it resolves to a fixed default: the
-barrier is centred (ratio `0.5`) and each shape uses a per-kind default size.
-Placement is fully deterministic — omitted fields give the same layout every
-run.
+barrier is centred (ratio `0.5`), `length` defaults to `0.25`, and `width`
+defaults to `0.02` (shared by every kind). Placement is fully deterministic —
+omitted fields give the same layout every run.
