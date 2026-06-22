@@ -61,6 +61,41 @@ describe("PresetSelector", () => {
         );
     });
 
+    it("re-applies the already-selected preset when it is re-picked", async () => {
+        const onSelect = vi.fn();
+        render(PresetSelector, {
+            props: { presets: PRESETS, selectedId: "corners", onSelect },
+        });
+        const select = screen.getByRole("combobox") as HTMLSelectElement;
+        // Opening the picker blanks the value so re-picking the current option
+        // still fires change (a native select is otherwise silent here).
+        await fireEvent.pointerDown(select);
+        expect(select.value).toBe("");
+        await fireEvent.change(select, { target: { value: "corners" } });
+        expect(onSelect).toHaveBeenCalledWith(
+            expect.objectContaining({ id: "corners" }),
+        );
+    });
+
+    it("restores the title when the picker is dismissed without a pick", async () => {
+        render(PresetSelector, {
+            props: {
+                presets: PRESETS,
+                selectedId: "corners",
+                onSelect: vi.fn(),
+            },
+        });
+        const select = screen.getByRole("combobox") as HTMLSelectElement;
+
+        await fireEvent.pointerDown(select);
+        await fireEvent.blur(select);
+        expect(select.value).toBe("corners");
+
+        await fireEvent.pointerDown(select);
+        await fireEvent.keyDown(select, { key: "Escape" });
+        expect(select.value).toBe("corners");
+    });
+
     it("disables the select when disabled", () => {
         render(PresetSelector, {
             props: {

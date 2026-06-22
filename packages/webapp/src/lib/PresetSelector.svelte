@@ -25,6 +25,26 @@
         const preset = presets.find((p) => p.id === id);
         if (preset) onSelect(preset);
     }
+
+    // A native <select> fires no change event when the user re-picks the
+    // already-selected option, so selecting a preset that is already current
+    // would not re-apply it. Clear the value as the picker opens; any pick —
+    // even the previously-selected id — then differs from "" and fires change.
+    function openPicker(event: Event): void {
+        (event.currentTarget as HTMLSelectElement).value = "";
+    }
+
+    // Restore the displayed value if the picker is dismissed without a pick, so
+    // the blanked value never lingers as an empty title.
+    function restore(event: Event): void {
+        (event.currentTarget as HTMLSelectElement).value = selectedId;
+    }
+
+    // Escape closes the picker without firing change and (on desktop) without
+    // firing blur, since focus stays on the select — restore the value here.
+    function onKey(event: KeyboardEvent): void {
+        if (event.key === "Escape") restore(event);
+    }
 </script>
 
 <div class="preset" class:preset--snapshot={selectedHasSnapshot}>
@@ -34,6 +54,9 @@
         {disabled}
         value={selectedId}
         onchange={choose}
+        onpointerdown={openPicker}
+        onblur={restore}
+        onkeydown={onKey}
         aria-label="Simulation preset"
     >
         {#each presets as p (p.id)}
