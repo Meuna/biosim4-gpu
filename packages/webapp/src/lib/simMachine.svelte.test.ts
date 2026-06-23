@@ -81,9 +81,11 @@ describe("onWorkerReady", () => {
         expect(sent).toEqual([{ type: "configure", params }]);
         expect(m.phase).toBe("WORKER_READY");
         expect(m.dirty).toBe(false);
-        // The configured reply commits the seed and lands the spawned generation.
+        // The configured reply commits the seed but leaves the machine in
+        // WORKER_READY so the idle overlay persists on handhelds, matching the
+        // desktop path which sends no configure (gh-199).
         m.onConfigured();
-        expect(m.phase).toBe("GENERATION_SPAWNED");
+        expect(m.phase).toBe("WORKER_READY");
         expect(m.dirty).toBe(false);
     });
 });
@@ -99,7 +101,12 @@ describe("toggle", () => {
 
     it("plays from GENERATION_SPAWNED and STEPS_PAUSED when clean", () => {
         for (const setup of [
-            (m: SimMachine) => m.onConfigured(), // -> GENERATION_SPAWNED
+            (m: SimMachine) => {
+                // WORKER_READY -> ... -> GENERATION_SPAWNED
+                m.toggle();
+                m.onGenComplete();
+                m.nextGen(false);
+            },
             (m: SimMachine) => m.step(), // WORKER_READY -> STEPS_PAUSED
         ]) {
             const { m, sent } = create();
@@ -508,7 +515,15 @@ describe("snapshots", () => {
         for (const [setup, rewindFirst] of [
             [(m: SimMachine) => m.toggle(), true], // STEPS_RUNNING
             [(m: SimMachine) => m.step(), true], // STEPS_PAUSED
-            [(m: SimMachine) => m.onConfigured(), false], // GENERATION_SPAWNED
+            [
+                (m: SimMachine) => {
+                    // -> GENERATION_SPAWNED
+                    m.toggle();
+                    m.onGenComplete();
+                    m.nextGen(false);
+                },
+                false,
+            ],
         ] as const) {
             const { m, sent } = create();
             m.onWorkerReady();

@@ -268,13 +268,13 @@ export class SimMachine {
         this.#phase = "WORKER_READY";
         // Reconcile the WASM sim (booted with DEFAULTS) to the seeded config
         // when it diverges, so the running sim matches the panel from the start.
-        // Mirrors the dirty-toggle path: send configure, stay WORKER_READY until
-        // onConfigured() commits the (already-equal) draft and lands in
-        // GENERATION_SPAWNED — without marking the draft dirty. Benign race: a
-        // play/step click in the sub-frame window before that reply would set
-        // STEPS_RUNNING/PAUSED then be overwritten to GENERATION_SPAWNED (UI
-        // mislabel only; the sim runs the right config). The window is the
-        // instant controls first enable at load — not humanly clickable.
+        // Send configure and stay WORKER_READY: onConfigured() commits the
+        // (already-equal) draft without marking it dirty and leaves the phase in
+        // WORKER_READY, so the idle overlay persists exactly as on the desktop
+        // path (which sends no configure). Benign race: a play/step click in the
+        // sub-frame window before that reply sets STEPS_RUNNING/PAUSED, which
+        // onConfigured() preserves. The window is the instant controls first
+        // enable at load — not humanly clickable.
         if (this.#needsInitialConfigure) {
             this.#pendingConfig = this.#snapshotDraft();
             this.#send({ type: "configure", params: this.#pendingConfig });
@@ -282,14 +282,21 @@ export class SimMachine {
     }
 
     onConfigured(): void {
-        this.#phase = "GENERATION_SPAWNED";
         this.#commitPendingConfig();
         this.#resetGenomeRequired();
         if (this.#pendingPlay) {
             this.#pendingPlay = false;
             this.#phase = "STEPS_RUNNING";
             this.#send({ type: "play" });
+            return;
         }
+        // No pending play means this is the initial reconcile-configure (the
+        // only other configure sender, toggle(), always sets #pendingPlay). The
+        // machine is already in WORKER_READY; leave it there so the idle overlay
+        // persists, matching the desktop path which sends no configure. Do NOT
+        // force WORKER_READY here — a play/step click in the sub-frame window
+        // before this reply (the benign race noted in onWorkerReady) may have
+        // already advanced the phase, and that raced phase must be preserved.
     }
 
     onGenComplete(): void {
