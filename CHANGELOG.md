@@ -26,6 +26,7 @@
 #### Changed
 
 - Surface the revert and rewind controls in a dirty-state action bar that slides open beneath the Simulation rail tab ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))
+- Move the generation counter above the survival sparkline and show the per-generation kill count instead of the population in the telemetry box ([#203](https://github.com/Meuna/biosim4-gpu/pull/203))
 
 #### Fixed
 
