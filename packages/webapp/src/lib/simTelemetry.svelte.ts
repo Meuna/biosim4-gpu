@@ -27,6 +27,7 @@ export class SimTelemetry {
     #gen = $state(0);
     #step = $state(0);
     #pop = $state(3000);
+    #kills = $state(0);
     #survivalHistory = $state<number[]>([]);
 
     // Running aggregates over the full survival history, folded in O(1) per
@@ -58,6 +59,10 @@ export class SimTelemetry {
 
     get pop(): number {
         return this.#pop;
+    }
+
+    get kills(): number {
+        return this.#kills;
     }
 
     get survivalHistory(): number[] {
@@ -123,9 +128,15 @@ export class SimTelemetry {
         this.#step = e.step;
     }
 
-    onCensus(e: { gen: number; population: number; survivors: number }): void {
+    onCensus(e: {
+        gen: number;
+        population: number;
+        survivors: number;
+        kills: number;
+    }): void {
         this.#gen = e.gen;
         this.#pop = e.population;
+        this.#kills = e.kills;
         this.#pushSurvival(e.survivors, e.population);
         this.#snapReady = true;
     }
@@ -135,6 +146,7 @@ export class SimTelemetry {
         this.#step = 0;
         this.#resetSurvival();
         this.#pop = e.population;
+        this.#kills = 0;
         this.#gridSizeX = e.gridSizeX;
         this.#gridSizeY = e.gridSizeY;
         this.#stepsPerGen = e.stepsPerGen;
@@ -145,6 +157,7 @@ export class SimTelemetry {
         this.#gen = e.gen;
         this.#step = 0;
         this.#pop = e.population;
+        this.#kills = 0;
         this.#gridSizeX = e.gridSizeX;
         this.#gridSizeY = e.gridSizeY;
         this.#stepsPerGen = e.stepsPerGen;
@@ -156,11 +169,13 @@ export class SimTelemetry {
             gen: number;
             censusPopulation: number;
             survivors: number;
+            kills: number;
         },
     ): void {
         this.#gen = e.gen;
         this.#step = 0;
         this.#pop = e.population;
+        this.#kills = e.kills;
         this.#gridSizeX = e.gridSizeX;
         this.#gridSizeY = e.gridSizeY;
         this.#stepsPerGen = e.stepsPerGen;
@@ -174,6 +189,7 @@ export class SimTelemetry {
         this.#gen = e.gen;
         this.#step = 0;
         this.#pop = e.population;
+        this.#kills = 0;
         this.#snapReady = true;
         this.#resetSurvival();
     }

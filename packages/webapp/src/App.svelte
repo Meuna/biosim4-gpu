@@ -741,16 +741,16 @@
                 geom={gridGeom}
                 placement={telemetryPlacement}
                 phase={machine.phase}
-                gen={telemetry.gen}
                 step={telemetry.step}
                 stepsPerGen={telemetry.stepsPerGen}
-                pop={telemetry.pop}
+                kills={telemetry.kills}
                 fps={measuredFps}
             />
         {/if}
 
         <!-- z-index: 15 — survival sparkline, bottom-left -->
         <SurvivalSparkline
+            gen={telemetry.gen}
             survivalHistory={telemetry.survivalHistory}
             min={telemetry.survivalMin}
             current={telemetry.survivalCurrent}

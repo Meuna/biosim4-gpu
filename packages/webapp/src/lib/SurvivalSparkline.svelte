@@ -4,6 +4,7 @@
     const DOT_SPACING = 7;
 
     let {
+        gen,
         survivalHistory,
         min,
         current,
@@ -11,6 +12,7 @@
         left,
         maxWidth,
     }: {
+        gen: number;
         survivalHistory: number[];
         min: number | null;
         current: number | null;
@@ -18,6 +20,10 @@
         left: number;
         maxWidth: number;
     } = $props();
+
+    function pad3(n: number): string {
+        return n.toString().padStart(3, "0");
+    }
 
     // Sparkline width grows one DOT_SPACING per generation, then clamps to the
     // grid-shared max width — so the dots fan out to the right while there is
@@ -66,6 +72,9 @@
     style="left: {left}px; max-width: {maxWidth}px"
     aria-label="Survival history"
 >
+    <p class="hud__readout small-caps">
+        gen <span class="hud__stat hud__stat--now">{pad3(gen)}</span>
+    </p>
     <p class="hud__readout small-caps">
         survival
         <span class="hud__stat">min {pct(min)}</span>

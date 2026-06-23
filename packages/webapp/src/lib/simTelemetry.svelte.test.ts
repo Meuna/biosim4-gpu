@@ -15,6 +15,7 @@ describe("initial state", () => {
         expect(t.gen).toBe(0);
         expect(t.step).toBe(0);
         expect(t.pop).toBe(3000);
+        expect(t.kills).toBe(0);
         expect(history(t)).toEqual([]);
         expect(t.survivalMin).toBeNull();
         expect(t.survivalCurrent).toBeNull();
@@ -36,25 +37,26 @@ describe("onStepped", () => {
 });
 
 describe("onCensus", () => {
-    it("updates gen/pop, appends survival rate, and arms snapReady", () => {
+    it("updates gen/pop/kills, appends survival rate, and arms snapReady", () => {
         const t = create();
-        t.onCensus({ gen: 5, population: 200, survivors: 50 });
+        t.onCensus({ gen: 5, population: 200, survivors: 50, kills: 12 });
         expect(t.gen).toBe(5);
         expect(t.pop).toBe(200);
+        expect(t.kills).toBe(12);
         expect(history(t)).toEqual([0.25]);
         expect(t.snapReady).toBe(true);
     });
 
     it("guards a zero population with a 0 rate", () => {
         const t = create();
-        t.onCensus({ gen: 1, population: 0, survivors: 0 });
+        t.onCensus({ gen: 1, population: 0, survivors: 0, kills: 0 });
         expect(history(t)).toEqual([0]);
     });
 
     it("keeps the full history without a sliding-window cap", () => {
         const t = create();
         for (let i = 0; i < 15; i++)
-            t.onCensus({ gen: i, population: 100, survivors: i });
+            t.onCensus({ gen: i, population: 100, survivors: i, kills: 0 });
         const h = history(t);
         expect(h).toHaveLength(15);
         expect(h[0]).toBeCloseTo(0);
@@ -63,10 +65,10 @@ describe("onCensus", () => {
 
     it("folds running min/current/max over the full history", () => {
         const t = create();
-        t.onCensus({ gen: 0, population: 100, survivors: 50 }); // 0.5
-        t.onCensus({ gen: 1, population: 100, survivors: 20 }); // 0.2
-        t.onCensus({ gen: 2, population: 100, survivors: 80 }); // 0.8
-        t.onCensus({ gen: 3, population: 100, survivors: 40 }); // 0.4
+        t.onCensus({ gen: 0, population: 100, survivors: 50, kills: 0 }); // 0.5
+        t.onCensus({ gen: 1, population: 100, survivors: 20, kills: 0 }); // 0.2
+        t.onCensus({ gen: 2, population: 100, survivors: 80, kills: 0 }); // 0.8
+        t.onCensus({ gen: 3, population: 100, survivors: 40, kills: 0 }); // 0.4
         expect(t.survivalMin).toBeCloseTo(0.2);
         expect(t.survivalMax).toBeCloseTo(0.8);
         expect(t.survivalCurrent).toBeCloseTo(0.4);
@@ -74,9 +76,9 @@ describe("onCensus", () => {
 });
 
 describe("onConfigured", () => {
-    it("resets counters/history and disarms snapReady", () => {
+    it("resets counters/kills/history and disarms snapReady", () => {
         const t = create();
-        t.onCensus({ gen: 9, population: 100, survivors: 80 }); // dirty first
+        t.onCensus({ gen: 9, population: 100, survivors: 80, kills: 7 }); // dirty first
         t.onConfigured({
             population: 1500,
             gridSizeX: 64,
@@ -85,6 +87,7 @@ describe("onConfigured", () => {
         });
         expect(t.gen).toBe(0);
         expect(t.step).toBe(0);
+        expect(t.kills).toBe(0);
         expect(history(t)).toEqual([]);
         expect(t.survivalMin).toBeNull();
         expect(t.survivalCurrent).toBeNull();
@@ -98,9 +101,9 @@ describe("onConfigured", () => {
 });
 
 describe("onRewindConfigured", () => {
-    it("sets gen/pop/grid, resets step and history", () => {
+    it("sets gen/pop/grid, resets step/kills and history", () => {
         const t = create();
-        t.onConfigured(1500, 64, 96, 250);
+        t.onCensus({ gen: 9, population: 100, survivors: 80, kills: 7 }); // dirty kills first
         t.onStepped({ step: 120 });
         t.onRewindConfigured({
             gen: 3,
@@ -111,6 +114,7 @@ describe("onRewindConfigured", () => {
         });
         expect(t.gen).toBe(3);
         expect(t.step).toBe(0);
+        expect(t.kills).toBe(0);
         expect(t.pop).toBe(2000);
         expect(t.gridSizeX).toBe(32);
         expect(t.gridSizeY).toBe(48);
@@ -123,7 +127,7 @@ describe("onRewindConfigured", () => {
 
     it("leaves snapReady untouched (preserves prior value)", () => {
         const t = create();
-        t.onCensus({ gen: 2, population: 100, survivors: 50 }); // arms snapReady
+        t.onCensus({ gen: 2, population: 100, survivors: 50, kills: 0 }); // arms snapReady
         t.onRewindConfigured({
             gen: 1,
             population: 100,
@@ -146,10 +150,12 @@ describe("onNextGenerationConfigured", () => {
             stepsPerGen: 300,
             censusPopulation: 160,
             survivors: 40,
+            kills: 9,
         });
         expect(t.gen).toBe(4);
         expect(t.step).toBe(0);
         expect(t.pop).toBe(3000);
+        expect(t.kills).toBe(9);
         expect(history(t)).toEqual([0.25]);
         expect(t.snapReady).toBe(true);
     });
@@ -164,13 +170,14 @@ describe("onNextGenerationConfigured", () => {
             stepsPerGen: 300,
             censusPopulation: 0,
             survivors: 0,
+            kills: 0,
         });
         expect(history(t)).toEqual([0]);
     });
 });
 
 describe("onSnapshotLoaded", () => {
-    it("sets gen/pop, arms snapReady, clears history, keeps grid/steps", () => {
+    it("sets gen/pop, resets kills, arms snapReady, clears history, keeps grid/steps", () => {
         const t = create();
         t.onConfigured({
             population: 1000,
@@ -178,11 +185,12 @@ describe("onSnapshotLoaded", () => {
             gridSizeY: 80,
             stepsPerGen: 500,
         });
-        t.onCensus({ gen: 9, population: 100, survivors: 80 });
+        t.onCensus({ gen: 9, population: 100, survivors: 80, kills: 7 });
         t.onSnapshotLoaded({ gen: 7, population: 1200 });
         expect(t.gen).toBe(7);
         expect(t.step).toBe(0);
         expect(t.pop).toBe(1200);
+        expect(t.kills).toBe(0);
         // Import affects only the population — grid/steps keep their live values.
         expect(t.gridSizeX).toBe(80);
         expect(t.gridSizeY).toBe(80);
@@ -199,7 +207,7 @@ describe("resetStep", () => {
     it("zeroes only the step counter", () => {
         const t = create();
         t.onStepped({ step: 88 });
-        t.onCensus({ gen: 3, population: 100, survivors: 50 });
+        t.onCensus({ gen: 3, population: 100, survivors: 50, kills: 0 });
         t.resetStep();
         expect(t.step).toBe(0);
         expect(t.gen).toBe(3);

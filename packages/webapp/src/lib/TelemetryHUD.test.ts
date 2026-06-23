@@ -8,10 +8,9 @@ describe("TelemetryHUD", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
             phase: "STEPS_PAUSED" as const,
-            gen: 0,
             step: 0,
             stepsPerGen: 300,
-            pop: 0,
+            kills: 0,
         });
         expect(screen.getByLabelText("Simulation telemetry")).toBeTruthy();
     });
@@ -20,38 +19,44 @@ describe("TelemetryHUD", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
             phase: "STEPS_PAUSED" as const,
-            gen: 0,
             step: 0,
             stepsPerGen: 300,
-            pop: 2048,
+            kills: 2048,
         });
-        expect(screen.getByText("gen")).toBeTruthy();
         expect(screen.getByText("step")).toBeTruthy();
-        expect(screen.getByText("pop")).toBeTruthy();
+        expect(screen.getByText("kills")).toBeTruthy();
         expect(screen.getByText("fps")).toBeTruthy();
     });
 
-    it("shows zero-padded gen and step values", () => {
+    it("shows the zero-padded step value", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
             phase: "STEPS_PAUSED" as const,
-            gen: 7,
             step: 42,
             stepsPerGen: 300,
-            pop: 2048,
+            kills: 2048,
         });
-        expect(screen.getByText("007")).toBeTruthy();
         expect(screen.getByText("042")).toBeTruthy();
+    });
+
+    it("shows the kill count", () => {
+        render(TelemetryHUD, {
+            geom: defaultGeom,
+            phase: "STEPS_PAUSED" as const,
+            step: 0,
+            stepsPerGen: 300,
+            kills: 777,
+        });
+        expect(screen.getByText("777")).toBeTruthy();
     });
 
     it("shows -- for fps when not running", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
             phase: "STEPS_PAUSED" as const,
-            gen: 0,
             step: 0,
             stepsPerGen: 300,
-            pop: 0,
+            kills: 0,
         });
         expect(screen.getByText("--")).toBeTruthy();
     });
@@ -60,10 +65,9 @@ describe("TelemetryHUD", () => {
         render(TelemetryHUD, {
             geom: defaultGeom,
             phase: "STEPS_RUNNING" as const,
-            gen: 0,
             step: 0,
             stepsPerGen: 300,
-            pop: 0,
+            kills: 0,
             fps: 30,
         });
         expect(screen.getByText("30")).toBeTruthy();
@@ -73,10 +77,9 @@ describe("TelemetryHUD", () => {
         const { container } = render(TelemetryHUD, {
             geom: defaultGeom,
             phase: "STEPS_PAUSED" as const,
-            gen: 0,
             step: 0,
             stepsPerGen: 300,
-            pop: 0,
+            kills: 0,
         });
         const aside = container.querySelector(".telemetry") as HTMLElement;
         expect(aside.classList.contains("telemetry--below")).toBe(false);
@@ -90,10 +93,9 @@ describe("TelemetryHUD", () => {
             geom: defaultGeom,
             placement: "below" as const,
             phase: "STEPS_PAUSED" as const,
-            gen: 0,
             step: 0,
             stepsPerGen: 300,
-            pop: 0,
+            kills: 0,
         });
         const aside = container.querySelector(".telemetry") as HTMLElement;
         expect(aside.classList.contains("telemetry--below")).toBe(true);

@@ -5,10 +5,9 @@
         geom,
         placement = "right",
         phase,
-        gen,
         step,
         stepsPerGen,
-        pop,
+        kills,
         fps = null,
     }: {
         geom: {
@@ -21,10 +20,9 @@
         };
         placement?: "right" | "below";
         phase: SimPhase;
-        gen: number;
         step: number;
         stepsPerGen: number;
-        pop: number;
+        kills: number;
         fps?: number | null;
     } = $props();
 
@@ -34,7 +32,7 @@
         return n.toString().padStart(3, "0");
     }
 
-    function fmtPop(n: number): string {
+    function fmtKills(n: number): string {
         return n.toLocaleString("fr-FR");
     }
 </script>
@@ -50,16 +48,13 @@
     <p class="telemetry__header small-caps">Telemetry</p>
 
     <dl class="telemetry__stats">
-        <dt class="telemetry__key">gen</dt>
-        <dd class="telemetry__val">{pad3(gen)}</dd>
-
         <dt class="telemetry__key">step</dt>
         <dd class="telemetry__val">
             {pad3(step)}<span class="telemetry__total">/{stepsPerGen}</span>
         </dd>
 
-        <dt class="telemetry__key">pop</dt>
-        <dd class="telemetry__val">{fmtPop(pop)}</dd>
+        <dt class="telemetry__key">kills</dt>
+        <dd class="telemetry__val">{fmtKills(kills)}</dd>
 
         <dt class="telemetry__key">fps</dt>
         <dd class="telemetry__val" class:telemetry__val--accent={running}>

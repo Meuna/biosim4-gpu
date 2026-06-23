@@ -1,7 +1,14 @@
 import { render, screen } from "@testing-library/svelte";
 import SurvivalSparkline from "./SurvivalSparkline.svelte";
 
-const base = { min: 0.2, current: 0.7, max: 0.8, left: 80, maxWidth: 600 };
+const base = {
+    gen: 0,
+    min: 0.2,
+    current: 0.7,
+    max: 0.8,
+    left: 80,
+    maxWidth: 600,
+};
 
 describe("SurvivalSparkline", () => {
     it("renders the sparkline SVG when survival history has entries", () => {
@@ -10,6 +17,19 @@ describe("SurvivalSparkline", () => {
             survivalHistory: [0.4, 0.6, 0.7],
         });
         expect(screen.getByLabelText("Survival rate sparkline")).toBeTruthy();
+    });
+
+    it("renders the zero-padded generation counter above the readout", () => {
+        const { container } = render(SurvivalSparkline, {
+            ...base,
+            gen: 7,
+            survivalHistory: [],
+        });
+        const readouts = container.querySelectorAll(".hud__readout");
+        // The gen counter is the first readout, above the survival label.
+        expect(readouts[0].textContent).toContain("gen");
+        expect(readouts[0].textContent).toContain("007");
+        expect(readouts[1].textContent).toContain("survival");
     });
 
     it("shows a dash placeholder when survival history is empty", () => {
