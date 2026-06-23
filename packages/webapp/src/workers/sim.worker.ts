@@ -357,11 +357,12 @@ function setBarriers(specs: BarrierSpec[]): void {
 // Scans the grid for BIOSIM_GRID_BARRIER cells (0xFFFFFFFF) and caches their
 // coordinates. Called once after biosim_wasm_init so rendering reuses the cache.
 function cacheBarrierCells(): void {
-    if (!biosim || !layout) {
+    if (!biosim) {
         barrierCells = null;
         return;
     }
-    const { gridCellsX: W, gridCellsY: H } = layout;
+    const W = call("biosim_wasm_get_size_x");
+    const H = call("biosim_wasm_get_size_y");
     const cellsOff = call("biosim_wasm_get_grid_cells_ptr") >>> 2;
     const { HEAPU32 } = biosim;
     const tmp: number[] = [];

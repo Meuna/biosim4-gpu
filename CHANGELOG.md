@@ -31,6 +31,7 @@
 #### Fixed
 
 - Keep the "press play" overlay visible on phones and tablets instead of having it flash away on load ([#202](https://github.com/Meuna/biosim4-gpu/pull/202))
+- Read the authoritative grid size when caching barrier cells so barriers render correctly after a form-factor / grid-size change ([gh-201](https://github.com/Meuna/biosim4-gpu/issues/201))
 
 ## [1.1.0] - 2026-06-19
 
