@@ -28,11 +28,19 @@ describe("initial state", () => {
 });
 
 describe("onStepped", () => {
-    it("updates only the step counter", () => {
+    it("updates the step and live kill counters", () => {
         const t = create();
-        t.onStepped({ step: 42 });
+        t.onStepped({ step: 42, kills: 7 });
         expect(t.step).toBe(42);
+        expect(t.kills).toBe(7);
         expect(t.snapReady).toBe(false);
+    });
+
+    it("tracks the kill count rising live across steps", () => {
+        const t = create();
+        t.onStepped({ step: 1, kills: 3 });
+        t.onStepped({ step: 2, kills: 9 });
+        expect(t.kills).toBe(9);
     });
 });
 

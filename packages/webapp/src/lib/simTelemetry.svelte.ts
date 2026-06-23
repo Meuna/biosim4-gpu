@@ -124,8 +124,9 @@ export class SimTelemetry {
 
     // ── Worker-reply intents ──────────────────────────────────────────────────
 
-    onStepped(e: { step: number }): void {
+    onStepped(e: { step: number; kills: number }): void {
         this.#step = e.step;
+        this.#kills = e.kills;
     }
 
     onCensus(e: {

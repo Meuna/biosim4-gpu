@@ -562,6 +562,10 @@ EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_population(void) {
     return sim.agents.population;
 }
 
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_kills(void) {
+    return sim.kills;
+}
+
 EMSCRIPTEN_KEEPALIVE int32_t biosim_wasm_get_size_x(void) {
     return sim.size_x;
 }

@@ -153,6 +153,7 @@ All indices are in `[0, population)`.
 | Function | Return | Description |
 |---|---|---|
 | `biosim_wasm_get_population` | `number` | Total agent slot count. |
+| `biosim_wasm_get_kills` | `number` | Live kill count for the current generation (accumulates per step). |
 | `biosim_wasm_get_size_x` | `number` | Grid width in cells. |
 | `biosim_wasm_get_size_y` | `number` | Grid height in cells. |
 

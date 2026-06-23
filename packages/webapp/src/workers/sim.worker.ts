@@ -174,9 +174,9 @@ export type WorkerCmd =
 export type WorkerEvent =
     | { type: "ready" }
     | { type: "renderMode"; mode: "kinematic" | "grid" }
-    | { type: "stepped"; gen: number; step: number }
-    | { type: "genComplete"; gen: number; step: number }
-    | { type: "paused"; gen: number; step: number }
+    | { type: "stepped"; gen: number; step: number; kills: number }
+    | { type: "genComplete"; gen: number; step: number; kills: number }
+    | { type: "paused"; gen: number; step: number; kills: number }
     | {
           type: "census";
           gen: number;
@@ -1138,6 +1138,7 @@ function progress(type: "stepped" | "genComplete" | "paused"): WorkerEvent {
         type,
         gen: call("biosim_wasm_get_gen"),
         step: call("biosim_wasm_get_step"),
+        kills: call("biosim_wasm_get_kills"),
     };
 }
 
