@@ -27,6 +27,10 @@
 
 - Surface the revert and rewind controls in a dirty-state action bar that slides open beneath the Simulation rail tab ([#195](https://github.com/Meuna/biosim4-gpu/pull/195))
 
+#### Fixed
+
+- Keep the "press play" overlay visible on phones and tablets instead of having it flash away on load ([#202](https://github.com/Meuna/biosim4-gpu/pull/202))
+
 ## [1.1.0] - 2026-06-19
 
 ### Biosim4-gpu
