@@ -205,7 +205,29 @@ export class SimMachine {
     }
 
     setDraft(params: SimParams): void {
+        // Show a barrier preview overlay only when the edit actually touches the
+        // barriers or the grid size (which moves where barrier cells land) —
+        // unrelated field edits must not pop the overlay (gh-134).
+        if (this.#barrierLayoutChanged(params)) {
+            this.#send({
+                type: "previewBarriers",
+                specs: params.barriers,
+                gridSizeX: params.gridSizeX,
+                gridSizeY: params.gridSizeY,
+            });
+        }
         this.#draftConfig = params;
+    }
+
+    // True when params' barrier list or grid size diverges from the current
+    // draft. Uses JSON equality, the same idiom as the dirty check above.
+    #barrierLayoutChanged(params: SimParams): boolean {
+        const prev = $state.snapshot(this.#draftConfig) as SimParams;
+        return (
+            params.gridSizeX !== prev.gridSizeX ||
+            params.gridSizeY !== prev.gridSizeY ||
+            JSON.stringify(params.barriers) !== JSON.stringify(prev.barriers)
+        );
     }
 
     revertDraft(): void {

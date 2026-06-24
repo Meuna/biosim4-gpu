@@ -1,7 +1,16 @@
 import { describe, it, expect } from "vitest";
-import type { SimParams, WorkerCmd } from "../workers/sim.worker";
+import type { BarrierSpec, SimParams, WorkerCmd } from "../workers/sim.worker";
 import { SIM_PHASES, SimMachine } from "./simMachine.svelte";
 import { DEFAULTS } from "./tomlConfig";
+
+const HBAR: BarrierSpec = {
+    kind: "hbar",
+    x: 0.5,
+    y: 0.5,
+    length: 0.25,
+    width: 0.02,
+    quadrant: "ne",
+};
 
 function makeParams(overrides: Partial<SimParams> = {}): SimParams {
     return { ...structuredClone(DEFAULTS), ...overrides };
@@ -640,5 +649,34 @@ describe("snapshots", () => {
         const { m, sent } = create();
         m.exportSnapshot();
         expect(sent).toEqual([{ type: "exportSnapshot" }]);
+    });
+});
+
+describe("setDraft barrier preview", () => {
+    it("sends previewBarriers when the barrier list changes", () => {
+        const { m, sent } = create();
+        const params = makeParams({ barriers: [HBAR] });
+        m.setDraft(params);
+        expect(sent).toEqual([
+            {
+                type: "previewBarriers",
+                specs: [HBAR],
+                gridSizeX: params.gridSizeX,
+                gridSizeY: params.gridSizeY,
+            },
+        ]);
+    });
+
+    it("sends previewBarriers when the grid size changes", () => {
+        const { m, sent } = create();
+        const params = makeParams({ gridSizeX: DEFAULTS.gridSizeX + 8 });
+        m.setDraft(params);
+        expect(types(sent)).toEqual(["previewBarriers"]);
+    });
+
+    it("does not send previewBarriers for unrelated field edits", () => {
+        const { m, sent } = create();
+        m.setDraft(makeParams({ population: DEFAULTS.population + 1 }));
+        expect(sent).toEqual([]);
     });
 });

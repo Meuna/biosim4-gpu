@@ -15,6 +15,7 @@ import { unpackConn, type BrainConn } from "../lib/brain";
 import { stepDelay, createFpsWindow } from "../lib/playbackRate";
 import { shouldIdleReturn, type RenderLoopMode } from "../lib/idleReturn";
 import { appendTracePoint, type TracePoint } from "../lib/agentTrace";
+import { previewFade } from "../lib/barrierPreview";
 
 // ── Types & Protocol ──────────────────────────────────────────────────────────
 
@@ -136,6 +137,12 @@ export type WorkerCmd =
     | { type: "nextGeneration" }
     | { type: "nextGenerationConfigured"; params: SimParams }
     | { type: "configure"; params: SimParams }
+    | {
+          type: "previewBarriers";
+          specs: BarrierSpec[];
+          gridSizeX: number;
+          gridSizeY: number;
+      }
     | {
           type: "canvas";
           canvas: OffscreenCanvas;
@@ -328,6 +335,17 @@ let barrierCells: Int32Array | null = null;
 // Tiled diagonal-line (///) pattern for barrier cells; created once after ctx is ready.
 let barrierHatchPattern: CanvasPattern | null = null;
 
+// Draft-barrier preview overlay (gh-134): the cells the in-progress barrier list
+// would occupy, resolved by the WASM scratch grid without applying the config.
+// Drawn accent-coloured at its own fading alpha (independent of the morph `frac`)
+// so an edit is visible even while the idle sculpture is showing; cleared the
+// moment the config is applied. previewGridCells* carry the *draft* grid size,
+// which may differ from the live grid until the config is applied.
+let previewBarrierCells: Int32Array | null = null;
+let previewGridCellsX = 0;
+let previewGridCellsY = 0;
+let previewEpoch = 0; // performance.now() of the latest edit (fade clock origin)
+
 // Passes barrier specs to WASM. The C core stores grid ratios in [0, 1]
 // directly, so fractions pass straight through; null maps to the sentinel
 // (-1.0 for position, 0.0 for dimension).
@@ -374,6 +392,9 @@ function cacheBarrierCells(): void {
         }
     }
     barrierCells = new Int32Array(tmp);
+    // The config is now applied: drop any draft-barrier preview so the overlay
+    // disappears the moment the user commits (play / rewind / next gen).
+    previewBarrierCells = null;
 }
 
 // Builds an 8×8 tiled diagonal-line (///) pattern for rendering barrier cells.
@@ -413,6 +434,65 @@ function drawBarriers(): void {
         const gy = barrierCells[i + 1];
         ctx.fillRect(gridX + gx * cellW, gridY + gy * cellH, cellW, cellH);
     }
+}
+
+// Resolves the draft barrier specs to grid cells via the WASM scratch grid (the
+// same placement init uses) and arms the fade clock. Does not touch the live sim.
+function previewBarriers(
+    specs: BarrierSpec[],
+    gridSizeX: number,
+    gridSizeY: number,
+): void {
+    if (!biosim) return;
+    setBarriers(specs);
+    const count = biosim.ccall(
+        "biosim_wasm_preview_barrier_cells",
+        "number",
+        ["number", "number"],
+        [gridSizeX, gridSizeY],
+    );
+    if (count === 0) {
+        previewBarrierCells = new Int32Array(0);
+    } else {
+        const off = call("biosim_wasm_preview_barrier_cells_ptr") >>> 2;
+        // Copy out: the WASM buffer is reused/freed on the next preview call.
+        previewBarrierCells = biosim.HEAP32.slice(off, off + count * 2);
+    }
+    previewGridCellsX = gridSizeX;
+    previewGridCellsY = gridSizeY;
+    previewEpoch = performance.now();
+}
+
+// Draws the draft-barrier preview as solid accent cells at its own fading alpha,
+// independent of the morph `frac`. Cells map through the *draft* grid size, so
+// the preview tracks grid-size edits before the config is applied.
+function drawBarrierPreview(): void {
+    if (
+        !ctx ||
+        !layout ||
+        !previewBarrierCells ||
+        previewBarrierCells.length === 0 ||
+        previewGridCellsX <= 0 ||
+        previewGridCellsY <= 0
+    )
+        return;
+    const alpha = previewFade(performance.now() - previewEpoch);
+    if (alpha <= 0) {
+        previewBarrierCells = null;
+        return;
+    }
+    const { gridX, gridY, gridW, gridH } = layout;
+    const cellW = gridW / previewGridCellsX;
+    const cellH = gridH / previewGridCellsY;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = accentColor;
+    for (let i = 0; i < previewBarrierCells.length; i += 2) {
+        const gx = previewBarrierCells[i];
+        const gy = previewBarrierCells[i + 1];
+        ctx.fillRect(gridX + gx * cellW, gridY + gy * cellH, cellW, cellH);
+    }
+    ctx.restore();
 }
 
 // ── Challenges ────────────────────────────────────────────────────────────────
@@ -964,6 +1044,10 @@ function drawMorph(
         ctx.fill();
     }
     ctx.restore();
+
+    // Draft-barrier preview rides on top at its own fading alpha, unaffected by
+    // the morph fade above, so an edit stays visible over the idle sculpture.
+    drawBarrierPreview();
 }
 
 // Accentuated polyline through the selected agent's recorded cells (gh-69). Does
@@ -1037,6 +1121,8 @@ function drawGrid(): void {
         ctx.lineWidth = 1;
         ctx.stroke();
     }
+
+    drawBarrierPreview();
 }
 
 function startTransitionIfNeeded(): void {
@@ -1445,6 +1531,9 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             break;
         case "configure":
             handleConfigure(cmd.params);
+            break;
+        case "previewBarriers":
+            previewBarriers(cmd.specs, cmd.gridSizeX, cmd.gridSizeY);
             break;
         case "play":
             handlePlay();
