@@ -22,7 +22,7 @@
 #### Added
 
 - Add simulation presets: a preset selector (replacing the panel title) for curated config + optional survivor-snapshot bundles, and desktop/tablet/phone form-factor pills that set population and grid size ([gh-79](https://github.com/Meuna/biosim4-gpu/issues/79))
-- Preview the draft barriers on the canvas while editing them, fading out shortly after each change ([gh-134](https://github.com/Meuna/biosim4-gpu/issues/134))
+- Preview the draft barriers on the canvas while editing the barrier list, fading out shortly after each change ([gh-134](https://github.com/Meuna/biosim4-gpu/issues/134))
 
 #### Changed
 

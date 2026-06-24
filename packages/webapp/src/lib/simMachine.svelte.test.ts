@@ -655,23 +655,14 @@ describe("snapshots", () => {
 describe("setDraft barrier preview", () => {
     it("sends previewBarriers when the barrier list changes", () => {
         const { m, sent } = create();
-        const params = makeParams({ barriers: [HBAR] });
-        m.setDraft(params);
-        expect(sent).toEqual([
-            {
-                type: "previewBarriers",
-                specs: [HBAR],
-                gridSizeX: params.gridSizeX,
-                gridSizeY: params.gridSizeY,
-            },
-        ]);
+        m.setDraft(makeParams({ barriers: [HBAR] }));
+        expect(sent).toEqual([{ type: "previewBarriers", specs: [HBAR] }]);
     });
 
-    it("sends previewBarriers when the grid size changes", () => {
+    it("does not send previewBarriers when only the grid size changes", () => {
         const { m, sent } = create();
-        const params = makeParams({ gridSizeX: DEFAULTS.gridSizeX + 8 });
-        m.setDraft(params);
-        expect(types(sent)).toEqual(["previewBarriers"]);
+        m.setDraft(makeParams({ gridSizeX: DEFAULTS.gridSizeX + 8 }));
+        expect(sent).toEqual([]);
     });
 
     it("does not send previewBarriers for unrelated field edits", () => {

@@ -137,12 +137,7 @@ export type WorkerCmd =
     | { type: "nextGeneration" }
     | { type: "nextGenerationConfigured"; params: SimParams }
     | { type: "configure"; params: SimParams }
-    | {
-          type: "previewBarriers";
-          specs: BarrierSpec[];
-          gridSizeX: number;
-          gridSizeY: number;
-      }
+    | { type: "previewBarriers"; specs: BarrierSpec[] }
     | {
           type: "canvas";
           canvas: OffscreenCanvas;
@@ -339,11 +334,9 @@ let barrierHatchPattern: CanvasPattern | null = null;
 // would occupy, resolved by the WASM scratch grid without applying the config.
 // Drawn accent-coloured at its own fading alpha (independent of the morph `frac`)
 // so an edit is visible even while the idle sculpture is showing; cleared the
-// moment the config is applied. previewGridCells* carry the *draft* grid size,
-// which may differ from the live grid until the config is applied.
+// moment the config is applied. Resolved at the live grid size, so the cells map
+// through the same pixel region as the rendered grid (no aspect distortion).
 let previewBarrierCells: Int32Array | null = null;
-let previewGridCellsX = 0;
-let previewGridCellsY = 0;
 let previewEpoch = 0; // performance.now() of the latest edit (fade clock origin)
 
 // Passes barrier specs to WASM. The C core stores grid ratios in [0, 1]
@@ -437,19 +430,17 @@ function drawBarriers(): void {
 }
 
 // Resolves the draft barrier specs to grid cells via the WASM scratch grid (the
-// same placement init uses) and arms the fade clock. Does not touch the live sim.
-function previewBarriers(
-    specs: BarrierSpec[],
-    gridSizeX: number,
-    gridSizeY: number,
-): void {
+// same placement init uses) and arms the fade clock. Does not touch the live
+// sim. Cells are resolved at the live grid size so they line up with the grid
+// currently on screen; a draft grid-size change only takes effect once applied.
+function previewBarriers(specs: BarrierSpec[]): void {
     if (!biosim) return;
     setBarriers(specs);
     const count = biosim.ccall(
         "biosim_wasm_preview_barrier_cells",
         "number",
         ["number", "number"],
-        [gridSizeX, gridSizeY],
+        [call("biosim_wasm_get_size_x"), call("biosim_wasm_get_size_y")],
     );
     if (count === 0) {
         previewBarrierCells = new Int32Array(0);
@@ -458,22 +449,18 @@ function previewBarriers(
         // Copy out: the WASM buffer is reused/freed on the next preview call.
         previewBarrierCells = biosim.HEAP32.slice(off, off + count * 2);
     }
-    previewGridCellsX = gridSizeX;
-    previewGridCellsY = gridSizeY;
     previewEpoch = performance.now();
 }
 
 // Draws the draft-barrier preview as solid accent cells at its own fading alpha,
-// independent of the morph `frac`. Cells map through the *draft* grid size, so
-// the preview tracks grid-size edits before the config is applied.
+// independent of the morph `frac`. Cells were resolved at the live grid size, so
+// they map through the same pixel region as drawBarriers (no aspect distortion).
 function drawBarrierPreview(): void {
     if (
         !ctx ||
         !layout ||
         !previewBarrierCells ||
-        previewBarrierCells.length === 0 ||
-        previewGridCellsX <= 0 ||
-        previewGridCellsY <= 0
+        previewBarrierCells.length === 0
     )
         return;
     const alpha = previewFade(performance.now() - previewEpoch);
@@ -481,9 +468,9 @@ function drawBarrierPreview(): void {
         previewBarrierCells = null;
         return;
     }
-    const { gridX, gridY, gridW, gridH } = layout;
-    const cellW = gridW / previewGridCellsX;
-    const cellH = gridH / previewGridCellsY;
+    const { gridX, gridY, gridW, gridH, gridCellsX, gridCellsY } = layout;
+    const cellW = gridW / gridCellsX;
+    const cellH = gridH / gridCellsY;
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = accentColor;
@@ -1533,7 +1520,7 @@ self.addEventListener("message", (e: MessageEvent<WorkerCmd>) => {
             handleConfigure(cmd.params);
             break;
         case "previewBarriers":
-            previewBarriers(cmd.specs, cmd.gridSizeX, cmd.gridSizeY);
+            previewBarriers(cmd.specs);
             break;
         case "play":
             handlePlay();
