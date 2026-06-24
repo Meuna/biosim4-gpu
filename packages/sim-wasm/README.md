@@ -80,6 +80,8 @@ Call `biosim_wasm_clear_barriers` and `biosim_wasm_add_barrier` **before**
 | `biosim_wasm_clear_barriers` | — | `null` | Reset the barrier list to empty. |
 | `biosim_wasm_add_barrier` | `kind: number, x: number, y: number, length: number, width: number, quadrant: number` | `number` (status) | Append one barrier. `x`/`y`/`length`/`width` are grid ratios in `[0, 1]`; pass `-1.0` for a random position or `0.0` for a random dimension. `quadrant` selects a corner's arm directions and is ignored by other kinds. Returns `BIOSIM_ERR_NOMEM` if allocation fails. |
 | `biosim_wasm_get_n_barriers` | — | `number` | Number of barriers currently in the list. |
+| `biosim_wasm_preview_barrier_cells` | `size_x: number, size_y: number` | `number` | Resolve the current barrier list onto a draft `size_x`×`size_y` grid (without touching the live sim) and record the occupied cells. Returns the cell count; read the cells via `biosim_wasm_preview_barrier_cells_ptr`. Uses the same placement as `init`, so the preview matches the applied barriers. Returns `0` on allocation failure or an empty list. |
+| `biosim_wasm_preview_barrier_cells_ptr` | `HEAP32` | `int32` | Pointer to the flat `[gx, gy, ...]` preview cell array. Valid until the next `preview_barrier_cells` call or `free`. |
 
 **Sentinel values for `add_barrier`:**
 - `x` / `y`: pass `-32768` (`INT16_MIN`) for random placement.

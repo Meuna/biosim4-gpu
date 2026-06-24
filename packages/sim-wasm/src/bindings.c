@@ -70,6 +70,13 @@ static biosim_barrier_spec_t *barriers = NULL;
 static size_t barriers_cap = 0U;
 static uint32_t n_barriers = 0U;
 
+/* Scratch buffer for biosim_wasm_preview_barrier_cells: a flat [gx, gy, ...]
+ * list of the cells the current barrier list would occupy on a draft grid,
+ * resolved without touching the live sim. Grows on demand via realloc and is
+ * freed in biosim_wasm_free. */
+static int32_t *preview_cells = NULL;
+static size_t preview_cells_cap = 0U;
+
 /* ── module state ────────────────────────────────────────────────────────── */
 
 static biosim_sim_t sim;
@@ -149,6 +156,9 @@ EMSCRIPTEN_KEEPALIVE void biosim_wasm_free(void) {
     barriers = NULL;
     barriers_cap = 0U;
     n_barriers = 0U;
+    free(preview_cells);
+    preview_cells = NULL;
+    preview_cells_cap = 0U;
     free(snap_export_buf);
     snap_export_buf = NULL;
     snap_export_size = 0U;
@@ -522,6 +532,58 @@ EMSCRIPTEN_KEEPALIVE int biosim_wasm_add_barrier(
 /* Number of barriers currently in the list. */
 EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_get_n_barriers(void) {
     return n_barriers;
+}
+
+/* Resolve the current barrier list onto a draft grid of size_x by size_y cells
+ * and record the occupied cells, without touching the live sim. Uses the same
+ * biosim_barriers_place the real init uses, so the preview matches the applied
+ * placement exactly. The cells are written as a flat [gx, gy, ...] array
+ * readable via biosim_wasm_preview_barrier_cells_ptr; the return value is the
+ * number of cells (pairs). Returns 0 on allocation failure or an empty list. */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_preview_barrier_cells(int32_t size_x, int32_t size_y) {
+    biosim_grid_t grid;
+    if (biosim_grid_create(size_x, size_y, &grid) != BIOSIM_OK) {
+        return 0U;
+    }
+    biosim_grid_zero_fill(&grid);
+    biosim_barriers_place(&grid, barriers, n_barriers, NULL);
+
+    uint32_t count = 0U;
+    for (int32_t y = 0; y < size_y; y++) {
+        for (int32_t x = 0; x < size_x; x++) {
+            biosim_coord_t c = {x, y};
+            if (!biosim_grid_is_barrier(&grid, c)) {
+                continue;
+            }
+            size_t need = ((size_t)count + 1U) * 2U;
+            if (need > preview_cells_cap) {
+                size_t new_cap = preview_cells_cap == 0U ? 64U : preview_cells_cap * 2U;
+                if (new_cap < need) {
+                    new_cap = need;
+                }
+                int32_t *grown = realloc(preview_cells, new_cap * sizeof(int32_t));
+                if (grown == NULL) {
+                    biosim_grid_free(&grid);
+                    return 0U;
+                }
+                preview_cells = grown;
+                preview_cells_cap = new_cap;
+            }
+            size_t idx = (size_t)count * 2U;
+            preview_cells[idx] = x;
+            preview_cells[idx + 1U] = y;
+            count++;
+        }
+    }
+
+    biosim_grid_free(&grid);
+    return count;
+}
+
+/* Pointer to the flat [gx, gy, ...] preview cell array (HEAP32). Valid until the
+ * next biosim_wasm_preview_barrier_cells call or biosim_wasm_free. */
+EMSCRIPTEN_KEEPALIVE uint32_t biosim_wasm_preview_barrier_cells_ptr(void) {
+    return (uint32_t)(uintptr_t)preview_cells;
 }
 
 /* ── state queries ───────────────────────────────────────────────────────── */
