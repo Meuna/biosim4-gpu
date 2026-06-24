@@ -1,4 +1,4 @@
-import type { SimParams, WorkerCmd } from "../workers/sim.worker";
+import type { BarrierSpec, SimParams, WorkerCmd } from "../workers/sim.worker";
 import { DEFAULTS } from "./tomlConfig";
 
 export const SIM_PHASES = [
@@ -210,7 +210,10 @@ export class SimMachine {
         // The worker resolves the cells at the live grid size, so a draft
         // grid-size change does not move the preview until it is applied.
         if (this.#barriersChanged(params)) {
-            this.#send({ type: "previewBarriers", specs: params.barriers });
+            this.#send({
+                type: "previewBarriers",
+                specs: $state.snapshot(params.barriers) as BarrierSpec[],
+            });
         }
         this.#draftConfig = params;
     }

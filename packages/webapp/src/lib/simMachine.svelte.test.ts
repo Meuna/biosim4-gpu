@@ -670,4 +670,15 @@ describe("setDraft barrier preview", () => {
         m.setDraft(makeParams({ population: DEFAULTS.population + 1 }));
         expect(sent).toEqual([]);
     });
+
+    it("posts a structured-cloneable snapshot, not a $state proxy", () => {
+        const { m, sent } = create();
+        const reactive = $state({ ...HBAR });
+        m.setDraft(makeParams({ barriers: [reactive] }));
+        expect(sent).toHaveLength(1);
+        // Pre-fix this throws "Proxy object could not be cloned".
+        expect(() =>
+            structuredClone((sent[0] as { specs: unknown }).specs),
+        ).not.toThrow();
+    });
 });
